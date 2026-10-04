@@ -15,3 +15,8 @@ build/
 *.pt
 *.pth
 .DS_Store
+
+# local
+.tmp
+.playground
+notebook

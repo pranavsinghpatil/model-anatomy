@@ -1,0 +1,12 @@
+flowchart TD
+    n0["Input"]
+    n1["QKV Projection"]
+    n2["Attention Core"]
+    n3["Output Projection"]
+    n4["Residual dropout"]
+    n5["Output"]
+    n0 -->|"[B, S, 768]"| n1
+    n1 -->|"[B, S, 2304]"| n2
+    n2 -->|"[B, S, 768]"| n3
+    n3 -->|"[B, S, 768]"| n4
+    n4 -->|"[B, S, 768]"| n5
