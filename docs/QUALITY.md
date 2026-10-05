@@ -2,7 +2,7 @@
 
 ## Branch and PR policy
 
-`main` is PR-only. Enable a GitHub ruleset or branch-protection rule for `main` that requires a pull request, the `quality` check, resolved conversations, and one approval when a second collaborator is available. Block force pushes, branch deletion, and normal bypasses.
+`main` is PR-only. The baseline GitHub protection requires a pull request, the `quality` check, resolved conversations, no force pushes or branch deletion, and no administrator bypass. It uses zero required approvals so a solo maintainer is not locked out; raise the threshold to one when an active collaborator can review every PR.
 
 Every PR states the change, its reason, deterministic verification, limitations, documentation impact, and next task. Topic branches use the `codex/` prefix by default.
 
