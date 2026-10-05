@@ -8,9 +8,9 @@ The input is a model ID or URL. The output is a model-specific technical represe
 
 ## Scope for the hackathon release
 
-Build one reliable path for a decoder-only Transformer, beginning with `HuggingFaceTB/SmolLM2-135M` after revision pinning. A judge can paste the model, see a generated graph, select a component, and trace the displayed facts to artifacts.
+Build one reliable path for a decoder-only Transformer, beginning with [`HuggingFaceTB/SmolLM2-135M`](https://huggingface.co/HuggingFaceTB/SmolLM2-135M) after revision pinning. A judge can paste the model, see a generated graph, select a component, and trace the displayed facts to artifacts.
 
-The release must run on Nebius Token Factory or Nebius AI Cloud and use an NVIDIA open-source model. The integration is an optional, evidence-bound explanation layer: it may summarize or answer questions about the completed reconstruction, but must never infer the graph or overwrite evidence.
+The [hackathon release](https://nebiusglobalaihackathon.devpost.com/) must run on Nebius Token Factory or Nebius AI Cloud and use an NVIDIA open-source model. The integration is an optional, evidence-bound explanation layer: it may summarize or answer questions about the completed reconstruction, but must never infer the graph or overwrite evidence.
 
 ## Non-goals for this release
 

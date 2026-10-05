@@ -1,10 +1,10 @@
 # Roadmap and release train
 
-**Last updated:** 2026-10-05 · **External deadline:** 2026-10-30 10:00 PDT (22:30 IST)
+**Last updated:** 2026-10-05 · **External deadline:** [2026-10-30 10:00 PDT](https://nebiusglobalaihackathon.devpost.com/) (22:30 IST)
 
 ## Current truth
 
-The Python package is a scaffold: resolver and reconstructor methods deliberately raise `NotImplementedError`, and the sole test is an IR smoke test. No reconstruction milestone is complete. The primary target is `HuggingFaceTB/SmolLM2-135M`; pin its commit revision before implementation begins.
+The Python package is a scaffold: resolver and reconstructor methods deliberately raise `NotImplementedError`, and the sole test is an IR smoke test. No reconstruction milestone is complete. The primary target is [`HuggingFaceTB/SmolLM2-135M`](https://huggingface.co/HuggingFaceTB/SmolLM2-135M); pin its commit revision before implementation begins.
 
 ## Milestones
 
