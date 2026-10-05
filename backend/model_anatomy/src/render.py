@@ -5,6 +5,7 @@ from __future__ import annotations
 from html import escape
 from pathlib import Path
 
+from .errors import AnatomyError
 from .ir import Graph, ModelIR
 
 
@@ -19,12 +20,19 @@ def mermaid(graph: Graph) -> str:
     lines = ["flowchart TD"]
     for node in graph.nodes:
         label = node.label + (f" x{node.repeat}" if node.repeat > 1 else "")
+        if node.repetition and node.repetition.mode != "sequential":
+            label += f" ({node.repetition.mode})"
         lines.append(f'    {ids[node.id]}["{_label(label)}"]')
     for edge in graph.edges:
-        shape = ", ".join(str(d) for d in edge.tensor.shape)
+        shape = (
+            ", ".join(str(d) for d in edge.tensor.shape)
+            if edge.tensor and edge.tensor.shape is not None
+            else "unknown shape"
+        )
         label = f"{edge.label}: " if edge.label else ""
-        label += f"[{shape}]"
-        lines.append(f'    {ids[edge.source]} -->|"{_label(label)}"| {ids[edge.target]}')
+        label += f"[{shape}]" if edge.relation == "dataflow" else edge.relation
+        arrow = "-->" if edge.relation == "dataflow" else "-.->"
+        lines.append(f'    {ids[edge.source]} {arrow}|"{_label(label)}"| {ids[edge.target]}')
     return "\n".join(lines) + "\n"
 
 
@@ -34,13 +42,21 @@ def write_outputs(
     """Write formal JSON/Mermaid artifacts and a bilingual Markdown preview."""
     import json
 
+    model_path = output_directory / "model.json"
+    old_graph_ids = set()
+    if model_path.exists():
+        try:
+            previous = ModelIR.from_json(model_path.read_text(encoding="utf-8"))
+            if previous.model_id == ir.model_id:
+                old_graph_ids = {graph.id for graph in previous.root_graph.walk()}
+        except (AnatomyError, ValueError, KeyError, TypeError):
+            pass
     serialized = ir.to_json()
     if ModelIR.from_json(serialized).to_dict() != ir.to_dict():
         raise ValueError("IR round-trip changed the model representation")
     output_directory.mkdir(parents=True, exist_ok=True)
     config_directory.mkdir(parents=True, exist_ok=True)
     preview_directory.mkdir(parents=True, exist_ok=True)
-    model_path = output_directory / "model.json"
     model_path.write_text(serialized, encoding="utf-8")
     config_path = config_directory / "config.json"
     config_path.write_text(
@@ -51,14 +67,30 @@ def write_outputs(
         json.dumps(ir.metadata["artifacts"], indent=2, sort_keys=True) + "\n", encoding="utf-8"
     )
     paths = [model_path, config_path, audit_path]
+    diagnostics_path = output_directory / "diagnostics.json"
+    diagnostics_path.write_text(
+        json.dumps(
+            {
+                "analysis_report": ir.metadata.get("analysis_report"),
+                "module_tree": ir.raw_structure.get("modules"),
+                **ir.raw_structure.get("semantic_diagnostics", {}),
+                "static_flow": ir.raw_structure.get("static_flow_reports"),
+            },
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    paths.append(diagnostics_path)
     preview = [
-        "# GPT-2 Hierarchy Preview / 层级图预览",
+        f"# {ir.architecture} Hierarchy Preview / 层级图预览",
         "",
         f"Model: `{ir.model_id}` · revision: `{ir.metadata['revision']}`",
         "",
-        "这些图由同一份 Hierarchical Model IR 生成。边和 symbolic shapes 来自 GPT-2 semantic rules；未执行 runtime forward。",
+        "这些图由同一份 Hierarchical Model IR 生成。实线表示 static source / pattern dataflow，虚线只表示结构关系。未执行 forward。",
         "",
-        "重复节点的 child graph 是 block 0 的 template；其他实例的参数保留在 Raw Structure。",
+        "重复节点的 child graph 展示 representative instance；全部 instance paths 和参数保留在 Raw Structure。Unknown shapes / components 明确标注。",
         "",
     ]
     for graph in ir.root_graph.walk():
@@ -67,7 +99,15 @@ def write_outputs(
         path.write_text(rendered, encoding="utf-8")
         paths.append(path)
         preview.extend([f"## {graph.id}", "", "```mermaid", rendered.rstrip(), "```", ""])
-    preview_path = preview_directory / "GPT2_PREVIEW.md"
+    for obsolete_id in old_graph_ids - {graph.id for graph in ir.root_graph.walk()}:
+        if obsolete_id.replace("_", "").isalnum():
+            (output_directory / f"{obsolete_id}.mmd").unlink(missing_ok=True)
+    preview_name = (
+        "GPT2_PREVIEW.md"
+        if ir.metadata.get("source_config", {}).get("model_type") == "gpt2"
+        else output_directory.name.upper().replace("-", "_") + "_PREVIEW.md"
+    )
+    preview_path = preview_directory / preview_name
     preview_path.write_text("\n".join(preview), encoding="utf-8")
     paths.append(preview_path)
     return paths

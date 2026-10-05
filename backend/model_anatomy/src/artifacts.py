@@ -13,9 +13,8 @@ from urllib.parse import quote, unquote, urlsplit
 
 import requests
 
-from .errors import ArtifactError, UnsupportedModelError
+from .errors import ArtifactError
 
-TARGET_MODEL = "openai-community/gpt2"
 MAX_HEADER_BYTES = 16 * 1024 * 1024
 DTYPE_BYTES = {
     "BOOL": 1,
@@ -31,6 +30,8 @@ DTYPE_BYTES = {
     "I64": 8,
     "U64": 8,
     "F64": 8,
+    "F8_E4M3": 1,
+    "F8_E5M2": 1,
 }
 
 
@@ -39,6 +40,7 @@ class ModelReference:
     model_id: str
     revision: str = "main"
     filename: str = "model.safetensors"
+    explicit_filename: bool = False
 
     def url(self, filename: str, revision: str | None = None) -> str:
         return f"https://huggingface.co/{self.model_id}/resolve/{quote(revision or self.revision, safe='')}/{filename}"
@@ -47,6 +49,7 @@ class ModelReference:
 def parse_reference(value: str) -> ModelReference:
     value = value.strip()
     revision, filename = "main", "model.safetensors"
+    explicit_filename = False
     if "://" in value:
         url = urlsplit(value)
         if url.scheme != "https" or url.netloc != "huggingface.co" or url.query or url.fragment:
@@ -54,19 +57,19 @@ def parse_reference(value: str) -> ModelReference:
         parts = url.path.strip("/").split("/")
         if len(parts) == 5 and parts[2] in {"blob", "resolve"}:
             revision, filename = unquote(parts[3]), parts[4]
+            explicit_filename = True
         elif len(parts) != 2:
             raise ArtifactError("Expected a model repository or a model.safetensors file URL")
         value = "/".join(parts[:2])
     if not re.fullmatch(r"[\w.-]+/[\w.-]+", value) or any(p in {".", ".."} for p in value.split("/")):
         raise ArtifactError("Expected a namespace/model repository ID")
-    if not revision or revision in {".", ".."} or filename != "model.safetensors":
-        raise ArtifactError("Only model.safetensors references are supported")
-    return ModelReference(value, revision, filename)
-
-
-def require_target(reference: ModelReference) -> None:
-    if reference.model_id != TARGET_MODEL:
-        raise UnsupportedModelError(f"This MVP supports exactly {TARGET_MODEL}; got {reference.model_id}")
+    if (
+        not revision
+        or revision in {".", ".."}
+        or not (filename.endswith((".safetensors", ".safetensors.index.json")))
+    ):
+        raise ArtifactError("Expected a Safetensors file or index reference")
+    return ModelReference(value, revision, filename, explicit_filename)
 
 
 @dataclass(frozen=True)
@@ -95,6 +98,18 @@ class SafetensorsMetadata:
     file_size: int
     header: dict[str, Any]
     requests: list[dict[str, Any]] = field(default_factory=list)
+
+
+@dataclass
+class CheckpointMetadata:
+    tensors: dict[str, TensorMetadata]
+    shards: dict[str, SafetensorsMetadata]
+    tensor_files: dict[str, str]
+    index: dict[str, Any] | None = None
+
+    @property
+    def requests(self) -> list[dict[str, Any]]:
+        return [request for shard in self.shards.values() for request in shard.requests]
 
 
 def _unique_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
@@ -156,6 +171,7 @@ class MetadataClient:
         self.session = session or requests.Session()
         self.timeout = timeout
         self.audit: list[dict[str, Any]] = []
+        self.repository_files: dict[tuple[str, str], set[str]] = {}
 
     def json(self, url: str, max_bytes: int = 1024 * 1024) -> dict[str, Any]:
         with self.session.get(
@@ -175,17 +191,73 @@ class MetadataClient:
             return result
 
     def resolve(self, reference: ModelReference) -> str:
-        require_target(reference)
         info = self.json(
             f"https://huggingface.co/api/models/{reference.model_id}/revision/{quote(reference.revision, safe='')}"
         )
         sha = info.get("sha")
         if not isinstance(sha, str) or not re.fullmatch(r"[0-9a-f]{40}", sha):
             raise ArtifactError("Hugging Face did not return an immutable commit SHA")
-        files = {item["rfilename"] for item in info.get("siblings", [])}
-        if not {"config.json", "model.safetensors"}.issubset(files):
-            raise ArtifactError("Repository must contain config.json and model.safetensors")
+        siblings = info.get("siblings", [])
+        if not isinstance(siblings, list) or not all(
+            isinstance(item, dict) and isinstance(item.get("rfilename"), str) for item in siblings
+        ):
+            raise ArtifactError("Hugging Face repository file metadata is invalid")
+        files = {item["rfilename"] for item in siblings}
+        if not any(name.endswith((".safetensors", ".safetensors.index.json")) for name in files):
+            raise ArtifactError("Repository has no Safetensors checkpoint; it is outside the target scope")
+        if "config.json" not in files:
+            raise ArtifactError("Repository has no config.json")
+        self.repository_files[(reference.model_id, sha)] = files
         return sha
+
+    def checkpoint(self, reference: ModelReference, revision: str) -> CheckpointMetadata:
+        files = self.repository_files[(reference.model_id, revision)]
+        index_name = "model.safetensors.index.json"
+        if reference.filename.endswith(".index.json"):
+            index_name = reference.filename
+        if reference.explicit_filename and reference.filename not in files:
+            raise ArtifactError(f"Requested Safetensors artifact is missing: {reference.filename}")
+        if index_name in files and (
+            not reference.explicit_filename or reference.filename.endswith(".index.json")
+        ):
+            index = self.json(reference.url(index_name, revision), max_bytes=16 * 1024 * 1024)
+            mapping = index.get("weight_map")
+            if not isinstance(mapping, dict) or not mapping:
+                raise ArtifactError("Safetensors index has no weight_map")
+            shard_names = (
+                sorted(set(mapping.values())) if all(isinstance(v, str) for v in mapping.values()) else []
+            )
+            if not shard_names or any(
+                name not in files
+                or not name.endswith(".safetensors")
+                or name.startswith("/")
+                or ".." in name.split("/")
+                for name in shard_names
+            ):
+                raise ArtifactError("Safetensors index references invalid or missing shard files")
+        else:
+            index = None
+            filename = reference.filename
+            if filename not in files:
+                alternatives = sorted(n for n in files if "/" not in n and n.endswith(".safetensors"))
+                if len(alternatives) != 1:
+                    raise ArtifactError("Cannot select an unambiguous Safetensors checkpoint")
+                filename = alternatives[0]
+            shard_names = [filename]
+            mapping = None
+        tensors, shards, tensor_files = {}, {}, {}
+        for filename in shard_names:
+            shard = self.safetensors(reference.url(filename, revision))
+            if shard.metadata.get("format") not in {None, "pt"}:
+                raise ArtifactError("Safetensors checkpoint is not in the PyTorch target scope")
+            shards[filename] = shard
+            for name, tensor in shard.tensors.items():
+                if name in tensors:
+                    raise ArtifactError(f"Duplicate tensor across Safetensors shards: {name}")
+                tensors[name], tensor_files[name] = tensor, filename
+        if mapping is not None and mapping != tensor_files:
+            raise ArtifactError("Safetensors shard headers disagree with the index weight_map")
+        return CheckpointMetadata(tensors, shards, tensor_files, index)
 
     def range(self, url: str, start: int, end: int) -> tuple[bytes, int]:
         with self.session.get(

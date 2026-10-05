@@ -1,8 +1,8 @@
 flowchart TD
-    n0["Input"]
-    n1["Expand projection"]
-    n2["gelu_new"]
-    n3["Output projection"]
+    n0["Hidden States"]
+    n1["Projection"]
+    n2["Activation"]
+    n3["Projection"]
     n4["Dropout"]
     n5["Output"]
     n0 -->|"[B, S, 768]"| n1

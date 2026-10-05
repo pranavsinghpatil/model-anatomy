@@ -1,5 +1,5 @@
 flowchart TD
-    n0["Input"]
+    n0["Hidden States"]
     n1["LayerNorm"]
     n2["Multi-Head Attention"]
     n3["Residual Add"]
@@ -13,6 +13,6 @@ flowchart TD
     n0 -->|"skip: [B, S, 768]"| n3
     n3 -->|"[B, S, 768]"| n4
     n4 -->|"[B, S, 768]"| n5
-    n5 -->|"[B, S, 768]"| n6
     n3 -->|"skip: [B, S, 768]"| n6
+    n5 -->|"[B, S, 768]"| n6
     n6 -->|"[B, S, 768]"| n7

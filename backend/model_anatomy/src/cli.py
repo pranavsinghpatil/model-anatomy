@@ -1,4 +1,4 @@
-"""Local JSON and Mermaid CLI for the metadata-only GPT-2 MVP."""
+"""Local JSON and Mermaid CLI for static native-Transformers reconstruction."""
 
 from __future__ import annotations
 
@@ -14,15 +14,26 @@ from .render import write_outputs
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
-        description="Reconstruct hierarchical GPT-2 architecture without downloading weights"
+        description="Statically reconstruct native Transformers architecture without weights or forward execution"
     )
     parser.add_argument("model", help="Hugging Face repository ID or model.safetensors browser URL")
-    parser.add_argument("--output", type=Path, default=Path("output/gpt2"))
-    parser.add_argument("--config-dir", type=Path, default=Path("config/gpt2"))
+    parser.add_argument("--output", type=Path)
+    parser.add_argument("--config-dir", type=Path)
+    parser.add_argument(
+        "--inspect", action="store_true", help="Print semantic coverage and unknown component diagnostics"
+    )
     args = parser.parse_args(argv)
     try:
         ir = reconstruct(args.model)
-        paths = write_outputs(ir, args.output, args.config_dir, Path(".playground"))
+        slug = ir.model_id.replace("/", "--").lower()
+        if ir.model_id == "openai-community/gpt2":
+            slug = "gpt2"
+        paths = write_outputs(
+            ir,
+            args.output or Path("output") / slug,
+            args.config_dir or Path("config") / slug,
+            Path(".playground"),
+        )
     except (AnatomyError, requests.RequestException, OSError) as exc:
         parser.exit(1, f"Reconstruction failed: {exc}\n")
     print(f"Model: {ir.model_id} ({ir.architecture})")
@@ -33,4 +44,8 @@ def main(argv: list[str] | None = None) -> int:
     )
     for path in paths:
         print(path)
+    if args.inspect:
+        import json
+
+        print(json.dumps(ir.metadata["analysis_report"], indent=2))
     return 0

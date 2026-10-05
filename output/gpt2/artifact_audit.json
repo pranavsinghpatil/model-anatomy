@@ -38,5 +38,14 @@
   ],
   "safetensors_bytes_read": 14291,
   "safetensors_url": "https://huggingface.co/openai-community/gpt2/resolve/607a30d783dfa663caf39e06633721c8d4cfcd7e/model.safetensors",
+  "sharded": false,
+  "shards": {
+    "model.safetensors": {
+      "file_size": 548105171,
+      "header_length": 14283,
+      "header_sha256": "a41dc5e8c2f45cd5f533b4f081e7777de1f8faa3b2527134d4230ae531127b21",
+      "url": "https://huggingface.co/openai-community/gpt2/resolve/607a30d783dfa663caf39e06633721c8d4cfcd7e/model.safetensors"
+    }
+  },
   "weight_payload_bytes_read": 0
 }
