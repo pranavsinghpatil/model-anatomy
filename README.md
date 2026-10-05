@@ -1,97 +1,33 @@
 # Model Anatomy
 
-> **Reconstruct an open-weight neural network into a semantic, tensor-aware architecture graph — then let us inspect what the model actually contains.**
+> Turn the artifacts of an open-weight Hugging Face model into a trustworthy, inspectable architecture graph.
 
-Model Anatomy is an exploration and reconstruction tool for Hugging Face models.
+Model Anatomy lets an engineer understand a specific checkpoint without manually joining its configuration, `nn.Module` hierarchy, source, graph traces, and Safetensors metadata. The graph is generated from evidence; it is not a hand-authored template or an LLM guess.
 
-It starts from the artifacts around an open-weight model — configuration, executable `nn.Module` structure, graph information, source code, and Safetensors metadata — and combines them into one representation that a human can actually understand.
-
-## Why
-
-A model repository gives us pieces of the truth. The engineer still has to mentally reconstruct:
-
-- how `nn.Module` parts connect
-- what those modules mean architecturally
-- which tensors belong to which component
-- how dimensions flow
-- where repeated blocks begin/end
-- what the actual computation structure looks like
-
-Model Anatomy turns that investigation into a generated model graph.
-
-## Core pipeline
+## Product path
 
 ```text
-Hugging Face Model
-        ↓
-Artifact Resolver
-        ↓
-Config + nn.Module + FX/Graph + Source + Safetensors
-        ↓
-Raw Architecture IR
-        ↓
-Semantic Architecture IR
-        ↓
-Interactive Model Graph
-        ↓
-Tensor / Parameter / Evidence Inspection
-        ↓
-Model Analysis / Autopsy
+model ID / URL → artifact inventory → Raw IR → Semantic IR → graph → inspection
 ```
 
-## The key distinction
+The first release proves that path for one decoder-only Transformer. A node must lead to its module path, tensors, dimensions, parameter ownership, and the evidence that established it. Model Autopsy is a later layer built on this representation.
 
-This is **not just a diagram generator**.
+## Current state
 
-The diagram is the visible result of an underlying reconstruction engine.
+The repository contains a Python scaffold and a smoke test; the resolver and reconstruction pipeline are not implemented yet. The immediate target is `HuggingFaceTB/SmolLM2-135M`, a compact, Apache-2.0 decoder model with Safetensors support. See the [roadmap](docs/ROADMAP.md) for the dated release gates.
 
-The long-term question is:
+## Hackathon fit
 
-> Can we automatically reconstruct enough of a real neural network from its open-weight artifacts to make its architecture, tensors, and relationships directly inspectable?
+For the Nebius × NVIDIA Global AI Hackathon, reconstruction remains deterministic. A clearly separated, optional Nebius Token Factory + NVIDIA model layer may explain already-established evidence in the explorer; it may never create or alter architectural facts. This makes the required model-service usage visible without weakening the product’s trust boundary.
 
-## First milestone
+## Documentation
 
-Start with **one decoder-only Transformer**.
+- [Project ground](docs/00-GROUND.md) — promise, scope, and non-negotiable boundaries
+- [Architecture](docs/ARCHITECTURE.md) — pipeline, IR, evidence, and failure model
+- [Roadmap](docs/ROADMAP.md) — milestones, dates, release gates, and current status
+- [Quality](docs/QUALITY.md) — PR, benchmark, demo, and submission requirements
+- [Decision log](docs/DECISION_LOG.md) — binding product and architecture decisions
 
-The first implementation must reliably produce:
+## Development workflow
 
-- module hierarchy
-- semantic components
-- tensor names
-- tensor shapes and dtype
-- parameter counts
-- graph relationships where traceable
-- evidence for where each fact came from
-
-## Important technical boundary
-
-Safetensors gives valuable tensor-level information, but it does **not** by itself contain the complete computation graph.
-
-Therefore we fuse multiple sources:
-
-- `config.json` / `AutoConfig`
-- instantiated `nn.Module`
-- `named_modules()`
-- graph tracing such as `torch.fx` where possible
-- source code
-- Safetensors metadata
-
-## Product layers
-
-### Layer 1 — Reconstruction
-Turn model artifacts into a canonical representation.
-
-### Layer 2 — Visualization
-Generate an architecture diagram from that representation.
-
-### Layer 3 — Inspection
-Expose tensors, parameters, dimensions, implementation and evidence.
-
-### Layer 4 — Analysis
-Eventually support Model Autopsy: comparisons, anomalies, contradictions and deeper findings.
-
-## Current status
-
-**Ground established. Implementation starts with reconstruction.**
-
-See [`docs/`](docs/) for the project context and decisions.
+`main` is integration-only. Create a topic branch, test the smallest useful change, open a PR, and merge only after CI and review. Full expectations are in [CONTRIBUTING.md](CONTRIBUTING.md).
