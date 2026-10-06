@@ -11,7 +11,7 @@
 
 ## Docs updated
 - [ ] Status
-- [ ] Decision log when needed
-- [ ] Design docs when needed
+- [ ] Decision log (when needed)
+- [ ] Design docs (when needed)
 
 ## Next
