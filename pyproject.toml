@@ -8,6 +8,7 @@ version = "0.1.0"
 description = "Reconstruct Hugging Face models into semantic architecture graphs"
 requires-python = ">=3.11"
 dependencies = [
+  "huggingface_hub>=0.27",
   "torch>=2.4",
   "transformers>=4.45",
   "safetensors>=0.4",

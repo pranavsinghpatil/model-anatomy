@@ -4,7 +4,7 @@
 
 ## Current truth
 
-The Python package is a scaffold: resolver and reconstructor methods deliberately raise `NotImplementedError`, and the sole test is an IR smoke test. No reconstruction milestone is complete. The primary target is [`HuggingFaceTB/SmolLM2-135M`](https://huggingface.co/HuggingFaceTB/SmolLM2-135M); pin its commit revision before implementation begins.
+M1 is in progress. The resolver foundation will normalize model IDs/URLs, pin an immutable commit, and enumerate artifacts without downloading weights. No reconstruction milestone is complete. The primary target is [`HuggingFaceTB/SmolLM2-135M`](https://huggingface.co/HuggingFaceTB/SmolLM2-135M); pin its commit revision before artifact extraction begins.
 
 ## Milestones
 
