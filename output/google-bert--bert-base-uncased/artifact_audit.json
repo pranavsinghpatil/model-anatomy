@@ -1,0 +1,51 @@
+{
+  "config_canonical_sha256": "235fdcf08cab525c280dd2447fffbb561fde85ba7e687916c155fa30d5a33275",
+  "config_url": "https://huggingface.co/google-bert/bert-base-uncased/resolve/86b5e0934494bd15c9632b12f734a8a67f723594/config.json",
+  "file_size": 440449768,
+  "header_length": 24048,
+  "header_sha256": "192094f6a027fa5e9bfe1f1b23e988dba5dc4d5c2c5b9b68d787cc454aa024b0",
+  "requests": [
+    {
+      "bytes_read": 4564,
+      "status": 200,
+      "url": "https://huggingface.co/api/models/google-bert/bert-base-uncased/revision/main"
+    },
+    {
+      "bytes_read": 570,
+      "status": 200,
+      "url": "https://huggingface.co/google-bert/bert-base-uncased/resolve/86b5e0934494bd15c9632b12f734a8a67f723594/config.json"
+    },
+    {
+      "bytes_read": 8,
+      "content_range": "bytes 0-7/440449768",
+      "range": [
+        0,
+        7
+      ],
+      "status": 206,
+      "url": "https://huggingface.co/google-bert/bert-base-uncased/resolve/86b5e0934494bd15c9632b12f734a8a67f723594/model.safetensors"
+    },
+    {
+      "bytes_read": 24048,
+      "content_range": "bytes 8-24055/440449768",
+      "range": [
+        8,
+        24055
+      ],
+      "status": 206,
+      "url": "https://huggingface.co/google-bert/bert-base-uncased/resolve/86b5e0934494bd15c9632b12f734a8a67f723594/model.safetensors"
+    }
+  ],
+  "safetensors_bytes_read": 24056,
+  "safetensors_url": "https://huggingface.co/google-bert/bert-base-uncased/resolve/86b5e0934494bd15c9632b12f734a8a67f723594/model.safetensors",
+  "sharded": false,
+  "shards": {
+    "model.safetensors": {
+      "file_size": 440449768,
+      "header_length": 24048,
+      "header_sha256": "192094f6a027fa5e9bfe1f1b23e988dba5dc4d5c2c5b9b68d787cc454aa024b0",
+      "url": "https://huggingface.co/google-bert/bert-base-uncased/resolve/86b5e0934494bd15c9632b12f734a8a67f723594/model.safetensors"
+    }
+  },
+  "weight_payload_bytes_read": 0
+}

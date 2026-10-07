@@ -79,7 +79,7 @@
       "header_sha256": "a41dc5e8c2f45cd5f533b4f081e7777de1f8faa3b2527134d4230ae531127b21",
       "requests": [
         {
-          "bytes_read": 4913,
+          "bytes_read": 4924,
           "status": 200,
           "url": "https://huggingface.co/api/models/openai-community/gpt2/revision/main"
         },

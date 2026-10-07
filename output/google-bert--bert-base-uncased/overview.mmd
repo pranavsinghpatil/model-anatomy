@@ -1,0 +1,8 @@
+flowchart TD
+    n0["Token IDs"]
+    n1["BERT Backbone"]
+    n2["LM Head"]
+    n3["Output"]
+    n0 -->|"[B, S]"| n1
+    n1 -->|"[B, S, 768]"| n2
+    n2 -->|"[B, S, 30522]"| n3

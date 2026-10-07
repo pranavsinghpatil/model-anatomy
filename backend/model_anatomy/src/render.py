@@ -39,7 +39,7 @@ def mermaid(graph: Graph) -> str:
 def write_outputs(
     ir: ModelIR, output_directory: Path, config_directory: Path, preview_directory: Path
 ) -> list[Path]:
-    """Write formal JSON/Mermaid artifacts and a bilingual Markdown preview."""
+    """Write formal JSON/Mermaid artifacts and an English Markdown preview."""
     import json
 
     model_path = output_directory / "model.json"
@@ -84,13 +84,13 @@ def write_outputs(
     )
     paths.append(diagnostics_path)
     preview = [
-        f"# {ir.architecture} Hierarchy Preview / 层级图预览",
+        f"# {ir.architecture} Hierarchy Preview",
         "",
-        f"Model: `{ir.model_id}` · revision: `{ir.metadata['revision']}`",
+        f"Model: `{ir.model_id}` | Revision: `{ir.metadata['revision']}`",
         "",
-        "这些图由同一份 Hierarchical Model IR 生成。实线表示 static source / pattern dataflow，虚线只表示结构关系。未执行 forward。",
+        "These graphs are generated from the same Hierarchical Model IR. Solid edges represent static source or pattern dataflow; dotted edges represent structural relationships. No forward pass was executed.",
         "",
-        "重复节点的 child graph 展示 representative instance；全部 instance paths 和参数保留在 Raw Structure。Unknown shapes / components 明确标注。",
+        "Child graphs of repeated nodes show a representative instance. All instance paths and parameters remain in the raw structure. Unknown shapes and components are explicitly marked.",
         "",
     ]
     for graph in ir.root_graph.walk():

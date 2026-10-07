@@ -32,7 +32,7 @@ def main(argv: list[str] | None = None) -> int:
             ir,
             args.output or Path("output") / slug,
             args.config_dir or Path("config") / slug,
-            Path(".playground"),
+            Path("preview"),
         )
     except (AnatomyError, requests.RequestException, OSError) as exc:
         parser.exit(1, f"Reconstruction failed: {exc}\n")

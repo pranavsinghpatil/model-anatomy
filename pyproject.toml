@@ -11,10 +11,23 @@ dependencies = [
   "torch>=2.4",
   "transformers>=4.45",
   "safetensors>=0.4",
+  "requests>=2.34.2",
 ]
 
 [project.optional-dependencies]
 dev = ["pytest>=8", "ruff>=0.6"]
 
+[project.scripts]
+model-anatomy = "model_anatomy.src.cli:main"
+
 [tool.setuptools.packages.find]
 where = ["backend"]
+
+[tool.pytest.ini_options]
+testpaths = [".tmp/tests"]
+addopts = "--basetemp=.tmp/pytest -o cache_dir=.tmp/pytest_cache"
+markers = ["integration: real Hugging Face metadata acceptance tests (network required)"]
+
+[tool.ruff]
+cache-dir = ".tmp/ruff_cache"
+line-length = 110
