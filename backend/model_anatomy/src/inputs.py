@@ -1,0 +1,86 @@
+"""Static input descriptions; no tokenizer, synthetic tensors, or forward calls."""
+
+from __future__ import annotations
+
+import inspect
+from typing import Any
+
+import torch
+
+from .ir import TensorSpec
+
+
+class InputResolver:
+    def __init__(self, model: torch.nn.Module):
+        self.model = model
+        parameter = next(model.parameters(), None)
+        self.activation_dtype = {
+            torch.float32: "F32",
+            torch.float16: "F16",
+            torch.bfloat16: "BF16",
+            torch.float64: "F64",
+        }.get(parameter.dtype if parameter is not None else None)
+
+    def describe(self) -> dict[str, Any]:
+        names = list(inspect.signature(self.model.forward).parameters)
+        return {
+            "forward_arguments": names,
+            "input_specs": {
+                name: {"shape": self.spec(name).shape, "dtype": self.spec(name).dtype}
+                for name in names
+                if name
+                in {"input_ids", "decoder_input_ids", "pixel_values", "input_features", "input_values"}
+            },
+            "execution": "disabled",
+            "synthetic_inputs_created": False,
+            "shape_basis": "symbolic input conventions and native config; not runtime observations",
+            "floating_dtype_basis": "native meta model dtype profile; runtime casts are not verified",
+        }
+
+    def spec(self, name: str, path: str = "") -> TensorSpec:
+        config = self.model.config
+        sequence = (
+            "T" if name == "decoder_input_ids" or "decoder" in path and config.is_encoder_decoder else "S"
+        )
+        if name in {"encoder_hidden_states", "key_value_states"}:
+            sequence = "S"
+        hidden = getattr(config, "hidden_size", None) or getattr(config, "d_model", None)
+        heads = getattr(config, "num_attention_heads", None) or getattr(config, "num_heads", None)
+        if name == "position_bias":
+            module = self.model.get_submodule(path) if path else self.model
+            cross = "cross" in type(module).__name__.lower() or "encdec" in type(module).__name__.lower()
+            return TensorSpec(
+                [1, heads, sequence, "S" if cross else sequence] if heads else None,
+                self.activation_dtype,
+                name,
+            )
+        if name == "position_embeddings":
+            dimension = getattr(config, "head_dim", None) or (hidden // heads if hidden and heads else None)
+            return TensorSpec(
+                ["B", sequence, dimension] if dimension else None, self.activation_dtype, "rotary_cos_sin"
+            )
+        if name in {"input_ids", "decoder_input_ids", "token_type_ids"}:
+            return TensorSpec(["B", sequence], "I64", name)
+        if name == "position_ids":
+            return TensorSpec([1, sequence], "I64", name)
+        if name == "pixel_values":
+            size = getattr(config, "image_size", None)
+            shape = (
+                list(size)
+                if isinstance(size, (list, tuple))
+                else [size, size]
+                if type(size) is int
+                else ["H", "W"]
+            )
+            return TensorSpec(["B", getattr(config, "num_channels", 3), *shape], self.activation_dtype, name)
+        if name == "input_features":
+            return TensorSpec(
+                ["B", getattr(config, "num_mel_bins", "F"), "Frames"], self.activation_dtype, name
+            )
+        if name == "input_values":
+            return TensorSpec(["B", "Samples"], self.activation_dtype, name)
+        return (
+            TensorSpec(["B", sequence, hidden], self.activation_dtype, name)
+            if type(hidden) is int
+            else TensorSpec(None, None, name)
+        )

@@ -4,14 +4,15 @@
 
 ## Current truth
 
-The resolver and reconstructor on `b-mvp` deliberately raise `NotImplementedError`.
-A FastAPI service foundation now provides health checks, capability reporting,
-OpenAPI, local configuration, and HTTP boundary tests. Readiness returns 503
-until an engine is integrated. No reconstruction milestone is complete. See
-[service integration](SERVICE_INTEGRATION.md) for the proposed worker, storage,
-frontend, and production gates. The primary target is
-[`HuggingFaceTB/SmolLM2-135M`](https://huggingface.co/HuggingFaceTB/SmolLM2-135M);
-pin its commit revision before reconstruction implementation begins.
+The real static engine is integrated from `feat/vv`, with committed regression
+tests and fresh pinned-model acceptance for GPT-2 and SmolLM2-135M. Resolver,
+module inspection, checkpoint metadata, and hierarchical semantic reports work
+through the CLI. Static warnings and unknown shapes remain explicit; this is not
+a runtime trace. See [engine acceptance](ENGINE_ACCEPTANCE.md).
+
+The HTTP foundation is present. Durable jobs, the public graph inspector,
+Supabase storage, Nemotron explanations, and cloud deployment follow in separate
+reviewable increments. No hosted-product release gate is yet complete.
 
 ## Milestones
 

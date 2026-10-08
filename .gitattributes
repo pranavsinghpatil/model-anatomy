@@ -1,0 +1,5 @@
+output/** linguist-generated=true
+preview/** linguist-generated=true
+uv.lock linguist-generated=true
+frontend/package-lock.json linguist-generated=true
+frontend/src/api/generated.ts linguist-generated=true

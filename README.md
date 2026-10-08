@@ -14,14 +14,30 @@ The first release proves that path for one decoder-only Transformer. A node must
 
 ## Current state
 
-The repository contains a Python reconstruction scaffold and a tested FastAPI service foundation. The resolver and reconstruction pipeline are not implemented yet on `b-mvp`. The API reports that limitation explicitly. The immediate target is `HuggingFaceTB/SmolLM2-135M`, a compact, Apache-2.0 decoder model with Safetensors support. See the [roadmap](docs/ROADMAP.md) for the dated release gates.
+The working CLI engine has been integrated from `feat/vv`. Fresh metadata-only
+runs verify GPT-2 and the primary target `HuggingFaceTB/SmolLM2-135M`, with no
+weight payload downloads or forward execution. See [engine acceptance](docs/ENGINE_ACCEPTANCE.md)
+for pinned revisions, tests, and the remaining static-analysis limitations.
+The FastAPI foundation is the HTTP boundary; durable web analyses and the
+interactive inspector are being integrated next.
+
+## Inspect a model
+
+```powershell
+uv sync --frozen --extra engine --extra api --extra dev
+uv run --no-sync model-anatomy openai-community/gpt2 --inspect
+```
+
+The command produces a model report, nested Mermaid diagrams, diagnostics,
+artifact audit, and Markdown preview. Use `--revision` to pin the model and
+`--preview-dir` to isolate previews. Network access to Hugging Face is required.
 
 ## Local API
 
 ```powershell
 python -m venv .venv
 .venv\Scripts\Activate.ps1
-python -m pip install -e '.[api,dev]'
+python -m pip install -e '.[api,engine,dev]'
 model-anatomy-api
 ```
 

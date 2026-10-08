@@ -91,3 +91,17 @@ targeting `b-mvp`; promote to `main` only through a separate reviewed PR.
 
 The worker, persistence, and frontend choices in `SERVICE_INTEGRATION.md` are
 recommendations for subsequent increments, not implemented capabilities.
+
+## D-016 - Integrate the working engine and preserve static evidence
+**2026-10-08 - accepted**
+
+Use the working `feat/vv` engine as the application's core and retain the CLI
+as a diagnostic entry point. The CLI and HTTP worker share extraction logic and
+canonical IR; the HTTP service must not execute CLI commands or parse terminal
+output. Fix extraction gaps during application integration and preserve partial
+results rather than inventing missing architecture.
+
+Use `pranav/` topic branches exclusively and raise PRs into `b-mvp`. Public
+visitors need no sign-in; anonymous ownership and usage limits belong to the
+service. Supabase PostgreSQL/private storage and evidence-bound Nemotron on
+Nebius are the accepted hosted direction.

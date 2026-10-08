@@ -17,12 +17,12 @@ jobs:
         with:
           python-version: '3.11'
       - name: Install project
-        run: |
-          python -m pip install --upgrade pip
-          pip install -e '.[api,dev]'
+        uses: astral-sh/setup-uv@v6
+      - name: Install locked CPU dependencies
+        run: uv sync --frozen --extra api --extra engine --extra dev
       - name: Compile
-        run: python -m compileall -q .
+        run: uv run --no-sync python -m compileall -q backend
       - name: Tests
-        run: pytest -q
-      - name: Lint API boundary
-        run: ruff check backend/model_anatomy/api backend/tests/test_api.py
+        run: uv run --no-sync pytest -q
+      - name: Lint
+        run: uv run --no-sync ruff check backend
