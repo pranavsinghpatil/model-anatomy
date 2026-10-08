@@ -118,3 +118,20 @@ NVIDIA Nemotron explanations use selected stored report facts and validated
 citations. AI cannot create or change graph facts. Cookie ownership is not
 sign-in or an anti-Sybil guarantee. Do not claim production readiness before
 real cloud configuration, container checks, live inference and deployment evidence.
+
+## D-018 - Live analyses first and one operational health contract
+**2026-10-09 - accepted**
+
+New analyses must inspect the submitted Hugging Face repository's actual pinned
+artifacts. Prepared snapshots are explicit optional examples, never an automatic
+default result or substitute for failed inspections. The browser begins with a
+visitor's recent job or an empty analysis workspace. Production has no mock
+response fallback; test-only mocks remain useful for deterministic failure tests.
+
+Consolidate liveness, readiness and configured availability into `GET /health`.
+It reports real database/storage/worker checks and returns 503 when inspection
+is unavailable. Optional AI configuration is separate from core readiness. Remove
+the former three operational endpoints instead of keeping redundant aliases.
+Allow exact same-origin Swagger mutations while retaining host validation and
+the explicit foreign-origin allowlist. Verify the HTTP-to-worker path against a
+real nonprepared model with prepared reports absent, not only saved snapshots.

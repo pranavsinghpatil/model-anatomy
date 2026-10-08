@@ -4,7 +4,7 @@
  */
 
 export interface paths {
-  "/healthz": {
+  "/health": {
     parameters: {
       query?: never;
       header?: never;
@@ -12,41 +12,7 @@ export interface paths {
       cookie?: never;
     };
     /** Health */
-    get: operations["health_healthz_get"];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/readyz": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /** Readiness */
-    get: operations["readiness_readyz_get"];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/capabilities": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /** Capabilities */
-    get: operations["capabilities_api_v1_capabilities_get"];
+    get: operations["health_health_get"];
     put?: never;
     post?: never;
     delete?: never;
@@ -82,7 +48,10 @@ export interface paths {
     /** List Analyses */
     get: operations["list_analyses_api_v1_analyses_get"];
     put?: never;
-    /** Create Analysis */
+    /**
+     * Analyze a Hugging Face model
+     * @description Accepts a repository ID or Hugging Face HTTPS URL, persists a new job and returns 202. The worker resolves an immutable revision and inspects real artifacts. No weights or remote model code are executed. Poll the returned ID using the same visitor cookie. An exact-revision cache hit is marked cached; this is not a prepared example.
+     */
     post: operations["create_analysis_api_v1_analyses_post"];
     delete?: never;
     options?: never;
@@ -276,33 +245,6 @@ export interface components {
       prepared: boolean;
       dimensions: components["schemas"]["Dimensions"];
     };
-    /** Capabilities */
-    Capabilities: {
-      /**
-       * Api Version
-       * @default v1
-       * @constant
-       */
-      api_version: "v1";
-      /**
-       * Reconstruction Available
-       * @default false
-       */
-      reconstruction_available: boolean;
-      /**
-       * Ai Available
-       * @default false
-       */
-      ai_available: boolean;
-      /**
-       * Storage Backend
-       * @default local
-       * @enum {string}
-       */
-      storage_backend: "local" | "supabase";
-      /** Supported Models */
-      supported_models?: string[];
-    };
     /** Citation */
     Citation: {
       /** Id */
@@ -319,7 +261,12 @@ export interface components {
     };
     /** CreateAnalysis */
     CreateAnalysis: {
-      /** Model */
+      /**
+       * Model
+       * @description Hugging Face repository ID or HTTPS URL; not a prepared analysis ID.
+       * @example HuggingFaceTB/SmolLM2-135M
+       * @example https://huggingface.co/openai-community/gpt2
+       */
       model: string;
     };
     /** Dimensions */
@@ -464,10 +411,36 @@ export interface components {
     Health: {
       /**
        * Status
-       * @default ok
+       * @enum {string}
+       */
+      status: "ok" | "degraded";
+      /**
+       * Api Version
+       * @default v1
        * @constant
        */
-      status: "ok";
+      api_version: "v1";
+      checks: components["schemas"]["HealthChecks"];
+      /** Analysis Available */
+      analysis_available: boolean;
+      /** Ai Available */
+      ai_available: boolean;
+      /**
+       * Storage Backend
+       * @enum {string}
+       */
+      storage_backend: "local" | "supabase";
+      /** Reason */
+      reason?: string | null;
+    };
+    /** HealthChecks */
+    HealthChecks: {
+      /** Database */
+      database: boolean;
+      /** Storage */
+      storage: boolean;
+      /** Worker */
+      worker: boolean;
     };
     /** NodeInspection */
     NodeInspection: {
@@ -511,17 +484,6 @@ export interface components {
       ai_generated: true;
       /** Warnings */
       warnings: string[];
-    };
-    /** Readiness */
-    Readiness: {
-      /**
-       * Status
-       * @default unavailable
-       * @enum {string}
-       */
-      status: "ready" | "unavailable";
-      /** Reason */
-      reason?: string | null;
     };
     /** Repetition */
     Repetition: {
@@ -576,7 +538,7 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
-  health_healthz_get: {
+  health_health_get: {
     parameters: {
       query?: never;
       header?: never;
@@ -636,137 +598,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["ErrorResponse"];
-        };
-      };
-    };
-  };
-  readiness_readyz_get: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["Readiness"];
-        };
-      };
-      /** @description Not Found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["ErrorResponse"];
-        };
-      };
-      /** @description Gone */
-      410: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["ErrorResponse"];
-        };
-      };
-      /** @description Unprocessable Entity */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["ErrorResponse"];
-        };
-      };
-      /** @description Too Many Requests */
-      429: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["ErrorResponse"];
-        };
-      };
-      /** @description Service Unavailable */
-      503: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["ErrorResponse"];
-        };
-      };
-    };
-  };
-  capabilities_api_v1_capabilities_get: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["Capabilities"];
-        };
-      };
-      /** @description Not Found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["ErrorResponse"];
-        };
-      };
-      /** @description Gone */
-      410: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["ErrorResponse"];
-        };
-      };
-      /** @description Unprocessable Entity */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["ErrorResponse"];
-        };
-      };
-      /** @description Too Many Requests */
-      429: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["ErrorResponse"];
-        };
-      };
-      /** @description Service Unavailable */
-      503: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["ErrorResponse"];
+          "application/json": components["schemas"]["Health"];
         };
       };
     };

@@ -22,6 +22,7 @@ test("real artifact graph, scoped nesting, tensor and evidence inspection", asyn
   page.on("pageerror", (error) => errors.push(error.message));
   await page.goto("/?analysis=example-gpt2");
   await expect(page.getByTestId("graph-canvas")).toBeVisible();
+  await expect(page).toHaveURL(/analysis=example-gpt2/);
   await expect(page.locator(".react-flow__node")).toHaveCount(
     rootGraph.nodes.length,
   );
@@ -75,13 +76,37 @@ test("real artifact graph, scoped nesting, tensor and evidence inspection", asyn
   expect(errors).toEqual([]);
 });
 
-test("prepared examples remain public when reconstruction and AI are unavailable", async ({
+test("503 health disables new analysis without hiding prepared or recent reports", async ({
   page,
   isMobile,
 }) => {
-  const requests = await mockService(page, { reconstruct: false, ai: false });
+  const requests = await mockService(page, {
+    recent: [
+      analysisFor("example-gpt2"),
+      { ...analysisFor("job-old"), created_at: "2026-10-07T09:00:00Z" },
+      analysisFor("job-test"),
+    ],
+    health: {
+      status: "degraded",
+      api_version: "v1",
+      checks: { database: true, storage: true, worker: false },
+      analysis_available: false,
+      ai_available: false,
+      storage_backend: "local",
+      reason: "Worker unavailable",
+    },
+  });
   await page.goto("/");
   await expect(page.getByTestId("graph-canvas")).toBeVisible();
+  await expect(page).toHaveURL(/analysis=job-test/);
+  await expect(page.locator(".service-state")).toHaveText("API degraded");
+  await expect(page.locator(".service-dot")).not.toHaveClass(/online/);
+  await expect(page.locator(".availability-note")).toContainText(
+    "Worker unavailable",
+  );
+  await page
+    .getByLabel("Hugging Face model", { exact: true })
+    .fill("org/model");
   await expect(
     page.getByRole("button", { name: "Analyze Model", exact: true }),
   ).toBeDisabled();
@@ -92,6 +117,9 @@ test("prepared examples remain public when reconstruction and AI are unavailable
       .click();
   await page.getByRole("button", { name: /SmolLM2 135M/ }).click();
   await expect(page.getByRole("heading", { level: 1 })).toContainText("SmolLM");
+  await expect(page.locator(".model-actions .prepared-label")).toHaveText(
+    "Prepared",
+  );
   await showQuestions(page, isMobile);
   await expect(page.getByLabel("Ask about model evidence")).toBeDisabled();
   await expect(
@@ -100,7 +128,76 @@ test("prepared examples remain public when reconstruction and AI are unavailable
   expect(requests.filter((request) => request.method === "POST")).toHaveLength(
     0,
   );
+  expect(requests.some((request) => request.path === "/health")).toBe(true);
+  expect(
+    requests.some((request) => request.path.includes("capabilities")),
+  ).toBe(false);
 });
+
+test("new visitor starts empty and chooses a prepared example explicitly", async ({
+  page,
+  isMobile,
+}, testInfo) => {
+  const requests = await mockService(page, { noRecent: true });
+  await page.goto("/");
+  await expect(page.locator(".service-state")).toHaveText("API v1");
+  await expect(page.getByText("No analysis selected").first()).toBeVisible();
+  await expect(page.getByTestId("graph-canvas")).toHaveCount(0);
+  await expect(page).not.toHaveURL(/analysis=/);
+  await expect(page.locator(".model-metrics")).toHaveCount(0);
+  await page
+    .getByLabel("Hugging Face model", { exact: true })
+    .fill("org/model");
+  await expect(
+    page.getByRole("button", { name: "Analyze Model", exact: true }),
+  ).toBeEnabled();
+  await page.screenshot({ path: testInfo.outputPath("empty-workspace.png") });
+  expect(
+    requests.some((request) => /\/analyses\/[^/?]+/.test(request.path)),
+  ).toBe(false);
+  if (isMobile)
+    await page
+      .getByRole("button", { name: "Open recent analyses" })
+      .first()
+      .click();
+  await expect(
+    page.getByRole("button", { name: /SmolLM2 135M/ }),
+  ).toContainText("Prepared");
+  await page.getByRole("button", { name: /SmolLM2 135M/ }).click();
+  await expect(page.getByTestId("graph-canvas")).toBeVisible();
+  await expect(page).toHaveURL(/analysis=example-smollm/);
+});
+
+test("optional AI configuration does not disable healthy model analysis", async ({
+  page,
+}) => {
+  await mockService(page, { ai: false, noRecent: true });
+  await page.goto("/");
+  await expect(page.locator(".service-state")).toHaveText("API v1");
+  await page
+    .getByLabel("Hugging Face model", { exact: true })
+    .fill("org/model");
+  await expect(
+    page.getByRole("button", { name: "Analyze Model", exact: true }),
+  ).toBeEnabled();
+});
+
+for (const healthError of ["network", "invalid"] as const)
+  test(`unknown health (${healthError}) does not claim online or block stored reports`, async ({
+    page,
+  }) => {
+    await mockService(page, { healthError });
+    await page.goto("/?analysis=example-gpt2");
+    await expect(page.getByTestId("graph-canvas")).toBeVisible();
+    await expect(page.locator(".service-state")).toHaveText("API unavailable");
+    await expect(page.locator(".service-dot")).not.toHaveClass(/online/);
+    await page
+      .getByLabel("Hugging Face model", { exact: true })
+      .fill("org/model");
+    await expect(
+      page.getByRole("button", { name: "Analyze Model", exact: true }),
+    ).toBeDisabled();
+  });
 
 test("submits exact contract and cancels a pending job", async ({ page }) => {
   const job = {

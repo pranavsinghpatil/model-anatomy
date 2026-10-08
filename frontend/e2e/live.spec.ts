@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import type { ArchitectureGraph } from "../src/api/contract";
-import type { AnalysisDetail } from "../src/api/contract";
+import type { AnalysisDetail, Health } from "../src/api/contract";
 import {
   expectGraphFramed,
   graphNode,
@@ -16,6 +16,12 @@ test("live prepared backend contract", async ({ page, isMobile }, testInfo) => {
   );
   const failures: string[] = [];
   page.on("pageerror", (error) => failures.push(error.message));
+  const healthResponse = await page.request.get("/health");
+  const health = (await healthResponse.json()) as Health;
+  expect(healthResponse.status()).toBe(
+    Object.values(health.checks).every(Boolean) ? 200 : 503,
+  );
+  expect(health.api_version).toBe("v1");
   const exampleResponse = await page.request.get("/api/v1/examples");
   expect(exampleResponse.ok()).toBe(true);
   const examples = (await exampleResponse.json()).examples as {
@@ -28,28 +34,36 @@ test("live prepared backend contract", async ({ page, isMobile }, testInfo) => {
   );
   expect(examples.some((example) => example.id === "example-gpt2")).toBe(true);
   await page.goto("/");
-  await expect(page.getByTestId("graph-canvas")).toBeVisible();
-  await expect(page.getByRole("heading", { level: 1 })).toHaveText(
-    examples.find((example) => example.id === "example-smollm")!.model_id,
+  await expect(page.getByText("No analysis selected").first()).toBeVisible();
+  await expect(page).not.toHaveURL(/analysis=/);
+  await expect(page.getByTestId("graph-canvas")).toHaveCount(0);
+  await expect(page.locator(".service-state")).toHaveText(
+    health.status === "ok" ? "API v1" : "API degraded",
   );
+  await page.screenshot({
+    path: testInfo.outputPath("live-empty-workspace.png"),
+    animations: "disabled",
+  });
   for (const id of ["example-smollm", "example-gpt2"]) {
-    if (id === "example-gpt2") {
-      if (isMobile)
-        await page
-          .getByRole("button", { name: "Open recent analyses" })
-          .first()
-          .click();
+    if (isMobile)
       await page
-        .getByRole("button", {
-          name: new RegExp(
-            examples.find((example) => example.id === id)!.title,
-          ),
-        })
+        .getByRole("button", { name: "Open recent analyses" })
+        .first()
         .click();
-    }
+    await page
+      .getByRole("button", {
+        name: new RegExp(examples.find((example) => example.id === id)!.title),
+      })
+      .click();
     const analysisResponse = await page.request.get(`/api/v1/analyses/${id}`);
     expect(analysisResponse.ok()).toBe(true);
     const analysis = await analysisResponse.json();
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText(
+      analysis.model_id,
+    );
+    await expect(page.locator(".model-actions .prepared-label")).toHaveText(
+      "Prepared",
+    );
     const graphResponse = await page.request.get(
       `/api/v1/analyses/${id}/graphs/${encodeURIComponent(analysis.root_graph_id)}`,
     );
@@ -160,9 +174,7 @@ test("live prepared backend contract", async ({ page, isMobile }, testInfo) => {
     expect(geometry).toEqual({ overflow: false, overlap: false });
   }
   await showQuestions(page, isMobile);
-  const capabilityResponse = await page.request.get("/api/v1/capabilities");
-  const capabilities = await capabilityResponse.json();
-  if (!capabilities.ai_available)
+  if (!health.ai_available)
     await expect(page.getByLabel("Ask about model evidence")).toBeDisabled();
   await page.screenshot({
     path: testInfo.outputPath("live-questions.png"),
@@ -183,9 +195,11 @@ test("live model submission reaches a stored architecture", async ({
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
   await page.goto("/");
+  await expect(page.getByText("No analysis selected").first()).toBeVisible();
+  await expect(page.getByTestId("graph-canvas")).toHaveCount(0);
   await page
     .getByLabel("Hugging Face model", { exact: true })
-    .fill("HuggingFaceTB/SmolLM2-135M");
+    .fill("HuggingFaceTB/SmolLM2-360M");
   await expect(
     page.getByRole("button", { name: "Analyze Model", exact: true }),
   ).toBeEnabled({ timeout: 60_000 });
@@ -213,6 +227,9 @@ test("live model submission reaches a stored architecture", async ({
     await page.request.get(`/api/v1/analyses/${created.id}`)
   ).json()) as AnalysisDetail;
   expect(["completed", "partial"]).toContain(result.status);
+  expect(result.model_id).toBe("HuggingFaceTB/SmolLM2-360M");
+  expect(result.parameter_count).toBe(361_821_120);
+  expect(result.prepared).toBe(false);
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(
     result.model_id,
   );
@@ -228,5 +245,15 @@ test("live model submission reaches a stored architecture", async ({
   await expect(page.locator(".recent-link.active")).toContainText(
     result.model_id,
   );
+  await page.goto("/");
+  await expect(page).toHaveURL(
+    new RegExp(`analysis=${encodeURIComponent(created.id)}`),
+  );
+  await expect(page.getByTestId("graph-canvas")).toBeVisible();
+  await expectGraphFramed(page);
+  await page.screenshot({
+    path: testInfo.outputPath("live-restored-analysis.png"),
+    animations: "disabled",
+  });
   expect(errors).toEqual([]);
 });

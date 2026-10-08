@@ -3,9 +3,11 @@ import { fileURLToPath } from "node:url";
 import type { Page } from "@playwright/test";
 import type {
   AnalysisDetail,
+  AnalysisSummary,
   ArchitectureGraph,
   Evidence,
   GraphNode,
+  Health,
 } from "../src/api/contract";
 
 type RawNode = Omit<GraphNode, "child_graph_id"> & {
@@ -86,7 +88,10 @@ export function analysisFor(id = "example-gpt2"): AnalysisDetail {
 export type Scenario = {
   job?: AnalysisDetail;
   ai?: boolean;
-  reconstruct?: boolean;
+  health?: Health;
+  healthError?: "network" | "invalid";
+  noRecent?: boolean;
+  recent?: AnalysisSummary[];
   postStatus?: number;
   postError?: string;
   questionError?: boolean;
@@ -102,7 +107,9 @@ export async function mockService(page: Page, scenario: Scenario = {}) {
   const requests: { method: string; path: string; body: unknown }[] = [];
   let job = scenario.job ?? analysisFor("job-test");
   let polls = 0;
-  await page.route("**/api/v1/**", async (route) => {
+  const apiRoute = (url: URL) =>
+    url.pathname === "/health" || url.pathname.startsWith("/api/v1/");
+  await page.route(apiRoute, async (route) => {
     const request = route.request();
     const url = new URL(request.url());
     const parts = url.pathname.split("/").slice(3).map(decodeURIComponent);
@@ -119,14 +126,21 @@ export async function mockService(page: Page, scenario: Scenario = {}) {
       });
     const error = (status: number, code: string, message: string) =>
       json({ error: { code, message, request_id: "test-request" } }, status);
-    if (parts[0] === "capabilities")
-      return json({
+    if (url.pathname === "/health") {
+      if (scenario.healthError === "network") return route.abort("failed");
+      if (scenario.healthError === "invalid")
+        return error(503, "unavailable", "Invalid health response");
+      const health: Health = scenario.health ?? {
+        status: "ok",
         api_version: "v1",
-        reconstruction_available: scenario.reconstruct ?? true,
+        checks: { database: true, storage: true, worker: true },
+        analysis_available: true,
         ai_available: scenario.ai ?? true,
         storage_backend: "local",
-        supported_models: ["gpt2", "llama"],
-      });
+        reason: null,
+      };
+      return json(health, health.status === "ok" ? 200 : 503);
+    }
     if (parts[0] === "examples")
       return json({
         examples: scenario.empty
@@ -146,7 +160,10 @@ export async function mockService(page: Page, scenario: Scenario = {}) {
               "Analysis could not be started",
             )
           : json(job, 202);
-      return json({ analyses: scenario.empty ? [] : [job] });
+      return json({
+        analyses:
+          scenario.empty || scenario.noRecent ? [] : (scenario.recent ?? [job]),
+      });
     }
     const id = parts[1];
     if (parts.length === 2) {

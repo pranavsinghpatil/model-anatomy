@@ -5,21 +5,20 @@ from typing import Any, Literal
 from pydantic import BaseModel, Field
 
 
+class HealthChecks(BaseModel):
+    database: bool
+    storage: bool
+    worker: bool
+
+
 class Health(BaseModel):
-    status: Literal["ok"] = "ok"
-
-
-class Readiness(BaseModel):
-    status: Literal["ready", "unavailable"] = "unavailable"
-    reason: str | None = None
-
-
-class Capabilities(BaseModel):
+    status: Literal["ok", "degraded"]
     api_version: Literal["v1"] = "v1"
-    reconstruction_available: bool = False
-    ai_available: bool = False
-    storage_backend: Literal["local", "supabase"] = "local"
-    supported_models: list[str] = Field(default_factory=list)
+    checks: HealthChecks
+    analysis_available: bool
+    ai_available: bool
+    storage_backend: Literal["local", "supabase"]
+    reason: str | None = None
 
 
 class ErrorDetail(BaseModel):
@@ -33,7 +32,12 @@ class ErrorResponse(BaseModel):
 
 
 class CreateAnalysis(BaseModel):
-    model: str = Field(min_length=1, max_length=512)
+    model: str = Field(
+        min_length=1,
+        max_length=512,
+        description="Hugging Face repository ID or HTTPS URL; not a prepared analysis ID.",
+        examples=["HuggingFaceTB/SmolLM2-135M", "https://huggingface.co/openai-community/gpt2"],
+    )
 
 
 class Question(BaseModel):

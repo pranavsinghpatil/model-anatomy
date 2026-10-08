@@ -2,7 +2,7 @@ import type {
   AnalysisDetail,
   AnalysesResponse,
   ArchitectureGraph,
-  Capabilities,
+  Health,
   ExportFormat,
   NodeDetail,
   ExamplesResponse,
@@ -36,10 +36,14 @@ async function errorFrom(response: Response): Promise<ApiError> {
   );
 }
 
-async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
+async function request<T>(
+  path: string,
+  init: RequestInit = {},
+  options: { prefix?: string; acceptedStatuses?: number[] } = {},
+): Promise<T> {
   let response: Response;
   try {
-    response = await fetch(`${prefix}${path}`, {
+    response = await fetch(`${options.prefix ?? prefix}${path}`, {
       ...init,
       credentials: "include",
       headers: {
@@ -56,7 +60,8 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
       "Cannot reach the analysis service.",
     );
   }
-  if (!response.ok) throw await errorFrom(response);
+  if (!response.ok && !options.acceptedStatuses?.includes(response.status))
+    throw await errorFrom(response);
   try {
     return (await response.json()) as T;
   } catch {
@@ -69,8 +74,37 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
 }
 
 export const api = {
-  capabilities: (signal?: AbortSignal) =>
-    request<Capabilities>("/capabilities", { signal }),
+  health: async (signal?: AbortSignal): Promise<Health> => {
+    const health = await request<Health>(
+      "/health",
+      { signal },
+      {
+        prefix: "",
+        acceptedStatuses: [503],
+      },
+    );
+    if (
+      !health ||
+      !["ok", "degraded"].includes(health.status) ||
+      health.api_version !== "v1" ||
+      !health.checks ||
+      [
+        health.checks.database,
+        health.checks.storage,
+        health.checks.worker,
+        health.analysis_available,
+        health.ai_available,
+      ].some((value) => typeof value !== "boolean") ||
+      !["local", "supabase"].includes(health.storage_backend) ||
+      !(health.reason === null || typeof health.reason === "string")
+    )
+      throw new ApiError(
+        0,
+        "invalid_response",
+        "The service returned an invalid health response.",
+      );
+    return health;
+  },
   examples: (signal?: AbortSignal) =>
     request<ExamplesResponse>("/examples", { signal }),
   analyses: (signal?: AbortSignal) =>

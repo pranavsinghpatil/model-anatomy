@@ -13,10 +13,13 @@ npm ci
 npm run dev
 ```
 
-Open the URL printed by Vite. `/api` proxies to `http://127.0.0.1:8001` by default.
+Open the URL printed by Vite. `/api` and `/health` proxy to `http://127.0.0.1:8001` by default.
 Set `API_PROXY_TARGET` in the environment or `.env.local` to change the upstream.
-Browser requests always use `/api/v1` and include same-origin guest cookies.
-In production, serve `dist/` and reverse-proxy `/api` to the HTTP service.
+Browser requests use `/api/v1` and root `/health` with same-origin guest cookies.
+In production, serve `dist/` and reverse-proxy both `/api` and `/health` to the HTTP service.
+On entry, the workspace restores the visitor's most recent non-prepared job when
+one exists. Otherwise it opens with an empty canvas and model input. Prepared
+examples are optional, explicitly selected reports with prepared badges.
 
 ## Verification
 
@@ -44,23 +47,34 @@ browser Origin header, and the API rejects unlisted mutation origins. These are
 explicit local development origins, not production settings. `E2E_BASE_URL` can
 override the browser URL (for example, port 5173 with the default API configuration).
 Both a running HTTP service and worker are required for live submission. Each
-viewport submits one SmolLM2 job under its own guest cookie. Screenshots and traces go to the ignored
+viewport submits one non-prepared SmolLM2-360M job under its own guest cookie and
+verifies its real parameter count and recent-job restoration. Screenshots and traces go to the ignored
 `test-results/` directory.
 
 ## Contract Integration
 
 `src/api/generated.ts` is generated from the actual service's `/openapi.json` using
 `npm run generate:api`. This command includes formatting, so an unchanged schema
-produces the same file for CI drift checks. `src/api/contract.ts` contains aliases
+produces the same file for CI drift checks. For an offline schema exported from
+the actual Python app's `app.openapi()`, use `npm run generate:api -- path/to/openapi.json`.
+The offline input is a generated contract, not application data or a graph fallback.
+`src/api/contract.ts` contains aliases
 imported from that generated file; no handwritten response schemas remain.
 Regenerate after backend schema changes, then type-check. `src/api/client.ts` is the
 single HTTP boundary and uses generated request and response schemas.
 
-Required endpoints use `/api/v1`: capabilities, examples, analyses (list/create),
+Readiness and optional AI configuration come from the single root `GET /health`.
+A 503 health response uses the same health schema as 200; its check results and
+reason are retained, and the UI indicates degradation without hiding stored
+reports. Only new analyses require confirmed healthy database, storage, and
+worker checks plus `analysis_available`. AI availability is independent.
+
+Other required endpoints use `/api/v1`: examples, analyses (list/create),
 analysis detail/cancel, graph, paginated node inspection, questions, and exports
 (`json`, `zip`, `mermaid`, `markdown`, `diagnostics`, `audit`). HTTP failures must
-provide `{error:{code,message,request_id}}`. Prepared examples use IDs `example-gpt2`
-and `example-smollm` and remain readable when reconstruction/AI are unavailable.
+provide `{error:{code,message,request_id}}`, except for the structured 503 health
+response. Prepared examples use IDs `example-gpt2`
+and `example-smollm` and remain selectable when new analysis/AI are unavailable.
 
 Graph/node identities stay scoped by graph ID. Repeated blocks open only the
 engine-provided representative child graph; collapsing returns to its parent.

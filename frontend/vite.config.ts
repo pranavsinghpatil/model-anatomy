@@ -15,6 +15,10 @@ export default defineConfig(({ mode }) => {
         ],
       },
       proxy: {
+        "/health": {
+          target: env.API_PROXY_TARGET || "http://127.0.0.1:8001",
+          changeOrigin: true,
+        },
         "/api": {
           target: env.API_PROXY_TARGET || "http://127.0.0.1:8001",
           changeOrigin: true,

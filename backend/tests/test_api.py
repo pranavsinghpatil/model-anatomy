@@ -24,17 +24,51 @@ def client(tmp_path):
 
 
 def test_readiness_requires_initialized_services_and_recent_worker(client):
-    assert client.get("/healthz").json() == {"status": "ok"}
-    assert client.get("/readyz").status_code == 503
-    capability = client.get("/api/v1/capabilities").json()
-    assert capability["reconstruction_available"] is False
-    assert capability["ai_available"] is False
-    assert capability["storage_backend"] == "local"
+    response = client.get("/health")
+    assert response.status_code == 503
+    health = response.json()
+    assert health["status"] == "degraded"
+    assert health["checks"] == {"database": True, "storage": True, "worker": False}
+    assert health["analysis_available"] is False
+    assert health["ai_available"] is False
+    assert health["storage_backend"] == "local"
+    assert health["reason"] == "worker_unavailable"
     client.app.state.jobs.acquire_worker("worker")
-    assert client.get("/readyz").status_code == 200
-    assert client.get("/api/v1/capabilities").json()["reconstruction_available"] is True
+    response = client.get("/health")
+    assert response.status_code == 200
+    assert response.json()["analysis_available"] is True
+    assert response.json()["reason"] is None
     client.app.state.jobs.release_worker("worker")
-    assert client.get("/readyz").status_code == 503
+    assert client.get("/health").status_code == 503
+
+
+def test_only_one_health_endpoint_without_fixed_supported_model_list(client):
+    schema = client.get("/openapi.json").json()
+    assert "/health" in schema["paths"]
+    for path in ("/healthz", "/readyz", "/api/v1/capabilities"):
+        assert path not in schema["paths"]
+        assert client.get(path).status_code == 404
+    assert "supported_models" not in client.get("/health").json()
+
+
+@pytest.mark.parametrize("dependency", ["database", "storage"])
+def test_health_reports_real_dependency_failure_without_leaking_details(client, monkeypatch, dependency):
+    from sqlalchemy.exc import SQLAlchemyError
+
+    client.app.state.jobs.acquire_worker("worker")
+    target = client.app.state.jobs.db if dependency == "database" else client.app.state.jobs.storage
+
+    def unavailable():
+        error = SQLAlchemyError("SECRET") if dependency == "database" else OSError("SECRET")
+        raise error
+
+    monkeypatch.setattr(target, "read" if dependency == "database" else "check", unavailable)
+    response = client.get("/health")
+    assert response.status_code == 503
+    assert response.json()["checks"][dependency] is False
+    assert response.json()["analysis_available"] is False
+    assert response.json()["reason"] == f"{dependency}_unavailable"
+    assert "SECRET" not in response.text
 
 
 def test_request_ids_are_generated_and_errors_correlated(client):
@@ -42,11 +76,11 @@ def test_request_ids_are_generated_and_errors_correlated(client):
     request_id = response.headers["X-Request-ID"]
     assert UUID(request_id).version == 4
     assert response.json()["error"] == {"code": "http_404", "message": "Not Found", "request_id": request_id}
-    assert client.get("/healthz").headers["X-Request-ID"] != request_id
+    assert client.get("/health").headers["X-Request-ID"] != request_id
 
 
 def test_hosts_cors_credentials_and_mutation_origin(client):
-    host = client.get("/healthz", headers={"Host": "attacker.example"})
+    host = client.get("/health", headers={"Host": "attacker.example"})
     assert host.status_code == 400
     assert host.json()["error"]["request_id"] == host.headers["X-Request-ID"]
     for origin, expected in [("http://localhost:5173", 200), ("https://attacker.example", 400)]:
@@ -62,6 +96,32 @@ def test_hosts_cors_credentials_and_mutation_origin(client):
         ).status_code
         == 403
     )
+
+
+def test_swagger_same_origin_can_submit_and_cancel_without_loosening_cross_origin_guard(client):
+    client.app.state.jobs.acquire_worker("worker")
+    response = client.post(
+        "/api/v1/analyses", json={"model": "HuggingFaceTB/SmolLM2-360M"},
+        headers={"Origin": "http://127.0.0.1"},
+    )
+    assert response.status_code == 202
+    job = response.json()
+    assert job["model_id"] == "HuggingFaceTB/SmolLM2-360M"
+    assert job["prepared"] is False
+    path = f"/api/v1/analyses/{job['id']}"
+    assert client.delete(path, headers={"Origin": "http://127.0.0.1:8001"}).status_code == 403
+    assert client.delete(path, headers={"Origin": "https://127.0.0.1"}).status_code == 403
+    assert client.delete(path, headers={"Origin": "http://127.0.0.1"}).json()["status"] == "cancelled"
+
+
+def test_same_origin_does_not_bypass_host_validation(client):
+    client.app.state.jobs.acquire_worker("worker")
+    response = client.post(
+        "/api/v1/analyses", json={"model": "gpt2"},
+        headers={"Host": "attacker.example", "Origin": "http://attacker.example"},
+    )
+    assert response.status_code == 400
+    assert client.get("/api/v1/analyses").json()["analyses"] == []
 
 
 def test_create_cookie_recent_isolation_and_cancel(client):
@@ -145,8 +205,9 @@ def test_dependency_failure_preserves_examples_and_health(tmp_path):
     service = JobService(settings)
     service.initialize = lambda: (_ for _ in ()).throw(ServiceError(503, "offline", "offline"))
     with TestClient(create_app(settings, service=service), base_url="http://localhost") as client:
-        assert client.get("/healthz").status_code == 200
-        assert client.get("/readyz").status_code == 503
+        health = client.get("/health")
+        assert health.status_code == 503
+        assert health.json()["checks"]["database"] is False
         assert client.get("/api/v1/analyses/example-gpt2").status_code == 200
         assert client.get("/api/v1/analyses").status_code == 503
 
@@ -183,7 +244,9 @@ def test_invalid_production_settings_never_render_secret_inputs():
 
 def test_docs_can_be_disabled_and_openapi_matches_service(client, tmp_path):
     schema = client.get("/openapi.json").json()
-    assert "503" in schema["paths"]["/readyz"]["get"]["responses"]
+    assert schema["paths"]["/health"]["get"]["responses"]["503"]["content"]["application/json"]["schema"] == {
+        "$ref": "#/components/schemas/Health"
+    }
     assert "/api/v1/analyses/{analysis_id}/questions" in schema["paths"]
     with TestClient(
         create_app(Settings(data_dir=tmp_path, docs_enabled=False)), base_url="http://localhost"

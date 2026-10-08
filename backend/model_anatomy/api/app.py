@@ -21,16 +21,15 @@ from model_anatomy.service.views import EXAMPLES, examples, export, graph_view, 
 from .schemas import (
     AnalysesResponse,
     AnalysisDetail,
-    Capabilities,
     CreateAnalysis,
     ErrorResponse,
     ExamplesResponse,
     GraphResponse,
     Health,
+    HealthChecks,
     NodeInspection,
     Question,
     QuestionAnswer,
-    Readiness,
 )
 from .settings import Settings
 
@@ -61,6 +60,12 @@ def create_app(settings: Settings | None = None, *, service=None, explanation=No
 
     app = FastAPI(
         title="Model Anatomy API",
+        description=(
+            "Analyze a Hugging Face model from its actual configuration, native structure and "
+            "checkpoint metadata. Submit a model, poll its persisted analysis, then inspect graphs, "
+            "tensors and exports. Prepared examples are explicitly marked and never substituted "
+            "for a submitted model. Retain the visitor cookie to access your analyses."
+        ),
         version="1.1",
         lifespan=lifespan,
         docs_url="/docs" if config.docs_enabled else None,
@@ -122,7 +127,13 @@ def create_app(settings: Settings | None = None, *, service=None, explanation=No
     async def observe(request: Request, call_next):
         request.state.request_id = uuid4().hex
         origin = request.headers.get("origin")
-        if request.method in {"POST", "DELETE"} and origin and origin not in config.cors_origins:
+        same_origin = str(request.url.replace(path="", query="")).rstrip("/")
+        if (
+            request.method in {"POST", "DELETE"}
+            and origin
+            and origin != same_origin
+            and origin not in config.cors_origins
+        ):
             response = error(request, 403, "origin_rejected", "Request origin is not allowed")
         else:
             try:
@@ -182,36 +193,41 @@ def create_app(settings: Settings | None = None, *, service=None, explanation=No
     async def validation_error(request, exc):
         return error(request, 422, "validation_error", "Request fields failed validation")
 
-    @app.get("/healthz", response_model=Health)
+    @app.get("/health", response_model=Health, responses={503: {"model": Health}})
     def health():
-        return Health()
-
-    @app.get("/readyz", response_model=Readiness, responses={503: {"model": ErrorResponse}})
-    def readiness(request: Request):
+        checks = HealthChecks(database=False, storage=False, worker=False)
+        reason = None
         try:
             require_service()
+            with jobs.db.read() as session:
+                session.execute(text("SELECT 1"))
             verify_migrations()
+            checks.database = True
+        except (ServiceError, SQLAlchemyError, OSError):
+            reason = "database_unavailable"
+        try:
             jobs.storage.check()
-            if not jobs.worker_available():
-                raise ServiceError(503, "worker_unavailable", "Reconstruction worker is offline")
-        except (SQLAlchemyError, OSError):
-            raise ServiceError(503, "service_unavailable", "Service dependency unavailable") from None
-        return {"status": "ready", "reason": None}
-
-    @app.get("/api/v1/capabilities", response_model=Capabilities)
-    def capabilities():
-        available = False
-        if app.state.service_ready:
+            checks.storage = True
+        except (ServiceError, OSError):
+            reason = reason or "storage_unavailable"
+        if checks.database:
             try:
-                available = jobs.worker_available()
+                checks.worker = jobs.worker_available()
             except SQLAlchemyError:
-                pass
-        return Capabilities(
-            reconstruction_available=available,
+                checks.database = False
+                reason = "database_unavailable"
+        if not checks.worker:
+            reason = reason or "worker_unavailable"
+        available = all((checks.database, checks.storage, checks.worker))
+        result = Health(
+            status="ok" if available else "degraded",
+            checks=checks,
+            analysis_available=available,
             ai_available=ai.available,
             storage_backend=config.storage_backend,
-            supported_models=["gpt2", "llama"],
+            reason=reason,
         )
+        return JSONResponse(status_code=200 if available else 503, content=result.model_dump())
 
     @app.get("/api/v1/examples", response_model=ExamplesResponse)
     def list_examples():
@@ -221,7 +237,18 @@ def create_app(settings: Settings | None = None, *, service=None, explanation=No
     def list_analyses(request: Request):
         return {"analyses": jobs.recent(guest(request))}
 
-    @app.post("/api/v1/analyses", status_code=202, response_model=AnalysisDetail)
+    @app.post(
+        "/api/v1/analyses",
+        status_code=202,
+        response_model=AnalysisDetail,
+        summary="Analyze a Hugging Face model",
+        description=(
+            "Accepts a repository ID or Hugging Face HTTPS URL, persists a new job and returns 202. "
+            "The worker resolves an immutable revision and inspects real artifacts. No weights or "
+            "remote model code are executed. Poll the returned ID using the same visitor cookie. "
+            "An exact-revision cache hit is marked cached; this is not a prepared example."
+        ),
+    )
     def create_analysis(body: CreateAnalysis, request: Request):
         return jobs.create(guest(request), body.model)
 

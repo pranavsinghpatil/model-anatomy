@@ -199,6 +199,43 @@ def test_lifetime_worker_lock_excludes_other_connections(tmp_path):
     second.db.engine.dispose()
 
 
+def test_idle_worker_recovers_expired_lease_after_computer_suspend(tmp_path, monkeypatch):
+    now = [1000.0]
+    service = JobService(Settings(data_dir=tmp_path), clock=lambda: now[0])
+    worker = Worker(service.settings, service=service)
+    heartbeat = service.heartbeat
+    calls = []
+
+    def suspend_once(owner, job_id=None):
+        calls.append(owner)
+        if len(calls) == 1:
+            now[0] += service.settings.lease_seconds + 1
+        return heartbeat(owner, job_id)
+
+    monkeypatch.setattr(service, "heartbeat", suspend_once)
+    worker.run(once=True)
+    assert calls == [worker.owner]
+    assert not service.worker_available()
+
+
+def test_idle_worker_does_not_steal_another_live_lease(tmp_path, monkeypatch):
+    service = JobService(Settings(data_dir=tmp_path))
+    worker = Worker(service.settings, service=service)
+    heartbeat = service.heartbeat
+
+    def replace_owner(owner, job_id=None):
+        service.release_worker(owner)
+        assert service.acquire_worker("other")
+        return heartbeat(owner, job_id)
+
+    monkeypatch.setattr(service, "heartbeat", replace_owner)
+    with pytest.raises(ServiceError, match="lease"):
+        worker.run(once=True)
+    assert service.worker_available()
+    service.release_worker("other")
+    service.db.engine.dispose()
+
+
 @pytest.mark.skipif(sys.platform != "linux", reason="Production meta-import memory gate requires real Linux")
 def test_linux_real_tiny_meta_model_under_production_address_limit():
     backend = Path(__file__).resolve().parents[1]

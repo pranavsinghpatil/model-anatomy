@@ -60,11 +60,19 @@ export function App() {
   const exportMenu = useRef<HTMLDetailsElement>(null);
   const activeAnalysis = useRef(analysisId);
   activeAnalysis.current = analysisId;
-  const capabilities = useQuery({
-    queryKey: ["capabilities"],
-    queryFn: ({ signal }) => api.capabilities(signal),
+  const health = useQuery({
+    queryKey: ["health"],
+    queryFn: ({ signal }) => api.health(signal),
     refetchInterval: 30_000,
   });
+  const serviceHealth = health.error ? undefined : health.data;
+  const analysisAvailable =
+    serviceHealth?.status === "ok" &&
+    serviceHealth.checks.database &&
+    serviceHealth.checks.storage &&
+    serviceHealth.checks.worker &&
+    serviceHealth.analysis_available;
+  const restoredRecent = useRef(false);
   const examples = useQuery({
     queryKey: ["examples"],
     queryFn: ({ signal }) => api.examples(signal),
@@ -108,13 +116,13 @@ export function App() {
     window.history.replaceState(null, "", url);
   }, []);
   useEffect(() => {
-    if (!analysisId && examples.data?.examples.length)
-      choose(
-        examples.data.examples.find(
-          (example) => example.id === "example-smollm",
-        )?.id ?? examples.data.examples[0].id,
-      );
-  }, [analysisId, examples.data, choose]);
+    if (restoredRecent.current || analysisId || !recent.data) return;
+    restoredRecent.current = true;
+    const ownJob = recent.data.analyses
+      .filter((job) => !job.prepared)
+      .sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at))[0];
+    if (ownJob) choose(ownJob.id);
+  }, [analysisId, recent.data, choose]);
   const create = useMutation({
     mutationFn: api.analyze,
     onSuccess: (result) => {
@@ -280,16 +288,21 @@ export function App() {
         <div
           className="service-state"
           title={
-            capabilities.error?.message ??
-            `Storage: ${capabilities.data?.storage_backend ?? "Unknown"}`
+            health.error?.message ??
+            serviceHealth?.reason ??
+            (serviceHealth
+              ? `Storage: ${serviceHealth.storage_backend}; database: ${serviceHealth.checks.database ? "ok" : "unavailable"}; storage: ${serviceHealth.checks.storage ? "ok" : "unavailable"}; worker: ${serviceHealth.checks.worker ? "ok" : "unavailable"}`
+              : "Health unknown")
           }
         >
           <span
-            className={`service-dot ${capabilities.data ? "online" : ""}`}
+            className={`service-dot ${serviceHealth?.status === "ok" ? "online" : serviceHealth?.status === "degraded" ? "degraded" : ""}`}
           />
-          {capabilities.data
-            ? `API ${capabilities.data.api_version}`
-            : capabilities.isPending
+          {serviceHealth
+            ? serviceHealth.status === "degraded"
+              ? "API degraded"
+              : `API ${serviceHealth.api_version}`
+            : health.isPending
               ? "Connecting"
               : "API unavailable"}
         </div>
@@ -305,11 +318,7 @@ export function App() {
           className="model-form"
           onSubmit={(event) => {
             event.preventDefault();
-            if (
-              model.trim() &&
-              !create.isPending &&
-              capabilities.data?.reconstruction_available !== false
-            )
+            if (model.trim() && !create.isPending && analysisAvailable)
               create.mutate(model.trim());
           }}
         >
@@ -329,14 +338,10 @@ export function App() {
           <button
             className="analyze-button"
             type="submit"
-            disabled={
-              create.isPending ||
-              !model.trim() ||
-              capabilities.data?.reconstruction_available === false
-            }
+            disabled={create.isPending || !model.trim() || !analysisAvailable}
             title={
-              capabilities.data?.reconstruction_available === false
-                ? "Analysis service unavailable"
+              !analysisAvailable
+                ? "Analysis unavailable until service health is confirmed"
                 : "Analyze Model"
             }
           >
@@ -348,9 +353,14 @@ export function App() {
             <span>Analyze Model</span>
           </button>
         </form>
-        {capabilities.data?.reconstruction_available === false && (
+        {(health.error ||
+          serviceHealth?.analysis_available === false ||
+          serviceHealth?.status === "degraded") && (
           <div className="availability-note">
-            Analysis unavailable. Prepared analyses remain readable.
+            {serviceHealth?.reason ??
+              health.error?.message ??
+              "Analysis unavailable."}{" "}
+            New analyses are unavailable.
           </div>
         )}
         {create.error && <ErrorNotice error={create.error} />}
@@ -393,6 +403,7 @@ export function App() {
                 </span>
                 <span className="analysis-link-copy">
                   <strong>{example.title}</strong>
+                  <span className="prepared-label">Prepared</span>
                   <span>{example.architecture ?? "Unknown architecture"}</span>
                   <small>
                     {count(example.parameter_count, true)} parameters
@@ -448,7 +459,9 @@ export function App() {
                 </IconButton>
                 <div>
                   <span className="eyebrow">
-                    {detail?.architecture ?? "Architecture unknown"}
+                    {detail
+                      ? (detail.architecture ?? "Architecture unknown")
+                      : "Workspace"}
                   </span>
                   <h1>{detail?.model_id ?? "Model Anatomy"}</h1>
                 </div>
@@ -505,32 +518,34 @@ export function App() {
                 </details>
               </div>
             </div>
-            <div className="model-metrics">
-              <div>
-                <span>Parameters</span>
-                <strong title={count(detail?.parameter_count)}>
-                  {count(detail?.parameter_count, true)}
-                </strong>
+            {detail && (
+              <div className="model-metrics">
+                <div>
+                  <span>Parameters</span>
+                  <strong title={count(detail?.parameter_count)}>
+                    {count(detail?.parameter_count, true)}
+                  </strong>
+                </div>
+                {(["hidden", "heads", "layers", "vocabulary"] as const).map(
+                  (key) => (
+                    <div key={key}>
+                      <span>
+                        {key === "hidden"
+                          ? "Hidden size"
+                          : key === "vocabulary"
+                            ? "Vocabulary"
+                            : key[0].toUpperCase() + key.slice(1)}
+                      </span>
+                      <strong>
+                        {typeof detail?.dimensions[key] === "number"
+                          ? count(detail.dimensions[key] as number)
+                          : (detail?.dimensions[key] ?? "Unknown")}
+                      </strong>
+                    </div>
+                  ),
+                )}
               </div>
-              {(["hidden", "heads", "layers", "vocabulary"] as const).map(
-                (key) => (
-                  <div key={key}>
-                    <span>
-                      {key === "hidden"
-                        ? "Hidden size"
-                        : key === "vocabulary"
-                          ? "Vocabulary"
-                          : key[0].toUpperCase() + key.slice(1)}
-                    </span>
-                    <strong>
-                      {typeof detail?.dimensions[key] === "number"
-                        ? count(detail.dimensions[key] as number)
-                        : (detail?.dimensions[key] ?? "Unknown")}
-                    </strong>
-                  </div>
-                ),
-              )}
-            </div>
+            )}
             {detail?.revision && (
               <div className="revision" title={detail.revision}>
                 <span>Revision</span>
@@ -707,7 +722,7 @@ export function App() {
                 nodeId={selectedNodeId ?? undefined}
                 nodeLabel={selectedNode?.label}
                 ready={ready}
-                available={capabilities.data?.ai_available}
+                available={serviceHealth?.ai_available === true}
                 jump={jumpCitation}
               />
             ) : (

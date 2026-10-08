@@ -9,9 +9,9 @@
     "typecheck": "tsc --noEmit",
     "preview": "vite preview --host 127.0.0.1",
     "test:e2e": "playwright test",
-    "format": "prettier --write src e2e *.ts *.json index.html README.md",
-    "format:check": "prettier --check src e2e *.ts *.json index.html README.md",
-    "generate:api": "openapi-typescript http://127.0.0.1:8001/openapi.json -o src/api/generated.ts && prettier --write src/api/generated.ts"
+    "format": "prettier --write src e2e scripts *.ts *.json index.html README.md",
+    "format:check": "prettier --check src e2e scripts *.ts *.json index.html README.md",
+    "generate:api": "node scripts/generate-api.mjs"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.90.0",

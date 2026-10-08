@@ -4,6 +4,7 @@ One globally leased worker, one fresh spawn process per job. Production requires
 RLIMIT_AS (4 GiB) and a parent-enforced 120 second wall clock deadline.
 """
 
+import logging
 import math
 import multiprocessing
 import os
@@ -19,6 +20,8 @@ from model_anatomy.api.settings import Settings
 from .database import Job
 from .errors import ServiceError
 from .jobs import JobService, cache_key
+
+logger = logging.getLogger("model_anatomy.worker")
 
 
 def enforce_limits(settings: Settings) -> None:
@@ -267,7 +270,14 @@ class Worker:
             raise RuntimeError("Another worker holds the global execution lease")
         try:
             while not self.stopping:
-                self.service.heartbeat(self.owner)
+                try:
+                    self.service.heartbeat(self.owner)
+                except ServiceError as exc:
+                    # A suspended idle process still holds the lifetime execution lock.
+                    # Reclaim its expired lease without ever overlapping a live child.
+                    if exc.code != "lease_lost" or not self.service.acquire_worker(self.owner):
+                        raise
+                    logger.warning("idle worker lease recovered")
                 self.service.cleanup()
                 job_id = self.service.claim(self.owner)
                 if job_id:

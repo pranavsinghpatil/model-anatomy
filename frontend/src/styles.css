@@ -123,6 +123,9 @@ svg {
 .service-dot.online {
   background: var(--teal);
 }
+.service-dot.degraded {
+  background: #b59349;
+}
 .app-header > .icon-button {
   display: none;
 }
@@ -434,6 +437,11 @@ h1 {
   color: #7b6495;
   border-radius: 3px;
   padding: 3px 6px;
+  font-size: 9px;
+}
+.analysis-link-copy > .prepared-label {
+  align-self: flex-start;
+  color: #7b6495;
   font-size: 9px;
 }
 .model-metrics {

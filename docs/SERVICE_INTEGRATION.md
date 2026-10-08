@@ -15,7 +15,7 @@ source of graph facts; React renders it without guessing model structure.
 | Extraction | One globally leased worker; fresh subprocess per job |
 | Browser | React, TypeScript, Vite, React Flow; ELK layout in a Web Worker |
 | Questions | NVIDIA Nemotron through Nebius Token Factory; evidence-only context |
-| Deployment | CPU-only API/worker images; Docker Compose and Caddy HTTPS |
+| Deployment | Planned CPU-only API/worker images; Docker Compose and Caddy HTTPS |
 
 ## Public Contract
 
@@ -24,7 +24,6 @@ OpenAPI document, not from a separately maintained specification.
 
 | Route | Behavior |
 | --- | --- |
-| `GET /capabilities` | Worker and AI configuration availability |
 | `GET /examples` | Public, retained prepared analyses |
 | `GET /analyses` | This anonymous visitor's unexpired jobs |
 | `POST /analyses` | Persist an admitted analysis before returning 202 |
@@ -35,10 +34,23 @@ OpenAPI document, not from a separately maintained specification.
 | `GET /analyses/{id}/exports/{format}` | JSON, Mermaid, Markdown, diagnostics, audit or ZIP |
 | `POST /analyses/{id}/questions` | AI-generated answer with validated report references |
 
-`/healthz` checks liveness. `/readyz` checks migrations, private storage and the
-worker lease. Prepared graphs remain usable when jobs or questions are unavailable.
+`GET /health` is the single operational endpoint, outside `/api/v1`. It checks
+the actual database, migrations, private storage and current worker lease. Its
+typed body includes dependency checks, `analysis_available`, configured
+`ai_available` and a sanitized failure reason. HTTP 200 means new analyses can
+run; 503 means degraded. AI is optional and never changes core health status.
+The former health/readiness/capabilities routes are removed, with no aliases.
+Prepared and existing stored graphs remain usable when jobs or questions are unavailable.
 Configured AI availability is not proof of successful inference; a deployment
 smoke test must establish that separately.
+
+The browser opens a visitor's recent job, or an empty analysis workspace. Prepared
+examples are explicit opt-in snapshots, not the default result or a submission
+fallback. Every POST persists a distinct job with `prepared=false`, resolves the
+input's actual immutable revision, and either runs the engine or reuses an exact
+revision cache entry marked `cached=true`. Missing repositories fail honestly.
+Swagger's same-origin POST/DELETE requests work without adding the API's own URL
+to the cross-origin allowlist; untrusted hosts and foreign origins remain rejected.
 
 ## Ownership and Spend
 
@@ -60,6 +72,9 @@ The worker has an exclusive database lease and heartbeats while its child runs.
 Jobs record revision, stage, attempts, deadline and lease owner. A stale worker
 cannot finish a recovered job. Interrupted jobs retry within a bounded allowance,
 preserving the original SHA. Cancellation and timeouts terminate the child.
+An idle process that resumes after suspension can renew its expired lease while
+holding the exclusive lifetime lock. It cannot steal a different live lease or
+silently let a stale running child publish results.
 
 Cache identity includes canonical model ID, exact commit SHA, engine version,
 IR schema version and artifact selection. Objects are immutable and checked
@@ -92,8 +107,15 @@ continue working.
 
 ## Release Evidence
 
-See [engine acceptance](ENGINE_ACCEPTANCE.md), [deployment](DEPLOYMENT.md) and
-[submission checklist](HACKATHON_SUBMISSION.md). Local tests do not establish
+Run the opt-in real HTTP test with `RUN_HTTP_INTEGRATION=1` and
+`pytest -q -s backend/tests/test_live_http.py`. It launches a separate API and
+worker with a fresh database and an absent prepared-report directory, submits
+`HuggingFaceTB/SmolLM2-360M`, compares dimensions with the exact upstream config,
+and checks nested graphs, real tensors, exports, cookie isolation, quotas and
+exact-revision cache reuse. No HTTP responses or engine functions are mocked.
+
+See [engine acceptance](ENGINE_ACCEPTANCE.md) and
+[live HTTP acceptance](LIVE_BACKEND_ACCEPTANCE.md). Local tests do not establish
 Supabase connectivity, usable Nebius credits, model availability, HTTPS hosting
 or availability during judging. Those remain deployment gates.
 
