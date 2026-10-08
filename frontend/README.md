@@ -1,3 +1,79 @@
-# Frontend
+# Model Anatomy Frontend
 
-The interactive model explorer will be added here after the reconstruction engine has a stable IR.
+React + TypeScript + Vite workspace for the service's IR 1.1 architecture graphs.
+The primary canvas uses React Flow and ELK layout in a bundled WebWorker. Only
+backend-returned shallow graphs are rendered; nested graphs are fetched on demand.
+No model artifacts or fabricated graph fallback are bundled with the application.
+
+## Local Run
+
+```powershell
+cd frontend
+npm ci
+npm run dev
+```
+
+Open the URL printed by Vite. `/api` proxies to `http://127.0.0.1:8001` by default.
+Set `API_PROXY_TARGET` in the environment or `.env.local` to change the upstream.
+Browser requests always use `/api/v1` and include same-origin guest cookies.
+In production, serve `dist/` and reverse-proxy `/api` to the HTTP service.
+
+## Verification
+
+```powershell
+npm run typecheck
+npm run build
+npx playwright install chromium
+npm run test:e2e
+```
+
+Playwright runs desktop and mobile Chromium checks on port 5174, with route fixtures
+derived from the repository's real `output/gpt2` and `output/huggingfacetb--smollm2-135m`
+IR artifacts. Lifecycle/error scenarios are test-only. The production app has no
+mock mode. With the HTTP service running on 8001, set `E2E_LIVE_API=1` to include
+the separate `e2e/live.spec.ts` prepared-example integration tests, which use no
+route interception. Before starting the local HTTP service for live tests, include
+the test server's port 5174 in its explicit allowed origins:
+
+```powershell
+$env:MODEL_ANATOMY_CORS_ORIGINS = '["http://127.0.0.1:5173","http://localhost:5173","http://127.0.0.1:5174"]'
+```
+
+Restart the HTTP process after changing this setting. The proxy preserves the
+browser Origin header, and the API rejects unlisted mutation origins. These are
+explicit local development origins, not production settings. `E2E_BASE_URL` can
+override the browser URL (for example, port 5173 with the default API configuration).
+Both a running HTTP service and worker are required for live submission. Each
+viewport submits one SmolLM2 job under its own guest cookie. Screenshots and traces go to the ignored
+`test-results/` directory.
+
+## Contract Integration
+
+`src/api/generated.ts` is generated from the actual service's `/openapi.json` using
+`npm run generate:api`. This command includes formatting, so an unchanged schema
+produces the same file for CI drift checks. `src/api/contract.ts` contains aliases
+imported from that generated file; no handwritten response schemas remain.
+Regenerate after backend schema changes, then type-check. `src/api/client.ts` is the
+single HTTP boundary and uses generated request and response schemas.
+
+Required endpoints use `/api/v1`: capabilities, examples, analyses (list/create),
+analysis detail/cancel, graph, paginated node inspection, questions, and exports
+(`json`, `zip`, `mermaid`, `markdown`, `diagnostics`, `audit`). HTTP failures must
+provide `{error:{code,message,request_id}}`. Prepared examples use IDs `example-gpt2`
+and `example-smollm` and remain readable when reconstruction/AI are unavailable.
+
+Graph/node identities stay scoped by graph ID. Repeated blocks open only the
+engine-provided representative child graph; collapsing returns to its parent.
+The UI never expands repeated instances into invented nodes. Null dimensions,
+parameter counts, dtypes, and shapes remain unknown; numeric zero remains zero.
+
+Citations resolve through exact evidence source/kind/locator matches, or the
+service's `stored_ir` locator forms `node:{graph_id}/{node_id}` and `metadata`.
+Navigation follows at most 100 returned child graphs; an unresolved association
+shows an honest error while retaining the citation source and locator. AI text is
+rendered as plain text and cannot change architecture data.
+
+## Ownership
+
+All changes are confined to `frontend/**`. No backend, infrastructure, root
+dependency files, branches, commits, or pull requests are created by this workstream.

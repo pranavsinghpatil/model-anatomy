@@ -26,3 +26,48 @@ jobs:
         run: uv run --no-sync pytest -q
       - name: Lint
         run: uv run --no-sync ruff check backend
+
+  browser:
+    name: browser
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: astral-sh/setup-uv@v6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install browser and API dependencies
+        run: |
+          uv sync --frozen --extra api
+          npm ci --prefix frontend
+      - name: Check generated API contract
+        run: |
+          .venv/bin/python -m uvicorn model_anatomy.api.app:create_app --factory --host 127.0.0.1 --port 8001 --no-access-log > /tmp/anatomy-api.log 2>&1 &
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:8001/openapi.json > /dev/null; then break; fi
+            sleep 1
+          done
+          npm run generate:api --prefix frontend
+          git diff --exit-code -- frontend/src/api/generated.ts
+      - name: Browser build and formatting
+        run: |
+          npm run build --prefix frontend
+          npm run format:check --prefix frontend
+      - name: Install test browser
+        working-directory: frontend
+        run: npx playwright install --with-deps chromium
+      - name: Desktop and mobile browser tests
+        working-directory: frontend
+        run: npm run test:e2e -- --workers=2
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: browser-evidence
+          path: |
+            frontend/playwright-report
+            frontend/test-results
