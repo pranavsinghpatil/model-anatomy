@@ -27,3 +27,11 @@ Each record carries its artifact source and locator. Semantic labels and graph e
 ## Failure model
 
 Each stage reports `success`, `partial`, `unsupported`, or `failed`, with a useful diagnostic. A partial graph is valid; a silently invented edge is not. Unsupported custom models fail honestly and do not block the known primary-model demo.
+
+## Service boundary
+
+The local application is framed by FastAPI. The API exposes typed contracts and
+operational health without importing model libraries at startup. Reconstruction
+will run behind a bounded worker and persisted job contract, with IR as the
+frontend integration boundary. See [service integration](SERVICE_INTEGRATION.md)
+for implemented endpoints, proposed technology choices, and production gates.

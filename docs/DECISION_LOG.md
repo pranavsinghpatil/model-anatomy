@@ -80,3 +80,14 @@ To meet the hackathon platform requirement without compromising reconstruction, 
 **2026-10-05 · accepted**
 
 The Oct 30, 2026 submission uses dated internal releases in `ROADMAP.md`. If a release gate fails, reduce optional scope before delaying the primary model’s reliable end-to-end path.
+
+## D-015 - FastAPI boundary and MVP integration base
+**2026-10-08 - accepted**
+
+Use FastAPI to frame the local application around the deterministic engine.
+Keep HTTP startup independent of model-library imports and report unavailable
+reconstruction honestly. Develop on topic branches from `b-mvp` and open PRs
+targeting `b-mvp`; promote to `main` only through a separate reviewed PR.
+
+The worker, persistence, and frontend choices in `SERVICE_INTEGRATION.md` are
+recommendations for subsequent increments, not implemented capabilities.

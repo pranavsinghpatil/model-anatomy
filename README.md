@@ -14,7 +14,33 @@ The first release proves that path for one decoder-only Transformer. A node must
 
 ## Current state
 
-The repository contains a Python scaffold and a smoke test; the resolver and reconstruction pipeline are not implemented yet. The immediate target is `HuggingFaceTB/SmolLM2-135M`, a compact, Apache-2.0 decoder model with Safetensors support. See the [roadmap](docs/ROADMAP.md) for the dated release gates.
+The repository contains a Python reconstruction scaffold and a tested FastAPI service foundation. The resolver and reconstruction pipeline are not implemented yet on `b-mvp`. The API reports that limitation explicitly. The immediate target is `HuggingFaceTB/SmolLM2-135M`, a compact, Apache-2.0 decoder model with Safetensors support. See the [roadmap](docs/ROADMAP.md) for the dated release gates.
+
+## Local API
+
+```powershell
+python -m venv .venv
+.venv\Scripts\Activate.ps1
+python -m pip install -e '.[api,dev]'
+model-anatomy-api
+```
+
+Open <http://127.0.0.1:8000/docs>. `GET /healthz` checks the HTTP process;
+`GET /readyz` returns 503 until reconstruction is integrated.
+`GET /api/v1/capabilities` reports the current supported functionality.
+The launcher binds to `127.0.0.1`; it does not expose a public service.
+
+Configuration uses `MODEL_ANATOMY_` environment variables. For example:
+
+```powershell
+$env:MODEL_ANATOMY_PORT = '8001'
+$env:MODEL_ANATOMY_CORS_ORIGINS = '["http://localhost:5173"]'
+```
+
+Run `python -m pytest -q` and
+`ruff check backend/model_anatomy/api backend/tests/test_api.py` before opening a PR.
+See [service integration](docs/SERVICE_INTEGRATION.md) for the proposed production
+path, resource controls, and remaining implementation gates.
 
 ## Hackathon fit
 
@@ -30,4 +56,4 @@ For the Nebius × NVIDIA Global AI Hackathon, reconstruction remains determinist
 
 ## Development workflow
 
-`main` is integration-only. Create a topic branch, test the smallest useful change, open a PR, and merge only after CI and review. Full expectations are in [CONTRIBUTING.md](CONTRIBUTING.md).
+The active MVP base is `b-mvp`. Create a topic branch from it, test the smallest useful change, and open a PR targeting `b-mvp`. Promotion to `main` requires a separate reviewed PR. Full expectations are in [CONTRIBUTING.md](CONTRIBUTING.md).
