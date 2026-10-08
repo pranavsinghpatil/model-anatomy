@@ -1,0 +1,447 @@
+"""Durable anonymous jobs, quotas, fenced leases, cache identity, and retention."""
+
+import hashlib
+import json
+import re
+import secrets
+import time
+from datetime import UTC, datetime
+from urllib.parse import unquote, urlsplit
+from uuid import uuid4
+
+from sqlalchemy import delete, func, select, update
+
+from .database import Blob, CacheEntry, Database, Guest, Job, Mutex, RateBucket, Tombstone
+from .errors import ServiceError
+from .storage import storage_for
+
+TERMINAL = {"completed", "partial", "unsupported", "failed", "timed_out", "cancelled"}
+
+
+def timestamp(value: float) -> str:
+    return datetime.fromtimestamp(value, UTC).isoformat().replace("+00:00", "Z")
+
+
+def model_reference(value: str) -> tuple[str, str]:
+    value = value.strip()
+    if value == "gpt2":
+        value = "openai-community/gpt2"
+    model_id = value
+    if "://" in value:
+        url = urlsplit(value)
+        parts = url.path.strip("/").split("/")
+        if (
+            url.scheme != "https"
+            or url.netloc != "huggingface.co"
+            or url.query
+            or url.fragment
+            or len(parts) not in {2, 5}
+        ):
+            raise ServiceError(422, "invalid_model", "Expected a Hugging Face repository ID or HTTPS URL")
+        if len(parts) == 5:
+            revision, filename = unquote(parts[3]), parts[4]
+            if (
+                parts[2] not in {"blob", "resolve"}
+                or revision in {"", ".", ".."}
+                or not filename.endswith((".safetensors", ".safetensors.index.json"))
+            ):
+                raise ServiceError(422, "invalid_model", "Expected a Safetensors artifact reference")
+        model_id = "/".join(parts[:2])
+    if not re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", model_id) or any(
+        part in {".", ".."} for part in model_id.split("/")
+    ):
+        raise ServiceError(422, "invalid_model", "Expected a namespace/model repository ID")
+    return value, model_id
+
+
+def cache_key(
+    model_id: str,
+    revision: str,
+    engine: str,
+    schema: str,
+    artifact: str = "model.safetensors",
+    explicit: bool = False,
+) -> str:
+    if not re.fullmatch(r"[0-9a-f]{40}", revision):
+        raise ValueError("Cache identity requires an immutable Hugging Face commit")
+    identity = [model_id, revision, engine, schema, artifact, explicit]
+    return hashlib.sha256(json.dumps(identity, separators=(",", ":")).encode()).hexdigest()
+
+
+def ir_summary(data: dict) -> dict:
+    metadata = data["metadata"]
+    report = metadata.get("analysis_report", {})
+    warnings = list(dict.fromkeys(report.get("warnings", []) + metadata.get("limitations", [])))
+    return {
+        "architecture": data["architecture"],
+        "root_graph_id": data["root_graph"]["id"],
+        "parameter_count": metadata.get("unique_parameter_count"),
+        "dimensions": metadata.get("dimensions", {}),
+        "warnings": warnings,
+        "result_status": "partial"
+        if report.get("unknown_nodes", 0)
+        or report.get("unmapped_checkpoint_tensors", [])
+        or report.get("warnings", [])
+        or any(
+            report.get(key, 1) < 1
+            for key in ("semantic_coverage", "checkpoint_parameter_coverage", "tensor_shape_coverage")
+        )
+        else "completed",
+    }
+
+
+def job_detail(job: Job) -> dict:
+    summary = job.summary or {}
+    return {
+        "id": job.id,
+        "model_id": job.model_id,
+        "revision": job.revision,
+        "architecture": summary.get("architecture"),
+        "status": job.status,
+        "stage": job.stage,
+        "error": job.error,
+        "warnings": summary.get("warnings", []),
+        "created_at": timestamp(job.created_at),
+        "expires_at": timestamp(job.expires_at),
+        "parameter_count": summary.get("parameter_count"),
+        "root_graph_id": summary.get("root_graph_id"),
+        "dimensions": summary.get("dimensions", {}),
+        "cached": job.cached,
+        "prepared": False,
+    }
+
+
+class JobService:
+    def __init__(self, settings, *, clock=time.time, storage=None):
+        self.settings, self.clock = settings, clock
+        self.db = Database(settings.resolved_database_url)
+        self.storage = storage or storage_for(settings)
+
+    def initialize(self) -> None:
+        self.db.initialize(create=self.settings.environment == "local")
+        self.storage.check()
+
+    def guest(self, token: str | None) -> tuple[str, str | None]:
+        if token and re.fullmatch(r"[A-Za-z0-9_-]{43}", token):
+            guest_id = hashlib.sha256(token.encode()).hexdigest()
+            with self.db.write() as session:
+                known = session.get(Guest, guest_id)
+                if known:
+                    known.last_seen_at = self.clock()
+                    return guest_id, None
+        new_token = secrets.token_urlsafe(32)
+        guest_id = hashlib.sha256(new_token.encode()).hexdigest()
+        with self.db.write() as session:
+            session.add(Guest(id=guest_id, created_at=self.clock(), last_seen_at=self.clock()))
+        return guest_id, new_token
+
+    def _quota(self, session, guest_id: str, action: str) -> None:
+        suffix = "jobs" if action == "jobs" else "questions"
+        limits = [
+            (f"global:{action}:day", getattr(self.settings, f"global_{suffix}_per_day"), 86400),
+            (f"guest:{guest_id}:{action}:hour", getattr(self.settings, f"guest_{suffix}_per_hour"), 3600),
+        ]
+        for key, limit, seconds in limits:
+            window = int(self.clock() // seconds)
+            bucket = session.get(RateBucket, (key, window))
+            if bucket and bucket.count >= limit:
+                raise ServiceError(429, "rate_limited", "Hourly guest or daily global allowance exhausted")
+            if bucket:
+                bucket.count += 1
+            else:
+                session.add(RateBucket(key=key, window=window, count=1))
+
+    def question_quota(self, guest_id: str) -> None:
+        with self.db.write() as session:
+            self._quota(session, guest_id, "questions")
+
+    def worker_available(self) -> bool:
+        with self.db.read() as session:
+            mutex = session.get(Mutex, 1)
+            return bool(mutex and mutex.worker_owner and mutex.worker_until > self.clock())
+
+    def create(self, guest_id: str, value: str) -> dict:
+        value, model_id = model_reference(value)
+        now = self.clock()
+        with self.db.write() as session:
+            mutex = session.get(Mutex, 1)
+            if not mutex.worker_owner or mutex.worker_until <= now:
+                raise ServiceError(503, "worker_unavailable", "Reconstruction worker is offline")
+            active = session.scalar(
+                select(func.count()).select_from(Job).where(Job.status == "queued", Job.expires_at > now)
+            )
+            if active >= self.settings.queue_capacity:
+                raise ServiceError(503, "queue_full", "Reconstruction queue is full")
+            self._quota(session, guest_id, "jobs")
+            job = Job(
+                id=uuid4().hex,
+                guest_id=guest_id,
+                model_input=value,
+                model_id=model_id,
+                engine_version=self.settings.engine_version,
+                schema_version=self.settings.schema_version,
+                status="queued",
+                stage="queued",
+                created_at=now,
+                expires_at=now + self.settings.job_ttl_seconds,
+                available_at=now,
+                attempts=0,
+                cancel_requested=False,
+                cached=False,
+                summary={},
+            )
+            session.add(job)
+            session.flush()
+            return job_detail(job)
+
+    def get(self, job_id: str, guest_id: str) -> Job:
+        with self.db.read() as session:
+            job = session.get(Job, job_id)
+            if job is None or job.guest_id != guest_id:
+                expired = session.get(Tombstone, job_id)
+                if expired and expired.guest_id == guest_id and expired.expires_at > self.clock():
+                    raise ServiceError(410, "expired", "Analysis expired after 24 hours")
+                raise ServiceError(404, "not_found", "Analysis not found")
+            if job.expires_at <= self.clock():
+                raise ServiceError(410, "expired", "Analysis expired after 24 hours")
+            return job
+
+    def recent(self, guest_id: str) -> list[dict]:
+        with self.db.read() as session:
+            jobs = session.scalars(
+                select(Job)
+                .where(Job.guest_id == guest_id, Job.expires_at > self.clock())
+                .order_by(Job.created_at.desc())
+                .limit(50)
+            ).all()
+            return [job_detail(job) for job in jobs]
+
+    def cancel(self, job_id: str, guest_id: str) -> dict:
+        self.get(job_id, guest_id)
+        with self.db.write() as session:
+            job = session.get(Job, job_id)
+            if job.status not in TERMINAL:
+                job.cancel_requested = True
+                if job.status == "queued":
+                    job.status = job.stage = "cancelled"
+                else:
+                    job.stage = "cancelling"
+            return job_detail(job)
+
+    def acquire_worker(self, owner: str) -> bool:
+        with self.db.write() as session:
+            mutex = session.get(Mutex, 1)
+            now = self.clock()
+            if mutex.worker_owner not in {None, owner} and mutex.worker_until > now:
+                return False
+            mutex.worker_owner, mutex.worker_until = owner, now + self.settings.lease_seconds
+            return True
+
+    def release_worker(self, owner: str) -> None:
+        with self.db.write() as session:
+            mutex = session.get(Mutex, 1)
+            if mutex.worker_owner == owner:
+                mutex.worker_owner, mutex.worker_until = None, 0
+
+    def _owned(self, session, job_id: str, owner: str) -> Job:
+        job = session.get(Job, job_id)
+        mutex = session.get(Mutex, 1)
+        now = self.clock()
+        if (
+            not job
+            or job.status != "running"
+            or job.lease_owner != owner
+            or not job.lease_until
+            or job.lease_until <= now
+            or mutex.worker_owner != owner
+            or mutex.worker_until <= now
+        ):
+            raise ServiceError(409, "lease_lost", "Worker lease is no longer valid")
+        return job
+
+    def heartbeat(self, owner: str, job_id: str | None = None) -> bool:
+        with self.db.write() as session:
+            mutex = session.get(Mutex, 1)
+            now = self.clock()
+            if mutex.worker_owner != owner or mutex.worker_until <= now:
+                raise ServiceError(409, "lease_lost", "Worker lease is no longer valid")
+            mutex.worker_until = now + self.settings.lease_seconds
+            if job_id:
+                job = self._owned(session, job_id, owner)
+                job.lease_until = now + self.settings.lease_seconds
+                return job.cancel_requested or job.expires_at <= now
+            return False
+
+    def claim(self, owner: str) -> str | None:
+        with self.db.write() as session:
+            now = self.clock()
+            mutex = session.get(Mutex, 1)
+            if mutex.worker_owner != owner or mutex.worker_until <= now:
+                raise ServiceError(409, "lease_lost", "Worker lease is no longer valid")
+            for job in session.scalars(select(Job).where(Job.status.in_(["queued", "running"]))):
+                if job.expires_at <= now or job.cancel_requested:
+                    job.status = job.stage = "cancelled"
+                elif job.status == "running":
+                    if job.lease_until and job.lease_until > now:
+                        return None
+                    if job.attempts >= self.settings.max_attempts:
+                        job.status = job.stage = "failed"
+                        job.error = {
+                            "code": "worker_interrupted",
+                            "message": "Worker recovery attempts exhausted",
+                        }
+                    else:
+                        job.status = job.stage = "queued"
+                        job.available_at = now
+            session.flush()
+            query = (
+                select(Job)
+                .where(Job.status == "queued", Job.available_at <= now, Job.expires_at > now)
+                .order_by(Job.created_at)
+                .limit(1)
+            )
+            if not self.db.sqlite:
+                query = query.with_for_update(skip_locked=True)
+            candidate = session.scalar(query)
+            if candidate is None:
+                return None
+            result = session.execute(
+                update(Job)
+                .where(Job.id == candidate.id, Job.status == "queued")
+                .values(
+                    status="running",
+                    stage="resolving_revision",
+                    lease_owner=owner,
+                    lease_until=now + self.settings.lease_seconds,
+                    attempts=Job.attempts + 1,
+                )
+            )
+            return candidate.id if result.rowcount == 1 else None
+
+    def stage(self, job_id: str, owner: str, stage: str) -> None:
+        with self.db.write() as session:
+            job = self._owned(session, job_id, owner)
+            if job.cancel_requested:
+                raise ServiceError(409, "cancelled", "Cancellation requested")
+            job.stage = re.sub(r"[^a-zA-Z0-9_-]", "_", str(stage))[:64]
+
+    def resolved(self, job_id: str, owner: str, model_id: str, revision: str) -> Job:
+        cache_key(model_id, revision, self.settings.engine_version, self.settings.schema_version)
+        with self.db.write() as session:
+            job = self._owned(session, job_id, owner)
+            if job.revision is not None and job.revision != revision:
+                raise ServiceError(409, "revision_changed", "Retry resolved a different immutable revision")
+            job.model_id, job.revision, job.stage = model_id, revision, "checking_cache"
+            return job
+
+    def cached_result(self, key: str) -> bytes | None:
+        with self.db.read() as session:
+            entry = session.get(CacheEntry, key)
+            if not entry or entry.expires_at <= self.clock():
+                return None
+            digest = entry.blob_digest
+        return self.storage.get(digest)
+
+    def finish(self, job_id: str, owner: str, data: bytes, key: str, *, cached: bool) -> None:
+        document = json.loads(data)
+        if document.get("schema_version") != self.settings.schema_version:
+            raise ServiceError(503, "schema_mismatch", "Worker returned an unsupported IR schema")
+        digest = hashlib.sha256(data).hexdigest()
+        # Reserve durably before network I/O, so interrupted uploads remain collectible.
+        with self.db.write() as session:
+            job = self._owned(session, job_id, owner)
+            if job.cancel_requested or job.expires_at <= self.clock():
+                job.status = job.stage = "cancelled"
+                return
+            if document["metadata"]["revision"] != job.revision or document["model_id"] != job.model_id:
+                raise ServiceError(503, "identity_mismatch", "IR identity disagrees with resolved revision")
+            blob = session.get(Blob, digest)
+            if blob and blob.deleting:
+                raise ServiceError(503, "storage_busy", "Metadata object is being retired; retry later")
+            if blob is None:
+                session.add(Blob(digest=digest, created_at=self.clock(), deleting=False))
+        self.storage.put(data)
+        with self.db.write() as session:
+            job = self._owned(session, job_id, owner)
+            if job.cancel_requested or job.expires_at <= self.clock():
+                job.status = job.stage = "cancelled"
+                return
+            entry = session.get(CacheEntry, key)
+            if entry is None:
+                session.add(
+                    CacheEntry(
+                        key=key, blob_digest=digest, expires_at=self.clock() + self.settings.cache_ttl_seconds
+                    )
+                )
+            elif not cached:
+                entry.blob_digest, entry.expires_at = digest, self.clock() + self.settings.cache_ttl_seconds
+            job.blob_digest, job.cached, job.summary = digest, cached, ir_summary(document)
+            job.status = job.stage = job.summary["result_status"]
+            job.error, job.lease_owner, job.lease_until = None, None, None
+
+    def fail(
+        self,
+        job_id: str,
+        owner: str,
+        code: str,
+        message: str,
+        *,
+        status: str = "failed",
+        transient: bool = False,
+    ) -> None:
+        with self.db.write() as session:
+            job = self._owned(session, job_id, owner)
+            job.error = {"code": code, "message": message}
+            if job.cancel_requested or job.expires_at <= self.clock():
+                status, transient = "cancelled", False
+            if transient and job.attempts < self.settings.max_attempts:
+                job.status = job.stage = "queued"
+                job.available_at = self.clock() + min(30, 2**job.attempts)
+            else:
+                job.status = job.stage = status
+            job.lease_owner, job.lease_until = None, None
+
+    def cleanup(self) -> None:
+        retired = []
+        with self.db.write() as session:
+            now = self.clock()
+            expired = session.scalars(select(Job).where(Job.expires_at <= now)).all()
+            for job in expired:
+                until = job.expires_at + self.settings.job_ttl_seconds
+                if until > now and session.get(Tombstone, job.id) is None:
+                    session.add(Tombstone(id=job.id, guest_id=job.guest_id, expires_at=until))
+                session.delete(job)
+            session.execute(delete(Tombstone).where(Tombstone.expires_at <= now))
+            session.execute(delete(CacheEntry).where(CacheEntry.expires_at <= now))
+            session.execute(
+                delete(RateBucket).where(
+                    RateBucket.key.like("global:%:day"), RateBucket.window < int(now // 86400)
+                )
+            )
+            session.execute(
+                delete(RateBucket).where(
+                    RateBucket.key.like("guest:%:hour"), RateBucket.window < int(now // 3600)
+                )
+            )
+            session.flush()
+            session.execute(
+                delete(Guest).where(
+                    Guest.last_seen_at <= now - self.settings.job_ttl_seconds,
+                    ~Guest.id.in_(select(Job.guest_id)),
+                    ~Guest.id.in_(select(Tombstone.guest_id)),
+                )
+            )
+            referenced = set(session.scalars(select(Job.blob_digest).where(Job.blob_digest.is_not(None))))
+            referenced.update(session.scalars(select(CacheEntry.blob_digest)))
+            grace = self.settings.job_timeout_seconds + self.settings.lease_seconds
+            for blob in session.scalars(select(Blob)):
+                if blob.digest not in referenced and (blob.deleting or blob.created_at < now - grace):
+                    blob.deleting = True
+                    retired.append(blob.digest)
+        # Deletions are retryable and never hold the API/heartbeat transaction mutex.
+        for digest in retired:
+            self.storage.delete(digest)
+            with self.db.write() as session:
+                blob = session.get(Blob, digest)
+                if blob and blob.deleting:
+                    session.delete(blob)

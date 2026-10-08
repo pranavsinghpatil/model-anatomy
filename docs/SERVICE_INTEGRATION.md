@@ -1,97 +1,101 @@
-# Service integration
+# Application Integration
 
-## Current implementation
+## Boundaries
 
-The FastAPI application factory lives in `backend/model_anatomy/api/app.py`.
-The existing reconstruction scaffold remains separate. Starting the HTTP service
-does not import Torch, Transformers, or Safetensors; a subprocess test verifies
-this property. The package still declares these existing engine dependencies.
+FastAPI is the application backend, not a terminal-output wrapper. Its separate
+inspection worker calls the same Python engine as the CLI. HTTP startup, graph
+views and exports do not import Torch or Transformers. Stored IR is the only
+source of graph facts; React renders it without guessing model structure.
 
-| Endpoint | Behavior |
+| Responsibility | Implementation |
 | --- | --- |
-| `GET /healthz` | 200 when the HTTP process can answer |
-| `GET /readyz` | 503 with `reconstruction_not_implemented` |
-| `GET /api/v1/capabilities` | API version and explicit unavailable reconstruction |
-| `GET /docs` | Generated OpenAPI explorer; configurable off |
+| HTTP | FastAPI, Pydantic, Uvicorn; versioned analyses API |
+| Jobs | SQLAlchemy; SQLite locally, Supabase PostgreSQL in production |
+| Reports | SHA-256-addressed local objects or private Supabase Storage |
+| Extraction | One globally leased worker; fresh subprocess per job |
+| Browser | React, TypeScript, Vite, React Flow; ELK layout in a Web Worker |
+| Questions | NVIDIA Nemotron through Nebius Token Factory; evidence-only context |
+| Deployment | CPU-only API/worker images; Docker Compose and Caddy HTTPS |
 
-The service generates request IDs and logs method, response status, and elapsed
-time, without logging request bodies or URLs. The local launcher binds to
-loopback, disables Uvicorn access logs, and caps HTTP concurrency at 32. This is
-an initial operational bound, not a measured optimum or a reconstruction limit.
-CORS allows the two configured local Vite origins, without credentials. Host
-validation rejects unconfigured hostnames. Neither CORS nor host validation
-provides authentication.
+## Public Contract
 
-This increment is a service foundation. It does not yet provide reconstruction,
-job persistence, frontend integration, result caching, cancellation, or public
-deployment. A live HTTP process must not be described as a ready model service.
+Application routes use `/api/v1`. Frontend types are generated from FastAPI's
+OpenAPI document, not from a separately maintained specification.
 
-## Recommended stack
-
-| Responsibility | Local application | Hosted expansion, when needed |
-| --- | --- | --- |
-| HTTP contracts | FastAPI, Pydantic, Uvicorn | Same API behind TLS and authentication |
-| Inspector | React, TypeScript, Vite | Same static frontend served with API |
-| Graph rendering | React Flow; ELK layout in a Web Worker | Same renderer |
-| Client data | Generated OpenAPI types; TanStack Query | Same contract and cache |
-| Job/result metadata | SQLite, SQLAlchemy, Alembic migrations | PostgreSQL |
-| Reconstruction | Separate bounded worker process | Dedicated workers; durable broker if justified |
-| Artifacts | Local files with content hashes and atomic writes | Object storage |
-| Verification | pytest, HTTPX, Ruff; Playwright for explorer | CI plus deployment smoke and load checks |
-
-FastAPI is an HTTP boundary around deterministic reconstruction. Heavy model
-work should run in a separate process with a resource budget. Adding API workers
-without measuring memory can duplicate model allocations. FastAPI's documentation
-covers [worker memory](https://fastapi.tiangolo.com/deployment/concepts/) and
-[heavy background work](https://fastapi.tiangolo.com/tutorial/background-tasks/).
-
-React Flow supports the required inspectable graph. Collapse repeated blocks and
-memoize node components; benchmark viewport rendering rather than enabling it
-blindly. See its [performance guidance](https://reactflow.dev/learn/advanced-use/performance).
-
-Keep the first installation local and straightforward. Redis, Celery, Kubernetes,
-and a desktop wrapper are optional future choices, not dependencies for the first
-end-to-end model. Local operation does not imply offline operation: resolving a
-new Hugging Face model requires network access; an offline mode requires a complete,
-verified cache and explicit cache-miss errors.
-
-## Proposed next API contract
-
-These routes are proposed, not implemented by this PR:
-
-| Route | Contract |
+| Route | Behavior |
 | --- | --- |
-| `POST /api/v1/reconstructions` | Validate reference, admit bounded job, return 202 with ID/status URL |
-| `GET /api/v1/reconstructions/{id}` | Persisted state, stage, warnings, or structured failure |
-| `GET /api/v1/reconstructions/{id}/graph` | Versioned IR, provenance, cache validator |
-| `GET /api/v1/reconstructions/{id}/nodes/{node_id}` | Focused tensor and evidence details |
-| `DELETE /api/v1/reconstructions/{id}` | Request cooperative cancellation; terminal state persisted |
+| `GET /capabilities` | Worker and AI configuration availability |
+| `GET /examples` | Public, retained prepared analyses |
+| `GET /analyses` | This anonymous visitor's unexpired jobs |
+| `POST /analyses` | Persist an admitted analysis before returning 202 |
+| `GET /analyses/{id}` | Status, progress, warnings, revision and dimensions |
+| `DELETE /analyses/{id}` | Request cancellation; prepared examples are immutable |
+| `GET /analyses/{id}/graphs/{graph_id}` | One shallow graph with nested references |
+| `GET /analyses/{id}/nodes/{graph_id}/{node_id}` | Facts, paginated tensors and evidence |
+| `GET /analyses/{id}/exports/{format}` | JSON, Mermaid, Markdown, diagnostics, audit or ZIP |
+| `POST /analyses/{id}/questions` | AI-generated answer with validated report references |
 
-Start with polling. Add SSE progress if measured UX needs justify it. Do not
-stream large tensor metadata through a progress channel. Generate frontend types
-from the actual OpenAPI document after these contracts are implemented.
+`/healthz` checks liveness. `/readyz` checks migrations, private storage and the
+worker lease. Prepared graphs remain usable when jobs or questions are unavailable.
+Configured AI availability is not proof of successful inference; a deployment
+smoke test must establish that separately.
 
-## Production gates and optimization
+## Ownership and Spend
 
-1. Integrate and verify one pinned model. Audit any code brought from `feat/vv`
-   in a separate PR; the current `b-mvp` resolver and reconstructor are stubs.
-2. Persist jobs before returning 202. Bound queue depth and worker concurrency;
-   start with one reconstruction worker. Define restart recovery, lease expiry,
-   cancellation, timeout, and partial/unsupported results with tests.
-3. Keep artifact resolution restricted to Hugging Face references and pinned
-   revisions. Disable remote model code by default. Set download/header and
-   artifact size limits; avoid weight payloads when metadata is sufficient.
-4. Key reusable results by canonical model ID, pinned SHA, engine version,
-   IR schema version, and extraction options. Use atomic writes and hashes;
-   a mutable branch name alone is insufficient cache identity.
-5. Page tensor lists and fetch node details on demand. Measure graph layout and
-   interaction using the primary model on desktop and mobile viewports.
-6. Record cold/warm reconstruction time, peak worker memory, cache size, HTTP
-   latency under concurrent jobs, and failure recovery. Set budgets from these
-   measurements and retain a reproducible benchmark manifest.
-7. Before public hosting, add user authentication, job/result ownership,
-   per-user admission limits, TLS, migrations, backups, deployment health checks,
-   and log/metric retention. Bind publicly only through a reviewed deployment.
+An HttpOnly, SameSite visitor cookie contains a random opaque token. The database
+stores its hash. Job reads and cancellation require matching ownership; another
+visitor's job returns 404. No login is required. Clearing cookies creates a new
+visitor; global caps, not cookies, are the hard spend bound.
 
-Promote each increment through a topic-branch PR into `b-mvp`. Promote to `main`
-through a separate release PR after the one-model end-to-end and benchmark gates.
+Defaults: two inspections and ten questions per visitor per hour; twenty
+inspections and one hundred questions globally per day. Counters and admission
+share a transaction. Ten jobs can wait behind one running inspection. Budgets
+are configurable. Visitor jobs expire after 24 hours; reusable reports have a
+seven-day cache TTL. Prepared reports are retained separately. Cleanup runs
+through the worker.
+
+## Durable Execution
+
+The worker has an exclusive database lease and heartbeats while its child runs.
+Jobs record revision, stage, attempts, deadline and lease owner. A stale worker
+cannot finish a recovered job. Interrupted jobs retry within a bounded allowance,
+preserving the original SHA. Cancellation and timeouts terminate the child.
+
+Cache identity includes canonical model ID, exact commit SHA, engine version,
+IR schema version and artifact selection. Objects are immutable and checked
+against their content hash. Cloud calls occur outside global database locks.
+Database and storage are separate systems: crash-orphaned objects require
+reconciliation, never blind deletion of live reports.
+
+The production Linux worker has a two-minute deadline and a 4 GiB memory budget,
+also bounded by its container. Windows local runs cannot establish Linux memory
+enforcement; validate production limits in Docker before release.
+
+## Trust and Failure
+
+Native Transformers implementations are inspected on the meta device. Remote
+model code is disabled. Header ranges, shard counts and aggregate metadata have
+bounds. No checkpoint weight payload is downloaded. Unknown dimensions,
+structural relationships and static-analysis limitations remain visible.
+
+`completed` and `partial` both permit inspection. `unsupported` means outside
+the supported native scope. `failed`, `timed_out` and `cancelled` do not become
+valid reports. Errors include a code, readable message and request ID without
+returning credential-bearing exception details.
+
+Nemotron receives a bounded selection of report facts and original evidence.
+Model content and questions are untrusted data, not instructions. Returned
+citation IDs must exist; quantitative claims are checked against cited values.
+This does not prove every qualitative claim. Answers are labelled AI-generated
+and never modify IR. Invalid responses and outages fail explicitly while graphs
+continue working.
+
+## Release Evidence
+
+See [engine acceptance](ENGINE_ACCEPTANCE.md), [deployment](DEPLOYMENT.md) and
+[submission checklist](HACKATHON_SUBMISSION.md). Local tests do not establish
+Supabase connectivity, usable Nebius credits, model availability, HTTPS hosting
+or availability during judging. Those remain deployment gates.
+
+Use `pranav/` branches and PRs into `b-mvp`. Promotion to `main` requires a
+separate reviewed release PR.

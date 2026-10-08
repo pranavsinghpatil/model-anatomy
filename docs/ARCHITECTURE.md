@@ -30,8 +30,8 @@ Each stage reports `success`, `partial`, `unsupported`, or `failed`, with a usef
 
 ## Service boundary
 
-The local application is framed by FastAPI. The API exposes typed contracts and
-operational health without importing model libraries at startup. Reconstruction
-will run behind a bounded worker and persisted job contract, with IR as the
-frontend integration boundary. See [service integration](SERVICE_INTEGRATION.md)
-for implemented endpoints, proposed technology choices, and production gates.
+FastAPI manages anonymous analyses, ownership, quotas, stored results, exports
+and evidence-bound questions without importing model libraries at startup.
+A separate, leased worker calls the shared engine in a bounded subprocess.
+React Flow renders stored IR and loads individual graphs and components on demand.
+See [service integration](SERVICE_INTEGRATION.md) for contracts and release gates.

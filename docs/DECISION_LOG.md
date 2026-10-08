@@ -89,8 +89,7 @@ Keep HTTP startup independent of model-library imports and report unavailable
 reconstruction honestly. Develop on topic branches from `b-mvp` and open PRs
 targeting `b-mvp`; promote to `main` only through a separate reviewed PR.
 
-The worker, persistence, and frontend choices in `SERVICE_INTEGRATION.md` are
-recommendations for subsequent increments, not implemented capabilities.
+The initial HTTP-only foundation has been superseded by D-016 and D-017.
 
 ## D-016 - Integrate the working engine and preserve static evidence
 **2026-10-08 - accepted**
@@ -105,3 +104,17 @@ Use `pranav/` topic branches exclusively and raise PRs into `b-mvp`. Public
 visitors need no sign-in; anonymous ownership and usage limits belong to the
 service. Supabase PostgreSQL/private storage and evidence-bound Nemotron on
 Nebius are the accepted hosted direction.
+
+## D-017 - Durable anonymous application and bounded explanations
+**2026-10-08 - accepted**
+
+Persist accepted analyses before returning 202. Use one fenced worker, ten waiting
+jobs, a 120-second deadline and a 4 GiB production memory budget. Visitor budgets
+are hourly; hard global spend caps are daily. Exact revisions and engine/schema
+versions define reusable cache identity. Keep visitor jobs for 24 hours and
+cache reports for seven days; prepared examples survive provider outages.
+
+NVIDIA Nemotron explanations use selected stored report facts and validated
+citations. AI cannot create or change graph facts. Cookie ownership is not
+sign-in or an anti-Sybil guarantee. Do not claim production readiness before
+real cloud configuration, container checks, live inference and deployment evidence.
