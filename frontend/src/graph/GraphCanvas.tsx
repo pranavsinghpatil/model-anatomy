@@ -13,6 +13,7 @@ import {
 import {
   ArrowDownToLine,
   ChevronRight,
+  ScanEye,
   Layers,
   Maximize,
   Search,
@@ -72,6 +73,18 @@ function ModelNode({ data, selected }: NodeProps<AnatomyNode>) {
 }
 const nodeTypes = { anatomy: ModelNode };
 
+function readableAnchor(nodes: AnatomyNode[], selectedNode?: string | null) {
+  return (
+    nodes.find((node) => node.data.original.id === selectedNode) ??
+    nodes.find((node) => node.data.original.repeat > 1) ??
+    nodes.find((node) => node.data.original.child_graph_id) ??
+    nodes.find(
+      (node) => !["input", "output"].includes(node.data.original.kind),
+    ) ??
+    nodes[0]
+  );
+}
+
 function Canvas({
   graph,
   selectedNode,
@@ -115,7 +128,10 @@ function Canvas({
     const frame = requestAnimationFrame(() => {
       if (!layout.nodes.length) return;
       void flow.fitView({
+        // Focus a component: a zoom floor on a wide graph can crop both branches.
+        nodes: [readableAnchor(layout.nodes)],
         padding: 0.25,
+        minZoom: 0.85,
         maxZoom: 1,
         duration: 0,
       });
@@ -182,7 +198,12 @@ function Canvas({
         nodesConnectable={false}
         edgesFocusable={true}
         fitView
-        fitViewOptions={{ padding: 0.25, maxZoom: 1 }}
+        fitViewOptions={{
+          nodes: [readableAnchor(layout.nodes)],
+          padding: 0.25,
+          minZoom: 0.85,
+          maxZoom: 1,
+        }}
         minZoom={0.08}
         maxZoom={1.8}
         proOptions={{ hideAttribution: true }}
@@ -268,6 +289,20 @@ function Canvas({
           }
         >
           <Maximize size={16} />
+        </IconButton>
+        <IconButton
+          label="Readable view"
+          onClick={() =>
+            void flow.fitView({
+              nodes: [readableAnchor(layout.nodes, selectedNode)],
+              padding: 0.2,
+              minZoom: 0.85,
+              maxZoom: 1,
+              duration: 200,
+            })
+          }
+        >
+          <ScanEye size={16} />
         </IconButton>
       </div>
       <div className="canvas-caption">

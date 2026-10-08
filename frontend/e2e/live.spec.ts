@@ -3,6 +3,7 @@ import type { ArchitectureGraph } from "../src/api/contract";
 import type { AnalysisDetail, Health } from "../src/api/contract";
 import {
   expectGraphFramed,
+  expectReadableGraph,
   graphNode,
   showDetails,
   showQuestions,
@@ -73,7 +74,12 @@ test("live prepared backend contract", async ({ page, isMobile }, testInfo) => {
       graph.nodes.length,
     );
     await expect(page.getByTestId("graph-canvas")).toBeVisible();
+    await expectReadableGraph(page);
     await expectGraphFramed(page);
+    await page
+      .getByRole("button", { name: "Readable view", exact: true })
+      .click();
+    await expectReadableGraph(page);
     await page.screenshot({
       path: testInfo.outputPath(`live-${id}-graph.png`),
       animations: "disabled",
@@ -136,6 +142,10 @@ test("live prepared backend contract", async ({ page, isMobile }, testInfo) => {
       child.nodes.length,
     );
     await expectGraphFramed(page);
+    await page
+      .getByRole("button", { name: "Readable view", exact: true })
+      .click();
+    await expectReadableGraph(page);
     await page.screenshot({
       path: testInfo.outputPath(`live-${id}-nested.png`),
       animations: "disabled",

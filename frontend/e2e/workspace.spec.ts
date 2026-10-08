@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import {
   expectGraphFramed,
+  expectReadableGraph,
   graphNode,
   showDetails,
   showQuestions,
@@ -12,6 +13,65 @@ import {
   mockService,
   rootGraph,
 } from "./service";
+
+test("readable graph with reversible workspace panels", async ({
+  page,
+  isMobile,
+}, testInfo) => {
+  await mockService(page);
+  await page.goto("/?analysis=example-gpt2");
+  await expect(page.getByTestId("graph-canvas")).toBeVisible();
+  await expectReadableGraph(page);
+  await expect(page.locator(".right-panel")).not.toBeVisible();
+  await page.screenshot({
+    path: testInfo.outputPath("readable-workspace.png"),
+  });
+  await expectGraphFramed(page);
+  await page
+    .getByRole("button", { name: "Readable view", exact: true })
+    .click();
+  await expectReadableGraph(page);
+  if (!isMobile) {
+    const before = (await page.getByTestId("graph-canvas").boundingBox())!
+      .width;
+    await page
+      .getByRole("button", { name: "Close recent analyses", exact: true })
+      .first()
+      .click();
+    await expect(page.locator(".sidebar")).not.toBeVisible();
+    await expect
+      .poll(
+        async () =>
+          (await page.getByTestId("graph-canvas").boundingBox())!.width,
+      )
+      .toBeGreaterThan(before);
+    await page
+      .getByRole("button", { name: "Open recent analyses", exact: true })
+      .first()
+      .click();
+    await expect(page.locator(".sidebar")).toBeVisible();
+    await page
+      .getByRole("button", { name: "Open analysis panel", exact: true })
+      .click();
+    await expect(page.locator(".right-panel")).toBeVisible();
+    await expect(
+      page
+        .getByRole("tablist", { name: "Analysis panels" })
+        .getByRole("button"),
+    ).toHaveCount(0);
+    await page
+      .locator(".right-tabs")
+      .getByRole("button", { name: "Close analysis panel" })
+      .click();
+    await expect(page.locator(".right-panel")).not.toBeVisible();
+  }
+  await graphNode(page, embedding.label);
+  await showDetails(page, isMobile);
+  await expect(page.getByTestId("inspector")).toBeVisible();
+  await page.screenshot({
+    path: testInfo.outputPath("selected-component.png"),
+  });
+});
 
 test("real artifact graph, scoped nesting, tensor and evidence inspection", async ({
   page,
@@ -359,6 +419,15 @@ test("exports JSON and ZIP through the authenticated API", async ({ page }) => {
   await expect(page.getByTestId("graph-canvas")).toBeVisible();
   for (const label of ["Architecture JSON", "Complete ZIP"]) {
     await page.getByLabel("Export analysis", { exact: true }).click();
+    await expect
+      .poll(async () => {
+        const anchor = (await page
+          .getByLabel("Export analysis", { exact: true })
+          .boundingBox())!;
+        const menu = (await page.locator(".export-options").boundingBox())!;
+        return Math.abs(menu.y - anchor.y - anchor.height - 6);
+      })
+      .toBeLessThan(1);
     const downloaded = page.waitForEvent("download");
     await page.getByRole("button", { name: label, exact: true }).click();
     expect((await downloaded).suggestedFilename()).toMatch(

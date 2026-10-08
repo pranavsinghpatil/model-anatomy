@@ -1,7 +1,43 @@
 import type { Page } from "@playwright/test";
 import { expect } from "@playwright/test";
 
+export async function expectReadableGraph(page: Page) {
+  await expect
+    .poll(() =>
+      page
+        .locator(".model-node")
+        .first()
+        .evaluate((node) => {
+          const title = node.querySelector(".node-title")!;
+          const scale =
+            node.getBoundingClientRect().width /
+            (node as HTMLElement).offsetWidth;
+          return Number.parseFloat(getComputedStyle(title).fontSize) * scale;
+        }),
+    )
+    .toBeGreaterThanOrEqual(11.8);
+  await expect
+    .poll(() =>
+      page.getByTestId("graph-canvas").evaluate((canvas) => {
+        const bounds = canvas.getBoundingClientRect();
+        return Array.from(canvas.querySelectorAll(".model-node")).some(
+          (node) => {
+            const rect = node.getBoundingClientRect();
+            return (
+              rect.left >= bounds.left &&
+              rect.right <= bounds.right &&
+              rect.top >= bounds.top + 50 &&
+              rect.bottom <= bounds.bottom
+            );
+          },
+        );
+      }),
+    )
+    .toBe(true);
+}
+
 export async function expectGraphFramed(page: Page) {
+  await page.getByRole("button", { name: "Fit graph", exact: true }).click();
   await expect
     .poll(async () =>
       page.getByTestId("graph-canvas").evaluate((canvas) => {
@@ -46,5 +82,8 @@ export async function showQuestions(page: Page, mobile: boolean) {
       .getByRole("navigation", { name: "Workspace views" })
       .getByRole("button", { name: "Questions" })
       .click();
-  else await page.getByRole("tab", { name: "Questions", exact: true }).click();
+  else
+    await page
+      .getByRole("button", { name: "Model questions", exact: true })
+      .click();
 }

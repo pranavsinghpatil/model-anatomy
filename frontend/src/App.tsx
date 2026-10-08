@@ -16,6 +16,8 @@ import {
   Network,
   PanelLeftClose,
   PanelLeftOpen,
+  PanelRightClose,
+  PanelRightOpen,
   Square,
 } from "lucide-react";
 import { api, graphReady, pending } from "./api/client";
@@ -53,10 +55,14 @@ export function App() {
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [citation, setCitation] = useState<Citation | null>(null);
   const [panel, setPanel] = useState<Panel>("graph");
-  const [sideOpen, setSideOpen] = useState(false);
+  const [sideOpen, setSideOpen] = useState(
+    () => window.matchMedia("(min-width: 1191px)").matches,
+  );
+  const [inspectorOpen, setInspectorOpen] = useState(false);
   const [rightTab, setRightTab] = useState<"details" | "questions">("details");
   const [exporting, setExporting] = useState<ExportFormat | null>(null);
   const [exportError, setExportError] = useState<Error | null>(null);
+  const [exportPosition, setExportPosition] = useState({ top: 0, right: 0 });
   const exportMenu = useRef<HTMLDetailsElement>(null);
   const activeAnalysis = useRef(analysisId);
   activeAnalysis.current = analysisId;
@@ -108,7 +114,10 @@ export function App() {
     setPath([]);
     setSelectedNodeId(null);
     setCitation(null);
-    setSideOpen(false);
+    setInspectorOpen(false);
+    setSideOpen((current) =>
+      window.matchMedia("(min-width: 1191px)").matches ? current : false,
+    );
     setPanel("graph");
     setExportError(null);
     const url = new URL(window.location.href);
@@ -155,6 +164,7 @@ export function App() {
       ]);
       setSelectedNodeId(null);
       setCitation(null);
+      setInspectorOpen(false);
       setPanel("graph");
     },
     [detail?.root_graph_id, detail?.model_id],
@@ -172,6 +182,7 @@ export function App() {
       setSelectedNodeId(null);
       setCitation(target);
       setRightTab("details");
+      setInspectorOpen(true);
       setPanel("details");
       return;
     }
@@ -212,6 +223,7 @@ export function App() {
         setSelectedNodeId(found.id);
         setCitation(target);
         setRightTab("details");
+        setInspectorOpen(true);
         setPanel("details");
         return;
       }
@@ -275,6 +287,7 @@ export function App() {
     setSelectedNodeId(node.id);
     setCitation(null);
     setRightTab("details");
+    setInspectorOpen(true);
   };
 
   return (
@@ -308,6 +321,7 @@ export function App() {
         </div>
         <IconButton
           label={sideOpen ? "Close recent analyses" : "Open recent analyses"}
+          aria-expanded={sideOpen}
           onClick={() => setSideOpen((value) => !value)}
         >
           <History size={17} />
@@ -487,7 +501,20 @@ export function App() {
                     )}
                   </IconButton>
                 )}
-                <details className="export-menu" ref={exportMenu}>
+                <details
+                  className="export-menu"
+                  ref={exportMenu}
+                  onToggle={(event) => {
+                    if (!event.currentTarget.open) return;
+                    const anchor = event.currentTarget
+                      .querySelector("summary")!
+                      .getBoundingClientRect();
+                    setExportPosition({
+                      top: anchor.bottom + 6,
+                      right: Math.max(12, window.innerWidth - anchor.right),
+                    });
+                  }}
+                >
                   <summary
                     aria-label="Export analysis"
                     title="Export analysis"
@@ -503,7 +530,7 @@ export function App() {
                     )}
                     <ChevronDown size={12} />
                   </summary>
-                  <div className="export-options">
+                  <div className="export-options" style={exportPosition}>
                     {exportFormats.map((item) => (
                       <button
                         key={item.format}
@@ -565,15 +592,17 @@ export function App() {
                 <span>{detail.error.message}</span>
               </div>
             )}
-            {detail?.status === "partial" && (
-              <div className="partial-notice">
-                Partial analysis
-                {detail.stage && detail.stage !== detail.status
-                  ? ` / ${detail.stage}`
-                  : ""}
-              </div>
-            )}
-            {detail && <Warnings warnings={detail.warnings} />}
+            <div className="analysis-notes">
+              {detail?.status === "partial" && (
+                <div className="partial-notice">
+                  Partial analysis
+                  {detail.stage && detail.stage !== detail.status
+                    ? ` / ${detail.stage}`
+                    : ""}
+                </div>
+              )}
+              {detail && <Warnings warnings={detail.warnings} />}
+            </div>
             {cancel.error && <ErrorNotice error={cancel.error} />}
             {exportError && <ErrorNotice error={exportError} />}
           </div>
@@ -590,6 +619,7 @@ export function App() {
                       setPath(breadcrumb.slice(0, index + 1));
                       setSelectedNodeId(null);
                       setCitation(null);
+                      setInspectorOpen(false);
                     }}
                   >
                     {crumb.label}
@@ -604,6 +634,7 @@ export function App() {
                   setPath((value) => value.slice(0, -1));
                   setSelectedNodeId(null);
                   setCitation(null);
+                  setInspectorOpen(false);
                 }}
               >
                 <Layers size={14} />
@@ -611,6 +642,32 @@ export function App() {
                 <ArrowRight size={12} />
               </button>
             )}
+            <div className="panel-controls">
+              <IconButton
+                label="Model questions"
+                aria-pressed={inspectorOpen && rightTab === "questions"}
+                onClick={() => {
+                  setRightTab("questions");
+                  setInspectorOpen(true);
+                  setPanel("questions");
+                }}
+              >
+                <MessageSquare size={16} />
+              </IconButton>
+              <IconButton
+                label={
+                  inspectorOpen ? "Close analysis panel" : "Open analysis panel"
+                }
+                aria-expanded={inspectorOpen}
+                onClick={() => {
+                  setInspectorOpen((value) => !value);
+                  setRightTab("details");
+                  setPanel("details");
+                }}
+              >
+                <PanelRightOpen size={16} />
+              </IconButton>
+            </div>
           </div>
           <div className="canvas-area">
             {analysis.error ? (
@@ -667,28 +724,38 @@ export function App() {
             </span>
           </footer>
         </main>
-        <aside className={`right-panel right-${rightTab}`}>
-          <div
-            className="right-tabs"
-            role="tablist"
-            aria-label="Analysis panels"
-          >
-            <button
-              role="tab"
-              aria-selected={rightTab === "details"}
-              onClick={() => setRightTab("details")}
+        <aside
+          className={`right-panel right-${rightTab} ${inspectorOpen ? "is-open" : ""}`}
+        >
+          <div className="right-tabs">
+            <div
+              className="analysis-tabs"
+              role="tablist"
+              aria-label="Analysis panels"
             >
-              <FileSearch size={15} />
-              Details
-            </button>
-            <button
-              role="tab"
-              aria-selected={rightTab === "questions"}
-              onClick={() => setRightTab("questions")}
+              <button
+                role="tab"
+                aria-selected={rightTab === "details"}
+                onClick={() => setRightTab("details")}
+              >
+                <FileSearch size={15} />
+                Details
+              </button>
+              <button
+                role="tab"
+                aria-selected={rightTab === "questions"}
+                onClick={() => setRightTab("questions")}
+              >
+                <MessageSquare size={15} />
+                Questions
+              </button>
+            </div>
+            <IconButton
+              label="Close analysis panel"
+              onClick={() => setInspectorOpen(false)}
             >
-              <MessageSquare size={15} />
-              Questions
-            </button>
+              <PanelRightClose size={16} />
+            </IconButton>
           </div>
           <div className="detail-panel">
             {detail && analysisId && graphId && ready ? (

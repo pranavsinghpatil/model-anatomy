@@ -21,6 +21,13 @@ On entry, the workspace restores the visitor's most recent non-prepared job when
 one exists. Otherwise it opens with an empty canvas and model input. Prepared
 examples are optional, explicitly selected reports with prepared badges.
 
+The canvas starts at a readable scale rather than shrinking a long architecture
+to fit the screen. Fit graph gives the complete overview; Readable view restores
+the inspection scale. Search and the minimap navigate components outside the
+viewport. Desktop history is collapsible, and the inspector opens on selection
+instead of reserving space for an empty panel. Mobile keeps separate workspace
+views. Architecture facts and graph direction are unchanged by these controls.
+
 ## Verification
 
 ```powershell

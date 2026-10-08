@@ -127,7 +127,7 @@ svg {
   background: #b59349;
 }
 .app-header > .icon-button {
-  display: none;
+  display: inline-flex;
 }
 .input-band {
   flex-shrink: 0;
@@ -202,7 +202,7 @@ svg {
   position: relative;
 }
 .sidebar {
-  display: flex;
+  display: none;
   flex-direction: column;
   flex: 0 0 220px;
   width: 220px;
@@ -210,6 +210,9 @@ svg {
   border-right: 1px solid var(--border);
   overflow: auto;
   z-index: 20;
+}
+.sidebar-open .sidebar {
+  display: flex;
 }
 .sidebar-heading {
   display: flex;
@@ -224,7 +227,7 @@ svg {
   font-weight: 650;
 }
 .sidebar-heading .icon-button {
-  display: none;
+  display: inline-flex;
 }
 .sidebar-section {
   padding: 8px 10px 18px;
@@ -351,7 +354,7 @@ svg {
 .model-overview {
   background: #fff;
   border-bottom: 1px solid var(--border);
-  padding: 17px 20px 12px;
+  padding: 12px 20px 10px;
   flex-shrink: 0;
   max-height: 40%;
   overflow: auto;
@@ -447,7 +450,7 @@ h1 {
 .model-metrics {
   display: grid;
   grid-template-columns: 1.4fr repeat(4, 1fr);
-  margin-top: 18px;
+  margin-top: 12px;
 }
 .model-metrics > div {
   border-right: 1px solid var(--border);
@@ -475,7 +478,7 @@ h1 {
 .revision {
   display: flex;
   gap: 8px;
-  margin-top: 13px;
+  margin-top: 9px;
   align-items: center;
   font-size: 10px;
   color: var(--muted);
@@ -528,8 +531,6 @@ summary::-webkit-details-marker {
 }
 .export-options {
   position: fixed;
-  right: 356px;
-  top: 170px;
   background: #fff;
   border: 1px solid var(--border);
   box-shadow: 0 5px 20px #00000010;
@@ -587,9 +588,26 @@ summary::-webkit-details-marker {
   overflow-wrap: anywhere;
 }
 .partial-notice {
-  padding-top: 10px;
+  padding-top: 0;
   font-size: 11px;
   color: #937532;
+}
+.analysis-notes {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin-top: 8px;
+}
+.analysis-notes:empty {
+  display: none;
+}
+.panel-controls {
+  display: flex;
+  gap: 3px;
+}
+.panel-controls .icon-button[aria-pressed="true"] {
+  color: var(--teal);
+  background: #eaf3f1;
 }
 .graph-toolbar {
   display: flex;
@@ -911,9 +929,12 @@ summary::-webkit-details-marker {
   flex: 0 0 332px;
   border-left: 1px solid var(--border);
   background: #fff;
-  display: flex;
+  display: none;
   flex-direction: column;
   min-height: 0;
+}
+.right-panel.is-open {
+  display: flex;
 }
 .right-tabs {
   display: flex;
@@ -922,8 +943,14 @@ summary::-webkit-details-marker {
   border-bottom: 1px solid var(--border);
   gap: 17px;
   padding: 0 17px;
+  align-items: center;
 }
-.right-tabs > button {
+.analysis-tabs {
+  display: flex;
+  gap: 17px;
+  align-self: stretch;
+}
+.analysis-tabs > button[role="tab"] {
   border: 0;
   border-bottom: 2px solid transparent;
   background: none;
@@ -933,8 +960,12 @@ summary::-webkit-details-marker {
   color: #838b91;
   font-size: 12px;
   padding: 0 3px;
+  height: 100%;
 }
-.right-tabs > button[aria-selected="true"] {
+.right-tabs > .icon-button {
+  margin-left: auto;
+}
+.analysis-tabs > button[aria-selected="true"] {
   color: #30383d;
   border-bottom-color: var(--teal);
 }
@@ -1437,7 +1468,7 @@ summary::-webkit-details-marker {
 .warnings {
   font-size: 11px;
   color: #957e44;
-  padding-top: 9px;
+  position: relative;
 }
 .warnings summary {
   display: flex;
@@ -1447,6 +1478,8 @@ summary::-webkit-details-marker {
   font-size: 10px;
 }
 .warnings ul {
+  max-height: 180px;
+  overflow: auto;
   padding-left: 17px;
   margin: 9px 0 4px;
 }
@@ -1544,9 +1577,6 @@ summary::-webkit-details-marker {
   }
   .canvas-caption {
     display: none;
-  }
-  .export-options {
-    right: 316px;
   }
 }
 @media (max-width: 760px) {
@@ -1647,10 +1677,6 @@ summary::-webkit-details-marker {
   .export-menu summary {
     padding: 3px;
   }
-  .export-options {
-    right: 12px;
-    top: 185px;
-  }
   .model-metrics {
     margin-top: 12px;
     gap: 0;
@@ -1692,6 +1718,12 @@ summary::-webkit-details-marker {
     width: 100%;
     flex: 1;
     border-left: 0;
+  }
+  .panel-graph .right-panel.is-open {
+    display: none;
+  }
+  .panel-controls {
+    display: none;
   }
   .right-tabs {
     display: none;

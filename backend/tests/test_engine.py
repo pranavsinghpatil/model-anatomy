@@ -63,9 +63,10 @@ def tiny_model():
 
 
 class FixtureClient(MetadataClient):
-    def __init__(self, checkpoint):
+    def __init__(self, checkpoint, config=CONFIG):
         super().__init__()
         self.fixture = checkpoint
+        self.config = config
 
     def resolve(self, reference):
         self.repository_files[(reference.model_id, SHA)] = {"config.json", "model.safetensors"}
@@ -73,7 +74,7 @@ class FixtureClient(MetadataClient):
 
     def json(self, url, max_bytes=1024 * 1024):
         self.audit.append({"url": url, "bytes_read": 1, "status": 200})
-        return dict(CONFIG)
+        return dict(self.config)
 
     def checkpoint(self, reference, revision):
         assert revision == SHA
@@ -94,6 +95,39 @@ def test_pipeline_emits_valid_inspectable_report_without_weights(tiny_model):
     ]
     assert ModelIR.from_json(ir.to_json()).to_dict() == ir.to_dict()
     assert "flowchart TD" in mermaid(ir.root_graph)
+
+
+def test_native_vision_metadata_and_component_views_keep_ownership():
+    from model_anatomy.service.views import node_view
+
+    config = {
+        "model_type": "vit",
+        "architectures": ["ViTForImageClassification"],
+        "hidden_size": 24,
+        "intermediate_size": 48,
+        "num_attention_heads": 3,
+        "num_hidden_layers": 2,
+        "image_size": 32,
+        "patch_size": 16,
+        "num_channels": 3,
+        "num_labels": 10,
+    }
+    model, _ = instantiate_native(load_native_config(config))
+    ir = reconstruct("example/vision", client=FixtureClient(checkpoint_for(model), config))
+    assert ir.architecture == "ViTForImageClassification"
+    assert ir.metadata["inputs"]["input_specs"]["pixel_values"]["shape"] == ["B", 3, 32, 32]
+    assert ir.metadata["dimensions"]["vocabulary"] is None
+    assert ir.metadata["analysis_report"]["checkpoint_parameter_coverage"] == 1
+    assert ir.metadata["artifacts"]["weight_payload_bytes_read"] == 0
+    assert ir.metadata["analysis_report"]["forward_executed"] is False
+    component = node_view(ir, ir.root_graph.id, "classifier")
+    assert component["node"]["kind"] == "classifier"
+    assert component["node"]["parameter_count"] == 250
+    assert [tensor["name"] for tensor in component["tensors"]] == [
+        "classifier.bias", "classifier.weight",
+    ]
+    assert all(tensor["parameter_refs"] for tensor in component["tensors"])
+    assert ModelIR.from_json(ir.to_json()).to_dict() == ir.to_dict()
 
 
 def test_pinned_revision_is_used_and_mutable_revisions_are_rejected(tiny_model):

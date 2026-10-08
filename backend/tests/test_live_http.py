@@ -93,13 +93,22 @@ def live_backend(tmp_path):
             log.close()
 
 
-def test_real_nonprepared_model_submission_graph_tensors_exports_and_cache(live_backend):
+@pytest.mark.parametrize(
+    ("model", "revision", "parameters", "component_kind"),
+    [
+        ("HuggingFaceTB/SmolLM2-360M", "f8027fd0eaeea54caa13c31d31b9fdc459c38b49", 361821120, "embedding"),
+        ("google/vit-base-patch16-224", "10064cc17b69d623a025c9e90e11230cc8ba6967", 86567656, "classifier"),
+    ],
+)
+def test_real_nonprepared_model_submission_graph_tensors_exports_and_cache(
+    live_backend, model, revision, parameters, component_kind,
+):
     client = live_backend
-    model = "HuggingFaceTB/SmolLM2-360M"
+    model_reference = f"https://huggingface.co/{model}/blob/{revision}/model.safetensors"
     health = client.get("/health").json()
     assert health["analysis_available"] and not health["ai_available"]
     # The same Origin header sent by Swagger/browser POST is accepted.
-    response = client.post("/api/v1/analyses", json={"model": model},
+    response = client.post("/api/v1/analyses", json={"model": model_reference},
                            headers={"Origin": str(client.base_url).rstrip("/")})
     assert response.status_code == 202
     queued = response.json()
@@ -108,6 +117,8 @@ def test_real_nonprepared_model_submission_graph_tensors_exports_and_cache(live_
     assert detail["status"] in {"completed", "partial"}, detail.get("error")
     assert detail["model_id"] == model and detail["prepared"] is False and detail["cached"] is False
     assert re.fullmatch(r"[0-9a-f]{40}", detail["revision"])
+    assert detail["revision"] == revision
+    assert detail["parameter_count"] == parameters
     with httpx.Client(timeout=30, follow_redirects=True, trust_env=False) as provider:
         config_response = provider.get(f"https://huggingface.co/{model}/resolve/{detail['revision']}/config.json")
         config_response.raise_for_status()
@@ -118,24 +129,27 @@ def test_real_nonprepared_model_submission_graph_tensors_exports_and_cache(live_
     graph = client.get(f"{path}/graphs/{detail['root_graph_id']}").json()
     repeated = next(node for node in graph["nodes"] if node["child_graph_id"])
     assert client.get(f"{path}/graphs/{repeated['child_graph_id']}").json()["nodes"]
-    embedding = next(node for node in graph["nodes"] if node["kind"] == "embedding")
-    node = client.get(f"{path}/nodes/{graph['id']}/{embedding['id']}").json()
+    component = next(node for node in graph["nodes"] if node["kind"] == component_kind)
+    node = client.get(f"{path}/nodes/{graph['id']}/{component['id']}").json()
     assert node["tensor_count"] > 0 and node["evidence"]
     report = client.get(f"{path}/exports/json").json()
     assert report["model_id"] == model
     assert report["metadata"]["artifacts"]["weight_payload_bytes_read"] == 0
-    assert report["tensors"] and detail["parameter_count"] != 134515008
+    assert report["tensors"] and report["metadata"]["analysis_report"]["checkpoint_parameter_coverage"] == 1
+    if component_kind == "classifier":
+        assert report["metadata"]["inputs"]["input_specs"]["pixel_values"]["shape"] == ["B", 3, 224, 224]
+        assert [tensor["name"] for tensor in node["tensors"]] == ["classifier.bias", "classifier.weight"]
     with zipfile.ZipFile(io.BytesIO(client.get(f"{path}/exports/zip").content)) as archive:
         assert "model.json" in archive.namelist()
     with httpx.Client(base_url=str(client.base_url), trust_env=False) as other:
         assert other.get(path).status_code == 404
-    cached = client.post("/api/v1/analyses", json={"model": model})
+    cached = client.post("/api/v1/analyses", json={"model": model_reference})
     assert cached.status_code == 202
     reused = wait_for_result(client, cached.json()["id"])
     assert reused["cached"] is True and reused["prepared"] is False
     assert reused["revision"] == detail["revision"]
     assert reused["parameter_count"] == detail["parameter_count"]
-    assert client.post("/api/v1/analyses", json={"model": model}).status_code == 429
+    assert client.post("/api/v1/analyses", json={"model": model_reference}).status_code == 429
     with httpx.Client(base_url=str(client.base_url), timeout=15, trust_env=False) as other:
         missing_model = f"model-anatomy-verification/missing-{uuid4().hex}"
         unavailable = other.post("/api/v1/analyses", json={"model": missing_model})

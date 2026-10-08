@@ -135,3 +135,18 @@ the former three operational endpoints instead of keeping redundant aliases.
 Allow exact same-origin Swagger mutations while retaining host validation and
 the explicit foreign-origin allowlist. Verify the HTTP-to-worker path against a
 real nonprepared model with prepared reports absent, not only saved snapshots.
+
+## D-019 - Expand through explicit family and scale acceptance gates
+**2026-10-09 - accepted**
+
+Broaden Model Anatomy step by step across model families, preserving the working
+text inspection path. Track family semantics, checkpoint ownership, input/output
+shapes, runtime budgets and cloud readiness separately. A successful native meta
+construction or large text checkpoint is not proof of image/video support. Unknown
+components remain visible, and unsupported artifacts never become an invented
+graph. `SYSTEM_GAPS.md` records the outstanding gates, not a universal support claim.
+
+Make the graph workspace readable before adding further UI surface: default to an
+inspection scale with explicit whole-graph framing, collapsible history, and an
+inspector that opens on selection. Keep the canonical graph unchanged by layout
+controls, and verify desktop/mobile inspection and export workflows.

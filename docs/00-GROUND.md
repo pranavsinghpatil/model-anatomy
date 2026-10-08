@@ -10,11 +10,17 @@ The input is a model ID or URL. The output is a model-specific technical represe
 
 Build one reliable path for a decoder-only Transformer, beginning with [`HuggingFaceTB/SmolLM2-135M`](https://huggingface.co/HuggingFaceTB/SmolLM2-135M) after revision pinning. A judge can paste the model, see a generated graph, select a component, and trace the displayed facts to artifacts.
 
+The October 9 expansion direction is family-by-family coverage across text,
+vision, multimodal, audio and video, with model size tested separately. Preserve
+the working text path while closing documented gaps in small PRs. A native model
+loading successfully does not establish complete semantic support. See
+`SYSTEM_GAPS.md` for current evidence and the next acceptance gates.
+
 The [hackathon release](https://nebiusglobalaihackathon.devpost.com/) must run on Nebius Token Factory or Nebius AI Cloud and use an NVIDIA open-source model. The integration is an optional, evidence-bound explanation layer: it may summarize or answer questions about the completed reconstruction, but must never infer the graph or overwrite evidence.
 
 ## Non-goals for this release
 
-- universal support for every architecture or custom codebase
+- claiming universal support for every architecture or custom codebase without evidence
 - a generic chatbot, model search tool, or hand-drawn diagram editor
 - checkpoint forensics, comparison, or anomaly detection as a dependency for the first demo
 
