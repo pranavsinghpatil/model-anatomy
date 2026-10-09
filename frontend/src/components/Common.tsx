@@ -24,7 +24,11 @@ export function IconButton({
 }
 export function Status({ status }: { status: string }) {
   return (
-    <span className={`status status-${status}`}>
+    <span
+      className={`status status-${status}`}
+      role="status"
+      aria-label={`Analysis status: ${status.replaceAll("_", " ")}`}
+    >
       <span className="status-dot" />
       {status.replaceAll("_", " ")}
     </span>

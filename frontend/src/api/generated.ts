@@ -182,6 +182,13 @@ export interface components {
       error: components["schemas"]["AnalysisError"] | null;
       /** Warnings */
       warnings: string[];
+      /** Limitations */
+      limitations?: string[];
+      /** Partial Reasons */
+      partial_reasons?: string[];
+      quality?: components["schemas"]["AnalysisQuality"];
+      /** Engine Version */
+      engine_version?: string | null;
       /** Created At */
       created_at: string;
       /** Expires At */
@@ -202,6 +209,27 @@ export interface components {
       code: string;
       /** Message */
       message: string;
+    };
+    /** AnalysisQuality */
+    AnalysisQuality: {
+      /** Semantic Coverage */
+      semantic_coverage?: number | null;
+      /** Module Semantic Coverage */
+      module_semantic_coverage?: number | null;
+      /** Checkpoint Parameter Coverage */
+      checkpoint_parameter_coverage?: number | null;
+      /** Tensor Shape Coverage */
+      tensor_shape_coverage?: number | null;
+      /** Unknown Nodes */
+      unknown_nodes?: number | null;
+      /** Unmapped Checkpoint Tensors */
+      unmapped_checkpoint_tensors?: number | null;
+      /** Forward Executed */
+      forward_executed?: boolean | null;
+      /** Runtime Trace Available */
+      runtime_trace_available?: boolean | null;
+      /** Mode */
+      mode?: string | null;
     };
     /** AnalysisSummary */
     AnalysisSummary: {
@@ -231,6 +259,13 @@ export interface components {
       error: components["schemas"]["AnalysisError"] | null;
       /** Warnings */
       warnings: string[];
+      /** Limitations */
+      limitations?: string[];
+      /** Partial Reasons */
+      partial_reasons?: string[];
+      quality?: components["schemas"]["AnalysisQuality"];
+      /** Engine Version */
+      engine_version?: string | null;
       /** Created At */
       created_at: string;
       /** Expires At */

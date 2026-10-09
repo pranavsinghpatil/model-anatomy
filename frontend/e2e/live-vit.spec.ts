@@ -43,6 +43,35 @@ test("live ViT patches, CLS selection and tensor inspection", async ({
   expect(result.status).toBe("completed");
   expect(result.prepared).toBe(false);
   expect(result.parameter_count).toBe(86_567_656);
+  expect(result.warnings).toEqual([]);
+  expect(result.partial_reasons).toEqual([]);
+  expect(result.limitations?.length ?? 0).toBeGreaterThan(0);
+  expect(result.quality).toMatchObject({
+    semantic_coverage: 1,
+    module_semantic_coverage: 1,
+    checkpoint_parameter_coverage: 1,
+    tensor_shape_coverage: 1,
+    unknown_nodes: 0,
+    unmapped_checkpoint_tensors: 0,
+    forward_executed: false,
+    runtime_trace_available: false,
+  });
+  const checks = page.getByTestId("report-checks");
+  await checks.locator("summary").click();
+  await expect(checks.locator("dd").filter({ hasText: "100.0%" })).toHaveCount(
+    4,
+  );
+  await page.getByTestId("analysis-scope").locator("summary").click();
+  await expect(page.getByTestId("analysis-scope")).toContainText(
+    result.engine_version!,
+  );
+  await expect(page.locator(".analysis-notes .warnings")).toHaveCount(0);
+  await page.screenshot({
+    path: testInfo.outputPath("vit-report-checks.png"),
+    animations: "disabled",
+  });
+  await checks.locator("summary").click();
+  await page.getByTestId("analysis-scope").locator("summary").click();
   const report = await (await page.request.get(`${path}/exports/json`)).json();
   expect(report.metadata.engine_version).toBe("2026.10.09.2");
   expect(report.metadata.artifacts.weight_payload_bytes_read).toBe(0);

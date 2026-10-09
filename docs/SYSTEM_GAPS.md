@@ -57,6 +57,12 @@ and a small vision model would not establish large-model capacity.
 
 ## Prioritized Acceptance Gaps
 
+**Current closure gate:** the user has paused expansion. Close existing extraction
+warnings, report accuracy and summary applicability before starting any of the
+family, scale or deployment additions below. See [READING_REPORTS.md](READING_REPORTS.md)
+for report meanings and the manual verification sequence. The queue below records
+future acceptance requirements; it does not authorize moving past this gate.
+
 1. **Close modality correctness before claiming family breadth.** Add pinned,
    small real-model engine acceptance for (a) encoder-decoder text, (b) additional image
    encoder/classifier, (c) image-text generation, and (d) audio. Each should
@@ -100,7 +106,7 @@ and a small vision model would not establish large-model capacity.
 | System | Current evidence | Next gate |
 | --- | --- | --- |
 | Artifact resolution | Pinned Safetensors and index/header safety checks, no payload fallback | Additional formats need their own safe metadata readers. Common revision-tree URLs are not accepted yet. Never enable pickle loading to improve coverage. |
-| Semantic engine | Real text and canonical ViT patch/CLS/output semantics; explicit unknowns | Encoder-decoder and modality bridges next; masked/interpolated vision paths require separate acceptance. Add pinned acceptance for every advertised family. |
+| Semantic engine | Real text and canonical ViT patch/CLS/output semantics; explicit unknowns | First resolve GPT-2's native padding-diagnostic static warning with evidence. Family additions remain paused; masked/interpolated vision paths need separate acceptance. |
 | Scale/resource control | Separate worker, timeout, bounded headers/shards/report, tested 4B text engine | Nested dimension validation, module/tensor/graph budgets, measured larger checkpoints, and actual Linux memory-limit evidence. |
 | Jobs/API | Real text and image cold/cache jobs, isolation, limits, exports; worker lifecycle unit tests | Repeat crash/restart/concurrent submission/retention tests against hosted PostgreSQL, not only local SQLite. |
 | Storage/cache | Local storage tested; private Supabase adapter/configuration exists | Real private-bucket integration, expired artifacts, provider outage and integrity recovery on the deployed service. |
@@ -127,6 +133,36 @@ and a small vision model would not establish large-model capacity.
 The successful paths remain pinned native inspection with explicit static-analysis
 limitations. Broader family, size and production claims must carry their own
 acceptance evidence.
+
+## Report Clarity Pass Verification
+
+- Analysis status is separate from model revision and engine version. The API/UI
+  expose recorded coverage, unknown/unmapped counts, execution flags and specific
+  incomplete checks. Missing or invalid coverage/count values cannot pass.
+- General method limitations are shown as analysis scope, not extraction warnings.
+  Actual warnings remain visible and can make an otherwise fully covered report
+  partial. Legacy summaries and terminal badges are reassessed from immutable
+  stored bytes without modifying reports, ownership or persisted job records.
+- Full backend suite with both real integration flags: **152 passed**, one
+  Linux memory-enforcement check skipped on Windows, one existing Starlette
+  TestClient deprecation warning. Frontend build/type checking, formatting, Ruff
+  and scoped diff checks pass.
+- **50 desktop/mobile regression checks passed**; six opt-in live cases were not
+  enabled in that run. A separate live ViT run passed on both desktop and mobile,
+  asserting the new quality fields, scope/warning separation, nested patch graph,
+  classifier tensor ownership and ZIP export against the real API and worker.
+- Current-engine audits of pinned SmolLM2-135M and Qwen3-4B-Thinking-2507 finish
+  completed with four coverage ratios of 1, zero unknown/unmapped counts and no
+  extraction warnings. GPT-2 retains the specific `is_torch_fx_proxy` opaque-call
+  warning in its native padding diagnostic and remains partial. Earlier rows
+  describing partial HTTP observations are historical, not current-engine audits.
+- The user's existing ViT report at revision
+  `3f49326eb077187dfe1c2a2bb15fbd74e6ab91e3` was checked directly: completed,
+  four coverage ratios of 1, no unknown/unmapped records or extraction warnings.
+  Eight general scope notes remain visible. No model forward pass was executed.
+- This closes report-clarity issues only. GPT-2's warning, modality-inapplicable
+  summary fields, broader static-path evidence and hosted runtime gates remain
+  open. No claim of a gap-free or universally supported application is made.
 
 ## ViT Semantic Pass Verification
 

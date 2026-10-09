@@ -64,6 +64,18 @@ class Dimensions(BaseModel):
     vocabulary: int | None = None
 
 
+class AnalysisQuality(BaseModel):
+    semantic_coverage: float | None = Field(default=None, ge=0, le=1)
+    module_semantic_coverage: float | None = Field(default=None, ge=0, le=1)
+    checkpoint_parameter_coverage: float | None = Field(default=None, ge=0, le=1)
+    tensor_shape_coverage: float | None = Field(default=None, ge=0, le=1)
+    unknown_nodes: int | None = Field(default=None, ge=0)
+    unmapped_checkpoint_tensors: int | None = Field(default=None, ge=0)
+    forward_executed: bool | None = None
+    runtime_trace_available: bool | None = None
+    mode: str | None = None
+
+
 class AnalysisDetail(BaseModel):
     id: str
     model_id: str
@@ -73,6 +85,10 @@ class AnalysisDetail(BaseModel):
     stage: str
     error: AnalysisError | None
     warnings: list[str]
+    limitations: list[str] = Field(default_factory=list)
+    partial_reasons: list[str] = Field(default_factory=list)
+    quality: AnalysisQuality = Field(default_factory=AnalysisQuality)
+    engine_version: str | None = None
     created_at: str
     expires_at: str | None
     parameter_count: int | None

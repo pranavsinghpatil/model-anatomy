@@ -9,3 +9,6 @@ The documentation is intentionally small. Each file has one job:
 5. [DECISION_LOG.md](DECISION_LOG.md) — permanent record of binding decisions.
 
 Read [AGENTS.md](../AGENTS.md) first when performing repository work.
+
+For application users, [Reading Reports](READING_REPORTS.md) explains status,
+revision, coverage checks, actual warnings, analysis scope and manual verification.

@@ -15,7 +15,7 @@ from starlette.exceptions import HTTPException
 
 from model_anatomy.service.ai import ExplanationService
 from model_anatomy.service.errors import ServiceError
-from model_anatomy.service.jobs import JobService, job_detail
+from model_anatomy.service.jobs import JobService
 from model_anatomy.service.views import EXAMPLES, examples, export, graph_view, load_ir, node_view, prepared
 
 from .schemas import (
@@ -113,7 +113,7 @@ def create_app(settings: Settings | None = None, *, service=None, explanation=No
     def detail(request: Request, analysis_id: str) -> dict:
         if analysis_id in EXAMPLES:
             return prepared(config, analysis_id)[0]
-        return job_detail(jobs.get(analysis_id, guest(request)))
+        return jobs.present(jobs.get(analysis_id, guest(request)))
 
     def artifact(request: Request, analysis_id: str):
         if analysis_id in EXAMPLES:

@@ -44,6 +44,8 @@ const exportFormats: { format: ExportFormat; label: string }[] = [
   { format: "diagnostics", label: "Diagnostics" },
   { format: "audit", label: "Audit" },
 ];
+const coverage = (value: number | null) =>
+  value == null ? "Unknown" : `${(value * 100).toFixed(1)}%`;
 
 export function App() {
   const client = useQueryClient();
@@ -573,10 +575,12 @@ export function App() {
                 )}
               </div>
             )}
-            {detail?.revision && (
-              <div className="revision" title={detail.revision}>
-                <span>Revision</span>
-                <code>{detail.revision}</code>
+            {detail && (
+              <div className="revision" title={detail.revision ?? undefined}>
+                <span>Model revision</span>
+                <code data-testid="model-revision">
+                  {detail.revision ?? "Unknown"}
+                </code>
               </div>
             )}
             {detail && pending(detail.status) && (
@@ -601,6 +605,128 @@ export function App() {
                     : ""}
                 </div>
               )}
+              {detail && (
+                <details
+                  className="analysis-report"
+                  data-testid="report-checks"
+                >
+                  <summary>Report checks</summary>
+                  <div
+                    className="report-check-content"
+                    tabIndex={0}
+                    role="region"
+                    aria-label="Report check results"
+                  >
+                    <dl>
+                      <div>
+                        <dt>Semantic coverage</dt>
+                        <dd>
+                          {coverage(detail.quality?.semantic_coverage ?? null)}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>Module semantic coverage</dt>
+                        <dd>
+                          {coverage(
+                            detail.quality?.module_semantic_coverage ?? null,
+                          )}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>Checkpoint parameter coverage</dt>
+                        <dd>
+                          {coverage(
+                            detail.quality?.checkpoint_parameter_coverage ??
+                              null,
+                          )}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>Tensor shape coverage</dt>
+                        <dd>
+                          {coverage(
+                            detail.quality?.tensor_shape_coverage ?? null,
+                          )}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>Unknown nodes</dt>
+                        <dd>{detail.quality?.unknown_nodes ?? "Unknown"}</dd>
+                      </div>
+                      <div>
+                        <dt>Unmapped checkpoint tensors</dt>
+                        <dd>
+                          {detail.quality?.unmapped_checkpoint_tensors ??
+                            "Unknown"}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>Forward executed</dt>
+                        <dd>
+                          {detail.quality?.forward_executed == null
+                            ? "Unknown"
+                            : detail.quality.forward_executed
+                              ? "Yes"
+                              : "No"}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>Runtime trace available</dt>
+                        <dd>
+                          {detail.quality?.runtime_trace_available == null
+                            ? "Unknown"
+                            : detail.quality.runtime_trace_available
+                              ? "Yes"
+                              : "No"}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>Mode</dt>
+                        <dd>{detail.quality?.mode ?? "Unknown"}</dd>
+                      </div>
+                    </dl>
+                    {(detail.partial_reasons?.length ?? 0) > 0 && (
+                      <div className="report-reasons">
+                        <strong>Incomplete checks</strong>
+                        <ul>
+                          {detail.partial_reasons?.map((reason, index) => (
+                            <li key={index}>{reason}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                </details>
+              )}
+              {detail &&
+                (detail.engine_version ||
+                  (detail.limitations?.length ?? 0) > 0) && (
+                  <details
+                    className="analysis-report analysis-scope"
+                    data-testid="analysis-scope"
+                  >
+                    <summary>Analysis scope</summary>
+                    <div
+                      className="report-check-content"
+                      tabIndex={0}
+                      role="region"
+                      aria-label="Analysis scope notes"
+                    >
+                      {detail.engine_version && (
+                        <p>
+                          Engine version: <code>{detail.engine_version}</code>
+                        </p>
+                      )}
+                      {(detail.limitations?.length ?? 0) > 0 && (
+                        <ul>
+                          {detail.limitations?.map((limitation, index) => (
+                            <li key={index}>{limitation}</li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  </details>
+                )}
               {detail && <Warnings warnings={detail.warnings} />}
             </div>
             {cancel.error && <ErrorNotice error={cancel.error} />}

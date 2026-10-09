@@ -175,3 +175,16 @@ Q/K/V tensor specs on named graph output ports rather than introducing artificia
 unknowns. Do not relax coverage thresholds or relabel genuinely partial reports.
 Old saved reports remain immutable; extraction corrections invalidate cache
 identity and require a new analysis.
+
+## D-022 - Separate report problems, method scope and artifact identity
+**2026-10-09 - accepted**
+
+Analysis status, model revision and engine version are independent facts. Expose
+recorded coverage and specific incomplete checks rather than implying that a
+completed badge proves every runtime variant. Extraction warnings remain warnings;
+general method limitations belong to analysis scope. Missing coverage/count checks remain
+unknown, not default to success. Normalize legacy presentation from immutable
+report bytes and reassess terminal completion from those same facts, without
+rewriting stored jobs, reports or ownership. Keep summaries
+small and bounded. Pause expansion while current report and system gaps are being
+closed; document unresolved engine warnings instead of declaring the system perfect.

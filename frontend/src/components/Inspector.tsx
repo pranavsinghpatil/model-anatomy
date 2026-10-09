@@ -166,6 +166,24 @@ export function Inspector({
             </div>
           ))}
         </dl>
+        {(analysis.engine_version ||
+          (analysis.limitations?.length ?? 0) > 0) && (
+          <section className="inspector-scope" data-testid="metadata-scope">
+            <h3>Analysis scope</h3>
+            {analysis.engine_version && (
+              <p>
+                Engine version: <code>{analysis.engine_version}</code>
+              </p>
+            )}
+            {(analysis.limitations?.length ?? 0) > 0 && (
+              <ul>
+                {analysis.limitations?.map((limitation, index) => (
+                  <li key={index}>{limitation}</li>
+                ))}
+              </ul>
+            )}
+          </section>
+        )}
         <h3>Warnings</h3>
         {analysis.warnings.length ? (
           <div className="warnings" data-testid="metadata-warnings">

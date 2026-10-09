@@ -485,9 +485,7 @@ h1 {
   min-width: 0;
 }
 .revision code {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
   font-size: 10px;
 }
 .icon-button {
@@ -595,8 +593,79 @@ summary::-webkit-details-marker {
 .analysis-notes {
   display: flex;
   align-items: baseline;
+  flex-wrap: wrap;
   gap: 12px;
   margin-top: 8px;
+}
+.analysis-report {
+  min-width: 0;
+  max-width: 100%;
+  color: #58636a;
+  font-size: 10px;
+}
+.analysis-report > summary {
+  cursor: pointer;
+  color: #53636a;
+  font-weight: 550;
+}
+.analysis-report[open] {
+  flex-basis: 100%;
+}
+.report-check-content {
+  max-width: 720px;
+  max-height: 180px;
+  overflow: auto;
+  font-size: 11px;
+  padding: 8px 0 2px;
+  overflow-wrap: anywhere;
+}
+.report-check-content dl {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px 16px;
+  margin: 0;
+}
+.report-check-content dl > div {
+  min-width: 0;
+}
+.report-check-content dt {
+  color: var(--muted);
+}
+.report-check-content dd {
+  margin: 2px 0 0;
+  color: #34434a;
+  font-weight: 550;
+  overflow-wrap: anywhere;
+}
+.report-check-content ul {
+  margin: 5px 0 2px;
+  padding-left: 17px;
+}
+.report-check-content li,
+.report-check-content p {
+  margin: 4px 0;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.report-reasons {
+  margin-top: 9px;
+}
+.report-reasons strong {
+  font-weight: 600;
+}
+.inspector-scope {
+  margin: 16px 0;
+  overflow-wrap: anywhere;
+}
+.inspector-scope p,
+.inspector-scope li {
+  color: #68747b;
+  font-size: 11px;
+  line-height: 1.55;
+}
+.inspector-scope ul {
+  margin: 6px 0 0;
+  padding-left: 17px;
 }
 .analysis-notes:empty {
   display: none;
@@ -1697,6 +1766,14 @@ summary::-webkit-details-marker {
   }
   .revision code {
     font-size: 9px;
+  }
+  .analysis-notes {
+    align-items: flex-start;
+    gap: 9px;
+  }
+  .report-check-content dl {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 7px 10px;
   }
   .graph-toolbar {
     min-height: 35px;
