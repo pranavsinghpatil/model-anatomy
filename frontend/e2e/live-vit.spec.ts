@@ -41,7 +41,6 @@ test("live ViT patches, CLS selection and tensor inspection", async ({
     await page.request.get(path)
   ).json()) as AnalysisDetail;
   expect(result.status).toBe("completed");
-  expect(result.prepared).toBe(false);
   expect(result.parameter_count).toBe(86_567_656);
   expect(result.warnings).toEqual([]);
   expect(result.partial_reasons).toEqual([]);

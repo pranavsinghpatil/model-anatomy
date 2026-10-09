@@ -435,16 +435,11 @@ h1 {
 .status-unsupported .status-dot {
   background: #a55050;
 }
-.prepared-label {
+.cache-label {
   background: #f0edf5;
   color: #7b6495;
   border-radius: 3px;
   padding: 3px 6px;
-  font-size: 9px;
-}
-.analysis-link-copy > .prepared-label {
-  align-self: flex-start;
-  color: #7b6495;
   font-size: 9px;
 }
 .model-metrics {
@@ -1732,7 +1727,7 @@ summary::-webkit-details-marker {
     justify-content: flex-end;
     max-width: 104px;
   }
-  .prepared-label {
+  .cache-label {
     font-size: 8px;
     padding: 2px 4px;
   }

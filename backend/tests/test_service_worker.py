@@ -41,7 +41,7 @@ def test_resolve_once_before_extraction_and_cache_hit_skips_engine(tmp_path):
     service.initialize()
     service.acquire_worker("w")
     guest, _ = service.guest(None)
-    ir = load_ir((settings.prepared_dir / "gpt2/model.json").read_bytes())
+    ir = load_ir((Path(__file__).resolve().parents[2] / "output/gpt2/model.json").read_bytes())
     metadata = MetadataMock(ir.metadata["revision"])
     calls = []
 
@@ -79,7 +79,7 @@ def sleeping_child(settings, job_id, owner):
 
 def successful_child(settings, job_id, owner):
     service = JobService(settings)
-    data = (settings.prepared_dir / "gpt2/model.json").read_bytes()
+    data = (Path(__file__).resolve().parents[2] / "output/gpt2/model.json").read_bytes()
     document = json.loads(data)
     service.resolved(job_id, owner, document["model_id"], document["metadata"]["revision"])
     key = cache_key(document["model_id"], document["metadata"]["revision"], settings.engine_version, "1.1")

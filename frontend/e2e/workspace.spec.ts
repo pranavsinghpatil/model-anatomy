@@ -19,7 +19,7 @@ test("readable graph with reversible workspace panels", async ({
   isMobile,
 }, testInfo) => {
   await mockService(page);
-  await page.goto("/?analysis=example-gpt2");
+  await page.goto("/?analysis=job-test");
   await expect(page.getByTestId("graph-canvas")).toBeVisible();
   await expectReadableGraph(page);
   await expect(page.locator(".right-panel")).not.toBeVisible();
@@ -80,9 +80,9 @@ test("real artifact graph, scoped nesting, tensor and evidence inspection", asyn
   const requests = await mockService(page);
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
-  await page.goto("/?analysis=example-gpt2");
+  await page.goto("/?analysis=job-test");
   await expect(page.getByTestId("graph-canvas")).toBeVisible();
-  await expect(page).toHaveURL(/analysis=example-gpt2/);
+  await expect(page).toHaveURL(/analysis=job-test/);
   await expect(page.locator(".react-flow__node")).toHaveCount(
     rootGraph.nodes.length,
   );
@@ -136,16 +136,14 @@ test("real artifact graph, scoped nesting, tensor and evidence inspection", asyn
   expect(errors).toEqual([]);
 });
 
-test("503 health disables new analysis without hiding prepared or recent reports", async ({
+test("503 health disables new analysis without hiding recent reports", async ({
   page,
   isMobile,
 }) => {
+  const cachedJob = { ...analysisFor(), cached: true };
   const requests = await mockService(page, {
-    recent: [
-      analysisFor("example-gpt2"),
-      { ...analysisFor("job-old"), created_at: "2026-10-07T09:00:00Z" },
-      analysisFor("job-test"),
-    ],
+    job: cachedJob,
+    recent: [cachedJob],
     health: {
       status: "degraded",
       api_version: "v1",
@@ -175,10 +173,12 @@ test("503 health disables new analysis without hiding prepared or recent reports
       .getByRole("button", { name: "Open recent analyses" })
       .first()
       .click();
-  await page.getByRole("button", { name: /SmolLM2 135M/ }).click();
-  await expect(page.getByRole("heading", { level: 1 })).toContainText("SmolLM");
-  await expect(page.locator(".model-actions .prepared-label")).toHaveText(
-    "Prepared",
+  await page.locator(".recent-link").click();
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(
+    analysisFor().model_id,
+  );
+  await expect(page.locator(".model-actions .cache-label")).toHaveText(
+    "Cached",
   );
   await showQuestions(page, isMobile);
   await expect(page.getByLabel("Ask about model evidence")).toBeDisabled();
@@ -194,9 +194,8 @@ test("503 health disables new analysis without hiding prepared or recent reports
   ).toBe(false);
 });
 
-test("new visitor starts empty and chooses a prepared example explicitly", async ({
+test("new visitor starts with an empty workspace", async ({
   page,
-  isMobile,
 }, testInfo) => {
   const requests = await mockService(page, { noRecent: true });
   await page.goto("/");
@@ -215,17 +214,25 @@ test("new visitor starts empty and chooses a prepared example explicitly", async
   expect(
     requests.some((request) => /\/analyses\/[^/?]+/.test(request.path)),
   ).toBe(false);
-  if (isMobile)
-    await page
-      .getByRole("button", { name: "Open recent analyses" })
-      .first()
-      .click();
-  await expect(
-    page.getByRole("button", { name: /SmolLM2 135M/ }),
-  ).toContainText("Prepared");
-  await page.getByRole("button", { name: /SmolLM2 135M/ }).click();
-  await expect(page.getByTestId("graph-canvas")).toBeVisible();
-  await expect(page).toHaveURL(/analysis=example-smollm/);
+  await expect(page.locator(".recent-link")).toHaveCount(0);
+  expect(requests.some((request) => request.path.includes("/examples"))).toBe(
+    false,
+  );
+});
+
+test("legacy example query cannot synthesize an analysis or graph", async ({
+  page,
+}) => {
+  const requests = await mockService(page);
+  await page.goto("/?analysis=example-gpt2");
+  await expect(page.getByRole("alert")).toContainText("Analysis not found");
+  await expect(page.getByTestId("graph-canvas")).toHaveCount(0);
+  expect(requests.some((request) => request.path.includes("/examples"))).toBe(
+    false,
+  );
+  expect(requests.some((request) => request.path.includes("/graphs/"))).toBe(
+    false,
+  );
 });
 
 test("optional AI configuration does not disable healthy model analysis", async ({
@@ -247,7 +254,7 @@ for (const healthError of ["network", "invalid"] as const)
     page,
   }) => {
     await mockService(page, { healthError });
-    await page.goto("/?analysis=example-gpt2");
+    await page.goto("/?analysis=job-test");
     await expect(page.getByTestId("graph-canvas")).toBeVisible();
     await expect(page.locator(".service-state")).toHaveText("API unavailable");
     await expect(page.locator(".service-dot")).not.toHaveClass(/online/);
@@ -323,7 +330,7 @@ test("AI response keeps provenance and citation jumps to associated component", 
   isMobile,
 }) => {
   const requests = await mockService(page);
-  await page.goto("/?analysis=example-gpt2");
+  await page.goto("/?analysis=job-test");
   await expect(page.getByTestId("graph-canvas")).toBeVisible();
   await graphNode(page, embedding.label);
   await showQuestions(page, isMobile);
@@ -362,7 +369,7 @@ for (const unknown of [false, true])
           dimensions: { hidden: null, heads: null, layers: 0 },
           warnings: ["Checkpoint metadata is incomplete."],
         }
-      : analysisFor("example-smollm");
+      : analysisFor("job-test");
     await mockService(page, { metadataCitation: true, job: analysis });
     await page.goto(`/?analysis=${analysis.id}`);
     await expect(page.getByTestId("graph-canvas")).toBeVisible();
@@ -469,7 +476,7 @@ test("tensor pagination requests bounded pages with stable selection", async ({
   isMobile,
 }) => {
   const requests = await mockService(page, { paginated: true });
-  await page.goto("/?analysis=example-gpt2");
+  await page.goto("/?analysis=job-test");
   await expect(page.getByTestId("graph-canvas")).toBeVisible();
   await graphNode(page, embedding.label);
   await showDetails(page, isMobile);
@@ -530,7 +537,7 @@ test("unavailable AI returns a structured error without fabricated answer", asyn
 });
 
 test("empty service does not synthesize a graph", async ({ page }) => {
-  await mockService(page, { empty: true });
+  await mockService(page, { noRecent: true });
   await page.goto("/");
   await expect(page.getByText("No analysis selected").first()).toBeVisible();
   await expect(page.getByTestId("graph-canvas")).toHaveCount(0);

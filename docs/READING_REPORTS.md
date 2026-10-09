@@ -10,8 +10,9 @@
 
 The same model ID can resolve to a newer revision later. To reproduce a report,
 use its recorded revision rather than assuming the repository's latest files
-are unchanged. A prepared report is a saved example. A cached report reuses an
-inspection with the same immutable revision and extraction identity.
+are unchanged. A cached report reuses a real inspection with the same immutable
+revision and extraction identity. Prepared examples and their API have been
+removed; only submitted, visitor-owned analyses are available in the application.
 
 ## What Completed Means
 

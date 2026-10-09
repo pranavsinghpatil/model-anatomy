@@ -9,6 +9,7 @@ export default defineConfig(({ mode }) => {
       watch: {
         ignored: [
           "**/test-results/**",
+          "**/test-results-live/**",
           "**/playwright-report/**",
           "**/.logs/**",
           "**/dist/**",

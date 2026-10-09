@@ -4,27 +4,11 @@ import io
 import json
 import zipfile
 from dataclasses import asdict, replace
-from functools import lru_cache
-from pathlib import Path
 
 from model_anatomy.src.ir import ModelIR
 from model_anatomy.src.render import mermaid
 
 from .errors import ServiceError
-from .jobs import ir_summary, timestamp
-
-EXAMPLES = {
-    "example-gpt2": ("GPT-2", "gpt2"),
-    "example-smollm": ("SmolLM2 135M", "huggingfacetb--smollm2-135m"),
-}
-
-
-@lru_cache(maxsize=2)
-def _prepared_snapshot(path: Path, modified_ns: int, size: int) -> ModelIR:
-    # Deployment snapshots are read-only; stat identity invalidates changed files.
-    if size > 32 * 1024**2:
-        raise ServiceError(503, "example_unavailable", "Prepared metadata exceeds its size budget")
-    return load_ir(path.read_bytes())
 
 
 def load_ir(data: bytes | str) -> ModelIR:
@@ -35,66 +19,6 @@ def load_ir(data: bytes | str) -> ModelIR:
         return ir
     except (ValueError, KeyError, TypeError) as exc:
         raise ServiceError(503, "invalid_artifact", "Stored IR failed validation") from exc
-
-
-def prepared(settings, analysis_id: str) -> tuple[dict, ModelIR]:
-    if analysis_id not in EXAMPLES:
-        raise ServiceError(404, "not_found", "Analysis not found")
-    _, directory = EXAMPLES[analysis_id]
-    path = settings.prepared_dir / directory / "model.json"
-    try:
-        stat = path.stat()
-        ir = _prepared_snapshot(path.resolve(), stat.st_mtime_ns, stat.st_size)
-        created = stat.st_mtime
-    except OSError as exc:
-        raise ServiceError(503, "example_unavailable", "Prepared metadata snapshot is unavailable") from exc
-    summary = ir_summary(
-        {
-            "metadata": ir.metadata,
-            "architecture": ir.architecture,
-            "root_graph": {"id": ir.root_graph.id},
-        }
-    )
-    return {
-        "id": analysis_id,
-        "model_id": ir.model_id,
-        "architecture": ir.architecture,
-        "revision": ir.metadata.get("revision"),
-        "status": summary["result_status"],
-        "stage": summary["result_status"],
-        "error": None,
-        "warnings": summary["warnings"],
-        "limitations": summary["limitations"],
-        "partial_reasons": summary["partial_reasons"],
-        "quality": summary["quality"],
-        "engine_version": summary["engine_version"],
-        "created_at": timestamp(created),
-        "expires_at": None,
-        "parameter_count": summary["parameter_count"],
-        "root_graph_id": ir.root_graph.id,
-        "cached": False,
-        "prepared": True,
-        "dimensions": summary["dimensions"],
-    }, ir
-
-
-def examples(settings) -> list[dict]:
-    result = []
-    for analysis_id, (title, _) in EXAMPLES.items():
-        try:
-            detail, _ = prepared(settings, analysis_id)
-        except ServiceError:
-            continue
-        if analysis_id == "example-smollm" and "smollm2" in detail["model_id"].lower():
-            title = "SmolLM2 135M"
-        result.append(
-            {
-                key: detail[key]
-                for key in ("id", "model_id", "revision", "architecture", "parameter_count", "status")
-            }
-            | {"title": title}
-        )
-    return result
 
 
 def graph(ir: ModelIR, graph_id: str):

@@ -38,7 +38,7 @@ def live_backend(tmp_path):
     with socket.socket() as socket_:
         socket_.bind(("127.0.0.1", 0))
         port = socket_.getsockname()[1]
-    # No credentials, prepared reports or previous cache can influence this run.
+    # No credentials or previous cache can influence this run.
     env = {
         key: value
         for key, value in os.environ.items()
@@ -46,7 +46,6 @@ def live_backend(tmp_path):
     }
     env.update(
         MODEL_ANATOMY_DATA_DIR=str(tmp_path / "live-data"),
-        MODEL_ANATOMY_PREPARED_DIR=str(tmp_path / "no-prepared-examples"),
         PYTHONPATH=str(ROOT / "backend"),
     )
     processes = []
@@ -120,7 +119,7 @@ def live_backend(tmp_path):
         ("google/vit-base-patch16-224", "10064cc17b69d623a025c9e90e11230cc8ba6967", 86567656, "classifier"),
     ],
 )
-def test_real_nonprepared_model_submission_graph_tensors_exports_and_cache(
+def test_real_model_submission_graph_tensors_exports_and_cache(
     live_backend,
     model,
     revision,
@@ -139,10 +138,10 @@ def test_real_nonprepared_model_submission_graph_tensors_exports_and_cache(
     )
     assert response.status_code == 202
     queued = response.json()
-    assert queued["status"] == "queued" and queued["prepared"] is False
+    assert queued["status"] == "queued" and "prepared" not in queued
     detail = wait_for_result(client, queued["id"])
     assert detail["status"] in {"completed", "partial"}, detail.get("error")
-    assert detail["model_id"] == model and detail["prepared"] is False and detail["cached"] is False
+    assert detail["model_id"] == model and "prepared" not in detail and detail["cached"] is False
     assert re.fullmatch(r"[0-9a-f]{40}", detail["revision"])
     assert detail["revision"] == revision
     assert detail["parameter_count"] == parameters
@@ -183,7 +182,7 @@ def test_real_nonprepared_model_submission_graph_tensors_exports_and_cache(
     cached = client.post("/api/v1/analyses", json={"model": model_reference})
     assert cached.status_code == 202
     reused = wait_for_result(client, cached.json()["id"])
-    assert reused["cached"] is True and reused["prepared"] is False
+    assert reused["cached"] is True and "prepared" not in reused
     assert reused["revision"] == detail["revision"]
     assert reused["parameter_count"] == detail["parameter_count"]
     assert client.post("/api/v1/analyses", json={"model": model_reference}).status_code == 429
@@ -194,10 +193,10 @@ def test_real_nonprepared_model_submission_graph_tensors_exports_and_cache(
         failed = wait_for_result(other, unavailable.json()["id"])
         assert failed["model_id"] == missing_model
         assert failed["status"] == "failed" and failed["error"]["code"] == "artifact_http"
-        assert failed["prepared"] is False and failed["root_graph_id"] is None
+        assert "prepared" not in failed and failed["root_graph_id"] is None
         assert failed["parameter_count"] is None and failed["architecture"] is None
         assert other.get(f"/api/v1/analyses/{failed['id']}/exports/json").status_code == 503
     print(
         f"Real live report: {model}@{detail['revision']}; {detail['parameter_count']} parameters; "
-        f"{len(report['tensors'])} tensors; prepared=false; cold+cached+honest failure verified"
+        f"{len(report['tensors'])} tensors; cold+cached+honest failure verified"
     )

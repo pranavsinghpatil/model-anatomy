@@ -56,11 +56,11 @@ npm run dev
 ```
 
 Open [the application](http://127.0.0.1:5173) or [API docs](http://127.0.0.1:8001/docs).
-No sign-in is required. Prepared GPT-2 and SmolLM2 analyses remain readable when
-new inspections are unavailable. New models require Hugging Face network access.
+No sign-in is required. There are no prepared reports or demo endpoints: paste
+a model ID or URL to create a real analysis. New models require Hugging Face network access.
 `/health` checks the actual database, storage and worker and reports configured
 AI availability. HTTP 503 means new analyses are unavailable; stored reports
-remain inspectable. The app starts with your recent job or an empty workspace,
+remain inspectable when their database and storage are reachable. The app starts with your recent job or an empty workspace,
 not a fixed model. These commands bind only to loopback.
 
 Configuration uses `MODEL_ANATOMY_` environment variables. For example:

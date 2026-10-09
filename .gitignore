@@ -20,6 +20,7 @@ build/
 .tmp/
 playwright-report/
 test-results/
+test-results-live/
 frontend/dist/
 *.sqlite3
 *.sqlite3-*

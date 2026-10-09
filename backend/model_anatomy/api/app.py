@@ -16,14 +16,13 @@ from starlette.exceptions import HTTPException
 from model_anatomy.service.ai import ExplanationService
 from model_anatomy.service.errors import ServiceError
 from model_anatomy.service.jobs import JobService
-from model_anatomy.service.views import EXAMPLES, examples, export, graph_view, load_ir, node_view, prepared
+from model_anatomy.service.views import export, graph_view, load_ir, node_view
 
 from .schemas import (
     AnalysesResponse,
     AnalysisDetail,
     CreateAnalysis,
     ErrorResponse,
-    ExamplesResponse,
     GraphResponse,
     Health,
     HealthChecks,
@@ -63,8 +62,8 @@ def create_app(settings: Settings | None = None, *, service=None, explanation=No
         description=(
             "Analyze a Hugging Face model from its actual configuration, native structure and "
             "checkpoint metadata. Submit a model, poll its persisted analysis, then inspect graphs, "
-            "tensors and exports. Prepared examples are explicitly marked and never substituted "
-            "for a submitted model. Retain the visitor cookie to access your analyses."
+            "tensors and exports. Every report belongs to a submitted analysis. "
+            "Retain the visitor cookie to access your analyses."
         ),
         version="1.1",
         lifespan=lifespan,
@@ -111,13 +110,9 @@ def create_app(settings: Settings | None = None, *, service=None, explanation=No
         return request.state.guest_id
 
     def detail(request: Request, analysis_id: str) -> dict:
-        if analysis_id in EXAMPLES:
-            return prepared(config, analysis_id)[0]
         return jobs.present(jobs.get(analysis_id, guest(request)))
 
     def artifact(request: Request, analysis_id: str):
-        if analysis_id in EXAMPLES:
-            return prepared(config, analysis_id)[1]
         job = jobs.get(analysis_id, guest(request))
         if job.status not in {"completed", "partial"} or not job.blob_digest:
             raise ServiceError(503, "analysis_not_ready", "Analysis metadata is not available yet")
@@ -229,10 +224,6 @@ def create_app(settings: Settings | None = None, *, service=None, explanation=No
         )
         return JSONResponse(status_code=200 if available else 503, content=result.model_dump())
 
-    @app.get("/api/v1/examples", response_model=ExamplesResponse)
-    def list_examples():
-        return {"examples": examples(config)}
-
     @app.get("/api/v1/analyses", response_model=AnalysesResponse)
     def list_analyses(request: Request):
         return {"analyses": jobs.recent(guest(request))}
@@ -246,7 +237,7 @@ def create_app(settings: Settings | None = None, *, service=None, explanation=No
             "Accepts a repository ID or Hugging Face HTTPS URL, persists a new job and returns 202. "
             "The worker resolves an immutable revision and inspects real artifacts. No weights or "
             "remote model code are executed. Poll the returned ID using the same visitor cookie. "
-            "An exact-revision cache hit is marked cached; this is not a prepared example."
+            "An exact-revision cache hit reuses a real inspected report and is marked cached."
         ),
     )
     def create_analysis(body: CreateAnalysis, request: Request):
@@ -258,8 +249,6 @@ def create_app(settings: Settings | None = None, *, service=None, explanation=No
 
     @app.delete("/api/v1/analyses/{analysis_id}", response_model=AnalysisDetail)
     def cancel_analysis(analysis_id: str, request: Request):
-        if analysis_id in EXAMPLES:
-            raise ServiceError(422, "prepared_immutable", "Prepared analyses cannot be cancelled")
         return jobs.cancel(analysis_id, guest(request))
 
     @app.get("/api/v1/analyses/{analysis_id}/graphs/{graph_id}", response_model=GraphResponse)

@@ -7,6 +7,10 @@ that a model family works end to end.
 
 ## Current Evidence
 
+The runtime now serves only submitted visitor-owned jobs. Prepared examples and
+their endpoint have been removed. References to prepared checks in earlier
+verification sections below describe historical test runs, not current features.
+
 | Family / scale | Status | Evidence and boundary |
 | --- | --- | --- |
 | Decoder-only text, GPT-2 (~124M) and SmolLM2-135M | **Tested** | Pinned real-model engine checks assert revision, parameter count, dimensions, full checkpoint parameter mapping, graph validity, no forward pass, and zero weight payload reads. See [test_engine_integration.py](../backend/tests/test_engine_integration.py) and [ENGINE_ACCEPTANCE.md](ENGINE_ACCEPTANCE.md). Reports may be partial: symbolic dataflow shapes and static classifications are not runtime observations. |
@@ -163,6 +167,33 @@ acceptance evidence.
 - This closes report-clarity issues only. GPT-2's warning, modality-inapplicable
   summary fields, broader static-path evidence and hosted runtime gates remain
   open. No claim of a gap-free or universally supported application is made.
+
+## Submitted-Analyses-Only Verification
+
+- Removed `/api/v1/examples`, prepared snapshot loading/configuration, public
+  sample-ID shortcuts, example response types/flags and the prepared sidebar.
+  Frontend types were regenerated from the running FastAPI schema. Current API
+  and browser runtime source has no prepared/example data path.
+- New visitors start empty. Legacy example URLs return an explicit error, not a
+  graph. All report, graph, node, export, cancel and question routes use persisted
+  visitor-owned jobs. Real exact-revision caching remains labelled Cached.
+- Full backend suite with both real integration flags: **157 passed**, one Linux
+  memory-enforcement check skipped on Windows, one existing Starlette TestClient
+  deprecation warning. Includes removal/ownership regressions and cold/cache
+  HTTP-worker checks against real text and image artifacts.
+- **52 desktop/mobile regression checks passed**, with six opt-in live cases
+  disabled in that run. A separate **six-case live desktop/mobile run passed**:
+  real SmolLM2-360M and pinned ViT submissions plus removed-example/empty-workspace
+  checks. Live tests use no intercepted responses or substitute engine outputs.
+- The first live run passed four cases, then Vite crashed watching a locked test
+  download in the separate live-results directory. Excluding generated live
+  artifacts from its watcher fixed the dev-server issue; the full live rerun
+  passed. Build/type checking, Prettier, Ruff and diff checks pass.
+- Historical CLI outputs and test-only fixtures/mocks remain regression evidence,
+  not runtime sources. Existing uncommitted deployment drafts still need their
+  retired snapshot-packaging/preflight assumptions removed before deployment;
+  they are not used by the running application or included in this app-only PR.
+  Hosted runtime/AI verification and the earlier extraction gaps remain open.
 
 ## ViT Semantic Pass Verification
 

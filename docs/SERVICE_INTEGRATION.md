@@ -24,11 +24,10 @@ OpenAPI document, not from a separately maintained specification.
 
 | Route | Behavior |
 | --- | --- |
-| `GET /examples` | Public, retained prepared analyses |
 | `GET /analyses` | This anonymous visitor's unexpired jobs |
 | `POST /analyses` | Persist an admitted analysis before returning 202 |
 | `GET /analyses/{id}` | Status, progress, warnings, revision and dimensions |
-| `DELETE /analyses/{id}` | Request cancellation; prepared examples are immutable |
+| `DELETE /analyses/{id}` | Request cancellation of this visitor's analysis |
 | `GET /analyses/{id}/graphs/{graph_id}` | One shallow graph with nested references |
 | `GET /analyses/{id}/nodes/{graph_id}/{node_id}` | Facts, paginated tensors and evidence |
 | `GET /analyses/{id}/exports/{format}` | JSON, Mermaid, Markdown, diagnostics, audit or ZIP |
@@ -40,13 +39,14 @@ typed body includes dependency checks, `analysis_available`, configured
 `ai_available` and a sanitized failure reason. HTTP 200 means new analyses can
 run; 503 means degraded. AI is optional and never changes core health status.
 The former health/readiness/capabilities routes are removed, with no aliases.
-Prepared and existing stored graphs remain usable when jobs or questions are unavailable.
+Existing owned reports remain usable when only the worker or AI is unavailable,
+provided their database and storage remain reachable. There is no demo fallback.
 Configured AI availability is not proof of successful inference; a deployment
 smoke test must establish that separately.
 
 The browser opens a visitor's recent job, or an empty analysis workspace. Prepared
-examples are explicit opt-in snapshots, not the default result or a submission
-fallback. Every POST persists a distinct job with `prepared=false`, resolves the
+examples, public sample IDs and `/api/v1/examples` have been removed. Every POST
+persists a distinct visitor-owned job, resolves the
 input's actual immutable revision, and either runs the engine or reuses an exact
 revision cache entry marked `cached=true`. Missing repositories fail honestly.
 Swagger's same-origin POST/DELETE requests work without adding the API's own URL
@@ -63,7 +63,7 @@ Defaults: two inspections and ten questions per visitor per hour; twenty
 inspections and one hundred questions globally per day. Counters and admission
 share a transaction. Ten jobs can wait behind one running inspection. Budgets
 are configurable. Visitor jobs expire after 24 hours; reusable reports have a
-seven-day cache TTL. Prepared reports are retained separately. Cleanup runs
+seven-day cache TTL. There are no separately retained demo reports. Cleanup runs
 through the worker.
 
 ## Durable Execution
@@ -109,10 +109,12 @@ continue working.
 
 Run the opt-in real HTTP test with `RUN_HTTP_INTEGRATION=1` and
 `pytest -q -s backend/tests/test_live_http.py`. It launches a separate API and
-worker with a fresh database and an absent prepared-report directory, submits
+worker with a fresh database, submits
 `HuggingFaceTB/SmolLM2-360M`, compares dimensions with the exact upstream config,
 and checks nested graphs, real tensors, exports, cookie isolation, quotas and
 exact-revision cache reuse. No HTTP responses or engine functions are mocked.
+Test-only saved engine outputs and mock transports remain under tests/e2e to
+exercise deterministic errors and safety checks; they are not runtime data sources.
 
 See [engine acceptance](ENGINE_ACCEPTANCE.md) and
 [live HTTP acceptance](LIVE_BACKEND_ACCEPTANCE.md). Local tests do not establish

@@ -38,10 +38,7 @@ const load = (directory: string) =>
       "utf8",
     ),
   ) as Artifact;
-const artifacts = {
-  "example-gpt2": load("gpt2"),
-  "example-smollm": load("huggingfacetb--smollm2-135m"),
-};
+const artifact = load("gpt2");
 const graphMap = (root: RawGraph): Map<string, ArchitectureGraph> => {
   const result = new Map<string, ArchitectureGraph>();
   function visit(graph: RawGraph) {
@@ -58,15 +55,13 @@ const graphMap = (root: RawGraph): Map<string, ArchitectureGraph> => {
   visit(root);
   return result;
 };
-export const graphs = graphMap(artifacts["example-gpt2"].root_graph);
-export const rootGraph = graphs.get(artifacts["example-gpt2"].root_graph.id)!;
+export const graphs = graphMap(artifact.root_graph);
+export const rootGraph = graphs.get(artifact.root_graph.id)!;
 export const block = rootGraph.nodes.find((node) => node.repeat > 1)!;
 export const embedding = rootGraph.nodes.find(
   (node) => node.kind === "embedding",
 )!;
-export function analysisFor(id = "example-gpt2"): AnalysisDetail {
-  const artifact =
-    artifacts[id as keyof typeof artifacts] ?? artifacts["example-gpt2"];
+export function analysisFor(id = "job-test"): AnalysisDetail {
   return {
     id,
     model_id: artifact.model_id,
@@ -81,7 +76,6 @@ export function analysisFor(id = "example-gpt2"): AnalysisDetail {
     parameter_count: artifact.metadata.unique_parameter_count,
     root_graph_id: artifact.root_graph.id,
     cached: false,
-    prepared: id.startsWith("example-"),
     dimensions: artifact.metadata.dimensions,
   };
 }
@@ -99,13 +93,12 @@ export type Scenario = {
   getStatus?: number;
   graphError?: boolean;
   pollComplete?: boolean;
-  empty?: boolean;
   symbolic?: boolean;
   paginated?: boolean;
 };
 export async function mockService(page: Page, scenario: Scenario = {}) {
   const requests: { method: string; path: string; body: unknown }[] = [];
-  let job = scenario.job ?? analysisFor("job-test");
+  let job = scenario.job ?? analysisFor();
   let polls = 0;
   const apiRoute = (url: URL) =>
     url.pathname === "/health" || url.pathname.startsWith("/api/v1/");
@@ -141,15 +134,6 @@ export async function mockService(page: Page, scenario: Scenario = {}) {
       };
       return json(health, health.status === "ok" ? 200 : 503);
     }
-    if (parts[0] === "examples")
-      return json({
-        examples: scenario.empty
-          ? []
-          : Object.keys(artifacts).map((id) => ({
-              ...analysisFor(id),
-              title: id === "example-gpt2" ? "GPT-2" : "SmolLM2 135M",
-            })),
-      });
     if (parts[0] !== "analyses") return error(404, "not_found", "Not found");
     if (parts.length === 1) {
       if (request.method() === "POST")
@@ -161,12 +145,13 @@ export async function mockService(page: Page, scenario: Scenario = {}) {
             )
           : json(job, 202);
       return json({
-        analyses:
-          scenario.empty || scenario.noRecent ? [] : (scenario.recent ?? [job]),
+        analyses: scenario.noRecent ? [] : (scenario.recent ?? [job]),
       });
     }
     const id = parts[1];
     if (parts.length === 2) {
+      if (id !== "job-test")
+        return error(404, "not_found", "Analysis not found");
       if (request.method() === "DELETE") {
         job = { ...job, status: "cancelled", stage: "cancelled" };
         return json(job);
@@ -189,10 +174,9 @@ export async function mockService(page: Page, scenario: Scenario = {}) {
           };
         return json(job);
       }
-      return json(analysisFor(id));
+      return error(404, "not_found", "Analysis not found");
     }
-    const artifact =
-      artifacts[id as keyof typeof artifacts] ?? artifacts["example-gpt2"];
+    if (id !== "job-test") return error(404, "not_found", "Analysis not found");
     const collection = graphMap(artifact.root_graph);
     if (parts[2] === "graphs") {
       if (scenario.graphError)

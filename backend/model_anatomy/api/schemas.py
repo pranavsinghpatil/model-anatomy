@@ -35,8 +35,7 @@ class CreateAnalysis(BaseModel):
     model: str = Field(
         min_length=1,
         max_length=512,
-        description="Hugging Face repository ID or HTTPS URL; not a prepared analysis ID.",
-        examples=["HuggingFaceTB/SmolLM2-135M", "https://huggingface.co/openai-community/gpt2"],
+        description="Hugging Face repository ID or HTTPS URL to inspect.",
     )
 
 
@@ -94,7 +93,6 @@ class AnalysisDetail(BaseModel):
     parameter_count: int | None
     root_graph_id: str | None
     cached: bool
-    prepared: bool
     dimensions: Dimensions
 
 
@@ -104,20 +102,6 @@ class AnalysisSummary(AnalysisDetail):
 
 class AnalysesResponse(BaseModel):
     analyses: list[AnalysisSummary]
-
-
-class ExampleSummary(BaseModel):
-    id: str
-    title: str
-    model_id: str
-    revision: str | None
-    architecture: str | None
-    parameter_count: int | None
-    status: AnalysisStatus
-
-
-class ExamplesResponse(BaseModel):
-    examples: list[ExampleSummary]
 
 
 class Evidence(BaseModel):

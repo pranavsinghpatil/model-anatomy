@@ -26,6 +26,12 @@ The [hackathon release](https://nebiusglobalaihackathon.devpost.com/) must run o
 
 ## Product boundary
 
+The application serves only visitor-owned, submitted analyses. There is no
+prepared-example API, seeded graph, static report shortcut or demo fallback.
+Exact-revision caching reuses real inspected reports; it is not mock data.
+Historical CLI outputs may be retained as extraction evidence and test inputs,
+but are never served as application analyses.
+
 Safetensors is tensor evidence, not a computation graph. The reconstruction fuses configuration, executable structure, module hierarchy, graph tracing where possible, source, and tensor metadata. Unknown or untraceable facts stay explicit; the system never fills gaps with plausible architecture.
 
 ## Product sequence

@@ -17,9 +17,8 @@ Open the URL printed by Vite. `/api` and `/health` proxy to `http://127.0.0.1:80
 Set `API_PROXY_TARGET` in the environment or `.env.local` to change the upstream.
 Browser requests use `/api/v1` and root `/health` with same-origin guest cookies.
 In production, serve `dist/` and reverse-proxy both `/api` and `/health` to the HTTP service.
-On entry, the workspace restores the visitor's most recent non-prepared job when
-one exists. Otherwise it opens with an empty canvas and model input. Prepared
-examples are optional, explicitly selected reports with prepared badges.
+On entry, the workspace restores the visitor's most recent job when one exists.
+Otherwise it opens with an empty canvas and model input.
 
 The canvas starts at a readable scale rather than shrinking a long architecture
 to fit the screen. Fit graph gives the complete overview; Readable view restores
@@ -37,12 +36,12 @@ npx playwright install chromium
 npm run test:e2e
 ```
 
-Playwright runs desktop and mobile Chromium checks on port 5174, with route fixtures
-derived from the repository's real `output/gpt2` and `output/huggingfacetb--smollm2-135m`
-IR artifacts. Lifecycle/error scenarios are test-only. The production app has no
+Playwright runs desktop and mobile Chromium checks on port 5174, with the `job-test`
+route fixture derived from the repository's real `output/gpt2` IR artifact.
+Lifecycle/error scenarios are test-only. The production app has no
 mock mode. With the HTTP service running on 8001, set `E2E_LIVE_API=1` to include
-the separate `e2e/live.spec.ts` prepared-example integration tests, which use no
-route interception. Before starting the local HTTP service for live tests, include
+the separate `e2e/live.spec.ts` integration tests, which use no route interception.
+Before starting the local HTTP service for live tests, include
 the test server's port 5174 in its explicit allowed origins:
 
 ```powershell
@@ -54,7 +53,7 @@ browser Origin header, and the API rejects unlisted mutation origins. These are
 explicit local development origins, not production settings. `E2E_BASE_URL` can
 override the browser URL (for example, port 5173 with the default API configuration).
 Both a running HTTP service and worker are required for live submission. Each
-viewport submits one non-prepared SmolLM2-360M job under its own guest cookie and
+viewport submits one SmolLM2-360M job under its own guest cookie and
 verifies its real parameter count and recent-job restoration. Screenshots and traces go to the ignored
 `test-results/` directory.
 
@@ -76,12 +75,12 @@ reason are retained, and the UI indicates degradation without hiding stored
 reports. Only new analyses require confirmed healthy database, storage, and
 worker checks plus `analysis_available`. AI availability is independent.
 
-Other required endpoints use `/api/v1`: examples, analyses (list/create),
-analysis detail/cancel, graph, paginated node inspection, questions, and exports
+Other required endpoints use `/api/v1`: analyses (list/create), analysis
+detail/cancel, graph, paginated node inspection, questions, and exports
 (`json`, `zip`, `mermaid`, `markdown`, `diagnostics`, `audit`). HTTP failures must
 provide `{error:{code,message,request_id}}`, except for the structured 503 health
-response. Prepared examples use IDs `example-gpt2`
-and `example-smollm` and remain selectable when new analysis/AI are unavailable.
+response. A visitor with no stored jobs sees an empty workspace. Cached analyses
+remain visitor-owned reports and are marked as cached.
 
 Graph/node identities stay scoped by graph ID. Repeated blocks open only the
 engine-provided representative child graph; collapsing returns to its parent.

@@ -81,10 +81,6 @@ export function App() {
     serviceHealth.checks.worker &&
     serviceHealth.analysis_available;
   const restoredRecent = useRef(false);
-  const examples = useQuery({
-    queryKey: ["examples"],
-    queryFn: ({ signal }) => api.examples(signal),
-  });
   const recent = useQuery({
     queryKey: ["analyses"],
     queryFn: ({ signal }) => api.analyses(signal),
@@ -129,9 +125,9 @@ export function App() {
   useEffect(() => {
     if (restoredRecent.current || analysisId || !recent.data) return;
     restoredRecent.current = true;
-    const ownJob = recent.data.analyses
-      .filter((job) => !job.prepared)
-      .sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at))[0];
+    const ownJob = [...recent.data.analyses].sort(
+      (a, b) => Date.parse(b.created_at) - Date.parse(a.created_at),
+    )[0];
     if (ownJob) choose(ownJob.id);
   }, [analysisId, recent.data, choose]);
   const create = useMutation({
@@ -399,36 +395,6 @@ export function App() {
               <PanelLeftClose size={15} />
             </IconButton>
           </div>
-          <section className="sidebar-section">
-            <h3>Prepared analyses</h3>
-            {examples.isPending && <Loading text="Loading examples" />}
-            {examples.error && (
-              <ErrorNotice
-                error={examples.error}
-                retry={() => void examples.refetch()}
-              />
-            )}
-            {examples.data?.examples.map((example) => (
-              <button
-                className={`analysis-link ${example.id === analysisId ? "active" : ""}`}
-                key={example.id}
-                onClick={() => choose(example.id)}
-              >
-                <span className="analysis-icon">
-                  <Layers size={17} />
-                </span>
-                <span className="analysis-link-copy">
-                  <strong>{example.title}</strong>
-                  <span className="prepared-label">Prepared</span>
-                  <span>{example.architecture ?? "Unknown architecture"}</span>
-                  <small>
-                    {count(example.parameter_count, true)} parameters
-                  </small>
-                </span>
-                <ChevronRight size={14} />
-              </button>
-            ))}
-          </section>
           <section className="sidebar-section recent-section">
             <div className="section-heading">
               <History size={14} />
@@ -484,12 +450,7 @@ export function App() {
               </div>
               <div className="model-actions">
                 {detail && <Status status={detail.status} />}
-                {detail?.prepared && (
-                  <span className="prepared-label">Prepared</span>
-                )}
-                {detail?.cached && (
-                  <span className="prepared-label">Cached</span>
-                )}
+                {detail?.cached && <span className="cache-label">Cached</span>}
                 {detail && pending(detail.status) && (
                   <IconButton
                     label="Cancel pending job"

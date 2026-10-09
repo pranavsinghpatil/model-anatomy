@@ -1,7 +1,7 @@
 # Service configuration
 
 Run from the repository root with API dependencies installed. API startup and
-prepared example reads never import Torch or Transformers. The worker needs the
+stored report reads never import Torch or Transformers. The worker needs the
 separate engine extra and starts a fresh spawn child for each job.
 
 ```powershell
@@ -36,7 +36,6 @@ Required settings:
 | `MODEL_ANATOMY_SUPABASE_BUCKET` | Existing **private** bucket; default `model-anatomy-private` |
 | `MODEL_ANATOMY_ALLOWED_HOSTS` | JSON array of explicit public hosts |
 | `MODEL_ANATOMY_CORS_ORIGINS` | JSON array of explicit HTTPS browser origins |
-| `MODEL_ANATOMY_PREPARED_DIR` | Snapshot directory if not repository `output/` |
 
 PostgreSQL transaction poolers are incompatible with the lifetime advisory
 worker lock. SQLite uses an OS file lock plus transaction mutex and conditional
@@ -54,7 +53,9 @@ must pass that test, and the deployment must also enforce its 4 GiB container RS
 budget. Large import reservations may require a different process memory policy.
 
 Readiness requires initialized database, current migration, private storage and a
-live worker heartbeat. Health and prepared examples remain independent of AI.
+live worker heartbeat. Health and owned stored reports remain independent of AI.
+There is no prepared-report directory setting, example endpoint or public sample
+analysis ID. Every report read requires the submitting visitor's cookie.
 
 ## Explanation provider
 
@@ -86,7 +87,7 @@ disappear; other visitors receive 404. Inactive unused guests and old quota
 buckets are removed. Cache entries expire seven days after extraction; hits do
 not extend retention. Blob deletion runs outside database transactions and uses
 a durable deletion marker to fence new references. Upload reservations collect
-objects left behind by interrupted completion. Prepared snapshots do not expire.
+objects left behind by interrupted completion. No reports are seeded at startup.
 
 Cache identity includes canonical model ID, immutable 40-character revision,
 engine version (from `src.version`), IR schema, artifact filename, and explicit

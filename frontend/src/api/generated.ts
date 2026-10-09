@@ -21,23 +21,6 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  "/api/v1/examples": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /** List Examples */
-    get: operations["list_examples_api_v1_examples_get"];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
   "/api/v1/analyses": {
     parameters: {
       query?: never;
@@ -50,7 +33,7 @@ export interface paths {
     put?: never;
     /**
      * Analyze a Hugging Face model
-     * @description Accepts a repository ID or Hugging Face HTTPS URL, persists a new job and returns 202. The worker resolves an immutable revision and inspects real artifacts. No weights or remote model code are executed. Poll the returned ID using the same visitor cookie. An exact-revision cache hit is marked cached; this is not a prepared example.
+     * @description Accepts a repository ID or Hugging Face HTTPS URL, persists a new job and returns 202. The worker resolves an immutable revision and inspects real artifacts. No weights or remote model code are executed. Poll the returned ID using the same visitor cookie. An exact-revision cache hit reuses a real inspected report and is marked cached.
      */
     post: operations["create_analysis_api_v1_analyses_post"];
     delete?: never;
@@ -199,8 +182,6 @@ export interface components {
       root_graph_id: string | null;
       /** Cached */
       cached: boolean;
-      /** Prepared */
-      prepared: boolean;
       dimensions: components["schemas"]["Dimensions"];
     };
     /** AnalysisError */
@@ -276,8 +257,6 @@ export interface components {
       root_graph_id: string | null;
       /** Cached */
       cached: boolean;
-      /** Prepared */
-      prepared: boolean;
       dimensions: components["schemas"]["Dimensions"];
     };
     /** Citation */
@@ -298,9 +277,7 @@ export interface components {
     CreateAnalysis: {
       /**
        * Model
-       * @description Hugging Face repository ID or HTTPS URL; not a prepared analysis ID.
-       * @example HuggingFaceTB/SmolLM2-135M
-       * @example https://huggingface.co/openai-community/gpt2
+       * @description Hugging Face repository ID or HTTPS URL to inspect.
        */
       model: string;
     };
@@ -343,39 +320,6 @@ export interface components {
       details: {
         [key: string]: unknown;
       };
-    };
-    /** ExampleSummary */
-    ExampleSummary: {
-      /** Id */
-      id: string;
-      /** Title */
-      title: string;
-      /** Model Id */
-      model_id: string;
-      /** Revision */
-      revision: string | null;
-      /** Architecture */
-      architecture: string | null;
-      /** Parameter Count */
-      parameter_count: number | null;
-      /**
-       * Status
-       * @enum {string}
-       */
-      status:
-        | "queued"
-        | "running"
-        | "completed"
-        | "partial"
-        | "unsupported"
-        | "failed"
-        | "timed_out"
-        | "cancelled";
-    };
-    /** ExamplesResponse */
-    ExamplesResponse: {
-      /** Examples */
-      examples: components["schemas"]["ExampleSummary"][];
     };
     /** GraphEdge */
     GraphEdge: {
@@ -634,71 +578,6 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["Health"];
-        };
-      };
-    };
-  };
-  list_examples_api_v1_examples_get: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["ExamplesResponse"];
-        };
-      };
-      /** @description Not Found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["ErrorResponse"];
-        };
-      };
-      /** @description Gone */
-      410: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["ErrorResponse"];
-        };
-      };
-      /** @description Unprocessable Entity */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["ErrorResponse"];
-        };
-      };
-      /** @description Too Many Requests */
-      429: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["ErrorResponse"];
-        };
-      };
-      /** @description Service Unavailable */
-      503: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["ErrorResponse"];
         };
       };
     };

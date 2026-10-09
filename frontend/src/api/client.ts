@@ -5,7 +5,6 @@ import type {
   Health,
   ExportFormat,
   NodeDetail,
-  ExamplesResponse,
   CreateAnalysisRequest,
   QuestionRequest,
   QuestionAnswer,
@@ -105,8 +104,6 @@ export const api = {
       );
     return health;
   },
-  examples: (signal?: AbortSignal) =>
-    request<ExamplesResponse>("/examples", { signal }),
   analyses: (signal?: AbortSignal) =>
     request<AnalysesResponse>("/analyses", { signal }),
   analyze: (model: string) =>

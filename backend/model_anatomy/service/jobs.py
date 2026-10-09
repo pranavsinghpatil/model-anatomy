@@ -141,7 +141,6 @@ def job_detail(job: Job, summary: dict | None = None) -> dict:
         "root_graph_id": summary.get("root_graph_id"),
         "dimensions": summary.get("dimensions", {}),
         "cached": job.cached,
-        "prepared": False,
     }
 
 

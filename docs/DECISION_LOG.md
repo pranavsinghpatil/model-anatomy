@@ -188,3 +188,17 @@ report bytes and reassess terminal completion from those same facts, without
 rewriting stored jobs, reports or ownership. Keep summaries
 small and bounded. Pause expansion while current report and system gaps are being
 closed; document unresolved engine warnings instead of declaring the system perfect.
+
+## D-023 - Serve submitted analyses only, with no prepared examples
+**2026-10-09 - accepted**
+
+Remove the examples endpoint, prepared snapshot resolver/settings, public sample
+IDs, prepared response types/flags, and example UI/client paths. Every analysis,
+graph, component, export and question uses a persisted job and visitor ownership.
+New visitors start empty; failed or unavailable submissions never substitute a
+saved sample. Exact-revision caching remains because its content comes from real
+inspections. This supersedes earlier decisions retaining prepared reports.
+Keep test-only fixtures and mocks for deterministic safety/failure regression
+tests, plus separate real HTTP/worker acceptance; neither becomes runtime data.
+Preserve historical CLI reports as evidence, not served product content. Pause
+new features until this removal is verified and the user can test it locally.

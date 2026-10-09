@@ -14,13 +14,30 @@ from pydantic import ValidationError
 from model_anatomy.api.app import COOKIE, create_app
 from model_anatomy.api.settings import Settings
 from model_anatomy.service.errors import ServiceError
-from model_anatomy.service.jobs import JobService
+from model_anatomy.service.jobs import JobService, cache_key
 
 
 @pytest.fixture
 def client(tmp_path):
     with TestClient(create_app(Settings(data_dir=tmp_path)), base_url="http://127.0.0.1") as client:
         yield client
+
+
+@pytest.fixture
+def stored_analysis(client):
+    # Test-only saved engine output exercises job ownership and views without networking.
+    service = client.app.state.jobs
+    service.acquire_worker("worker")
+    detail = client.post("/api/v1/analyses", json={"model": "gpt2"}).json()
+    assert service.claim("worker") == detail["id"]
+    data = (Path(__file__).resolve().parents[2] / "output/gpt2/model.json").read_bytes()
+    report = json.loads(data)
+    service.resolved(detail["id"], "worker", report["model_id"], report["metadata"]["revision"])
+    key = cache_key(
+        report["model_id"], report["metadata"]["revision"], service.settings.engine_version, "1.1"
+    )
+    service.finish(detail["id"], "worker", data, key, cached=False)
+    return client.get(f"/api/v1/analyses/{detail['id']}").json()
 
 
 def test_readiness_requires_initialized_services_and_recent_worker(client):
@@ -101,13 +118,14 @@ def test_hosts_cors_credentials_and_mutation_origin(client):
 def test_swagger_same_origin_can_submit_and_cancel_without_loosening_cross_origin_guard(client):
     client.app.state.jobs.acquire_worker("worker")
     response = client.post(
-        "/api/v1/analyses", json={"model": "HuggingFaceTB/SmolLM2-360M"},
+        "/api/v1/analyses",
+        json={"model": "HuggingFaceTB/SmolLM2-360M"},
         headers={"Origin": "http://127.0.0.1"},
     )
     assert response.status_code == 202
     job = response.json()
     assert job["model_id"] == "HuggingFaceTB/SmolLM2-360M"
-    assert job["prepared"] is False
+    assert "prepared" not in job
     path = f"/api/v1/analyses/{job['id']}"
     assert client.delete(path, headers={"Origin": "http://127.0.0.1:8001"}).status_code == 403
     assert client.delete(path, headers={"Origin": "https://127.0.0.1"}).status_code == 403
@@ -117,7 +135,8 @@ def test_swagger_same_origin_can_submit_and_cancel_without_loosening_cross_origi
 def test_same_origin_does_not_bypass_host_validation(client):
     client.app.state.jobs.acquire_worker("worker")
     response = client.post(
-        "/api/v1/analyses", json={"model": "gpt2"},
+        "/api/v1/analyses",
+        json={"model": "gpt2"},
         headers={"Host": "attacker.example", "Origin": "http://attacker.example"},
     )
     assert response.status_code == 400
@@ -134,7 +153,7 @@ def test_create_cookie_recent_isolation_and_cancel(client):
     detail = response.json()
     assert detail["status"] == "queued"
     assert detail["root_graph_id"] is None
-    assert detail["prepared"] is False
+    assert "prepared" not in detail
     assert len(client.get("/api/v1/analyses").json()["analyses"]) == 1
     saved = client.cookies.get(COOKIE)
     client.cookies.clear()
@@ -161,34 +180,26 @@ def test_validation_failures_have_structured_envelope(client, body):
     assert set(response.json()["error"]) == {"code", "message", "request_id"}
 
 
-def test_missing_provider_does_not_block_prepared_graph_and_inspection(client):
-    result = client.get("/api/v1/examples").json()["examples"]
-    assert {e["id"] for e in result} == {"example-gpt2", "example-smollm"}
-    detail = client.get("/api/v1/analyses/example-smollm").json()
-    assert detail["prepared"] is True
-    assert detail["status"] == "partial"
-    assert "SmolLM" in detail["model_id"]
-    gpt = client.get("/api/v1/analyses/example-gpt2").json()
-    assert gpt["parameter_count"] == 124439808
-    graph = client.get(f"/api/v1/analyses/example-gpt2/graphs/{gpt['root_graph_id']}").json()
+def test_missing_provider_does_not_block_owned_report_graph_and_inspection(client, stored_analysis):
+    path = f"/api/v1/analyses/{stored_analysis['id']}"
+    assert stored_analysis["parameter_count"] == 124439808
+    graph = client.get(f"{path}/graphs/{stored_analysis['root_graph_id']}").json()
     assert graph["nodes"] and graph["edges"]
     assert all("child_graph" not in n and "child_graph_id" in n for n in graph["nodes"])
     repeated = next(n for n in graph["nodes"] if n["child_graph_id"])
-    assert client.get(f"/api/v1/analyses/example-gpt2/graphs/{repeated['child_graph_id']}").status_code == 200
-    inspect = client.get(f"/api/v1/analyses/example-gpt2/nodes/{graph['id']}/{repeated['id']}?limit=1").json()
+    assert client.get(f"{path}/graphs/{repeated['child_graph_id']}").status_code == 200
+    inspect = client.get(f"{path}/nodes/{graph['id']}/{repeated['id']}?limit=1").json()
     assert inspect["tensor_count"] >= len(inspect["tensors"])
     assert len(inspect["tensors"]) == 1
     assert inspect["tensors"][0]["artifact"].startswith("https://huggingface.co/")
-    question = client.post(
-        "/api/v1/analyses/example-gpt2/questions", json={"question": "How many parameters?"}
-    )
+    question = client.post(f"{path}/questions", json={"question": "How many parameters?"})
     assert question.status_code == 503
     assert question.json()["error"]["code"] == "ai_unavailable"
 
 
 @pytest.mark.parametrize("format", ["json", "mermaid", "markdown", "diagnostics", "audit", "zip"])
-def test_exports_use_same_prepared_ir(client, format):
-    response = client.get(f"/api/v1/analyses/example-gpt2/exports/{format}")
+def test_exports_use_same_owned_report(client, stored_analysis, format):
+    response = client.get(f"/api/v1/analyses/{stored_analysis['id']}/exports/{format}")
     assert response.status_code == 200
     assert "attachment" in response.headers["content-disposition"]
     if format == "json":
@@ -200,7 +211,7 @@ def test_exports_use_same_prepared_ir(client, format):
             )
 
 
-def test_dependency_failure_preserves_examples_and_health(tmp_path):
+def test_dependency_failure_is_explicit_without_demo_fallback(tmp_path):
     settings = Settings(data_dir=tmp_path)
     service = JobService(settings)
     service.initialize = lambda: (_ for _ in ()).throw(ServiceError(503, "offline", "offline"))
@@ -208,8 +219,38 @@ def test_dependency_failure_preserves_examples_and_health(tmp_path):
         health = client.get("/health")
         assert health.status_code == 503
         assert health.json()["checks"]["database"] is False
-        assert client.get("/api/v1/analyses/example-gpt2").status_code == 200
+        assert client.get("/api/v1/examples").status_code == 404
+        assert client.get("/api/v1/analyses/example-gpt2").status_code == 503
         assert client.get("/api/v1/analyses").status_code == 503
+
+
+def test_no_example_endpoint_schema_or_public_artifact_shortcut(client):
+    schema = client.get("/openapi.json").json()
+    assert "/api/v1/examples" not in schema["paths"]
+    assert "ExampleSummary" not in schema["components"]["schemas"]
+    assert "ExamplesResponse" not in schema["components"]["schemas"]
+    assert "prepared" not in schema["components"]["schemas"]["AnalysisDetail"]["properties"]
+    assert "prepared_dir" not in Settings.model_fields
+    assert client.get("/api/v1/examples").status_code == 404
+    assert client.get("/api/v1/analyses").json() == {"analyses": []}
+    for analysis_id in ("example-gpt2", "example-smollm", "example-anything"):
+        base = f"/api/v1/analyses/{analysis_id}"
+        for suffix in ("", "/graphs/root", "/nodes/root/embedding", "/exports/json"):
+            response = client.get(base + suffix)
+            assert response.status_code == 404
+            assert response.json()["error"]["code"] == "not_found"
+        assert client.delete(base).status_code == 404
+        assert client.post(base + "/questions", json={"question": "Explain this"}).status_code == 404
+    assert client.get("/api/v1/analyses").json() == {"analyses": []}
+
+
+def test_all_report_routes_require_the_submitting_visitor(client, stored_analysis):
+    path = f"/api/v1/analyses/{stored_analysis['id']}"
+    client.cookies.clear()
+    for suffix in ("", "/graphs/root", "/nodes/root/embedding", "/exports/json"):
+        assert client.get(path + suffix).status_code == 404
+    assert client.delete(path).status_code == 404
+    assert client.post(path + "/questions", json={"question": "Explain this"}).status_code == 404
 
 
 def test_settings_exact_environment_names_and_failclosed(monkeypatch):
@@ -254,7 +295,7 @@ def test_docs_can_be_disabled_and_openapi_matches_service(client, tmp_path):
         assert other.get("/docs").status_code == 404
 
 
-def test_http_startup_and_prepared_reads_do_not_import_model_libraries(tmp_path):
+def test_http_startup_and_job_reads_do_not_import_model_libraries(tmp_path):
     backend = Path(__file__).resolve().parents[1]
     result = subprocess.run(
         [
@@ -265,7 +306,9 @@ def test_http_startup_and_prepared_reads_do_not_import_model_libraries(tmp_path)
                 "from model_anatomy.api.settings import Settings; import sys; from pathlib import Path; "
                 "app=create_app(Settings(data_dir=Path(sys.argv[1]))); "
                 "client=TestClient(app,base_url='http://localhost'); "
-                "assert client.get('/api/v1/analyses/example-gpt2').status_code==200; "
+                "app.state.jobs.initialize(); app.state.service_ready=True; "
+                "assert client.get('/api/v1/analyses').json()=={'analyses':[]}; "
+                "assert client.get('/api/v1/analyses/example-gpt2').status_code==404; "
                 "assert not {'torch','transformers','safetensors'} & sys.modules.keys()"
             ),
             str(tmp_path),

@@ -50,7 +50,6 @@ class Settings(BaseSettings):
     guest_questions_per_hour: int = Field(default=10, ge=1)
     global_questions_per_day: int = Field(default=100, ge=1)
     max_blob_bytes: int = Field(default=32 * 1024**2, ge=1024)
-    prepared_dir: Path = Path(__file__).resolve().parents[3] / "output"
     nebius_api_key: SecretStr | None = Field(
         default=None, validation_alias=AliasChoices("NEBIUS_API_KEY", "MODEL_ANATOMY_NEBIUS_API_KEY")
     )
