@@ -14,7 +14,7 @@ that a model family works end to end.
 | Qwen3-4B-Thinking-2507 (~4.02B) | **Tested engine; locally observed HTTP result** | Pinned revision `768f209d9ea81521153ed38c47d515654e938aea` passes the committed real-engine checks: 4,022,468,096 unique parameters, 36 layers, hidden size 2560, complete checkpoint parameter mapping, valid graph/IR round-trip and zero weight payload reads. Its non-prepared local HTTP job also finished as partial. This is not proof of larger text or other modalities. |
 | Text models larger than the tested Qwen 4B checkpoint | **Unverified** | There is no parameter-count ceiling. Meta construction still creates the complete module hierarchy and IR; header-only weight access does not make those steps constant-memory. Service jobs are bounded by a 4 GiB memory setting and 120 seconds, and recognized top-level native layer fields reject more than 512 layers. See [registry.py](../backend/model_anatomy/src/registry.py), [settings.py](../backend/model_anatomy/api/settings.py), and [ENGINE_ACCEPTANCE.md](ENGINE_ACCEPTANCE.md). |
 | Encoder-decoder text | **Unverified** | Input and graph code has encoder/decoder sequence conventions, but there is no pinned end-to-end encoder-decoder acceptance model. Cross-attention and decoder wiring therefore have no family-level proof. |
-| Google ViT image classification (~86.57M) | **Tested metadata/ownership path; partial semantics** | `google/vit-base-patch16-224` at `10064cc17b69d623a025c9e90e11230cc8ba6967` passes pinned engine and fresh real HTTP-worker checks: 86,567,656 parameters, 200 tensors, config-derived `[B,3,224,224]` image input, classifier tensor ownership, root dataflow, nested graph, export and cold/cache reuse. All checkpoint parameters map and zero payload bytes are read. Unknown native output modules and unresolved shapes remain; patch sequence/CLS-token transformations and image preprocessing are not fully established. Other vision architectures remain unverified. |
+| Google ViT image classification (~86.57M) | **Tested canonical static architecture; partial report** | `google/vit-base-patch16-224` at `10064cc17b69d623a025c9e90e11230cc8ba6967`: pinned engine and fresh HTTP-worker checks establish 86,567,656 parameters, 200 tensors, `[B,3,224,224]` pixels, convolution/flatten/transpose to 196 patches, CLS expansion/concatenation to `[B,197,768]`, position addition, attention and feed-forward output projections/residuals, CLS selection to `[B,768]` and classifier `[B,1000]`. No unknown native modules remain in this checkpoint. All checkpoint parameters map; zero payload bytes are read. Real desktop/mobile browser tests submit this pinned model and inspect nested patch graphs, classifier tensors and downloads. Shapes describe fixed-resolution, unmasked inputs without interpolation; they are not runtime observations. Image preprocessing and other vision architectures remain unverified. |
 | Image-text / multimodal | **Unverified** | No pinned multimodal model or modality-bridge acceptance test exists. Generic module classification and input names do not establish the relationship between image encoder, projector/resampler, text decoder, and modality-specific evidence. |
 | Audio | **Unverified** | `input_features` and `input_values` receive generic symbolic specs, but no real audio model or audio-specific task/output semantics are tested. |
 | Video | **Unsupported by the current explicit input description; otherwise unverified** | There is no video/frame/temporal input name or video-specific shape convention in `InputResolver`; the public `TensorSpec` can carry symbolic dimensions but does not identify a modality or temporal semantics. Native construction might succeed for some architectures, but that would not demonstrate a trustworthy video graph. |
@@ -66,8 +66,9 @@ and a small vision model would not establish large-model capacity.
    and graph validation; and zero tensor-payload reads. Compare any advertised
    modality edge or shape against native source/config evidence. Expected failures
    should be explicit unsupported/partial status with a reason, never a plausible
-   generic graph. First close ViT's unresolved semantic modules and prove patch
-   sequence/CLS-token transformations. Do not mark a whole modality tested from
+   generic graph. The canonical ViT patch/CLS/output path is now established;
+   masked/interpolated variants and other image families still need separate proof.
+   Do not mark a whole modality tested from
    input specs or one checkpoint alone. Video models may also call their input
    `pixel_values`; the current four-dimensional convention must not be assumed
    correct for frame sequences or composite multimodal configurations.
@@ -99,7 +100,7 @@ and a small vision model would not establish large-model capacity.
 | System | Current evidence | Next gate |
 | --- | --- | --- |
 | Artifact resolution | Pinned Safetensors and index/header safety checks, no payload fallback | Additional formats need their own safe metadata readers. Common revision-tree URLs are not accepted yet. Never enable pickle loading to improve coverage. |
-| Semantic engine | Real text and ViT metadata/ownership checks; explicit unknowns | ViT patch/output semantics first, then encoder-decoder and modality bridges. Add pinned acceptance for every advertised family. |
+| Semantic engine | Real text and canonical ViT patch/CLS/output semantics; explicit unknowns | Encoder-decoder and modality bridges next; masked/interpolated vision paths require separate acceptance. Add pinned acceptance for every advertised family. |
 | Scale/resource control | Separate worker, timeout, bounded headers/shards/report, tested 4B text engine | Nested dimension validation, module/tensor/graph budgets, measured larger checkpoints, and actual Linux memory-limit evidence. |
 | Jobs/API | Real text and image cold/cache jobs, isolation, limits, exports; worker lifecycle unit tests | Repeat crash/restart/concurrent submission/retention tests against hosted PostgreSQL, not only local SQLite. |
 | Storage/cache | Local storage tested; private Supabase adapter/configuration exists | Real private-bucket integration, expired artifacts, provider outage and integrity recovery on the deployed service. |
@@ -107,7 +108,7 @@ and a small vision model would not establish large-model capacity.
 | Frontend | Readable focused canvas, explicit overview, reversible panels, nesting/tensors/exports checked desktop/mobile | Modality-appropriate summaries, dense graph/long label accessibility and further visual polish using real reports. This is a first layout correction, not a finished redesign. |
 | Deployment | Local live API/worker evidence; deployment configuration remains a separate tranche | Nebius access/credits, HTTPS, Linux containers, PostgreSQL/private storage and live inference before claiming production readiness. |
 
-## This Pass's Verification
+## Initial Gap Pass Verification
 
 - Full backend suite with `RUN_HF_INTEGRATION=1` and `RUN_HTTP_INTEGRATION=1`:
   110 passed, one Linux memory-enforcement test skipped on Windows. One existing
@@ -126,3 +127,14 @@ and a small vision model would not establish large-model capacity.
 The successful paths remain pinned native inspection with explicit static-analysis
 limitations. Broader family, size and production claims must carry their own
 acceptance evidence.
+
+## ViT Semantic Pass Verification
+
+- Full backend suite with both real integration flags: 128 passed, one Linux
+  memory-enforcement test skipped on Windows, one existing Starlette TestClient
+  deprecation warning. This includes explicit residual operand/skip wiring and
+  standalone CLS/position checkpoint ownership assertions.
+- 48 desktop/mobile browser checks passed: the existing 46 workspace/prepared
+  checks plus two real pinned ViT submissions with no request interception.
+- Frontend build/type checking and formatting, backend Ruff, and scoped Git diff
+  checks pass. See [VIT_ACCEPTANCE.md](VIT_ACCEPTANCE.md) for manual testing.

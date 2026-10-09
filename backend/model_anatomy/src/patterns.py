@@ -244,6 +244,18 @@ class SemanticAnalyzer:
             return result(
                 "projection_block", 0.94, "direct affine projection + normalization/activation composition"
             )
+        if (
+            type(module).__module__ == "transformers.models.vit.modeling_vit"
+            and record["type"] in {"ViTSelfOutput", "ViTOutput"}
+            and child_names == {"dense", "dropout"}
+            and isinstance(module.dense, torch.nn.Linear)
+            and isinstance(module.dropout, torch.nn.Dropout)
+        ):
+            return result(
+                "projection_block",
+                0.99,
+                "native ViT output projection/dropout; residual connectivity comes from forward source",
+            )
         if attention and "attention" in class_name:
             return result(
                 "cross_attention" if "cross" in class_name else "self_attention",

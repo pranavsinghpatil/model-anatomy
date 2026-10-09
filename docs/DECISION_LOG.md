@@ -150,3 +150,17 @@ Make the graph workspace readable before adding further UI surface: default to a
 inspection scale with explicit whole-graph framing, collapsible history, and an
 inspector that opens on selection. Keep the canonical graph unchanged by layout
 controls, and verify desktop/mobile inspection and export workflows.
+
+## D-020 - Close canonical ViT semantics with bounded source shape algebra
+**2026-10-09 - accepted**
+
+Capture patch flatten/transpose, CLS expansion/concatenation and token selection
+as explicit source operations for native ViT. Derive fixed-resolution dimensions
+from native configuration and projection metadata, retaining unknowns for
+unsupported transformations. Classify ViT output projections from native types
+and affine/dropout topology; source analysis alone establishes residual wiring.
+Expose standalone CLS/position parameter ownership through component inspection.
+Keep this refinement scoped to ViT until other families have acceptance evidence.
+Increment the engine cache identity without changing IR schema. Do not equate
+complete native-module classification with runtime-verified computation, image
+preprocessing, universal vision support or production deployment readiness.

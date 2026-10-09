@@ -13,6 +13,10 @@ from .ir import TensorSpec
 class InputResolver:
     def __init__(self, model: torch.nn.Module):
         self.model = model
+        self.native_vit = (
+            getattr(model.config, "model_type", None) == "vit"
+            and type(model).__module__ == "transformers.models.vit.modeling_vit"
+        )
         parameter = next(model.parameters(), None)
         self.activation_dtype = {
             torch.float32: "F32",
@@ -45,6 +49,15 @@ class InputResolver:
         if name in {"encoder_hidden_states", "key_value_states"}:
             sequence = "S"
         hidden = getattr(config, "hidden_size", None) or getattr(config, "d_model", None)
+        if self.native_vit:
+            size, patch = config.image_size, config.patch_size
+            size = size if isinstance(size, (list, tuple)) else (size, size)
+            patch = patch if isinstance(patch, (list, tuple)) else (patch, patch)
+            if all(type(v) is int and v > 0 for v in (*size, *patch)):
+                sequence = (size[0] // patch[0]) * (size[1] // patch[1]) + 1
+            module = self.model.get_submodule(path) if path else self.model
+            if name == "hidden_states" and type(module).__name__ == "ViTOutput":
+                hidden = module.dense.in_features
         heads = getattr(config, "num_attention_heads", None) or getattr(config, "num_heads", None)
         if name == "position_bias":
             module = self.model.get_submodule(path) if path else self.model

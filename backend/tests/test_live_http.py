@@ -53,15 +53,31 @@ def live_backend(tmp_path):
     logs = []
     try:
         for name, arguments in (
-            ("api", ["uvicorn", "model_anatomy.api.app:create_app", "--factory", "--host", "127.0.0.1",
-                     "--port", str(port), "--no-access-log"]),
+            (
+                "api",
+                [
+                    "uvicorn",
+                    "model_anatomy.api.app:create_app",
+                    "--factory",
+                    "--host",
+                    "127.0.0.1",
+                    "--port",
+                    str(port),
+                    "--no-access-log",
+                ],
+            ),
             ("worker", ["model_anatomy.service.worker"]),
         ):
             log = (tmp_path / f"{name}.log").open("wb")
             logs.append(log)
             processes.append(
-                subprocess.Popen([sys.executable, "-m", *arguments], cwd=ROOT, env=env,
-                                 stdout=log, stderr=subprocess.STDOUT)
+                subprocess.Popen(
+                    [sys.executable, "-m", *arguments],
+                    cwd=ROOT,
+                    env=env,
+                    stdout=log,
+                    stderr=subprocess.STDOUT,
+                )
             )
         with httpx.Client(base_url=f"http://127.0.0.1:{port}", timeout=15, trust_env=False) as client:
             deadline = time.monotonic() + 30
@@ -80,8 +96,12 @@ def live_backend(tmp_path):
         for process in reversed(processes):
             if process.poll() is None:
                 if sys.platform == "win32":
-                    subprocess.run(["taskkill", "/PID", str(process.pid), "/T", "/F"],
-                                   capture_output=True, timeout=15, check=False)
+                    subprocess.run(
+                        ["taskkill", "/PID", str(process.pid), "/T", "/F"],
+                        capture_output=True,
+                        timeout=15,
+                        check=False,
+                    )
                 else:
                     process.terminate()
                 try:
@@ -101,15 +121,22 @@ def live_backend(tmp_path):
     ],
 )
 def test_real_nonprepared_model_submission_graph_tensors_exports_and_cache(
-    live_backend, model, revision, parameters, component_kind,
+    live_backend,
+    model,
+    revision,
+    parameters,
+    component_kind,
 ):
     client = live_backend
     model_reference = f"https://huggingface.co/{model}/blob/{revision}/model.safetensors"
     health = client.get("/health").json()
     assert health["analysis_available"] and not health["ai_available"]
     # The same Origin header sent by Swagger/browser POST is accepted.
-    response = client.post("/api/v1/analyses", json={"model": model_reference},
-                           headers={"Origin": str(client.base_url).rstrip("/")})
+    response = client.post(
+        "/api/v1/analyses",
+        json={"model": model_reference},
+        headers={"Origin": str(client.base_url).rstrip("/")},
+    )
     assert response.status_code == 202
     queued = response.json()
     assert queued["status"] == "queued" and queued["prepared"] is False
@@ -120,7 +147,9 @@ def test_real_nonprepared_model_submission_graph_tensors_exports_and_cache(
     assert detail["revision"] == revision
     assert detail["parameter_count"] == parameters
     with httpx.Client(timeout=30, follow_redirects=True, trust_env=False) as provider:
-        config_response = provider.get(f"https://huggingface.co/{model}/resolve/{detail['revision']}/config.json")
+        config_response = provider.get(
+            f"https://huggingface.co/{model}/resolve/{detail['revision']}/config.json"
+        )
         config_response.raise_for_status()
         config = config_response.json()
     assert detail["dimensions"]["hidden"] == config["hidden_size"]
@@ -139,6 +168,12 @@ def test_real_nonprepared_model_submission_graph_tensors_exports_and_cache(
     if component_kind == "classifier":
         assert report["metadata"]["inputs"]["input_specs"]["pixel_values"]["shape"] == ["B", 3, 224, 224]
         assert [tensor["name"] for tensor in node["tensors"]] == ["classifier.bias", "classifier.weight"]
+        assert component["inputs"][0]["shape"] == ["B", 768]
+        assert component["outputs"][0]["shape"] == ["B", 1000]
+        selection = next(n for n in graph["nodes"] if n["kind"] == "selection")
+        assert selection["inputs"][0]["shape"] == ["B", 197, 768]
+        assert selection["outputs"][0]["shape"] == ["B", 768]
+        assert report["metadata"]["analysis_report"]["unknown_module_paths"] == []
     with zipfile.ZipFile(io.BytesIO(client.get(f"{path}/exports/zip").content)) as archive:
         assert "model.json" in archive.namelist()
     with httpx.Client(base_url=str(client.base_url), trust_env=False) as other:
@@ -160,5 +195,7 @@ def test_real_nonprepared_model_submission_graph_tensors_exports_and_cache(
         assert failed["prepared"] is False and failed["root_graph_id"] is None
         assert failed["parameter_count"] is None and failed["architecture"] is None
         assert other.get(f"/api/v1/analyses/{failed['id']}/exports/json").status_code == 503
-    print(f"Real live report: {model}@{detail['revision']}; {detail['parameter_count']} parameters; "
-          f"{len(report['tensors'])} tensors; prepared=false; cold+cached+honest failure verified")
+    print(
+        f"Real live report: {model}@{detail['revision']}; {detail['parameter_count']} parameters; "
+        f"{len(report['tensors'])} tensors; prepared=false; cold+cached+honest failure verified"
+    )

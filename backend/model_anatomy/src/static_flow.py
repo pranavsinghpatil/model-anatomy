@@ -324,6 +324,19 @@ class StaticFlowAnalyzer:
             result.items = values
             return result
         if isinstance(node, ast.Subscript):
+            if getattr(self.model.config, "model_type", None) == "vit" and isinstance(node.slice, ast.Tuple):
+                value = self.expression(node.value)
+                indices = []
+                for item in node.slice.elts:
+                    if isinstance(item, ast.Slice) and item.lower is item.upper is item.step is None:
+                        indices.append(None)
+                    elif isinstance(item, ast.Constant) and type(item.value) is int:
+                        indices.append(item.value)
+                    else:
+                        indices.append("unknown")
+                return self.event(
+                    node, None, "selection", "Select tokens", {"input": value}, {"indices": indices}
+                )
             value, index = self.expression(node.value), self.expression(node.slice).constant
             if value.module_path is not None and type(index) is int:
                 module = self.model.get_submodule(value.module_path) if value.module_path else self.model
@@ -410,6 +423,35 @@ class StaticFlowAnalyzer:
                 "expand",
                 "flatten",
             }:
+                if getattr(self.model.config, "model_type", None) == "vit" and name in {
+                    "view",
+                    "reshape",
+                    "transpose",
+                    "permute",
+                    "unsqueeze",
+                    "squeeze",
+                    "expand",
+                    "flatten",
+                }:
+                    values = [self.expression(arg).constant for arg in node.args]
+                    values = [
+                        value
+                        if type(value) is int
+                        else "B"
+                        if isinstance(arg, ast.Name)
+                        and arg.id == "batch_size"
+                        and type(self.module).__module__ == "transformers.models.vit.modeling_vit"
+                        else "unknown"
+                        for arg, value in zip(node.args, values)
+                    ]
+                    return self.event(
+                        node,
+                        None,
+                        "reshape",
+                        name.title(),
+                        {"input": receiver},
+                        {"method": name, "dimensions": values, "keyword_arguments": bool(node.keywords)},
+                    )
                 return receiver
             if name in {"enumerate", "iter"} and node.args:
                 return self.expression(node.args[0])
@@ -431,8 +473,17 @@ class StaticFlowAnalyzer:
                 return self.input("position_ids")
             if name in {"matmul", "bmm", "einsum", "cat", "stack"}:
                 kind = "matmul" if name in {"matmul", "bmm", "einsum"} else "concatenation"
+                dimension = arguments.get("dim", arguments.get("1", StaticValue(constant=0))).constant
+                metadata = {"method": name}
+                if name in {"cat", "stack"} and type(dimension) is int:
+                    metadata["dimension"] = dimension
                 return self.event(
-                    node, None, kind, "Matrix multiply" if kind == "matmul" else "Concatenate", arguments
+                    node,
+                    None,
+                    kind,
+                    "Matrix multiply" if kind == "matmul" else "Concatenate",
+                    arguments,
+                    metadata,
                 )
             if name in {"hasattr", "isinstance"}:
                 if name == "hasattr" and len(node.args) == 2:

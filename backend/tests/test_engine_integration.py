@@ -10,7 +10,9 @@ from model_anatomy.src.pipeline import reconstruct
 
 
 @pytest.mark.integration
-@pytest.mark.skipif(os.getenv("RUN_HF_INTEGRATION") != "1", reason="Set RUN_HF_INTEGRATION=1 for network tests")
+@pytest.mark.skipif(
+    os.getenv("RUN_HF_INTEGRATION") != "1", reason="Set RUN_HF_INTEGRATION=1 for network tests"
+)
 @pytest.mark.parametrize(
     ("model_id", "revision", "parameters", "layers", "hidden"),
     [
@@ -33,13 +35,12 @@ def test_real_pinned_model(model_id, revision, parameters, layers, hidden):
     ir.root_graph.validate()
     assert ModelIR.from_json(ir.to_json()).to_dict() == ir.to_dict()
     assert ir.metadata["analysis_report"]["unmapped_checkpoint_tensors"] == []
-    assert all(
-        tensor["parameter_refs"] for tensor in ir.tensors.values() if tensor["role"] == "parameter"
-    )
+    assert all(tensor["parameter_refs"] for tensor in ir.tensors.values() if tensor["role"] == "parameter")
     if model_id == "google/vit-base-patch16-224":
         assert ir.architecture == "ViTForImageClassification"
         assert ir.metadata["inputs"]["input_specs"]["pixel_values"] == {
-            "shape": ["B", 3, 224, 224], "dtype": "F32",
+            "shape": ["B", 3, 224, 224],
+            "dtype": "F32",
         }
         nodes = {node.id: node for node in ir.root_graph.nodes}
         assert nodes["pixel_values"].kind == "input"
@@ -49,10 +50,19 @@ def test_real_pinned_model(model_id, revision, parameters, layers, hidden):
         assert nodes["classifier"].parameter_count == 769000
         component = node_view(ir, ir.root_graph.id, "classifier")
         assert [tensor["name"] for tensor in component["tensors"]] == [
-            "classifier.bias", "classifier.weight",
+            "classifier.bias",
+            "classifier.weight",
         ]
-        assert {(edge.source, edge.target) for edge in ir.root_graph.edges if edge.relation == "dataflow"} >= {
-            ("pixel_values", "vit"), ("vit", "classifier"), ("classifier", "output"),
+        assert {
+            (edge.source, edge.target) for edge in ir.root_graph.edges if edge.relation == "dataflow"
+        } >= {
+            ("pixel_values", "vit"),
+            ("vit", "selection"),
+            ("selection", "classifier"),
+            ("classifier", "output"),
         }
-        # Native ownership is verified, not complete vision computation semantics.
-        assert ir.metadata["analysis_report"]["unknown_module_paths"]
+        assert nodes["vit"].outputs[0].shape == ["B", 197, 768]
+        assert nodes["selection"].outputs[0].shape == ["B", 768]
+        assert nodes["classifier"].inputs[0].shape == ["B", 768]
+        assert nodes["classifier"].outputs[0].shape == ["B", 1000]
+        assert ir.metadata["analysis_report"]["unknown_module_paths"] == []
