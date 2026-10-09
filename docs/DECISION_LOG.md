@@ -164,3 +164,14 @@ Keep this refinement scoped to ViT until other families have acceptance evidence
 Increment the engine cache identity without changing IR schema. Do not equate
 complete native-module classification with runtime-verified computation, image
 preprocessing, universal vision support or production deployment readiness.
+
+## D-021 - Completion follows established report facts, not runtime execution
+**2026-10-09 - accepted**
+
+A canonical static report can complete without executing weights when all scoped
+facts and shapes are established and no extraction warnings remain. General
+method limitations remain visible but are not missing model facts. Preserve known
+Q/K/V tensor specs on named graph output ports rather than introducing artificial
+unknowns. Do not relax coverage thresholds or relabel genuinely partial reports.
+Old saved reports remain immutable; extraction corrections invalidate cache
+identity and require a new analysis.

@@ -36,6 +36,13 @@ def test_real_pinned_model(model_id, revision, parameters, layers, hidden):
     assert ModelIR.from_json(ir.to_json()).to_dict() == ir.to_dict()
     assert ir.metadata["analysis_report"]["unmapped_checkpoint_tensors"] == []
     assert all(tensor["parameter_refs"] for tensor in ir.tensors.values() if tensor["role"] == "parameter")
+    for graph in ir.root_graph.walk():
+        if graph.id.endswith("_qkv"):
+            by_id = {node.id: node for node in graph.nodes}
+            for edge in graph.edges:
+                if edge.target == "output":
+                    assert edge.tensor.shape == by_id[edge.source].outputs[0].shape
+                    assert edge.tensor.shape is not None
     if model_id == "google/vit-base-patch16-224":
         assert ir.architecture == "ViTForImageClassification"
         assert ir.metadata["inputs"]["input_specs"]["pixel_values"] == {
@@ -66,3 +73,4 @@ def test_real_pinned_model(model_id, revision, parameters, layers, hidden):
         assert nodes["classifier"].inputs[0].shape == ["B", 768]
         assert nodes["classifier"].outputs[0].shape == ["B", 1000]
         assert ir.metadata["analysis_report"]["unknown_module_paths"] == []
+        assert ir.metadata["analysis_report"]["tensor_shape_coverage"] == 1

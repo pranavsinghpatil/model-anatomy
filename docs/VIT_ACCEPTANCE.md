@@ -41,7 +41,7 @@ module. Invalid or unsupported shape operations retain unknown dimensions.
 https://huggingface.co/google/vit-base-patch16-224/blob/10064cc17b69d623a025c9e90e11230cc8ba6967/model.safetensors
 ```
 
-The partial label is intentional: static inference is not execution proof.
+Static inference is not execution proof, even when the canonical report completes.
 This application inspects model structure; it does not classify an uploaded image.
 Image preprocessing, masking, interpolated resolutions, other vision families,
 video and multimodal bridges are not established by this acceptance case.
@@ -66,3 +66,20 @@ output connectivity and the absence of a residual inside `ViTSelfOutput`.
 
 Cloud deployment, real Supabase operation and live Nebius/NVIDIA explanations
 remain independent gates. Local verification does not establish those systems.
+
+## QKV Export Correction
+
+Engine `2026.10.09.2` corrects three Q/K/V projection-output edges which lost
+already-established shapes when assigned named graph ports. This was a graph
+export defect, not an inherent unknown in ViT. The pinned canonical ViT now
+requires full shape coverage and `completed` status in real HTTP acceptance.
+General static-analysis limitations remain visible; completed does not mean all
+runtime variants or arbitrary models are verified. Previously saved reports are
+immutable: submit a new analysis to obtain the corrected version.
+
+Correction verification: full backend suite 128 passed, one Linux-only skip and
+the existing deprecation warning; then four focused offline ViT tests passed,
+including the added QKV export regression. Real desktop/mobile checks both pass
+with `completed` required. Initial browser rerun detected the still-running old
+API serving its previous cache version; API and worker were restarted before
+the successful rerun. Ruff, formatting and scoped diff checks pass.

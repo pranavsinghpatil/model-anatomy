@@ -174,6 +174,8 @@ def test_real_nonprepared_model_submission_graph_tensors_exports_and_cache(
         assert selection["inputs"][0]["shape"] == ["B", 197, 768]
         assert selection["outputs"][0]["shape"] == ["B", 768]
         assert report["metadata"]["analysis_report"]["unknown_module_paths"] == []
+        assert detail["status"] == "completed"
+        assert report["metadata"]["analysis_report"]["tensor_shape_coverage"] == 1
     with zipfile.ZipFile(io.BytesIO(client.get(f"{path}/exports/zip").content)) as archive:
         assert "model.json" in archive.namelist()
     with httpx.Client(base_url=str(client.base_url), trust_env=False) as other:

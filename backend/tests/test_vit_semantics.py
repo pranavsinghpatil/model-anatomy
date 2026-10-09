@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from test_engine import FixtureClient, checkpoint_for
 
+from model_anatomy.service.jobs import ir_summary
 from model_anatomy.service.views import node_view
 from model_anatomy.src.pipeline import reconstruct
 from model_anatomy.src.registry import instantiate_native, load_native_config
@@ -157,3 +158,26 @@ def test_cls_and_position_parameter_nodes_expose_only_their_checkpoint_tensors()
                 e.details["source_fingerprint"] and e.details["runtime_verified"] is False
                 for e in node.evidence
             )
+
+
+def test_native_vit_qkv_exports_preserve_projection_tensor_specs():
+    ir = reconstruct_vit(vit_config())
+
+    qkv_graphs = [graph for graph in ir.root_graph.walk() if graph.id.endswith("_qkv")]
+    assert qkv_graphs
+    for graph in qkv_graphs:
+        by_id = {node.id: node for node in graph.nodes}
+        exports = [edge for edge in graph.edges if edge.target == "output"]
+        assert len(exports) == 3
+        assert {edge.source_port for edge in exports} == {"q", "k", "v"}
+        for edge in exports:
+            projection = by_id[edge.source]
+            assert projection.outputs
+            spec = projection.outputs[0]
+            assert edge.tensor.shape == spec.shape
+            assert edge.tensor.dtype == spec.dtype
+
+    report = ir.metadata["analysis_report"]
+    assert ir_summary(ir.to_dict())["result_status"] == "completed"
+    assert report["tensor_shape_coverage"] == 1
+    assert report["warnings"] == []
