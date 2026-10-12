@@ -1,11 +1,13 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import * as Tabs from "@radix-ui/react-tabs";
 import { ExternalLink, FileSearch, ScanSearch } from "lucide-react";
 import { api } from "../api/client";
 import type { InspectionSummary } from "../api/contract";
 import { count, shape, valueText } from "../format";
 import { ErrorNotice, IconButton, Loading } from "./Common";
 import { EvidenceList } from "./Inspector";
+import "./inspection.css";
 
 const pageSize = 50;
 
@@ -87,6 +89,7 @@ export function ArtifactInspection({
   summary,
   onInspectFile,
   inspectionDisabled,
+  architecture = false,
 }: {
   analysisId: string;
   modelId: string;
@@ -94,19 +97,30 @@ export function ArtifactInspection({
   summary: InspectionSummary | null | undefined;
   onInspectFile: (url: string) => void;
   inspectionDisabled: boolean;
+  architecture?: boolean;
 }) {
-  const [offset, setOffset] = useState(0);
-  const inspection = useQuery({
-    queryKey: ["artifacts", analysisId, offset],
+  const [filesOffset, setFilesOffset] = useState(0);
+  const [tensorsOffset, setTensorsOffset] = useState(0);
+  const [tab, setTab] = useState("files");
+  const filesInspection = useQuery({
+    queryKey: ["artifacts", analysisId, "files", filesOffset],
     queryFn: ({ signal }) =>
-      api.artifacts(analysisId, offset, pageSize, signal),
+      api.artifacts(analysisId, filesOffset, pageSize, signal),
     placeholderData: (previous) => previous,
   });
-  const page = inspection.data;
+  const tensorsInspection = useQuery({
+    queryKey: ["artifacts", analysisId, "tensors", tensorsOffset],
+    queryFn: ({ signal }) =>
+      api.artifacts(analysisId, tensorsOffset, pageSize, signal),
+    enabled: tab === "tensors",
+    placeholderData: (previous) => previous,
+  });
+  const page = filesInspection.data ?? tensorsInspection.data;
   const profile = page?.model_profile;
+  const filesPage = filesInspection.data;
+  const tensorsPage = tensorsInspection.data;
   const fileCount = page?.file_count ?? summary?.file_count ?? 0;
   const tensorCount = page?.tensor_count ?? summary?.tensor_count ?? 0;
-  const maximumCount = Math.max(fileCount, tensorCount);
   const pageRevision = page?.revision ?? revision;
   const message = page?.message ?? summary?.message;
   const reasonCode = page?.reason_code ?? summary?.reason_code;
@@ -116,6 +130,8 @@ export function ArtifactInspection({
       "pipeline_components_require_selection",
     ) ??
       false);
+  const inspectionError =
+    filesInspection.error ?? tensorsInspection.error ?? undefined;
 
   return (
     <section className="artifact-inspection" data-testid="artifact-inspection">
@@ -124,7 +140,11 @@ export function ArtifactInspection({
           <FileSearch size={20} />
           <div>
             <span className="eyebrow">Artifacts inspected</span>
-            <h2>Architecture unavailable</h2>
+            <h2>
+              {architecture
+                ? "Architecture report"
+                : "Architecture unavailable"}
+            </h2>
           </div>
         </div>
         <div className="artifact-inspection-stats">
@@ -189,13 +209,19 @@ export function ArtifactInspection({
         <code data-testid="artifact-revision">{pageRevision ?? "Unknown"}</code>
       </div>
 
-      {inspection.error && (
+      {inspectionError && (
         <ErrorNotice
-          error={inspection.error}
-          retry={() => void inspection.refetch()}
+          error={inspectionError}
+          retry={() => {
+            void filesInspection.refetch();
+            void tensorsInspection.refetch();
+          }}
         />
       )}
-      {inspection.isPending && <Loading text="Loading artifact metadata" />}
+      {(filesInspection.isPending ||
+        (tab === "tensors" && tensorsInspection.isPending)) && (
+        <Loading text="Loading artifact metadata" />
+      )}
 
       {page && (
         <>
@@ -297,136 +323,226 @@ export function ArtifactInspection({
               )}
             </section>
           )}
-          <section
-            className="artifact-section"
-            aria-labelledby="artifact-files-title"
+          <Tabs.Root
+            className="artifact-tabs"
+            value={tab}
+            onValueChange={setTab}
           >
-            <div className="artifact-section-heading">
-              <h3 id="artifact-files-title">Repository files</h3>
-              <span>{range(offset, page.limit, page.file_count)}</span>
-            </div>
-            {page.files.length ? (
-              <ul className="artifact-file-list">
-                {page.files.map((file) => {
-                  const href = artifactUrl(modelId, page.revision, file);
-                  const fileKind = checkpointFileKind(file);
-                  return (
-                    <li key={file}>
-                      {href ? (
-                        <a href={href} target="_blank" rel="noreferrer">
-                          <code>{file}</code>
-                          <ExternalLink size={13} aria-hidden="true" />
-                        </a>
-                      ) : (
-                        <code>{file}</code>
-                      )}
-                      {href && fileKind && (
-                        <IconButton
-                          label={`Inspect ${file} (${fileKind})`}
-                          disabled={inspectionDisabled}
-                          onClick={() => onInspectFile(href)}
-                        >
-                          <ScanSearch size={16} />
-                        </IconButton>
-                      )}
-                      {href && fileKind && <small>{fileKind}</small>}
-                    </li>
-                  );
-                })}
-              </ul>
-            ) : (
-              <p className="artifact-empty">No files returned for this page.</p>
-            )}
-          </section>
-          <section
-            className="artifact-section"
-            aria-labelledby="artifact-tensors-title"
-          >
-            <div className="artifact-section-heading">
-              <h3 id="artifact-tensors-title">Checkpoint tensors</h3>
-              <span>{range(offset, page.limit, page.tensor_count)}</span>
-            </div>
-            <div className="artifact-table-wrap">
-              <table className="artifact-tensor-table">
-                <thead>
-                  <tr>
-                    <th scope="col">Tensor</th>
-                    <th scope="col">Shape</th>
-                    <th scope="col">Dtype</th>
-                    <th scope="col">Elements</th>
-                    <th scope="col">Artifact</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {page.tensors.map((tensor) => {
-                    const href = tensorArtifactUrl(
-                      modelId,
-                      page.revision,
-                      tensor.artifact,
-                    );
-                    return (
-                      <tr key={`${tensor.artifact}:${tensor.name}`}>
-                        <th scope="row">
-                          <code>{tensor.name}</code>
-                        </th>
-                        <td>
-                          <code>{shape(tensor.shape)}</code>
-                          {tensor.shape_convention === "ggml_dimensions" && (
-                            <small>GGML axis order</small>
-                          )}
-                        </td>
-                        <td>
-                          <code>{tensor.dtype || "Unknown"}</code>
-                        </td>
-                        <td>{count(tensor.parameter_count)}</td>
-                        <td>
+            <Tabs.List
+              className="artifact-tab-list"
+              aria-label="Artifact inspection views"
+            >
+              <Tabs.Trigger value="files">
+                Files <span>{count(fileCount, true)}</span>
+              </Tabs.Trigger>
+              <Tabs.Trigger value="tensors">
+                Tensors <span>{count(tensorCount, true)}</span>
+              </Tabs.Trigger>
+            </Tabs.List>
+            <Tabs.Content value="files" aria-busy={filesInspection.isFetching}>
+              {filesInspection.isPlaceholderData && (
+                <Loading text="Loading next file page" />
+              )}
+              <section
+                className="artifact-section"
+                aria-labelledby="artifact-files-title"
+              >
+                <div className="artifact-section-heading">
+                  <h3 id="artifact-files-title">Repository files</h3>
+                  <span>
+                    {range(
+                      filesPage?.offset ?? 0,
+                      filesPage?.limit ?? page.limit,
+                      page.file_count,
+                    )}
+                  </span>
+                </div>
+                {filesPage?.files.length ? (
+                  <ul className="artifact-file-list">
+                    {filesPage.files.map((file) => {
+                      const href = artifactUrl(
+                        modelId,
+                        filesPage.revision,
+                        file,
+                      );
+                      const fileKind = checkpointFileKind(file);
+                      return (
+                        <li key={file}>
                           {href ? (
                             <a href={href} target="_blank" rel="noreferrer">
-                              <code>{tensor.artifact}</code>
+                              <code>{file}</code>
                               <ExternalLink size={13} aria-hidden="true" />
                             </a>
                           ) : (
-                            <code>{tensor.artifact}</code>
+                            <code>{file}</code>
                           )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-              {!page.tensors.length && (
-                <p className="artifact-empty">
-                  No tensors returned for this page.
-                </p>
+                          {href && fileKind && (
+                            <IconButton
+                              label={`Inspect ${file} (${fileKind})`}
+                              disabled={inspectionDisabled}
+                              onClick={() => onInspectFile(href)}
+                            >
+                              <ScanSearch size={16} />
+                            </IconButton>
+                          )}
+                          {href && fileKind && <small>{fileKind}</small>}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                ) : filesPage ? (
+                  <p className="artifact-empty">
+                    No files returned for this page.
+                  </p>
+                ) : null}
+              </section>
+              <nav
+                className="artifact-pagination"
+                aria-label="Repository file pages"
+              >
+                <span>
+                  Page {Math.floor((filesPage?.offset ?? 0) / pageSize) + 1}
+                </span>
+                <div>
+                  <button
+                    type="button"
+                    aria-label="Previous file page"
+                    disabled={filesOffset === 0 || filesInspection.isFetching}
+                    onClick={() =>
+                      setFilesOffset((value) => Math.max(0, value - pageSize))
+                    }
+                  >
+                    Previous
+                  </button>
+                  <button
+                    type="button"
+                    aria-label="Next file page"
+                    disabled={
+                      filesOffset + pageSize >= fileCount ||
+                      filesInspection.isFetching
+                    }
+                    onClick={() => setFilesOffset((value) => value + pageSize)}
+                  >
+                    Next
+                  </button>
+                </div>
+              </nav>
+            </Tabs.Content>
+            <Tabs.Content
+              value="tensors"
+              aria-busy={tensorsInspection.isFetching}
+            >
+              {tensorsInspection.isPlaceholderData && (
+                <Loading text="Loading next tensor page" />
               )}
-            </div>
-          </section>
+              <section
+                className="artifact-section"
+                aria-labelledby="artifact-tensors-title"
+              >
+                <div className="artifact-section-heading">
+                  <h3 id="artifact-tensors-title">Checkpoint tensors</h3>
+                  <span>
+                    {range(
+                      tensorsPage?.offset ?? 0,
+                      tensorsPage?.limit ?? page.limit,
+                      page.tensor_count,
+                    )}
+                  </span>
+                </div>
+                <div className="artifact-table-wrap">
+                  <table className="artifact-tensor-table">
+                    <thead>
+                      <tr>
+                        <th scope="col">Tensor</th>
+                        <th scope="col">Shape</th>
+                        <th scope="col">Dtype</th>
+                        <th scope="col">Elements</th>
+                        <th scope="col">Artifact</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(tensorsPage?.tensors ?? []).map((tensor) => {
+                        const href = tensorArtifactUrl(
+                          modelId,
+                          tensorsPage?.revision ?? page.revision,
+                          tensor.artifact,
+                        );
+                        return (
+                          <tr key={`${tensor.artifact}:${tensor.name}`}>
+                            <th scope="row">
+                              <code>{tensor.name}</code>
+                            </th>
+                            <td>
+                              <code>{shape(tensor.shape)}</code>
+                              {tensor.shape_convention ===
+                                "ggml_dimensions" && (
+                                <small>GGML axis order</small>
+                              )}
+                            </td>
+                            <td>
+                              <code>{tensor.dtype || "Unknown"}</code>
+                            </td>
+                            <td>{count(tensor.parameter_count)}</td>
+                            <td>
+                              {href ? (
+                                <a href={href} target="_blank" rel="noreferrer">
+                                  <code>{tensor.artifact}</code>
+                                  <ExternalLink size={13} aria-hidden="true" />
+                                </a>
+                              ) : (
+                                <code>{tensor.artifact}</code>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                  {tensorsPage && !tensorsPage.tensors.length && (
+                    <p className="artifact-empty">
+                      No tensors returned for this page.
+                    </p>
+                  )}
+                </div>
+              </section>
 
-          <nav className="artifact-pagination" aria-label="Artifact pages">
-            <span>Page {Math.floor(offset / pageSize) + 1}</span>
-            <div>
-              <button
-                type="button"
-                aria-label="Previous artifact page"
-                disabled={offset === 0 || inspection.isFetching}
-                onClick={() =>
-                  setOffset((value) => Math.max(0, value - pageSize))
-                }
+              <nav
+                className="artifact-pagination"
+                aria-label="Checkpoint tensor pages"
               >
-                Previous
-              </button>
-              <button
-                type="button"
-                aria-label="Next artifact page"
-                disabled={
-                  offset + pageSize >= maximumCount || inspection.isFetching
-                }
-                onClick={() => setOffset((value) => value + pageSize)}
-              >
-                Next
-              </button>
-            </div>
-          </nav>
+                <span>
+                  Page {Math.floor((tensorsPage?.offset ?? 0) / pageSize) + 1}
+                </span>
+                <div>
+                  <button
+                    type="button"
+                    aria-label="Previous tensor page"
+                    disabled={
+                      tensorsOffset === 0 || tensorsInspection.isFetching
+                    }
+                    onClick={() =>
+                      setTensorsOffset((value) => Math.max(0, value - pageSize))
+                    }
+                  >
+                    Previous
+                  </button>
+                  <button
+                    type="button"
+                    aria-label="Next tensor page"
+                    disabled={
+                      tensorsOffset + pageSize >= tensorCount ||
+                      tensorsInspection.isFetching
+                    }
+                    onClick={() =>
+                      setTensorsOffset((value) => value + pageSize)
+                    }
+                  >
+                    Next
+                  </button>
+                </div>
+              </nav>
+            </Tabs.Content>
+          </Tabs.Root>
 
           {page.source_config && (
             <details className="artifact-source-details">

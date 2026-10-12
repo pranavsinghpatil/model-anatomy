@@ -40,12 +40,12 @@ for (const item of cases) {
     test.setTimeout(180_000);
     const errors: string[] = [];
     page.on("pageerror", (error) => errors.push(error.message));
-    await page.goto("/");
+    await page.goto("/app");
     await page
       .getByLabel("Hugging Face model", { exact: true })
       .fill(item.model);
     const submit = page.getByRole("button", {
-      name: "Analyze Model",
+      name: "Inspect model",
       exact: true,
     });
     await expect(submit).toBeEnabled({ timeout: 30_000 });
@@ -102,10 +102,10 @@ test("live diffusion component selection reads its actual nested checkpoint", as
   test.setTimeout(180_000);
   const model = "stable-diffusion-v1-5/stable-diffusion-v1-5";
   const file = "unet/diffusion_pytorch_model.safetensors";
-  await page.goto("/");
+  await page.goto("/app");
   await page.getByLabel("Hugging Face model", { exact: true }).fill(model);
   const submit = page.getByRole("button", {
-    name: "Analyze Model",
+    name: "Inspect model",
     exact: true,
   });
   await expect(submit).toBeEnabled({ timeout: 30_000 });
@@ -131,10 +131,12 @@ test("live diffusion component selection reads its actual nested checkpoint", as
   const response = await submitted;
   expect(response.status()).toBe(202);
   const created = (await response.json()) as AnalysisDetail;
-  await expect(view.locator("tbody tr")).toHaveCount(50, { timeout: 130_000 });
   await expect(page.getByTestId("model-profile")).toContainText(
     "unet/config.json",
+    { timeout: 130_000 },
   );
+  await view.getByRole("tab", { name: /^Tensors/ }).click();
+  await expect(view.locator("tbody tr")).toHaveCount(50, { timeout: 130_000 });
   const report = await (
     await page.request.get(`/api/v1/analyses/${created.id}/exports/json`)
   ).json();

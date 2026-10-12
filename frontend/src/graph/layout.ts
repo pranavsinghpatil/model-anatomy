@@ -49,16 +49,22 @@ export async function layoutGraph(
       type: MarkerType.ArrowClosed,
       width: 12,
       height: 12,
-      color: edge.relation === "dataflow" ? "#9aa4aa" : "#8979aa",
+      color:
+        edge.relation === "dataflow"
+          ? "var(--graph-edge)"
+          : "var(--graph-semantic-edge)",
     },
     data: { original: edge },
     style: {
-      stroke: edge.relation === "dataflow" ? "#9aa4aa" : "#8979aa",
+      stroke:
+        edge.relation === "dataflow"
+          ? "var(--graph-edge)"
+          : "var(--graph-semantic-edge)",
       strokeWidth: 1.3,
       ...(edge.relation !== "dataflow" ? { strokeDasharray: "5 4" } : {}),
     },
-    labelStyle: { fill: "#626a70", fontSize: 10 },
-    labelBgStyle: { fill: "#f7f8f9", fillOpacity: 0.96 },
+    labelStyle: { fill: "var(--muted)", fontSize: 10 },
+    labelBgStyle: { fill: "var(--surface)", fillOpacity: 0.96 },
     labelBgPadding: [5, 3],
   }));
   const result = await elk.layout({
@@ -91,6 +97,10 @@ export async function layoutGraph(
     nodes: graph.nodes.map((original) => ({
       id: scopedNodeId(graph.id, original.id),
       type: "anatomy",
+      // These match the fixed card and ELK dimensions. Controlled React Flow
+      // nodes need dimensions on the user node for the minimap to render them.
+      width: 242,
+      height: 108,
       position: positions.get(scopedNodeId(graph.id, original.id)) ?? {
         x: 0,
         y: 0,

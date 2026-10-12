@@ -29,12 +29,12 @@ for (const item of cases) {
     page.on("request", (request) => {
       if (request.url().includes("/graphs/")) graphRequests.push(request.url());
     });
-    await page.goto("/");
+    await page.goto("/app");
     await page
       .getByLabel("Hugging Face model", { exact: true })
       .fill(item.model);
     await expect(
-      page.getByRole("button", { name: "Analyze Model", exact: true }),
+      page.getByRole("button", { name: "Inspect model", exact: true }),
     ).toBeEnabled({ timeout: 30_000 });
     const submitted = page.waitForResponse(
       (response) =>
@@ -42,11 +42,13 @@ for (const item of cases) {
         response.url().endsWith("/api/v1/analyses"),
     );
     await page
-      .getByRole("button", { name: "Analyze Model", exact: true })
+      .getByRole("button", { name: "Inspect model", exact: true })
       .click();
     const response = await submitted;
     expect(response.status()).toBe(202);
     const created = (await response.json()) as AnalysisDetail;
+    await expect(page).toHaveURL(new RegExp(`/app/analyses/${created.id}`));
+    await page.getByRole("link", { name: "Artifacts", exact: true }).click();
     const view = page.getByTestId("artifact-inspection");
     await expect(view).toBeVisible({ timeout: 130_000 });
     await expect(view).toContainText(item.reason);
@@ -71,9 +73,10 @@ for (const item of cases) {
     expect(detail.parameter_count).toBeNull();
     expect(detail.root_graph_id).toBeNull();
     if (item.tensors) {
+      await view.getByRole("tab", { name: /^Tensors/ }).click();
       await expect(view.locator("tbody tr")).toHaveCount(50);
       await page
-        .getByRole("button", { name: "Next artifact page", exact: true })
+        .getByRole("button", { name: "Next tensor page", exact: true })
         .click();
       await expect(view).toContainText("Page 2");
     }
@@ -81,10 +84,6 @@ for (const item of cases) {
       () => document.documentElement.scrollWidth > window.innerWidth,
     );
     expect(overflow).toBe(false);
-    if (isMobile)
-      await expect(
-        page.getByRole("button", { name: "Questions", exact: true }),
-      ).toBeDisabled();
     await page.screenshot({
       path: info.outputPath("live-artifact-inspection.png"),
       animations: "disabled",

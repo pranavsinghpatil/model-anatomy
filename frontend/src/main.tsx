@@ -4,6 +4,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { retryQuery } from "./api/client";
 import { App } from "./App";
 import "@xyflow/react/dist/style.css";
+import "@fontsource-variable/inter";
+import "@fontsource-variable/jetbrains-mono";
 import "./styles.css";
 
 const client = new QueryClient({

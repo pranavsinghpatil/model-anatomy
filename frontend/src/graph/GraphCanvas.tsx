@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Background,
   BackgroundVariant,
@@ -8,6 +8,8 @@ import {
   ReactFlow,
   ReactFlowProvider,
   useReactFlow,
+  useStore,
+  type Viewport,
   type NodeProps,
 } from "@xyflow/react";
 import {
@@ -20,10 +22,11 @@ import {
   ZoomIn,
   ZoomOut,
 } from "lucide-react";
-import type { ArchitectureGraph, GraphNode } from "../api/contract";
+import type { ArchitectureGraph, GraphEdge, GraphNode } from "../api/contract";
 import { count, scopedNodeId } from "../format";
 import { ErrorNotice, IconButton, Loading } from "../components/Common";
 import { layoutGraph, type AnatomyEdge, type AnatomyNode } from "./layout";
+import "./graph.css";
 
 function ModelNode({ data, selected }: NodeProps<AnatomyNode>) {
   const node = data.original;
@@ -88,13 +91,21 @@ function readableAnchor(nodes: AnatomyNode[], selectedNode?: string | null) {
 function Canvas({
   graph,
   selectedNode,
+  selectedEdge,
   select,
   open,
+  viewport,
+  onViewportChange,
+  selectEdge,
 }: {
   graph: ArchitectureGraph;
   selectedNode: string | null;
+  selectedEdge?: GraphEdge | null;
   select: (node: GraphNode) => void;
   open: (node: GraphNode) => void;
+  viewport?: Viewport;
+  onViewportChange?: (viewport: Viewport) => void;
+  selectEdge?: (edge: GraphEdge | null) => void;
 }) {
   const [layout, setLayout] = useState<{
     nodes: AnatomyNode[];
@@ -103,7 +114,56 @@ function Canvas({
   const [error, setError] = useState<Error | null>(null);
   const [search, setSearch] = useState("");
   const [attempt, setAttempt] = useState(0);
+  const [zoom, setZoom] = useState(viewport?.zoom ?? 1);
+  const [reduceMotion, setReduceMotion] = useState(
+    () =>
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+  );
   const flow = useReactFlow<AnatomyNode, AnatomyEdge>();
+  const canvasWidth = useStore((s) => s.width);
+  const canvasHeight = useStore((s) => s.height);
+  const lastSelection = useRef({ node: selectedNode, width: 0 });
+  useEffect(() => {
+    const previous = lastSelection.current;
+    lastSelection.current = { node: selectedNode, width: canvasWidth };
+    if (
+      previous.node === selectedNode &&
+      (!previous.width || previous.width === canvasWidth)
+    )
+      return;
+    if (!selectedNode || !layout || !canvasWidth || !canvasHeight) return;
+    const node = flow.getNode(scopedNodeId(graph.id, selectedNode));
+    if (!node) return;
+    const current = flow.getViewport();
+    const left = node.position.x * current.zoom + current.x;
+    const top = node.position.y * current.zoom + current.y;
+    if (
+      left < 20 ||
+      left + 242 * current.zoom > canvasWidth - 20 ||
+      top < 20 ||
+      top + 108 * current.zoom > canvasHeight - 20
+    )
+      void flow.setCenter(node.position.x + 121, node.position.y + 54, {
+        zoom: current.zoom,
+        duration: reduceMotion ? 0 : 150,
+      });
+  }, [
+    selectedNode,
+    layout,
+    canvasWidth,
+    canvasHeight,
+    flow,
+    graph.id,
+    reduceMotion,
+  ]);
+  useEffect(() => {
+    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const update = () => setReduceMotion(media.matches);
+    update();
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, []);
   useEffect(() => {
     let active = true;
     setLayout(null);
@@ -124,7 +184,7 @@ function Canvas({
     };
   }, [graph, attempt]);
   useEffect(() => {
-    if (!layout) return;
+    if (!layout || viewport) return;
     const frame = requestAnimationFrame(() => {
       if (!layout.nodes.length) return;
       void flow.fitView({
@@ -137,7 +197,7 @@ function Canvas({
       });
     });
     return () => cancelAnimationFrame(frame);
-  }, [layout, flow]);
+  }, [layout, flow, viewport]);
   const nodes = useMemo(
     () =>
       layout?.nodes.map((node) => ({
@@ -160,6 +220,14 @@ function Canvas({
     `${node.label} ${node.module_path ?? ""}`
       .toLowerCase()
       .includes(search.toLowerCase()),
+  );
+  const edges = useMemo(
+    () =>
+      layout?.edges.map((edge) => ({
+        ...edge,
+        selected: edge.data?.original === selectedEdge,
+      })) ?? [],
+    [layout, selectedEdge],
   );
   if (error)
     return (
@@ -185,25 +253,68 @@ function Canvas({
       </div>
     );
   return (
-    <div className="graph-canvas" data-testid="graph-canvas">
+    <div
+      className={`graph-canvas ${zoom < 0.55 ? "is-distant" : ""}`}
+      data-testid="graph-canvas"
+    >
       <ReactFlow<AnatomyNode, AnatomyEdge>
         nodes={nodes}
-        edges={layout.edges}
+        edges={edges}
+        // Restore a saved view on mount; let React Flow finish gestures and
+        // transitions before persisting. Controlling every animation frame
+        // resynchronizes the pan/zoom engine and interrupts fit operations.
+        defaultViewport={viewport}
+        onViewportChange={(nextViewport) => {
+          setZoom(nextViewport.zoom);
+        }}
         nodeTypes={nodeTypes}
         onNodeClick={(_, node) => select(node.data.original)}
-        onNodeDoubleClick={(_, node) => {
-          if (node.data.original.child_graph_id) open(node.data.original);
+        onEdgeClick={(_, edge) => {
+          if (edge.data) selectEdge?.(edge.data.original);
+        }}
+        onEdgesChange={(changes) => {
+          const selected = changes.find(
+            (change) => change.type === "select" && change.selected,
+          );
+          if (selected?.type === "select") {
+            const edge = layout.edges.find((edge) => edge.id === selected.id);
+            if (edge?.data) selectEdge?.(edge.data.original);
+          } else if (
+            changes.some(
+              (change) => change.type === "select" && !change.selected,
+            )
+          ) {
+            selectEdge?.(null);
+          }
+        }}
+        onNodesChange={(changes) => {
+          const selected = changes.find(
+            (change) => change.type === "select" && change.selected,
+          );
+          if (selected?.type === "select") {
+            const node = layout.nodes.find((node) => node.id === selected.id);
+            if (node) select(node.data.original);
+          }
+        }}
+        onMoveEnd={(_, nextViewport) => {
+          setZoom(nextViewport.zoom);
+          onViewportChange?.(nextViewport);
         }}
         nodesDraggable={false}
         nodesConnectable={false}
+        deleteKeyCode={null}
         edgesFocusable={true}
-        fitView
-        fitViewOptions={{
-          nodes: [readableAnchor(layout.nodes)],
-          padding: 0.25,
-          minZoom: 0.85,
-          maxZoom: 1,
-        }}
+        {...(!viewport
+          ? {
+              fitView: true,
+              fitViewOptions: {
+                nodes: [readableAnchor(layout.nodes)],
+                padding: 0.25,
+                minZoom: 0.85,
+                maxZoom: 1,
+              },
+            }
+          : {})}
         minZoom={0.08}
         maxZoom={1.8}
         proOptions={{ hideAttribution: true }}
@@ -216,30 +327,35 @@ function Canvas({
           variant={BackgroundVariant.Dots}
           gap={22}
           size={1}
-          color="#d9dee1"
+          color="var(--graph-grid)"
         />
-        <MiniMap
-          position="bottom-right"
-          nodeColor={(node) =>
-            (node as AnatomyNode).data.original.child_graph_id
-              ? "#9b8ab4"
-              : "#70aaa2"
-          }
-          maskColor="rgba(245,247,248,0.7)"
-          pannable
-          zoomable
-        />
+        {canvasWidth >= 700 && canvasHeight >= 360 && (
+          <MiniMap
+            className="graph-minimap"
+            position="bottom-right"
+            nodeColor={(node) =>
+              (node as AnatomyNode).data.original.child_graph_id
+                ? "var(--graph-child)"
+                : "var(--graph-node)"
+            }
+            maskColor="var(--graph-mask)"
+            pannable
+            zoomable
+          />
+        )}
       </ReactFlow>
       <div className="graph-zoom">
         <IconButton
           label="Zoom in"
-          onClick={() => void flow.zoomIn({ duration: 150 })}
+          onClick={() => void flow.zoomIn({ duration: reduceMotion ? 0 : 150 })}
         >
           <ZoomIn size={16} />
         </IconButton>
         <IconButton
           label="Zoom out"
-          onClick={() => void flow.zoomOut({ duration: 150 })}
+          onClick={() =>
+            void flow.zoomOut({ duration: reduceMotion ? 0 : 150 })
+          }
         >
           <ZoomOut size={16} />
         </IconButton>
@@ -249,7 +365,7 @@ function Canvas({
           <Search size={14} />
           <input
             aria-label="Find component"
-            placeholder="Find component"
+            placeholder="Find in current graph"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
           />
@@ -269,7 +385,7 @@ function Canvas({
                         void flow.fitView({
                           nodes: [found],
                           maxZoom: 1.2,
-                          duration: 250,
+                          duration: reduceMotion ? 0 : 250,
                         });
                     }}
                   >
@@ -285,7 +401,11 @@ function Canvas({
         <IconButton
           label="Fit graph"
           onClick={() =>
-            void flow.fitView({ padding: 0.2, maxZoom: 1, duration: 200 })
+            void flow.fitView({
+              padding: 0.2,
+              maxZoom: 1,
+              duration: reduceMotion ? 0 : 200,
+            })
           }
         >
           <Maximize size={16} />
@@ -298,7 +418,7 @@ function Canvas({
               padding: 0.2,
               minZoom: 0.85,
               maxZoom: 1,
-              duration: 200,
+              duration: reduceMotion ? 0 : 200,
             })
           }
         >

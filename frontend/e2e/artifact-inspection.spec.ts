@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import type { ArtifactInspectionResponse } from "../src/api/contract";
 import { analysisFor, mockService } from "./service";
+import { openAnalysis } from "./helpers";
 
 const revision = "0123456789abcdef0123456789abcdef01234567";
 const longTensorName =
@@ -36,7 +37,7 @@ const page = (
   tensor_count: 51,
   checkpoint_tensor_element_count: 589824,
   checkpoint_available: true,
-  source_config: null,
+  source_config: { model_type: "vision-model", hidden_size: 768 },
   evidence: [
     {
       source: "safetensors_header",
@@ -74,7 +75,7 @@ test("GGUF selection submits the exact pinned file rather than guessing a varian
       },
     ],
   });
-  await browser.goto(`/?analysis=${job.id}`);
+  await openAnalysis(browser, job.id, "artifacts");
   await browser
     .getByRole("button", {
       name: `Inspect ${file} (GGUF checkpoint)`,
@@ -235,8 +236,9 @@ test("selected split GGUF reports file elements and native axis order", async ({
       },
     ],
   });
-  await browser.goto(`/?analysis=${job.id}`);
+  await openAnalysis(browser, job.id, "artifacts");
   const view = browser.getByTestId("artifact-inspection");
+  await view.getByRole("tab", { name: /^Tensors/ }).click();
   await expect(view).toContainText("Selected file elements");
   await expect(view).toContainText("only the selected file");
   await expect(view).toContainText("GGML axis order");
@@ -285,19 +287,11 @@ test("inspected artifacts stay graph-free and paginate verified metadata", async
       page(50, [], [tensor(50)]),
     ],
   });
-  await browser.goto(`/?analysis=${job.id}`);
+  await openAnalysis(browser, job.id, "artifacts");
 
   const inspection = browser.getByTestId("artifact-inspection");
   await expect(
     inspection.getByRole("heading", { name: "Architecture unavailable" }),
-  ).toBeVisible();
-  await expect(
-    browser
-      .getByRole("main")
-      .getByRole("status", { name: "Analysis status: inspected" }),
-  ).toBeVisible();
-  await expect(
-    browser.getByText("Artifacts inspected", { exact: true }).first(),
   ).toBeVisible();
   await expect(
     inspection.getByText("architecture_not_supported"),
@@ -310,6 +304,20 @@ test("inspected artifacts stay graph-free and paginate verified metadata", async
   );
   await expect(browser.getByTestId("graph-canvas")).toHaveCount(0);
   await expect(browser.locator(".model-metrics")).toHaveCount(0);
+  await expect(browser.getByTestId("report-checks")).toHaveCount(0);
+  await expect(browser.getByTestId("analysis-scope")).toHaveCount(0);
+  await expect(
+    browser.getByRole("link", { name: "Overview", exact: true }),
+  ).toBeVisible();
+  await expect(
+    browser.getByRole("link", { name: "Architecture", exact: true }),
+  ).toBeVisible();
+  await expect(
+    browser.getByRole("link", { name: "Artifacts", exact: true }),
+  ).toBeVisible();
+  await expect(
+    browser.getByRole("link", { name: "Report", exact: true }),
+  ).toBeVisible();
   await expect(
     inspection.getByRole("link", { name: "config.json" }),
   ).toHaveAttribute(
@@ -317,30 +325,47 @@ test("inspected artifacts stay graph-free and paginate verified metadata", async
     `https://huggingface.co/acme/vision-model/blob/${revision}/config.json`,
   );
 
-  const tensorRow = inspection
+  const filesTab = inspection.getByRole("tab", { name: /^Files/ });
+  await expect(filesTab).toHaveAttribute("data-state", "active");
+  await expect(inspection.getByText("Source configuration")).toBeVisible();
+  await expect(inspection.getByText("Artifact evidence (1)")).toBeVisible();
+  await inspection.getByRole("tab", { name: /^Tensors/ }).click();
+  const tensorLink = inspection
     .getByRole("row")
-    .filter({ hasText: longTensorName });
-  const tensorLink = tensorRow.getByRole("link");
+    .filter({ hasText: longTensorName })
+    .getByRole("link");
   await expect(tensorLink).toHaveAttribute("href", longArtifactUrl);
   await expect(inspection.getByText("0 of 3")).toHaveCount(0);
 
-  if (isMobile) {
-    await expect(
-      browser
-        .getByRole("navigation", { name: "Workspace views" })
-        .getByRole("button", { name: "Questions" }),
-    ).toBeDisabled();
-  } else {
-    await expect(
-      browser.getByRole("button", {
-        name: "Questions unavailable for artifact inspection",
-      }),
-    ).toBeDisabled();
-    await browser.getByRole("button", { name: "Open analysis panel" }).click();
-    await expect(
-      browser.getByRole("tab", { name: "Questions" }),
-    ).toBeDisabled();
+  // Long names and source URLs must scroll within the table at every supported
+  // width; they must never push the surrounding workspace beyond the viewport.
+  for (const width of [320, 390, 768, 1024, 1440, 1920]) {
+    await browser.setViewportSize({ width, height: 900 });
+    for (const theme of ["Light", "Dark"]) {
+      await browser.getByRole("button", { name: "Theme", exact: true }).click();
+      await browser
+        .getByRole("menuitemradio", { name: theme, exact: true })
+        .click();
+      await expect(tensorLink).toHaveAttribute("href", longArtifactUrl);
+      await expect
+        .poll(
+          () =>
+            browser.evaluate(
+              () =>
+                Math.max(
+                  document.body.scrollWidth,
+                  document.documentElement.scrollWidth,
+                ) <= innerWidth,
+            ),
+          `${width}px ${theme} long tensor`,
+        )
+        .toBe(true);
+    }
   }
+  await browser.setViewportSize(
+    isMobile ? { width: 390, height: 844 } : { width: 1440, height: 960 },
+  );
+
   expect(requests.some((request) => request.path.includes("/graphs/"))).toBe(
     false,
   );
@@ -348,11 +373,33 @@ test("inspected artifacts stay graph-free and paginate verified metadata", async
     false,
   );
 
-  await inspection.getByRole("button", { name: "Next artifact page" }).click();
+  await inspection.getByRole("tab", { name: /^Tensors/ }).click();
+  let releaseTensorPage!: () => void;
+  let signalTensorRequest!: () => void;
+  const tensorPageGate = new Promise<void>((resolve) => {
+    releaseTensorPage = resolve;
+  });
+  const tensorRequestStarted = new Promise<void>((resolve) => {
+    signalTensorRequest = resolve;
+  });
+  const tensorPageRoute = /\/api\/v1\/analyses\/job-test\/artifacts\?offset=50/;
+  await browser.route(tensorPageRoute, async (route) => {
+    signalTensorRequest();
+    await tensorPageGate;
+    await route.fallback();
+  });
+  await inspection.getByRole("button", { name: "Next tensor page" }).click();
+  await tensorRequestStarted;
+  try {
+    await expect(inspection.getByText("1-50 of 51")).toBeVisible();
+  } finally {
+    releaseTensorPage();
+  }
+  await browser.unroute(tensorPageRoute);
   await expect(inspection.getByText("encoder.layer.50.weight")).toBeVisible();
-  await expect(inspection.getByText("0 of 3")).toBeVisible();
+  await expect(inspection.getByText("51-51 of 51")).toBeVisible();
   await expect(
-    inspection.getByRole("button", { name: "Previous artifact page" }),
+    inspection.getByRole("button", { name: "Previous tensor page" }),
   ).toBeEnabled();
   expect(
     requests.some((request) =>
@@ -366,31 +413,25 @@ test("inspected artifacts stay graph-free and paginate verified metadata", async
     const metrics = await inspection
       .locator(".artifact-table-wrap")
       .evaluate((wrap) => {
-        const table = wrap.querySelector("table")!;
-        const row = table.tBodies[0].rows[0];
-        const cells = Array.from(
-          row.cells,
-          (cell) => cell.getBoundingClientRect().width,
-        );
         return {
           clientWidth: wrap.clientWidth,
           scrollWidth: wrap.scrollWidth,
-          rowHeight: row.getBoundingClientRect().height,
-          columns: cells.map(
-            (width) => width / table.getBoundingClientRect().width,
-          ),
-          tableWidth: table.getBoundingClientRect().width,
         };
       });
     expect(metrics.scrollWidth).toBeGreaterThan(metrics.clientWidth);
-    expect(metrics.tableWidth).toBeGreaterThanOrEqual(1000);
-    expect(metrics.columns[0]).toBeGreaterThan(0.35);
-    expect(metrics.columns[1]).toBeGreaterThan(0.1);
-    expect(metrics.columns[2]).toBeGreaterThan(0.06);
-    expect(metrics.columns[3]).toBeGreaterThan(0.1);
-    expect(metrics.columns[4]).toBeGreaterThan(0.27);
-    expect(metrics.rowHeight).toBeLessThan(150);
+    expect(metrics.clientWidth).toBeGreaterThan(0);
+    const pageWidth = await browser.evaluate(
+      () => document.documentElement.scrollWidth - window.innerWidth,
+    );
+    expect(pageWidth).toBeLessThanOrEqual(1);
   }
+  await inspection.getByRole("tab", { name: /^Files/ }).click();
+  await expect(
+    inspection.getByRole("link", { name: "config.json" }),
+  ).toBeVisible();
+  await expect(
+    inspection.getByRole("button", { name: "Next file page" }),
+  ).toBeDisabled();
 });
 
 test("inspected report keeps supported exports and omits Mermaid", async ({
@@ -400,6 +441,7 @@ test("inspected report keeps supported exports and omits Mermaid", async ({
   const job = {
     ...base,
     architecture: null,
+    engine_version: "2030.01.01.1",
     status: "inspected" as const,
     parameter_count: null,
     root_graph_id: null,
@@ -417,8 +459,19 @@ test("inspected report keeps supported exports and omits Mermaid", async ({
     job,
     artifactPages: [page(0, [], [])],
   });
-  await browser.goto(`/?analysis=${job.id}`);
-  await expect(browser.getByTestId("artifact-inspection")).toBeVisible();
+  await openAnalysis(browser, job.id, "report");
+  const reportChecks = browser.getByTestId("report-checks");
+  const scope = browser.getByTestId("analysis-scope");
+  await expect(reportChecks).toBeVisible();
+  await expect(scope).toBeVisible();
+  await expect(reportChecks.locator("details")).toHaveCount(0);
+  await expect(scope.locator("details")).toHaveCount(0);
+  const identity = browser.locator(".report-section").filter({
+    has: browser.getByRole("heading", { name: "Artifact identity" }),
+  });
+  await expect(
+    identity.getByText("2030.01.01.1", { exact: true }),
+  ).toBeVisible();
 
   const formats = [
     ["Report JSON", "json"],
@@ -430,7 +483,7 @@ test("inspected report keeps supported exports and omits Mermaid", async ({
   for (const [label, format] of formats) {
     await browser.getByLabel("Export analysis", { exact: true }).click();
     const download = browser.waitForEvent("download");
-    await browser.getByRole("button", { name: label, exact: true }).click();
+    await browser.getByRole("menuitem", { name: label, exact: true }).click();
     await download;
     expect(
       requests.some((request) => request.path.endsWith(`/exports/${format}`)),
@@ -438,6 +491,6 @@ test("inspected report keeps supported exports and omits Mermaid", async ({
   }
   await browser.getByLabel("Export analysis", { exact: true }).click();
   await expect(
-    browser.getByRole("button", { name: "Mermaid", exact: true }),
+    browser.getByRole("menuitem", { name: "Mermaid", exact: true }),
   ).toHaveCount(0);
 });

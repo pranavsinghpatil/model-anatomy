@@ -272,3 +272,15 @@ VideoMAE temporal input order from native source; leave other unverified layouts
 unknown. Add pinned cross-category and diffusion component checks. Partial reports
 record remaining semantic work, not full modality support. See
 `DYNAMIC_ROUTING_ACCEPTANCE.md`.
+
+## D-028 - Organize inspection around orientation, architecture, artifacts and evidence
+**2026-10-12 - accepted by user; implemented 2026-10-13**
+
+Introduce a routed technical workspace with Learn and Research modes using the
+same real report. Keep submission on Start, explicit visitor-owned continuation,
+theme preferences, and session graph/selection/viewport state. Separate Overview,
+Architecture, Artifacts and Report to contain dense details. Use free Radix
+primitives, resizable panels and local fonts. Learn definitions are authored
+general guidance, never model-specific inferred facts. Artifact-only results
+retain graph-free behavior and supported exports. API and IR schemas do not
+change. See `UI_REDESIGN.md` for responsive layouts and domain boundaries.
