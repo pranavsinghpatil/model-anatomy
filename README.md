@@ -33,6 +33,11 @@ Choose the exact file when a repository contains multiple variants; inspect its
 bounded header metadata and GGML-order tensor dimensions without inventing a
 graph. See [GGUF checks and manual testing](docs/GGUF_ACCEPTANCE.md).
 
+Category-aware routing now covers additional native text, image, speech, video
+and image-text checkpoints, with explicit partial-report limitations. Diffusion
+pipelines require component selection. See
+[dynamic routing evidence and manual checks](docs/DYNAMIC_ROUTING_ACCEPTANCE.md).
+
 ## Inspect a model
 
 ```powershell

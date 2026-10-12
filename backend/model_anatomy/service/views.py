@@ -57,6 +57,7 @@ def artifact_view(ir: ModelIR, offset: int = 0, limit: int = 50) -> dict:
         ),
         "selected_file_split_metadata": ir.metadata.get("artifacts", {}).get("selected_file_split_metadata"),
         "source_config": ir.metadata.get("source_config"),
+        "model_profile": ir.metadata.get("model_profile"),
         "evidence": [asdict(item) for item in ir.evidence],
         "offset": offset,
         "limit": limit,

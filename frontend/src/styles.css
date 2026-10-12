@@ -1963,6 +1963,38 @@ summary::-webkit-details-marker {
   margin: 0;
   line-height: 1.5;
 }
+.artifact-model-profile {
+  display: block;
+  border-bottom: 1px solid var(--border);
+  overflow-wrap: anywhere;
+}
+.artifact-model-profile h3 {
+  margin: 0 0 12px;
+  font-size: 13px;
+}
+.artifact-model-profile dl {
+  display: grid;
+  grid-template-columns: minmax(100px, 150px) minmax(0, 1fr);
+  gap: 8px 16px;
+  margin: 0 0 12px;
+  font-size: 12px;
+}
+.artifact-model-profile dt {
+  color: var(--muted);
+}
+.artifact-model-profile dd {
+  min-width: 0;
+  margin: 0;
+}
+.artifact-model-profile ul {
+  margin: 8px 0 12px;
+  padding-left: 18px;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.artifact-model-profile small {
+  color: var(--muted);
+}
 .artifact-inspection-revision {
   display: flex;
   flex-wrap: wrap;

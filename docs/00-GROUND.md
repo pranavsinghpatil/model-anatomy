@@ -16,6 +16,11 @@ the working text path while closing documented gaps in small PRs. A native model
 loading successfully does not establish complete semantic support. See
 `SYSTEM_GAPS.md` for current evidence and the next acceptance gates.
 
+The October 12 compatibility increment adds artifact-layout/native-task routing,
+component selection and pinned partial reports across text, image, audio, video
+and image-text. Their remaining semantic gaps are acceptance work, not grounds
+for a universal support claim. See `DYNAMIC_ROUTING_ACCEPTANCE.md`.
+
 The [hackathon release](https://nebiusglobalaihackathon.devpost.com/) must run on Nebius Token Factory or Nebius AI Cloud and use an NVIDIA open-source model. The integration is an optional, evidence-bound explanation layer: it may summarize or answer questions about the completed reconstruction, but must never infer the graph or overwrite evidence.
 
 ## Non-goals for this release

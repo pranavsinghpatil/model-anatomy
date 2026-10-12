@@ -22,7 +22,7 @@ import {
 } from "lucide-react";
 import { api, graphReady, pending } from "./api/client";
 import type { Citation, ExportFormat, GraphNode } from "./api/contract";
-import { count, reportDimensionKeys, time } from "./format";
+import { count, dimensionCount, reportDimensionKeys, time } from "./format";
 import {
   ErrorNotice,
   IconButton,
@@ -539,15 +539,14 @@ export function App() {
                     <span>
                       {key === "hidden"
                         ? "Hidden size"
-                        : key === "vocabulary"
-                          ? "Vocabulary"
-                          : key[0].toUpperCase() + key.slice(1)}
+                        : key === "heads" &&
+                            Array.isArray(detail.dimensions.heads)
+                          ? "Heads per stage"
+                          : key === "vocabulary"
+                            ? "Vocabulary"
+                            : key[0].toUpperCase() + key.slice(1)}
                     </span>
-                    <strong>
-                      {typeof detail?.dimensions[key] === "number"
-                        ? count(detail.dimensions[key] as number)
-                        : (detail?.dimensions[key] ?? "Unknown")}
-                    </strong>
+                    <strong>{dimensionCount(detail.dimensions[key])}</strong>
                   </div>
                 ))}
               </div>

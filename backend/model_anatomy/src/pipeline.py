@@ -7,19 +7,15 @@ import json
 import re
 from collections.abc import Callable
 from dataclasses import replace
+from functools import partial
 
 import requests
 
-from .adapters import adapter_for
 from .artifact_inspection import build_artifact_inspection, has_adapter_tensors
 from .artifacts import AmbiguousCheckpointError, InspectionBudgetError, MetadataClient, parse_reference
 from .errors import UnsupportedModelError
-from .facts import inspect_native_model
-from .hierarchy import HierarchyBuilder
-from .inputs import InputResolver
 from .ir import Evidence, ModelIR
-from .patterns import SemanticAnalyzer
-from .registry import instantiate_native, load_native_config
+from .profile import config_filename, native_dimensions, repository_profile
 from .version import ENGINE_VERSION
 
 
@@ -64,7 +60,32 @@ def reconstruct(
         from .errors import ArtifactError
 
         raise ArtifactError(f"Requested Safetensors artifact is missing: {reference.filename}")
-    config_data = client.json(reference.url("config.json", revision)) if "config.json" in files else None
+    config_file = config_filename(reference)
+    config_data = client.json(reference.url(config_file, revision)) if config_file in files else None
+    manifest = (
+        client.json(reference.url("model_index.json", revision))
+        if allow_artifact_inspection and "model_index.json" in files
+        else None
+    )
+    profile = repository_profile(
+        reference,
+        files,
+        config_data,
+        client.repository_metadata.get((reference.model_id, revision), {}),
+        manifest,
+    )
+    inspect_artifacts = partial(build_artifact_inspection, model_profile=profile)
+    if manifest is not None and not reference.explicit_filename:
+        return inspect_artifacts(
+            reference,
+            revision,
+            files,
+            client.audit,
+            audit_start=audit_start,
+            config_data=config_data,
+            checkpoint=None,
+            reason_code="pipeline_components_require_selection",
+        )
     if config_data is None and not allow_artifact_inspection:
         from .errors import ArtifactError
 
@@ -77,18 +98,23 @@ def reconstruct(
 
         raise ArtifactError("GGUF header inspection is available only through artifact inspection")
     adapter_config = None
-    if allow_artifact_inspection and "adapter_config.json" in files:
-        adapter_config = client.json(reference.url("adapter_config.json", revision))
+    directory = reference.filename.rpartition("/")[0] if reference.explicit_filename else ""
+    adapter_file = f"{directory}/adapter_config.json" if directory else "adapter_config.json"
+    if allow_artifact_inspection and adapter_file in files:
+        adapter_config = client.json(reference.url(adapter_file, revision))
 
     config = None
     native_error = None
     if config_data is not None:
         try:
+            from .registry import load_native_config
+
             config = load_native_config(config_data)
         except UnsupportedModelError as exc:
             if not allow_artifact_inspection:
                 raise
             native_error = exc
+            profile["architecture_blockers"].append(str(exc)[:1024])
 
     if not has_safetensors:
         if not allow_artifact_inspection:
@@ -99,7 +125,7 @@ def reconstruct(
             try:
                 checkpoint = client.checkpoint(reference, revision)
             except AmbiguousCheckpointError:
-                return build_artifact_inspection(
+                return inspect_artifacts(
                     reference,
                     revision,
                     files,
@@ -110,7 +136,7 @@ def reconstruct(
                     reason_code="checkpoint_selection_required",
                 )
             except InspectionBudgetError:
-                return build_artifact_inspection(
+                return inspect_artifacts(
                     reference,
                     revision,
                     files,
@@ -120,7 +146,7 @@ def reconstruct(
                     checkpoint=None,
                     reason_code="metadata_budget_exceeded",
                 )
-            return build_artifact_inspection(
+            return inspect_artifacts(
                 reference,
                 revision,
                 files,
@@ -137,7 +163,7 @@ def reconstruct(
             if config_data is None
             else "safetensors_unavailable"
         )
-        return build_artifact_inspection(
+        return inspect_artifacts(
             reference,
             revision,
             files,
@@ -153,7 +179,7 @@ def reconstruct(
     except AmbiguousCheckpointError:
         if not allow_artifact_inspection:
             raise
-        return build_artifact_inspection(
+        return inspect_artifacts(
             reference,
             revision,
             files,
@@ -170,7 +196,7 @@ def reconstruct(
     except InspectionBudgetError:
         if not allow_artifact_inspection:
             raise
-        return build_artifact_inspection(
+        return inspect_artifacts(
             reference,
             revision,
             files,
@@ -182,7 +208,7 @@ def reconstruct(
         )
 
     if checkpoint.format == "gguf":
-        return build_artifact_inspection(
+        return inspect_artifacts(
             reference,
             revision,
             files,
@@ -191,6 +217,28 @@ def reconstruct(
             config_data=config_data,
             checkpoint=checkpoint,
             reason_code="gguf_header_only",
+        )
+
+    frameworks = sorted(
+        {shard.metadata["format"] for shard in checkpoint.shards.values() if "format" in shard.metadata}
+    )
+    non_native_frameworks = [framework for framework in frameworks if framework != "pt"]
+    if non_native_frameworks:
+        message = "Safetensors metadata declares non-PyTorch framework(s): " + ", ".join(
+            non_native_frameworks
+        )
+        if not allow_artifact_inspection:
+            raise UnsupportedModelError(message)
+        profile["architecture_blockers"].append(message)
+        return inspect_artifacts(
+            reference,
+            revision,
+            files,
+            client.audit,
+            audit_start=audit_start,
+            config_data=config_data,
+            checkpoint=checkpoint,
+            reason_code="checkpoint_framework_unavailable",
         )
 
     reason = None
@@ -205,7 +253,7 @@ def reconstruct(
             else None
         )
     if reason is not None:
-        return build_artifact_inspection(
+        return inspect_artifacts(
             reference,
             revision,
             files,
@@ -218,11 +266,14 @@ def reconstruct(
 
     progress("building_structure")
     try:
+        from .registry import instantiate_native
+
         model, selection = instantiate_native(config)
-    except UnsupportedModelError:
+    except UnsupportedModelError as exc:
         if not allow_artifact_inspection:
             raise
-        return build_artifact_inspection(
+        profile["architecture_blockers"].append(str(exc)[:1024])
+        return inspect_artifacts(
             reference,
             revision,
             files,
@@ -232,7 +283,13 @@ def reconstruct(
             checkpoint=checkpoint,
             reason_code="native_architecture_unavailable",
         )
-    config_url = reference.url("config.json", revision)
+    from .adapters import adapter_for
+    from .facts import inspect_native_model
+    from .hierarchy import HierarchyBuilder
+    from .inputs import InputResolver
+    from .patterns import SemanticAnalyzer
+
+    config_url = reference.url(config_file, revision)
     raw = inspect_native_model(model, checkpoint)
     adapter = adapter_for(config.model_type)
     if adapter:
@@ -318,15 +375,11 @@ def reconstruct(
     edges = [edge for graph in root.walk() for edge in graph.edges if edge.relation == "dataflow"]
     unknown_modules = raw["semantic_diagnostics"]["unknown_components"]
     metadata = {
+        "model_profile": profile,
         "revision": revision,
         "requested_revision": reference.revision,
         "source_config": config_data,
-        "dimensions": {
-            "hidden": getattr(config, "hidden_size", None) or getattr(config, "d_model", None),
-            "heads": getattr(config, "num_attention_heads", None) or getattr(config, "num_heads", None),
-            "layers": getattr(config, "num_hidden_layers", None) or getattr(config, "num_layers", None),
-            "vocabulary": getattr(config, "vocab_size", None),
-        },
+        "dimensions": native_dimensions(config),
         "unique_parameter_count": raw["unique_parameter_count"],
         "logical_parameter_count": raw["logical_parameter_count"],
         "checkpoint_tensor_element_count": sum(t.parameter_count for t in checkpoint.tensors.values()),

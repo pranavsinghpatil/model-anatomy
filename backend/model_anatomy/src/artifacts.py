@@ -66,11 +66,7 @@ def parse_reference(value: str) -> ModelReference:
             revision = unquote(parts[3])
             filename_parts = [unquote(part) for part in parts[4:]]
             if any(
-                not part
-                or part in {".", ".."}
-                or "/" in part
-                or "\\" in part
-                or "\x00" in part
+                not part or part in {".", ".."} or "/" in part or "\\" in part or "\x00" in part
                 for part in filename_parts
             ):
                 raise ArtifactError("Checkpoint URL contains an invalid file path")
@@ -205,6 +201,7 @@ class MetadataClient:
         self.timeout = timeout
         self.audit: list[dict[str, Any]] = []
         self.repository_files: dict[tuple[str, str], set[str]] = {}
+        self.repository_metadata: dict[tuple[str, str], dict[str, str | None]] = {}
         self.header_bytes_read = 0
         self.checkpoint_header_bytes_read = 0
 
@@ -241,6 +238,10 @@ class MetadataClient:
             raise ArtifactError("Hugging Face repository file metadata is invalid")
         files = {item["rfilename"] for item in siblings}
         self.repository_files[(reference.model_id, sha)] = files
+        self.repository_metadata[(reference.model_id, sha)] = {
+            key: info.get(key) if isinstance(info.get(key), str) else None
+            for key in ("pipeline_tag", "library_name")
+        }
         return sha
 
     def checkpoint(self, reference: ModelReference, revision: str) -> CheckpointMetadata:
@@ -250,9 +251,7 @@ class MetadataClient:
                 raise ArtifactError(f"Requested GGUF artifact is missing: {reference.filename}")
             return self.gguf_checkpoint(reference, revision, reference.filename)
 
-        has_safetensors = any(
-            name.endswith((".safetensors", ".safetensors.index.json")) for name in files
-        )
+        has_safetensors = any(name.endswith((".safetensors", ".safetensors.index.json")) for name in files)
         if not has_safetensors:
             gguf_files = sorted(name for name in files if "/" not in name and name.endswith(".gguf"))
             if len(gguf_files) == 1:
@@ -274,12 +273,26 @@ class MetadataClient:
                 raise ArtifactError("Safetensors index has no weight_map")
             if not all(isinstance(key, str) and isinstance(value, str) for key, value in mapping.items()):
                 raise ArtifactError("Safetensors index has an invalid weight_map")
+            directory = index_name.rpartition("/")[0]
+            # Component indexes name shards relative to their own subfolder.
+            if directory:
+                if any(
+                    value.startswith("/")
+                    or any(part in {"", ".", ".."} for part in value.split("/"))
+                    or "\\" in value
+                    or "\x00" in value
+                    for value in mapping.values()
+                ):
+                    raise ArtifactError("Safetensors index references invalid shard paths")
+                mapping = {name: f"{directory}/{filename}" for name, filename in mapping.items()}
             shard_names = sorted(set(mapping.values()))
             if not shard_names or any(
                 name not in files
                 or not name.endswith(".safetensors")
                 or name.startswith("/")
-                or ".." in name.split("/")
+                or any(part in {"", ".", ".."} for part in name.split("/"))
+                or "\\" in name
+                or "\x00" in name
                 for name in shard_names
             ):
                 raise ArtifactError("Safetensors index references invalid or missing shard files")
@@ -302,14 +315,12 @@ class MetadataClient:
             if len(tensors) >= limits.MAX_CHECKPOINT_TENSORS:
                 raise InspectionBudgetError("Checkpoint exceeds the supported tensor record count")
             shard = self.safetensors(reference.url(filename, revision))
-            if shard.metadata.get("format") not in {None, "pt"}:
-                raise ArtifactError("Safetensors checkpoint is not in the PyTorch target scope")
             shards[filename] = shard
             for name, tensor in shard.tensors.items():
                 if name in tensors:
                     raise ArtifactError(f"Duplicate tensor across Safetensors shards: {name}")
                 if len(tensors) >= limits.MAX_CHECKPOINT_TENSORS:
-                    raise ArtifactError("Checkpoint exceeds the supported tensor record count")
+                    raise InspectionBudgetError("Checkpoint exceeds the supported tensor record count")
                 tensors[name], tensor_files[name] = tensor, filename
         if mapping is not None and mapping != tensor_files:
             raise ArtifactError("Safetensors shard headers disagree with the index weight_map")

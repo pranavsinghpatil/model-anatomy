@@ -9,6 +9,13 @@ import { EvidenceList } from "./Inspector";
 
 const pageSize = 50;
 
+function checkpointFileKind(file: string) {
+  if (file.endsWith(".safetensors.index.json")) return "Safetensors index";
+  if (file.endsWith(".safetensors")) return "Safetensors checkpoint";
+  if (file.endsWith(".gguf")) return "GGUF checkpoint";
+  return null;
+}
+
 function artifactUrl(modelId: string, revision: string, file: string) {
   const repo = modelId.split("/");
   const path = file.split("/");
@@ -96,12 +103,19 @@ export function ArtifactInspection({
     placeholderData: (previous) => previous,
   });
   const page = inspection.data;
+  const profile = page?.model_profile;
   const fileCount = page?.file_count ?? summary?.file_count ?? 0;
   const tensorCount = page?.tensor_count ?? summary?.tensor_count ?? 0;
   const maximumCount = Math.max(fileCount, tensorCount);
   const pageRevision = page?.revision ?? revision;
   const message = page?.message ?? summary?.message;
   const reasonCode = page?.reason_code ?? summary?.reason_code;
+  const pipelineSelectionRequired =
+    reasonCode === "pipeline_components_require_selection" ||
+    (profile?.architecture_blockers.includes(
+      "pipeline_components_require_selection",
+    ) ??
+      false);
 
   return (
     <section className="artifact-inspection" data-testid="artifact-inspection">
@@ -147,6 +161,20 @@ export function ArtifactInspection({
       <div className="artifact-inspection-reason">
         {reasonCode && <code>{reasonCode}</code>}
         <p>{message ?? "Inspection details unavailable."}</p>
+        {(reasonCode === "checkpoint_selection_required" ||
+          pipelineSelectionRequired) && (
+          <strong data-testid="checkpoint-selection-callout">
+            {pipelineSelectionRequired
+              ? "Pipeline components require selection. No file was chosen automatically."
+              : "Checkpoint selection required. No file was chosen automatically."}
+            {pipelineSelectionRequired && (
+              <>
+                {" "}
+                <code>pipeline_components_require_selection</code>
+              </>
+            )}
+          </strong>
+        )}
         {page?.selected_file_split_metadata && (
           <p>
             Split checkpoint: this report covers only the selected file.{" "}
@@ -171,6 +199,104 @@ export function ArtifactInspection({
 
       {page && (
         <>
+          {profile && (
+            <section
+              className="artifact-inspection-reason artifact-model-profile"
+              aria-label="Declared model profile"
+              data-testid="model-profile"
+            >
+              <h3>Repository profile</h3>
+              <dl>
+                <dt>Repository kind</dt>
+                <dd>{profile.repository_kind}</dd>
+                {profile.declared_task && (
+                  <>
+                    <dt>Declared task</dt>
+                    <dd>{profile.declared_task}</dd>
+                  </>
+                )}
+                {profile.declared_library && (
+                  <>
+                    <dt>Declared library</dt>
+                    <dd>{profile.declared_library}</dd>
+                  </>
+                )}
+                {profile.config_model_type && (
+                  <>
+                    <dt>Config model type</dt>
+                    <dd>{profile.config_model_type}</dd>
+                  </>
+                )}
+                {profile.declared_architectures.length > 0 && (
+                  <>
+                    <dt>Declared architectures</dt>
+                    <dd>{profile.declared_architectures.join(", ")}</dd>
+                  </>
+                )}
+                {profile.formats.length > 0 && (
+                  <>
+                    <dt>Formats</dt>
+                    <dd>{profile.formats.join(", ")}</dd>
+                  </>
+                )}
+                {profile.selected_file && (
+                  <>
+                    <dt>Selected file</dt>
+                    <dd>
+                      <code style={{ overflowWrap: "anywhere" }}>
+                        {profile.selected_file}
+                      </code>
+                    </dd>
+                  </>
+                )}
+                {profile.selected_config && (
+                  <>
+                    <dt>Selected config</dt>
+                    <dd>
+                      <code style={{ overflowWrap: "anywhere" }}>
+                        {profile.selected_config}
+                      </code>
+                    </dd>
+                  </>
+                )}
+              </dl>
+              {profile.components.length > 0 && (
+                <div>
+                  <strong>Declared components</strong>
+                  <ul>
+                    {profile.components.map((component) => (
+                      <li key={component.path}>
+                        <code style={{ overflowWrap: "anywhere" }}>
+                          {component.path}
+                        </code>
+                        {component.library && ` · ${component.library}`}
+                        {component.declared_class &&
+                          ` · ${component.declared_class}`}
+                        {component.checkpoint_files.length > 0 && (
+                          <span style={{ overflowWrap: "anywhere" }}>
+                            {" · "}
+                            {component.checkpoint_files.join(", ")}
+                          </span>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {profile.architecture_blockers.length > 0 && (
+                <div>
+                  <strong>Architecture blockers</strong>
+                  <ul>
+                    {profile.architecture_blockers.map((blocker) => (
+                      <li key={blocker}>
+                        <code>{blocker}</code>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </section>
+          )}
           <section
             className="artifact-section"
             aria-labelledby="artifact-files-title"
@@ -183,6 +309,7 @@ export function ArtifactInspection({
               <ul className="artifact-file-list">
                 {page.files.map((file) => {
                   const href = artifactUrl(modelId, page.revision, file);
+                  const fileKind = checkpointFileKind(file);
                   return (
                     <li key={file}>
                       {href ? (
@@ -193,15 +320,16 @@ export function ArtifactInspection({
                       ) : (
                         <code>{file}</code>
                       )}
-                      {href && file.endsWith(".gguf") && (
+                      {href && fileKind && (
                         <IconButton
-                          label={`Inspect ${file}`}
+                          label={`Inspect ${file} (${fileKind})`}
                           disabled={inspectionDisabled}
                           onClick={() => onInspectFile(href)}
                         >
                           <ScanSearch size={16} />
                         </IconButton>
                       )}
+                      {href && fileKind && <small>{fileKind}</small>}
                     </li>
                   );
                 })}
@@ -210,7 +338,6 @@ export function ArtifactInspection({
               <p className="artifact-empty">No files returned for this page.</p>
             )}
           </section>
-
           <section
             className="artifact-section"
             aria-labelledby="artifact-tensors-title"

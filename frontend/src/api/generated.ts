@@ -317,6 +317,7 @@ export interface components {
       selected_file_split_metadata?: {
         [key: string]: number;
       } | null;
+      model_profile?: components["schemas"]["ModelProfile"] | null;
       /** Source Config */
       source_config: {
         [key: string]: unknown;
@@ -355,7 +356,7 @@ export interface components {
       /** Hidden */
       hidden?: number | null;
       /** Heads */
-      heads?: number | null;
+      heads?: number | number[] | null;
       /** Layers */
       layers?: number | null;
       /** Vocabulary */
@@ -509,6 +510,42 @@ export interface components {
       checkpoint_tensor_element_count: number | null;
       /** Checkpoint Available */
       checkpoint_available: boolean;
+    };
+    /** ModelComponent */
+    ModelComponent: {
+      /** Path */
+      path: string;
+      /** Library */
+      library: string | null;
+      /** Declared Class */
+      declared_class: string | null;
+      /** Checkpoint Files */
+      checkpoint_files: string[];
+    };
+    /** ModelProfile */
+    ModelProfile: {
+      /** Repository Kind */
+      repository_kind: string;
+      /** Declared Task */
+      declared_task: string | null;
+      /** Declared Library */
+      declared_library: string | null;
+      /** Config Model Type */
+      config_model_type: string | null;
+      /** Declared Architectures */
+      declared_architectures: string[];
+      /** Formats */
+      formats: string[];
+      /** Selected File */
+      selected_file: string | null;
+      /** Selected Config */
+      selected_config: string | null;
+      /** Components */
+      components: components["schemas"]["ModelComponent"][];
+      /** Architecture Blockers */
+      architecture_blockers: string[];
+      /** Metadata Basis */
+      metadata_basis: string;
     };
     /** NodeInspection */
     NodeInspection: {

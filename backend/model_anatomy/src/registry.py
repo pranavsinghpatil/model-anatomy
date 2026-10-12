@@ -6,8 +6,7 @@ from contextvars import ContextVar
 from typing import Any
 
 import torch
-import transformers
-from transformers import AutoConfig, AutoModel, PretrainedConfig
+from transformers import AutoConfig, PretrainedConfig
 
 from . import limits
 from .errors import ArtifactError, UnsupportedModelError
@@ -140,25 +139,78 @@ def load_native_config(data: dict[str, Any]) -> PretrainedConfig:
 
 
 def select_auto_class(config: PretrainedConfig) -> tuple[type, list[str]]:
-    architectures = config.architectures or []
-    for name in sorted(n for n in dir(transformers) if n.startswith("AutoModel")):
-        auto_class = getattr(transformers, name)
-        mapping = getattr(auto_class, "_model_mapping", None)
-        if mapping is None or type(config) not in mapping:
-            continue
-        try:
-            models = mapping[type(config)]
-        except (ImportError, RuntimeError) as exc:
-            raise UnsupportedModelError(f"Native architecture dependencies are unavailable: {exc}") from exc
-        if not isinstance(models, tuple):
-            models = (models,)
-        if any(model.__name__ in architectures for model in models):
-            return auto_class, []
-    if type(config) not in AutoModel._model_mapping:
+    architectures = config.architectures
+    if architectures is None:
+        architectures = []
+    if not isinstance(architectures, (list, tuple)) or any(
+        not isinstance(name, str) or not name for name in architectures
+    ):
+        raise ArtifactError("Invalid native configuration architectures; expected a list of class names")
+
+    candidates = _auto_model_candidates(config)
+    matches = [candidate for candidate in candidates if candidate[2] in architectures]
+    if matches:
+        preferred = _task_routing_hint(config)
+        matches.sort(
+            key=lambda candidate: (
+                candidate[0] != preferred,
+                candidate[0] != "AutoModel",
+                candidate[0],
+            )
+        )
+        return matches[0][1], []
+
+    if architectures:
+        declared = ", ".join(architectures)
+        raise UnsupportedModelError(f"No native AutoModel mapping for declared architecture(s): {declared}")
+
+    hint = _task_routing_hint(config)
+    if hint is not None:
+        routed = next((candidate for candidate in candidates if candidate[0] == hint), None)
+        if routed is not None:
+            return routed[1], [f"No architecture declared; selected {hint} from native config task metadata"]
+
+    backbone = next((candidate for candidate in candidates if candidate[0] == "AutoModel"), None)
+    if backbone is None:
         raise UnsupportedModelError(f"No native PyTorch AutoModel for {type(config).__name__}")
-    return AutoModel, [
-        "No registered task wrapper matched config.architectures; selected the native AutoModel backbone"
+    return backbone[1], [
+        "No architecture declared or compatible task wrapper found; selected the native AutoModel backbone"
     ]
+
+
+def _auto_model_candidates(config: PretrainedConfig) -> list[tuple[str, type, str]]:
+    """Read upstream Auto mappings as names without resolving model implementations."""
+    from transformers.models.auto import modeling_auto
+
+    model_type = getattr(config, "model_type", None)
+    if not isinstance(model_type, str):
+        return []
+
+    candidates = []
+    for name, auto_class in vars(modeling_auto).items():
+        if not name.startswith("AutoModel") or not isinstance(auto_class, type):
+            continue
+        mapping = auto_class.__dict__.get("_model_mapping")
+        mapping_names = getattr(mapping, "_model_mapping", None)
+        if not isinstance(mapping_names, dict):
+            continue
+        model_names = mapping_names.get(model_type)
+        if isinstance(model_names, str):
+            candidates.append((name, auto_class, model_names))
+        elif isinstance(model_names, (list, tuple)) and all(
+            isinstance(model_name, str) for model_name in model_names
+        ):
+            candidates.extend((name, auto_class, model_name) for model_name in model_names)
+    return candidates
+
+
+def _task_routing_hint(config: PretrainedConfig) -> str | None:
+    """Use generic native config modality flags only when architecture names do not decide."""
+    if not getattr(config, "is_encoder_decoder", False):
+        return None
+    if getattr(config, "num_mel_bins", None) is not None:
+        return "AutoModelForSpeechSeq2Seq"
+    return "AutoModelForSeq2SeqLM"
 
 
 def instantiate_native(config: PretrainedConfig) -> tuple[torch.nn.Module, dict[str, Any]]:

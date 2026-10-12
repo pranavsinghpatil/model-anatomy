@@ -16,7 +16,13 @@ import type {
   GraphNode,
   TensorMetadata,
 } from "../api/contract";
-import { count, reportDimensionKeys, shape, valueText } from "../format";
+import {
+  count,
+  dimensionCount,
+  reportDimensionKeys,
+  shape,
+  valueText,
+} from "../format";
 import { ErrorNotice, IconButton, Loading, Warnings } from "./Common";
 
 export const matchesCitation = (
@@ -159,9 +165,13 @@ export function Inspector({
         <dl className="properties">
           {reportDimensionKeys(analysis).map((key) => (
             <div className="property-row" key={key}>
-              <dt>{key}</dt>
+              <dt>
+                {key === "heads" && Array.isArray(analysis.dimensions.heads)
+                  ? "heads per stage"
+                  : key}
+              </dt>
               <dd data-testid={`metadata-${key}`}>
-                {count(analysis.dimensions[key])}
+                {dimensionCount(analysis.dimensions[key])}
               </dd>
             </div>
           ))}

@@ -66,7 +66,7 @@ class AnalysisError(BaseModel):
 
 class Dimensions(BaseModel):
     hidden: int | None = None
-    heads: int | None = None
+    heads: int | list[int] | None = None
     layers: int | None = None
     vocabulary: int | None = None
 
@@ -193,6 +193,27 @@ class TensorRecord(BaseModel):
     role_evidence_kind: EvidenceKind | None = None
 
 
+class ModelComponent(BaseModel):
+    path: str
+    library: str | None
+    declared_class: str | None
+    checkpoint_files: list[str]
+
+
+class ModelProfile(BaseModel):
+    repository_kind: str
+    declared_task: str | None
+    declared_library: str | None
+    config_model_type: str | None
+    declared_architectures: list[str]
+    formats: list[str]
+    selected_file: str | None
+    selected_config: str | None
+    components: list[ModelComponent]
+    architecture_blockers: list[str]
+    metadata_basis: str
+
+
 class ArtifactInspectionResponse(BaseModel):
     kind: Literal["artifact_inspection", "architecture"]
     reason_code: str | None
@@ -207,6 +228,7 @@ class ArtifactInspectionResponse(BaseModel):
     checkpoint_format: str | None = None
     selected_file_tensor_element_count: int | None = None
     selected_file_split_metadata: dict[str, int] | None = None
+    model_profile: ModelProfile | None = None
     source_config: dict[str, Any] | None
     evidence: list[Evidence]
     offset: int

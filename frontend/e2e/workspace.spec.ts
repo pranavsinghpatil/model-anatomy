@@ -390,8 +390,12 @@ for (const unknown of [false, true])
       await expect(evidence.getByTestId(`metadata-${key}`)).toHaveText(
         analysis[key] ?? "Unknown",
       );
-    const formatted = (value: number | null | undefined) =>
-      value == null ? "Unknown" : value.toLocaleString("en-US");
+    const formatted = (value: number | number[] | null | undefined): string =>
+      Array.isArray(value)
+        ? value.map((item) => item.toLocaleString("en-US")).join(" / ")
+        : value == null
+          ? "Unknown"
+          : value.toLocaleString("en-US");
     await expect(evidence.getByTestId("metadata-parameter_count")).toHaveText(
       formatted(analysis.parameter_count),
     );

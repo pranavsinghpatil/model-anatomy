@@ -256,3 +256,19 @@ Keep the CLI architecture path strict. Return the existing graph-free `inspected
 outcome, and invalidate cache identity without rewriting previous analyses.
 Full Bonsai hybrid-attention reconstruction and broader modality semantics remain
 separate acceptance gates; this decision does not claim universal support.
+
+## D-027 - Route by artifact layout and upstream native mappings
+**2026-10-12 - compatibility increment**
+
+The user requests broader categories and investigation of real failures. Keep
+publisher task/library declarations as hints, not architecture facts. Discover
+native wrappers from upstream mapping names; unavailable declared heads must not
+silently become another backbone. Pipeline manifests require component selection
+with sibling configs and directory-relative indexes. Preserve native blockers and
+non-PyTorch Safetensors as artifact evidence. Keep remote code and weights disabled.
+
+Preserve staged dimensions instead of failing valid API reports. Establish
+VideoMAE temporal input order from native source; leave other unverified layouts
+unknown. Add pinned cross-category and diffusion component checks. Partial reports
+record remaining semantic work, not full modality support. See
+`DYNAMIC_ROUTING_ACCEPTANCE.md`.

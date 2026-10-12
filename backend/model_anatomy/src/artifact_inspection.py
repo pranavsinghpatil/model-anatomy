@@ -39,6 +39,15 @@ INSPECTION_MESSAGES = {
         "GGUF tensor metadata was read from the pinned file header only. No architecture graph or "
         "tensor payload was inferred."
     ),
+    "pipeline_components_require_selection": (
+        "This repository declares a multi-component pipeline. Select a component checkpoint to "
+        "inspect its tensors or supported native architecture. Pipeline execution connections "
+        "have not been reconstructed."
+    ),
+    "checkpoint_framework_unavailable": (
+        "Safetensors headers were verified, but their declared framework is not supported by the "
+        "native PyTorch architecture engine. No architecture graph or parameter ownership was inferred."
+    ),
 }
 
 
@@ -58,6 +67,7 @@ def build_artifact_inspection(
     config_data: dict[str, Any] | None,
     checkpoint: CheckpointMetadata | None,
     reason_code: str,
+    model_profile: dict[str, Any] | None = None,
 ) -> ModelIR:
     """Return only pinned file and validated Safetensors-header facts."""
     message = INSPECTION_MESSAGES[reason_code]
@@ -123,7 +133,12 @@ def build_artifact_inspection(
         artifacts["payload_read_status"] = "not_established_header_validation_failed"
     else:
         artifacts["weight_payload_bytes_read"] = 0
-    if checkpoint is not None and checkpoint.format == "safetensors" or checkpoint is None and not has_gguf_ranges:
+    if (
+        checkpoint is not None
+        and checkpoint.format == "safetensors"
+        or checkpoint is None
+        and not has_gguf_ranges
+    ):
         artifacts["safetensors_bytes_read"] = artifacts["checkpoint_header_bytes_read"]
     if checkpoint is not None:
         artifacts["checkpoint_format"] = checkpoint.format
@@ -187,13 +202,16 @@ def build_artifact_inspection(
             "runtime_trace_available": False,
         },
     }
+    if model_profile is not None:
+        metadata["model_profile"] = model_profile
     if checkpoint is None or checkpoint.format == "safetensors":
         metadata["checkpoint_tensor_element_count"] = (
             sum(item.parameter_count for item in checkpoint.tensors.values()) if checkpoint else None
         )
     if config_data is not None:
         metadata["source_config"] = config_data
-        metadata["artifacts"]["config_url"] = reference.url("config.json", revision)
+        config_file = (model_profile or {}).get("selected_config") or "config.json"
+        metadata["artifacts"]["config_url"] = reference.url(config_file, revision)
         metadata["artifacts"]["config_canonical_sha256"] = hashlib.sha256(
             json.dumps(config_data, sort_keys=True).encode()
         ).hexdigest()
@@ -211,8 +229,20 @@ def build_artifact_inspection(
             Evidence(
                 "hf_config",
                 "direct",
-                reference.url("config.json", revision),
+                metadata["artifacts"]["config_url"],
                 {"revision": revision, "canonical_sha256": artifacts["config_canonical_sha256"]},
+            )
+        )
+    if model_profile and model_profile.get("manifest_canonical_sha256"):
+        evidence.append(
+            Evidence(
+                "hf_pipeline_manifest",
+                "direct",
+                reference.url("model_index.json", revision),
+                {
+                    "canonical_sha256": model_profile["manifest_canonical_sha256"],
+                    "declared_components": model_profile["components"],
+                },
             )
         )
     if checkpoint and checkpoint.format == "gguf":

@@ -76,7 +76,10 @@ test("GGUF selection submits the exact pinned file rather than guessing a varian
   });
   await browser.goto(`/?analysis=${job.id}`);
   await browser
-    .getByRole("button", { name: `Inspect ${file}`, exact: true })
+    .getByRole("button", {
+      name: `Inspect ${file} (GGUF checkpoint)`,
+      exact: true,
+    })
     .click();
   await expect
     .poll(() =>
@@ -86,6 +89,101 @@ test("GGUF selection submits the exact pinned file rather than guessing a varian
     )
     .toContainEqual({
       model: `https://huggingface.co/acme/vision-model/blob/${revision}/${file}`,
+    });
+  expect(requests.some((request) => request.path.includes("/graphs/"))).toBe(
+    false,
+  );
+});
+
+test("declared repository profile and nested Safetensors index remain selectable", async ({
+  page: browser,
+}) => {
+  const indexFile = "text_encoder/model.safetensors.index.json";
+  const componentFile = "text_encoder/model-00001-of-00002.safetensors";
+  const job = {
+    ...analysisFor(),
+    model_id: "acme/compound-model",
+    revision,
+    status: "inspected" as const,
+    stage: "inspected",
+    root_graph_id: null,
+    architecture: null,
+    parameter_count: null,
+  };
+  const profilePage = {
+    ...page(0, [indexFile, componentFile], []),
+    reason_code: "checkpoint_selection_required",
+    model_profile: {
+      repository_kind: "compound_pipeline",
+      declared_task: "text-to-image",
+      declared_library: "diffusers",
+      config_model_type: null,
+      declared_architectures: [],
+      formats: ["safetensors"],
+      selected_file: null,
+      selected_config: "model_index.json",
+      architecture_blockers: [
+        "native_architecture_unavailable",
+        "pipeline_components_require_selection",
+      ],
+      components: [
+        {
+          path: "text_encoder",
+          library: "transformers",
+          declared_class: "CLIPTextModel",
+          checkpoint_files: [componentFile, indexFile],
+        },
+      ],
+      metadata_basis:
+        "Declared by repository metadata; components are not a verified graph.",
+    },
+  };
+  const requests = await mockService(browser, {
+    job,
+    artifactPages: [profilePage],
+  });
+  await browser.goto(`/?analysis=${job.id}`);
+
+  const inspection = browser.getByTestId("artifact-inspection");
+  await expect(inspection.getByTestId("model-profile")).toContainText(
+    "text-to-image",
+  );
+  await expect(inspection.getByTestId("model-profile")).toContainText(
+    "Declared components",
+  );
+  await expect(inspection.getByTestId("model-profile")).toHaveClass(
+    /artifact-model-profile/,
+  );
+  await expect(inspection.getByTestId("model-profile")).toContainText(
+    "native_architecture_unavailable",
+  );
+  await expect(inspection.getByTestId("model-profile")).toContainText(
+    "pipeline_components_require_selection",
+  );
+  await expect(
+    inspection.getByTestId("checkpoint-selection-callout"),
+  ).toContainText("pipeline_components_require_selection");
+  await expect(
+    inspection.getByRole("button", {
+      name: `Inspect ${indexFile} (Safetensors index)`,
+      exact: true,
+    }),
+  ).toBeVisible();
+  await inspection
+    .getByRole("button", {
+      name: `Inspect ${indexFile} (Safetensors index)`,
+      exact: true,
+    })
+    .click();
+
+  await expect
+    .poll(() =>
+      requests
+        .filter((request) => request.method === "POST")
+        .map((request) => request.body),
+    )
+    .toContainEqual({
+      model: `https://huggingface.co/acme/compound-model/blob/${revision}/${indexFile}`,
     });
   expect(requests.some((request) => request.path.includes("/graphs/"))).toBe(
     false,

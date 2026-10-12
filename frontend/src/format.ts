@@ -30,6 +30,13 @@ export function count(
     compact ? { notation: "compact", maximumFractionDigits: 2 } : {},
   ).format(value);
 }
+export function dimensionCount(
+  value: number | number[] | null | undefined,
+): string {
+  return Array.isArray(value)
+    ? value.map((item) => count(item)).join(" / ")
+    : count(value);
+}
 export function shape(value: Dimension[] | null | undefined): string {
   if (value == null) return "Unknown shape";
   if (!value.length) return "Scalar";

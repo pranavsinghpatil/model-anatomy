@@ -33,7 +33,15 @@ class InputResolver:
                 name: {"shape": self.spec(name).shape, "dtype": self.spec(name).dtype}
                 for name in names
                 if name
-                in {"input_ids", "decoder_input_ids", "pixel_values", "input_features", "input_values"}
+                in {
+                    "input_ids",
+                    "decoder_input_ids",
+                    "pixel_values",
+                    "pixel_values_videos",
+                    "video_pixel_values",
+                    "input_features",
+                    "input_values",
+                }
             },
             "execution": "disabled",
             "synthetic_inputs_created": False,
@@ -77,7 +85,23 @@ class InputResolver:
         if name == "position_ids":
             return TensorSpec([1, sequence], "I64", name)
         if name == "pixel_values":
-            size = getattr(config, "image_size", None)
+            from transformers.models.auto.modeling_auto import MODEL_FOR_VIDEO_CLASSIFICATION_MAPPING_NAMES
+
+            model_type = getattr(config, "model_type", None)
+            native_module = type(self.model).__module__
+            native_videomae = (
+                model_type == "videomae" and native_module == "transformers.models.videomae.modeling_videomae"
+            )
+            if model_type in MODEL_FOR_VIDEO_CLASSIFICATION_MAPPING_NAMES and not native_videomae:
+                return TensorSpec(None, self.activation_dtype, name)
+            image_config = config
+            if getattr(config, "vision_config", None) is not None:
+                if model_type == "clip" and native_module == "transformers.models.clip.modeling_clip":
+                    image_config = config.vision_config
+                else:
+                    # Composite models can pack patches rather than use image axes.
+                    return TensorSpec(None, self.activation_dtype, name)
+            size = getattr(image_config, "image_size", None)
             shape = (
                 list(size)
                 if isinstance(size, (list, tuple))
@@ -85,7 +109,14 @@ class InputResolver:
                 if type(size) is int
                 else ["H", "W"]
             )
-            return TensorSpec(["B", getattr(config, "num_channels", 3), *shape], self.activation_dtype, name)
+            axes = ["B", getattr(image_config, "num_channels", 3), *shape]
+            if native_videomae:
+                # Native VideoMAEPatchEmbeddings.forward unpacks B,T,C,H,W.
+                frames = getattr(config, "num_frames", None)
+                axes.insert(1, frames if type(frames) is int and frames > 0 else "Frames")
+            return TensorSpec(axes, self.activation_dtype, name)
+        if name in {"pixel_values_videos", "video_pixel_values"}:
+            return TensorSpec(None, self.activation_dtype, name)
         if name == "input_features":
             return TensorSpec(
                 ["B", getattr(config, "num_mel_bins", "F"), "Frames"], self.activation_dtype, name
