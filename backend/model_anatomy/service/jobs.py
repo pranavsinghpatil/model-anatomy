@@ -37,17 +37,20 @@ def model_reference(value: str) -> tuple[str, str]:
             or url.netloc != "huggingface.co"
             or url.query
             or url.fragment
-            or len(parts) not in {2, 5}
+            or (len(parts) != 2 and len(parts) < 5)
         ):
             raise ServiceError(422, "invalid_model", "Expected a Hugging Face repository ID or HTTPS URL")
-        if len(parts) == 5:
-            revision, filename = unquote(parts[3]), parts[4]
+        if len(parts) >= 5:
+            revision = unquote(parts[3])
+            file_parts = [unquote(part) for part in parts[4:]]
+            filename = "/".join(file_parts)
             if (
                 parts[2] not in {"blob", "resolve"}
                 or revision in {"", ".", ".."}
-                or not filename.endswith((".safetensors", ".safetensors.index.json"))
+                or any(not part or part in {".", ".."} or "/" in part or "\\" in part for part in file_parts)
+                or not filename.endswith((".safetensors", ".safetensors.index.json", ".gguf"))
             ):
-                raise ServiceError(422, "invalid_model", "Expected a Safetensors artifact reference")
+                raise ServiceError(422, "invalid_model", "Expected a Safetensors or GGUF artifact reference")
         model_id = "/".join(parts[:2])
     if not re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", model_id) or any(
         part in {".", ".."} for part in model_id.split("/")

@@ -13,6 +13,7 @@ const tensor = (index: number) => ({
   name: index === 0 ? longTensorName : `encoder.layer.${index}.weight`,
   dtype: "F32",
   shape: [768, 768],
+  shape_convention: "tensor_axes" as const,
   parameter_count: 589824,
   artifact:
     index === 0
@@ -46,6 +47,103 @@ const page = (
   ],
   offset,
   limit: 50,
+});
+
+test("GGUF selection submits the exact pinned file rather than guessing a variant", async ({
+  page: browser,
+}) => {
+  const file = "Bonsai-PTQ1_0.gguf";
+  const base = analysisFor();
+  const job = {
+    ...base,
+    model_id: "acme/vision-model",
+    revision,
+    status: "inspected" as const,
+    stage: "inspected",
+    root_graph_id: null,
+    architecture: null,
+    parameter_count: null,
+  };
+  const requests = await mockService(browser, {
+    job,
+    artifactPages: [
+      {
+        ...page(0, [file, "Bonsai-F16.gguf"], []),
+        tensor_count: 0,
+        reason_code: "checkpoint_selection_required",
+      },
+    ],
+  });
+  await browser.goto(`/?analysis=${job.id}`);
+  await browser
+    .getByRole("button", { name: `Inspect ${file}`, exact: true })
+    .click();
+  await expect
+    .poll(() =>
+      requests
+        .filter((request) => request.method === "POST")
+        .map((request) => request.body),
+    )
+    .toContainEqual({
+      model: `https://huggingface.co/acme/vision-model/blob/${revision}/${file}`,
+    });
+  expect(requests.some((request) => request.path.includes("/graphs/"))).toBe(
+    false,
+  );
+});
+
+test("selected split GGUF reports file elements and native axis order", async ({
+  page: browser,
+}) => {
+  const file = "part-00001-of-00002.gguf";
+  const job = {
+    ...analysisFor(),
+    model_id: "acme/vision-model",
+    revision,
+    status: "inspected" as const,
+    stage: "inspected",
+    root_graph_id: null,
+    architecture: null,
+    parameter_count: null,
+  };
+  await mockService(browser, {
+    job,
+    artifactPages: [
+      {
+        ...page(
+          0,
+          [file],
+          [
+            {
+              ...tensor(1),
+              artifact: `https://huggingface.co/acme/vision-model/resolve/${revision}/${file}`,
+              shape_convention: "ggml_dimensions",
+              dtype: "GGML_TYPE_0",
+              tensor_type_id: 0,
+            },
+          ],
+        ),
+        tensor_count: 1,
+        file_count: 1,
+        reason_code: "gguf_header_only",
+        checkpoint_tensor_element_count: null,
+        checkpoint_format: "gguf",
+        selected_file_tensor_element_count: 589824,
+        selected_file_split_metadata: {
+          "split.no": 0,
+          "split.count": 2,
+          "split.tensors.count": 2,
+        },
+      },
+    ],
+  });
+  await browser.goto(`/?analysis=${job.id}`);
+  const view = browser.getByTestId("artifact-inspection");
+  await expect(view).toContainText("Selected file elements");
+  await expect(view).toContainText("only the selected file");
+  await expect(view).toContainText("GGML axis order");
+  await expect(view).toContainText("589,824");
+  await expect(browser.getByTestId("graph-canvas")).toHaveCount(0);
 });
 
 test("inspected artifacts stay graph-free and paginate verified metadata", async ({

@@ -7,6 +7,7 @@ from fastapi.testclient import TestClient
 from model_anatomy.api.app import COOKIE, create_app
 from model_anatomy.api.settings import Settings
 from model_anatomy.service.jobs import cache_key
+from model_anatomy.service.views import artifact_view
 from model_anatomy.src.ir import Evidence, Graph, ModelIR
 
 
@@ -87,6 +88,21 @@ def test_artifacts_paginate_verified_records_and_retain_provenance(inspected):
     assert page["revision"] == "a" * 40
     assert client.get(f"/api/v1/analyses/{job_id}/artifacts?limit=101").status_code == 422
     assert client.get(f"/api/v1/analyses/{job_id}/artifacts?offset=-1").status_code == 422
+
+
+def test_gguf_artifact_view_preserves_selected_split_file_scope(inspected):
+    _, _, ir, _ = inspected
+    ir.metadata["checkpoint_tensor_element_count"] = None
+    ir.metadata["artifacts"].update(
+        checkpoint_format="gguf",
+        selected_file_tensor_element_count=12,
+        selected_file_split_metadata={"split.no": 0, "split.count": 2, "split.tensors.count": 4},
+    )
+    page = artifact_view(ir)
+    assert page["checkpoint_format"] == "gguf"
+    assert page["checkpoint_tensor_element_count"] is None
+    assert page["selected_file_tensor_element_count"] == 12
+    assert page["selected_file_split_metadata"]["split.count"] == 2
 
 
 def test_artifact_results_do_not_expose_fake_graphs_or_spend_ai_quota(inspected):

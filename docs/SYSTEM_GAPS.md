@@ -46,6 +46,24 @@ resource limits without separate validation. The Qwen Image multiple-angles
 repository is a LoRA adapter, not its own complete diffusion pipeline.
 See `test_artifact_inspection_integration.py` for pinned acceptance cases.
 
+### Compatibility Expansion Order
+
+Artifact format support and architecture semantics are separate gates. The
+reported `prism-ml/Ternary-Bonsai-2-27B-gguf` repository contains multiple GGUF
+language-model variants and separate vision projectors, not a canonical
+Safetensors checkpoint. Do not combine these files or infer a hybrid-attention
+graph from their tensor names. Explicit file selection and bounded GGUF metadata
+inspection are the immediate compatibility increment.
+
+After this format increment, the smallest useful architecture acceptance matrix
+adds a pinned T5-family encoder-decoder, a non-ViT image encoder such as Swin,
+a native image-text generator, and a Whisper-family audio model. Each needs
+model-specific input/output semantics, component ownership, modality or
+cross-attention relationships, tensor mapping and provenance checks. Merely
+constructing a native module or returning file inventory is not a passed gate.
+Video additionally needs explicit frame/temporal representation before a support
+claim. These are remaining work, not capabilities delivered by the GGUF change.
+
 ## Actual Bounds
 
 - Architecture reconstruction resolves to an immutable Hugging Face commit and requires `config.json`

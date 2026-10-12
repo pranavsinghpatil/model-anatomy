@@ -31,7 +31,7 @@ if (-not (Test-Path -LiteralPath $python -PathType Leaf)) {
     throw "Repository virtualenv Python was not found: $python"
 }
 $dependencyErrorLog = Join-Path $runDir 'dependency-preflight-error.log'
-& $python -c 'import fastapi, pydantic_settings, sqlalchemy, uvicorn, requests, torch, transformers, safetensors' 2> $dependencyErrorLog
+& $python -c 'import fastapi, pydantic_settings, sqlalchemy, uvicorn, requests, torch, transformers, safetensors, gguf' 2> $dependencyErrorLog
 if ($LASTEXITCODE -ne 0) {
     throw "API or engine dependencies are missing from $python. See $dependencyErrorLog and install the repository API/engine environment before starting."
 }

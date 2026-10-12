@@ -32,8 +32,12 @@ INSPECTION_MESSAGES = {
         "Only the pinned repository file inventory is available; no tensors or graph were inferred."
     ),
     "metadata_budget_exceeded": (
-        "Safetensors metadata exceeds the configured inspection budget. The pinned repository and "
+        "Checkpoint metadata exceeds the configured inspection budget. The pinned repository and "
         "available configuration are shown without tensor or architecture claims."
+    ),
+    "gguf_header_only": (
+        "GGUF tensor metadata was read from the pinned file header only. No architecture graph or "
+        "tensor payload was inferred."
     ),
 }
 
@@ -63,6 +67,22 @@ def build_artifact_inspection(
             "header_sha256": shard.header_sha256,
             "header_length": shard.header_length,
             "file_size": shard.file_size,
+            "format": checkpoint.format,
+            **(
+                {
+                    "data_start": shard.data_start,
+                    "alignment_padding_bytes": shard.data_start - shard.header_length,
+                    "header_hash_coverage": "complete_bytes_0_to_header_length_exclusive",
+                    "header_validation_scope": (
+                        "structure_and_tensor_descriptors; skipped metadata strings are not decoded"
+                    ),
+                    "tensor_count": shard.tensor_count,
+                    "metadata_entry_count": shard.metadata_entry_count,
+                    "metadata": shard.metadata,
+                }
+                if checkpoint.format == "gguf"
+                else {}
+            ),
         }
         for filename, shard in (checkpoint.shards.items() if checkpoint else [])
     }
@@ -84,16 +104,43 @@ def build_artifact_inspection(
                 "artifact": reference.url(filename, revision),
                 "role": "unclassified",
                 "evidence_kind": "direct",
+                "format": checkpoint.format,
             }
 
     artifacts = {
         "repository_files": sorted(files),
         "shards": shard_audit,
         "sharded": bool(checkpoint and checkpoint.index is not None),
-        "safetensors_bytes_read": sum(item["bytes_read"] for item in audit[audit_start:] if "range" in item),
-        "weight_payload_bytes_read": 0,
+        "checkpoint_header_bytes_read": sum(
+            item["bytes_read"] for item in audit[audit_start:] if "range" in item
+        ),
         "requests": audit[audit_start:],
     }
+    has_gguf_ranges = any(item.get("format") == "gguf" for item in audit[audit_start:])
+    if checkpoint is None and has_gguf_ranges:
+        # A malformed declaration can make bounded prefetch cross the real
+        # boundary. Do not claim zero payload reads without a validated header.
+        artifacts["payload_read_status"] = "not_established_header_validation_failed"
+    else:
+        artifacts["weight_payload_bytes_read"] = 0
+    if checkpoint is not None and checkpoint.format == "safetensors" or checkpoint is None and not has_gguf_ranges:
+        artifacts["safetensors_bytes_read"] = artifacts["checkpoint_header_bytes_read"]
+    if checkpoint is not None:
+        artifacts["checkpoint_format"] = checkpoint.format
+    if checkpoint is not None and checkpoint.format == "gguf":
+        selected_shard = next(iter(checkpoint.shards.values()))
+        artifacts["selected_file_tensor_count"] = len(checkpoint.tensors)
+        artifacts["selected_file_tensor_element_count"] = sum(
+            item.parameter_count for item in checkpoint.tensors.values()
+        )
+        artifacts["selected_file_scope"] = "single_selected_gguf_file"
+        split = {
+            key: selected_shard.metadata[key]
+            for key in ("split.no", "split.count", "split.tensors.count")
+            if key in selected_shard.metadata
+        }
+        if split:
+            artifacts["selected_file_split_metadata"] = split
     if checkpoint and checkpoint.index is not None:
         artifacts["index"] = {
             "url": next(
@@ -110,7 +157,7 @@ def build_artifact_inspection(
             "metadata": checkpoint.index.get("metadata", {}),
             "tensor_count": len(checkpoint.index["weight_map"]),
         }
-    if len(shard_audit) == 1:
+    if len(shard_audit) == 1 and checkpoint and checkpoint.format == "safetensors":
         shard = next(iter(shard_audit.values()))
         artifacts.update(
             safetensors_url=shard["url"],
@@ -129,12 +176,9 @@ def build_artifact_inspection(
             "files": sorted(files),
             "selected_checkpoint_files": sorted(selected_checkpoint_files),
             "checkpoint_available": any(
-                name.endswith((".safetensors", ".safetensors.index.json")) for name in files
+                name.endswith((".safetensors", ".safetensors.index.json", ".gguf")) for name in files
             ),
         },
-        "checkpoint_tensor_element_count": (
-            sum(item.parameter_count for item in checkpoint.tensors.values()) if checkpoint else None
-        ),
         "artifacts": artifacts,
         "engine_version": ENGINE_VERSION,
         "analysis_report": {
@@ -143,6 +187,10 @@ def build_artifact_inspection(
             "runtime_trace_available": False,
         },
     }
+    if checkpoint is None or checkpoint.format == "safetensors":
+        metadata["checkpoint_tensor_element_count"] = (
+            sum(item.parameter_count for item in checkpoint.tensors.values()) if checkpoint else None
+        )
     if config_data is not None:
         metadata["source_config"] = config_data
         metadata["artifacts"]["config_url"] = reference.url("config.json", revision)
@@ -167,7 +215,20 @@ def build_artifact_inspection(
                 {"revision": revision, "canonical_sha256": artifacts["config_canonical_sha256"]},
             )
         )
-    if checkpoint:
+    if checkpoint and checkpoint.format == "gguf":
+        evidence.append(
+            Evidence(
+                "gguf_header",
+                "direct",
+                next(iter(shard_audit.values()))["url"],
+                {
+                    "shards": shard_audit,
+                    "selected_file_tensor_count": len(checkpoint.tensors),
+                    "payload_bytes_read": 0,
+                },
+            )
+        )
+    elif checkpoint:
         evidence.append(
             Evidence(
                 "safetensors_header",

@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ExternalLink, FileSearch } from "lucide-react";
+import { ExternalLink, FileSearch, ScanSearch } from "lucide-react";
 import { api } from "../api/client";
 import type { InspectionSummary } from "../api/contract";
 import { count, shape, valueText } from "../format";
-import { ErrorNotice, Loading } from "./Common";
+import { ErrorNotice, IconButton, Loading } from "./Common";
 import { EvidenceList } from "./Inspector";
 
 const pageSize = 50;
@@ -78,11 +78,15 @@ export function ArtifactInspection({
   modelId,
   revision,
   summary,
+  onInspectFile,
+  inspectionDisabled,
 }: {
   analysisId: string;
   modelId: string;
   revision: string | null;
   summary: InspectionSummary | null | undefined;
+  onInspectFile: (url: string) => void;
+  inspectionDisabled: boolean;
 }) {
   const [offset, setOffset] = useState(0);
   const inspection = useQuery({
@@ -123,11 +127,17 @@ export function ArtifactInspection({
             </strong>
           </div>
           <div>
-            <span>Checkpoint elements</span>
+            <span>
+              {page?.checkpoint_format === "gguf"
+                ? "Selected file elements"
+                : "Checkpoint elements"}
+            </span>
             <strong>
               {count(
-                page?.checkpoint_tensor_element_count ??
-                  summary?.checkpoint_tensor_element_count,
+                page?.checkpoint_format === "gguf"
+                  ? page.selected_file_tensor_element_count
+                  : (page?.checkpoint_tensor_element_count ??
+                      summary?.checkpoint_tensor_element_count),
               )}
             </strong>
           </div>
@@ -137,6 +147,13 @@ export function ArtifactInspection({
       <div className="artifact-inspection-reason">
         {reasonCode && <code>{reasonCode}</code>}
         <p>{message ?? "Inspection details unavailable."}</p>
+        {page?.selected_file_split_metadata && (
+          <p>
+            Split checkpoint: this report covers only the selected file.{" "}
+            Reported parts:{" "}
+            {page.selected_file_split_metadata["split.count"] ?? "Unknown"}.
+          </p>
+        )}
       </div>
 
       <div className="artifact-inspection-revision">
@@ -175,6 +192,15 @@ export function ArtifactInspection({
                         </a>
                       ) : (
                         <code>{file}</code>
+                      )}
+                      {href && file.endsWith(".gguf") && (
+                        <IconButton
+                          label={`Inspect ${file}`}
+                          disabled={inspectionDisabled}
+                          onClick={() => onInspectFile(href)}
+                        >
+                          <ScanSearch size={16} />
+                        </IconButton>
                       )}
                     </li>
                   );
@@ -218,6 +244,9 @@ export function ArtifactInspection({
                         </th>
                         <td>
                           <code>{shape(tensor.shape)}</code>
+                          {tensor.shape_convention === "ggml_dimensions" && (
+                            <small>GGML axis order</small>
+                          )}
                         </td>
                         <td>
                           <code>{tensor.dtype || "Unknown"}</code>

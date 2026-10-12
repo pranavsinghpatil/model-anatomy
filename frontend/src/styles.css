@@ -2007,6 +2007,23 @@ summary::-webkit-details-marker {
   color: #176c64;
   text-decoration: none;
 }
+.artifact-file-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+.artifact-file-list li > a {
+  flex: 1;
+  min-width: 0;
+}
+.artifact-file-list .icon-button {
+  flex-shrink: 0;
+}
+.artifact-tensor-table td small {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+}
 .artifact-file-list code,
 .artifact-tensor-table code {
   overflow-wrap: anywhere;

@@ -28,6 +28,11 @@ Repositories whose architecture cannot be reconstructed can return a distinct
 never a guessed graph or model parameter total. See
 [artifact acceptance and retesting](docs/ARTIFACT_INSPECTION_ACCEPTANCE.md).
 
+GGUF repositories can be inspected separately from architecture reconstruction.
+Choose the exact file when a repository contains multiple variants; inspect its
+bounded header metadata and GGML-order tensor dimensions without inventing a
+graph. See [GGUF checks and manual testing](docs/GGUF_ACCEPTANCE.md).
+
 ## Inspect a model
 
 ```powershell

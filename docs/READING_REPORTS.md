@@ -38,7 +38,10 @@ and cancelled are unsuccessful jobs, not substitute model reports.
 partial report. The repository was pinned and its actual files were inspected,
 but the application cannot safely construct its architecture. The page states
 why, and shows verified tensor names, shapes, dtypes and source links when an
-unambiguous Safetensors checkpoint fits the inspection budget. No graph is drawn.
+unambiguous Safetensors checkpoint or selected GGUF file fits the inspection
+budget. GGUF dimensions are labelled in their native GGML axis order, not silently
+converted to PyTorch shapes. Multiple GGUF variants require an explicit file
+selection. No graph is drawn.
 
 **Checkpoint elements are not unique model parameters.** Adapter tensors,
 quantization scales and repeated storage may be included. The parameter total

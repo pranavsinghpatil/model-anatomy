@@ -183,6 +183,8 @@ class TensorRecord(BaseModel):
     name: str
     dtype: str
     shape: list[int]
+    shape_convention: Literal["tensor_axes", "ggml_dimensions"] = "tensor_axes"
+    tensor_type_id: int | None = None
     parameter_count: int
     artifact: str
     parameter_refs: list[str] = Field(default_factory=list)
@@ -202,6 +204,9 @@ class ArtifactInspectionResponse(BaseModel):
     tensor_count: int
     checkpoint_tensor_element_count: int | None
     checkpoint_available: bool
+    checkpoint_format: str | None = None
+    selected_file_tensor_element_count: int | None = None
+    selected_file_split_metadata: dict[str, int] | None = None
     source_config: dict[str, Any] | None
     evidence: list[Evidence]
     offset: int

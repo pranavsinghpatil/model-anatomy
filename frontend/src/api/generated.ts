@@ -309,6 +309,14 @@ export interface components {
       checkpoint_tensor_element_count: number | null;
       /** Checkpoint Available */
       checkpoint_available: boolean;
+      /** Checkpoint Format */
+      checkpoint_format?: string | null;
+      /** Selected File Tensor Element Count */
+      selected_file_tensor_element_count?: number | null;
+      /** Selected File Split Metadata */
+      selected_file_split_metadata?: {
+        [key: string]: number;
+      } | null;
       /** Source Config */
       source_config: {
         [key: string]: unknown;
@@ -565,6 +573,14 @@ export interface components {
       dtype: string;
       /** Shape */
       shape: number[];
+      /**
+       * Shape Convention
+       * @default tensor_axes
+       * @enum {string}
+       */
+      shape_convention: "tensor_axes" | "ggml_dimensions";
+      /** Tensor Type Id */
+      tensor_type_id?: number | null;
       /** Parameter Count */
       parameter_count: number;
       /** Artifact */

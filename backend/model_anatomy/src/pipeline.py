@@ -71,6 +71,11 @@ def reconstruct(
         raise ArtifactError("Repository has no config.json")
 
     has_safetensors = any(name.endswith((".safetensors", ".safetensors.index.json")) for name in files)
+    has_gguf = any(name.endswith(".gguf") for name in files)
+    if reference.explicit_filename and reference.filename.endswith(".gguf") and not allow_artifact_inspection:
+        from .errors import ArtifactError
+
+        raise ArtifactError("GGUF header inspection is available only through artifact inspection")
     adapter_config = None
     if allow_artifact_inspection and "adapter_config.json" in files:
         adapter_config = client.json(reference.url("adapter_config.json", revision))
@@ -90,6 +95,41 @@ def reconstruct(
             from .errors import ArtifactError
 
             raise ArtifactError("Repository has no Safetensors checkpoint; it is outside the target scope")
+        if has_gguf or reference.filename.endswith(".gguf"):
+            try:
+                checkpoint = client.checkpoint(reference, revision)
+            except AmbiguousCheckpointError:
+                return build_artifact_inspection(
+                    reference,
+                    revision,
+                    files,
+                    client.audit,
+                    audit_start=audit_start,
+                    config_data=config_data,
+                    checkpoint=None,
+                    reason_code="checkpoint_selection_required",
+                )
+            except InspectionBudgetError:
+                return build_artifact_inspection(
+                    reference,
+                    revision,
+                    files,
+                    client.audit,
+                    audit_start=audit_start,
+                    config_data=config_data,
+                    checkpoint=None,
+                    reason_code="metadata_budget_exceeded",
+                )
+            return build_artifact_inspection(
+                reference,
+                revision,
+                files,
+                client.audit,
+                audit_start=audit_start,
+                config_data=config_data,
+                checkpoint=checkpoint,
+                reason_code="gguf_header_only",
+            )
         reason = (
             "adapter_requires_base_model"
             if adapter_config is not None
@@ -139,6 +179,18 @@ def reconstruct(
             config_data=config_data,
             checkpoint=None,
             reason_code="metadata_budget_exceeded",
+        )
+
+    if checkpoint.format == "gguf":
+        return build_artifact_inspection(
+            reference,
+            revision,
+            files,
+            client.audit,
+            audit_start=audit_start,
+            config_data=config_data,
+            checkpoint=checkpoint,
+            reason_code="gguf_header_only",
         )
 
     reason = None

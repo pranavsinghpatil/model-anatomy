@@ -785,6 +785,8 @@ export function App() {
                 modelId={detail.model_id}
                 revision={detail.revision}
                 summary={detail.inspection}
+                onInspectFile={(url) => create.mutate(url)}
+                inspectionDisabled={!analysisAvailable || create.isPending}
               />
             ) : analysis.error ? (
               <div className="canvas-state">

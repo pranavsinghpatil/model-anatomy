@@ -239,3 +239,20 @@ only to the owning visitor. Keep the CLI strict and invalidate engine cache iden
 Use an explicit local launcher profile with bounded higher allowances for manual
 testing. Do not clear rate records, replace visitor identity, or weaken deployment
 defaults. Keep support claims tied to fresh pinned model evidence.
+
+## D-026 - Inspect GGUF metadata without claiming architecture reconstruction
+**2026-10-12 - implementation increment**
+
+The reported Bonsai repository uses GGUF rather than Safetensors and has separate
+language-model variants and vision projectors. Support explicit pinned GGUF file
+URLs and file selection from the inspected inventory. Never choose a quantization
+variant arbitrarily or merge a projector into a language-model checkpoint.
+
+Read bounded GGUF metadata and tensor descriptors through exact HTTP ranges;
+do not load weights or execute publisher code. Use upstream GGUF type definitions,
+retain unknown quantization IDs as numeric facts, and label GGML dimension order
+explicitly. Header facts do not prove payload integrity or computation dataflow.
+Keep the CLI architecture path strict. Return the existing graph-free `inspected`
+outcome, and invalidate cache identity without rewriting previous analyses.
+Full Bonsai hybrid-attention reconstruction and broader modality semantics remain
+separate acceptance gates; this decision does not claim universal support.

@@ -46,7 +46,11 @@ class ModelReference:
     explicit_filename: bool = False
 
     def url(self, filename: str, revision: str | None = None) -> str:
-        return f"https://huggingface.co/{self.model_id}/resolve/{quote(revision or self.revision, safe='')}/{filename}"
+        encoded_filename = "/".join(quote(part, safe="") for part in filename.split("/"))
+        return (
+            f"https://huggingface.co/{self.model_id}/resolve/"
+            f"{quote(revision or self.revision, safe='')}/{encoded_filename}"
+        )
 
 
 def parse_reference(value: str) -> ModelReference:
@@ -58,8 +62,19 @@ def parse_reference(value: str) -> ModelReference:
         if url.scheme != "https" or url.netloc != "huggingface.co" or url.query or url.fragment:
             raise ArtifactError("Expected an HTTPS Hugging Face model URL without query or fragment")
         parts = url.path.strip("/").split("/")
-        if len(parts) == 5 and parts[2] in {"blob", "resolve"}:
-            revision, filename = unquote(parts[3]), parts[4]
+        if len(parts) >= 5 and parts[2] in {"blob", "resolve"}:
+            revision = unquote(parts[3])
+            filename_parts = [unquote(part) for part in parts[4:]]
+            if any(
+                not part
+                or part in {".", ".."}
+                or "/" in part
+                or "\\" in part
+                or "\x00" in part
+                for part in filename_parts
+            ):
+                raise ArtifactError("Checkpoint URL contains an invalid file path")
+            filename = "/".join(filename_parts)
             explicit_filename = True
         elif len(parts) != 2:
             raise ArtifactError("Expected a model repository or a model.safetensors file URL")
@@ -69,9 +84,9 @@ def parse_reference(value: str) -> ModelReference:
     if (
         not revision
         or revision in {".", ".."}
-        or not (filename.endswith((".safetensors", ".safetensors.index.json")))
+        or not filename.endswith((".safetensors", ".safetensors.index.json", ".gguf"))
     ):
-        raise ArtifactError("Expected a Safetensors file or index reference")
+        raise ArtifactError("Expected a Safetensors or GGUF file URL")
     return ModelReference(value, revision, filename, explicit_filename)
 
 
@@ -105,10 +120,11 @@ class SafetensorsMetadata:
 
 @dataclass
 class CheckpointMetadata:
-    tensors: dict[str, TensorMetadata]
-    shards: dict[str, SafetensorsMetadata]
+    tensors: dict[str, Any]
+    shards: dict[str, Any]
     tensor_files: dict[str, str]
     index: dict[str, Any] | None = None
+    format: str = "safetensors"
 
     @property
     def requests(self) -> list[dict[str, Any]]:
@@ -190,6 +206,7 @@ class MetadataClient:
         self.audit: list[dict[str, Any]] = []
         self.repository_files: dict[tuple[str, str], set[str]] = {}
         self.header_bytes_read = 0
+        self.checkpoint_header_bytes_read = 0
 
     def json(self, url: str, max_bytes: int = 1024 * 1024) -> dict[str, Any]:
         with self.session.get(
@@ -228,8 +245,21 @@ class MetadataClient:
 
     def checkpoint(self, reference: ModelReference, revision: str) -> CheckpointMetadata:
         files = self.repository_files[(reference.model_id, revision)]
-        if not any(name.endswith((".safetensors", ".safetensors.index.json")) for name in files):
-            raise ArtifactError("Repository has no Safetensors checkpoint; it is outside the target scope")
+        if reference.explicit_filename and reference.filename.endswith(".gguf"):
+            if reference.filename not in files:
+                raise ArtifactError(f"Requested GGUF artifact is missing: {reference.filename}")
+            return self.gguf_checkpoint(reference, revision, reference.filename)
+
+        has_safetensors = any(
+            name.endswith((".safetensors", ".safetensors.index.json")) for name in files
+        )
+        if not has_safetensors:
+            gguf_files = sorted(name for name in files if "/" not in name and name.endswith(".gguf"))
+            if len(gguf_files) == 1:
+                return self.gguf_checkpoint(reference, revision, gguf_files[0])
+            if len(gguf_files) > 1:
+                raise AmbiguousCheckpointError("Cannot select an unambiguous GGUF checkpoint")
+            raise ArtifactError("Repository has no supported checkpoint artifact")
         index_name = "model.safetensors.index.json"
         if reference.filename.endswith(".index.json"):
             index_name = reference.filename
@@ -285,6 +315,32 @@ class MetadataClient:
             raise ArtifactError("Safetensors shard headers disagree with the index weight_map")
         return CheckpointMetadata(tensors, shards, tensor_files, index)
 
+    def gguf_checkpoint(self, reference: ModelReference, revision: str, filename: str) -> CheckpointMetadata:
+        from .gguf import parse_gguf_header
+
+        audit_start = len(self.audit)
+        url = reference.url(filename, revision)
+        _, file_size = self.range(url, 0, 23)
+        self.audit[-1]["format"] = "gguf"
+
+        def read_range(start: int, end: int) -> tuple[bytes, int]:
+            result = self.range(url, start, end)
+            self.audit[-1]["format"] = "gguf"
+            return result
+
+        shard = parse_gguf_header(read_range, file_size)
+        for item in self.audit[audit_start:]:
+            if "range" in item:
+                item["format"] = "gguf"
+        shard.requests = self.audit[audit_start:]
+        tensors = shard.tensors
+        return CheckpointMetadata(
+            tensors,
+            {filename: shard},
+            {name: filename for name in tensors},
+            format="gguf",
+        )
+
     def range(self, url: str, start: int, end: int) -> tuple[bytes, int]:
         with self.session.get(
             url,
@@ -320,6 +376,7 @@ class MetadataClient:
                     "bytes_read": len(body),
                 }
             )
+            self.checkpoint_header_bytes_read += len(body)
             return body, int(match[3])
 
     def safetensors(self, url: str) -> SafetensorsMetadata:
