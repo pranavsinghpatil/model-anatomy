@@ -1,0 +1,99 @@
+.artifact-tabs,
+.learn-guide {
+  color: var(--text, #243036);
+}
+
+.artifact-tab-list,
+.panel-tabs [role="tablist"] {
+  display: flex;
+  gap: 0.35rem;
+  border-bottom: 1px solid var(--border, #cbd4d8);
+  margin: 0 0 1rem;
+}
+
+.artifact-tab-list button,
+.panel-tabs [role="tab"] {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.65rem 0.8rem;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--muted, #717980);
+}
+
+.artifact-tab-list button[data-state="active"],
+.panel-tabs [role="tab"][data-state="active"] {
+  color: var(--accent, #408f85);
+  border-bottom-color: var(--accent, #408f85);
+}
+
+.artifact-tab-list span,
+.panel-tabs [role="tab"] span {
+  color: var(--muted, #717980);
+  font-size: 0.85em;
+}
+
+.inspector-purpose {
+  max-width: 42rem;
+  margin-top: 0.45rem;
+  color: var(--muted, #717980);
+  line-height: 1.5;
+}
+
+.inspector-long-path {
+  display: block;
+  max-width: 100%;
+  margin-top: 0.5rem;
+  overflow-wrap: anywhere;
+}
+
+.learn-guide {
+  padding: 1rem;
+  border: 1px solid var(--border, #cbd4d8);
+  border-radius: 0.65rem;
+  background: var(--surface, #fff);
+}
+
+.learn-guide header p,
+.learn-guide li p {
+  margin-top: 0.4rem;
+  color: var(--muted, #717980);
+  line-height: 1.5;
+}
+
+.learn-guide-steps {
+  display: flex;
+  gap: 0.35rem;
+  margin-top: 0.85rem;
+  overflow-x: auto;
+}
+
+.learn-guide-steps button {
+  flex: 0 0 auto;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--border, #cbd4d8);
+  border-radius: 999px;
+  background: var(--surface, #fff);
+  color: var(--text, #243036);
+}
+
+.learn-guide-steps button[aria-pressed="true"] {
+  border-color: var(--accent, #408f85);
+  background: var(--soft, #e9f2f0);
+  color: var(--accent, #408f85);
+}
+
+.learn-guide-copy {
+  margin-top: 0.75rem;
+  color: var(--muted, #717980);
+  line-height: 1.5;
+}
+
+.artifact-tab-list button:focus-visible,
+.panel-tabs [role="tab"]:focus-visible,
+.learn-guide button:focus-visible {
+  outline: 2px solid var(--accent, #408f85);
+  outline-offset: 2px;
+}

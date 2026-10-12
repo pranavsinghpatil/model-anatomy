@@ -63,27 +63,48 @@ export async function expectGraphFramed(page: Page) {
 }
 
 export async function graphNode(page: Page, label: string) {
-  await page.getByLabel("Find component").fill(label);
+  const back = page.getByRole("button", { name: "Back to graph", exact: true });
+  if (await back.isVisible()) await back.click();
+  await page.getByRole("textbox", { name: /find.*component/i }).fill(label);
   await page
     .locator(".search-results")
     .getByRole("button", { name: label, exact: true })
     .click();
 }
-export async function showDetails(page: Page, mobile: boolean) {
-  if (mobile)
-    await page
-      .getByRole("navigation", { name: "Workspace views" })
-      .getByRole("button", { name: "Details" })
-      .click();
-}
-export async function showQuestions(page: Page, mobile: boolean) {
-  if (mobile)
-    await page
-      .getByRole("navigation", { name: "Workspace views" })
-      .getByRole("button", { name: "Questions" })
-      .click();
+
+export async function openNestedGraph(page: Page, label: string) {
+  const componentTab = page.getByRole("tab", { name: /^Component/ });
+  if (await componentTab.isVisible()) await componentTab.click();
+  const inspectorAction = page.getByRole("button", {
+    name: "Open nested graph",
+    exact: true,
+  });
+  if (await inspectorAction.isVisible()) await inspectorAction.click();
   else
     await page
-      .getByRole("button", { name: "Model questions", exact: true })
+      .getByRole("button", { name: `Open ${label}`, exact: true })
       .click();
+}
+
+export async function openAnalysis(
+  page: Page,
+  analysisId = "job-test",
+  view: "overview" | "architecture" | "artifacts" | "report" = "architecture",
+) {
+  await page.goto(`/app/analyses/${analysisId}?view=${view}`);
+}
+
+export async function showDetails(page: Page, _mobile?: boolean) {
+  await expect(page.getByTestId("inspector")).toBeVisible();
+}
+
+export async function showQuestions(page: Page, _mobile?: boolean) {
+  const tab = page.getByRole("tab", { name: "Questions", exact: true });
+  if (await tab.isVisible()) {
+    await tab.click();
+    return;
+  }
+  await page
+    .getByRole("button", { name: "Model questions", exact: true })
+    .click();
 }

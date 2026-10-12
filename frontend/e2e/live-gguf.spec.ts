@@ -14,13 +14,13 @@ test("live Bonsai GGUF selection exposes verified tensors without inventing a gr
   const file = "Ternary-Bonsai-2-27B-PTQ1_0.gguf";
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
-  await page.goto("/");
+  await page.goto("/app");
   await page.getByLabel("Hugging Face model", { exact: true }).fill(model);
   await expect(
-    page.getByRole("button", { name: "Analyze Model", exact: true }),
+    page.getByRole("button", { name: "Inspect model", exact: true }),
   ).toBeEnabled({ timeout: 30_000 });
   await page
-    .getByRole("button", { name: "Analyze Model", exact: true })
+    .getByRole("button", { name: "Inspect model", exact: true })
     .click();
   const inspection = page.getByTestId("artifact-inspection");
   await expect(inspection).toContainText("checkpoint_selection_required", {
@@ -38,6 +38,10 @@ test("live Bonsai GGUF selection exposes verified tensors without inventing a gr
   const response = await submitted;
   expect(response.status()).toBe(202);
   const job = (await response.json()) as AnalysisDetail;
+  await expect(page).toHaveURL(new RegExp(`/app/analyses/${job.id}`));
+  await page.getByRole("link", { name: "Artifacts", exact: true }).click();
+  const artifactsTab = page.getByRole("tab", { name: /^Tensors/ });
+  await artifactsTab.click();
   await expect(inspection.locator("tbody tr")).toHaveCount(50, {
     timeout: 130_000,
   });

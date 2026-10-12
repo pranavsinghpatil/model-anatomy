@@ -1,9 +1,9 @@
 import { expect, test } from "@playwright/test";
+import { openAnalysis } from "./helpers";
 import { analysisFor, mockService } from "./service";
 
 test("selected report status stays consistent while recent jobs are still stale", async ({
   page,
-  isMobile,
 }) => {
   const job = {
     ...analysisFor("job-test"),
@@ -14,20 +14,22 @@ test("selected report status stays consistent while recent jobs are still stale"
     job,
     recent: [{ ...job, status: "running", stage: "analyzing_components" }],
   });
-  await page.goto(`/?analysis=${job.id}`);
-  await expect(page.getByTestId("graph-canvas")).toBeVisible();
-  if (isMobile)
-    await page
-      .getByRole("button", { name: "Open recent analyses" })
-      .first()
-      .click();
-  const recent = page.locator(".recent-link.active");
+  await openAnalysis(page, job.id, "report");
+  await expect(page.getByTestId("report-checks")).toBeVisible();
+  const selected = page.locator(".workspace-header");
   await expect(
-    recent.getByRole("status", { name: "Analysis status: completed" }),
+    selected.getByRole("status", { name: "Analysis status: completed" }),
   ).toBeVisible();
+  await page.getByRole("button", { name: "Switch model" }).click();
+  const selectedRecent = page
+    .getByRole("menuitem")
+    .filter({ hasText: job.model_id });
+  await expect(selectedRecent).toContainText("completed");
+  await expect(selectedRecent).not.toContainText("running");
+  await page.keyboard.press("Escape");
   await expect(
-    recent.getByRole("status", { name: "Analysis status: running" }),
-  ).toHaveCount(0);
+    selected.getByRole("status", { name: "Analysis status: completed" }),
+  ).toBeVisible();
 });
 
 test("text report shows established vocabulary and keeps missing dimensions unknown", async ({
@@ -39,15 +41,15 @@ test("text report shows established vocabulary and keeps missing dimensions unkn
     dimensions: { ...base.dimensions, heads: null },
   };
   await mockService(page, { job: analysis });
-  await page.goto(`/?analysis=${analysis.id}`);
-  await expect(page.getByTestId("graph-canvas")).toBeVisible();
+  await openAnalysis(page, analysis.id, "overview");
+  await expect(page.locator(".model-metrics")).toBeVisible();
 
   const metrics = page.locator(".model-metrics");
   await expect(metrics.getByTestId("model-metric-vocabulary")).toContainText(
     "50,257",
   );
   await expect(
-    metrics.getByTestId("model-metric-heads").locator("strong"),
+    metrics.getByTestId("model-metric-heads").locator("dd"),
   ).toHaveText("Unknown");
 });
 
@@ -60,8 +62,8 @@ test("vision report omits text vocabulary", async ({ page }) => {
     input_names: ["pixel_values"],
   };
   await mockService(page, { job: analysis });
-  await page.goto(`/?analysis=${analysis.id}`);
-  await expect(page.getByTestId("graph-canvas")).toBeVisible();
+  await openAnalysis(page, analysis.id, "overview");
+  await expect(page.locator(".model-metrics")).toBeVisible();
 
   const metrics = page.locator(".model-metrics");
   await expect(metrics.getByTestId("model-metric-hidden")).toBeVisible();
@@ -78,8 +80,8 @@ test("text input evidence establishes vocabulary for classification wrappers", a
     input_names: ["input_ids"],
   };
   await mockService(page, { job: analysis });
-  await page.goto(`/?analysis=${analysis.id}`);
-  await expect(page.getByTestId("graph-canvas")).toBeVisible();
+  await openAnalysis(page, analysis.id, "overview");
+  await expect(page.locator(".model-metrics")).toBeVisible();
   await expect(
     page.locator(".model-metrics").getByTestId("model-metric-vocabulary"),
   ).toContainText("30,522");
@@ -95,13 +97,13 @@ test("text input evidence keeps an unreported vocabulary honestly unknown", asyn
     input_names: ["input_ids"],
   };
   await mockService(page, { job: analysis });
-  await page.goto(`/?analysis=${analysis.id}`);
-  await expect(page.getByTestId("graph-canvas")).toBeVisible();
+  await openAnalysis(page, analysis.id, "overview");
+  await expect(page.locator(".model-metrics")).toBeVisible();
   await expect(
     page
       .locator(".model-metrics")
       .getByTestId("model-metric-vocabulary")
-      .locator("strong"),
+      .locator("dd"),
   ).toHaveText("Unknown");
 });
 
@@ -129,15 +131,17 @@ test("completed report separates revision, scope, checks, and warnings", async (
     },
   };
   await mockService(page, { job: analysis });
-  await page.goto(`/?analysis=${analysis.id}`);
-  await expect(page.getByTestId("graph-canvas")).toBeVisible();
+  await openAnalysis(page, analysis.id, "report");
+  await expect(page.getByTestId("report-checks")).toBeVisible();
   await expect(
-    page.locator(".model-title-row").getByLabel("Analysis status: completed"),
+    page.locator(".workspace-header").getByLabel("Analysis status: completed"),
   ).toBeVisible();
   await expect(page.getByTestId("model-revision")).toHaveText(base.revision!);
 
   const checks = page.getByTestId("report-checks");
-  await checks.locator("summary").click();
+  await expect(
+    checks.getByRole("heading", { name: "Report checks" }),
+  ).toBeVisible();
   await expect(checks.locator("dd").filter({ hasText: "100.0%" })).toHaveCount(
     4,
   );
@@ -146,11 +150,21 @@ test("completed report separates revision, scope, checks, and warnings", async (
   await expect(checks).toContainText("No");
 
   const scope = page.getByTestId("analysis-scope");
-  await scope.locator("summary").click();
-  await expect(scope).toContainText("1.2.3");
+  await expect(
+    scope.getByRole("heading", { name: "Analysis scope" }),
+  ).toBeVisible();
+  await expect(
+    page.locator(".report-section").filter({
+      has: page.getByRole("heading", { name: "Artifact identity" }),
+    }),
+  ).toContainText("1.2.3");
   await expect(scope).toContainText("Forward execution was not requested.");
-  await expect(page.locator(".partial-notice")).toHaveCount(0);
-  await expect(page.locator(".warnings")).toHaveCount(0);
+  await expect(page.getByTestId("report-checks")).toContainText(
+    "No incomplete-check details returned.",
+  );
+  await expect(
+    page.getByTestId("report-checks").locator("details"),
+  ).toHaveCount(0);
 });
 
 test("partial report shows specific missing checks and unknown quality", async ({
@@ -174,20 +188,19 @@ test("partial report shows specific missing checks and unknown quality", async (
     },
   };
   await mockService(page, { job: analysis });
-  await page.goto(`/?analysis=${analysis.id}`);
-  await expect(page.getByTestId("graph-canvas")).toBeVisible();
-  await expect(page.locator(".partial-notice")).toContainText(
-    "Partial analysis",
-  );
+  await openAnalysis(page, analysis.id, "report");
+  await expect(page.getByTestId("report-checks")).toBeVisible();
   await expect(
-    page.locator(".model-title-row").getByLabel("Analysis status: partial"),
+    page.locator(".workspace-header").getByLabel("Analysis status: partial"),
   ).toBeVisible();
   await expect(page.getByTestId("model-revision")).toHaveText(
     analysis.revision!,
   );
 
   const checks = page.getByTestId("report-checks");
-  await checks.locator("summary").click();
+  await expect(
+    checks.getByRole("heading", { name: "Report checks" }),
+  ).toBeVisible();
   await expect(checks).toContainText("Unknown");
   await expect(checks).toContainText(
     "Tensor shape comparison could not be completed.",
@@ -195,7 +208,9 @@ test("partial report shows specific missing checks and unknown quality", async (
   await expect(checks).not.toContainText("100.0%");
 
   const scope = page.getByTestId("analysis-scope");
-  await scope.locator("summary").click();
+  await expect(
+    scope.getByRole("heading", { name: "Analysis scope" }),
+  ).toBeVisible();
   await expect(scope).toContainText("Custom module details are unavailable.");
   await expect(checks).toContainText(
     "Tensor shape comparison could not be completed.",
@@ -212,13 +227,16 @@ test("actual extraction warnings remain visible separately from scope", async ({
     limitations: ["Weights were not downloaded."],
   };
   await mockService(page, { job: analysis });
-  await page.goto(`/?analysis=${analysis.id}`);
-  await expect(page.getByTestId("graph-canvas")).toBeVisible();
-  await page.locator(".analysis-notes .warnings summary").click();
-  await expect(page.locator(".analysis-notes .warnings")).toContainText(
-    analysis.warnings[0],
-  );
-  await expect(page.locator(".analysis-notes .warnings")).not.toContainText(
-    analysis.limitations[0],
-  );
+  await openAnalysis(page, analysis.id, "report");
+  await expect(page.getByTestId("report-checks")).toBeVisible();
+  await expect(
+    page
+      .locator(".report-section")
+      .filter({ has: page.getByRole("heading", { name: "Warnings" }) }),
+  ).toContainText(analysis.warnings[0]);
+  await expect(
+    page
+      .locator(".report-section")
+      .filter({ has: page.getByRole("heading", { name: "Warnings" }) }),
+  ).not.toContainText(analysis.limitations[0]);
 });

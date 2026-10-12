@@ -3,6 +3,8 @@ import {
   expectGraphFramed,
   expectReadableGraph,
   graphNode,
+  openAnalysis,
+  openNestedGraph,
   showDetails,
   showQuestions,
 } from "./helpers";
@@ -10,6 +12,7 @@ import {
   analysisFor,
   block,
   embedding,
+  graphs,
   mockService,
   rootGraph,
 } from "./service";
@@ -19,10 +22,9 @@ test("readable graph with reversible workspace panels", async ({
   isMobile,
 }, testInfo) => {
   await mockService(page);
-  await page.goto("/?analysis=job-test");
+  await openAnalysis(page);
   await expect(page.getByTestId("graph-canvas")).toBeVisible();
   await expectReadableGraph(page);
-  await expect(page.locator(".right-panel")).not.toBeVisible();
   await page.screenshot({
     path: testInfo.outputPath("readable-workspace.png"),
   });
@@ -31,39 +33,18 @@ test("readable graph with reversible workspace panels", async ({
     .getByRole("button", { name: "Readable view", exact: true })
     .click();
   await expectReadableGraph(page);
-  if (!isMobile) {
-    const before = (await page.getByTestId("graph-canvas").boundingBox())!
-      .width;
+  if (isMobile) {
     await page
-      .getByRole("button", { name: "Close recent analyses", exact: true })
-      .first()
+      .getByRole("button", { name: "Open components", exact: true })
       .click();
-    await expect(page.locator(".sidebar")).not.toBeVisible();
-    await expect
-      .poll(
-        async () =>
-          (await page.getByTestId("graph-canvas").boundingBox())!.width,
-      )
-      .toBeGreaterThan(before);
-    await page
-      .getByRole("button", { name: "Open recent analyses", exact: true })
-      .first()
-      .click();
-    await expect(page.locator(".sidebar")).toBeVisible();
-    await page
-      .getByRole("button", { name: "Open analysis panel", exact: true })
-      .click();
-    await expect(page.locator(".right-panel")).toBeVisible();
     await expect(
-      page
-        .getByRole("tablist", { name: "Analysis panels" })
-        .getByRole("button"),
-    ).toHaveCount(0);
-    await page
-      .locator(".right-tabs")
-      .getByRole("button", { name: "Close analysis panel" })
-      .click();
-    await expect(page.locator(".right-panel")).not.toBeVisible();
+      page.getByRole("dialog", { name: "Components", exact: true }),
+    ).toBeVisible();
+    await page.keyboard.press("Escape");
+  } else {
+    await expect(
+      page.getByRole("complementary", { name: /component/i }),
+    ).toBeVisible();
   }
   await graphNode(page, embedding.label);
   await showDetails(page, isMobile);
@@ -80,9 +61,9 @@ test("real artifact graph, scoped nesting, tensor and evidence inspection", asyn
   const requests = await mockService(page);
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
-  await page.goto("/?analysis=job-test");
+  await openAnalysis(page);
   await expect(page.getByTestId("graph-canvas")).toBeVisible();
-  await expect(page).toHaveURL(/analysis=job-test/);
+  await expect(page).toHaveURL(/\/app\/analyses\/job-test\?view=architecture/);
   await expect(page.locator(".react-flow__node")).toHaveCount(
     rootGraph.nodes.length,
   );
@@ -104,19 +85,13 @@ test("real artifact graph, scoped nesting, tensor and evidence inspection", asyn
   await expect(page.locator(".tensor-extra").first()).toContainText("artifact");
   await page.getByRole("tab", { name: /^Evidence/ }).click();
   await expect(page.locator(".evidence-item").first()).toBeVisible();
-  if (isMobile)
-    await page
-      .getByRole("navigation", { name: "Workspace views" })
-      .getByRole("button", { name: "Graph" })
-      .click();
+  if (isMobile) await page.getByRole("link", { name: "Architecture" }).click();
   await graphNode(page, block.label);
-  await page
-    .getByRole("button", { name: `Open ${block.label}`, exact: true })
-    .click();
+  await openNestedGraph(page, block.label);
   await expect(
     page
-      .getByRole("navigation", { name: "Graph breadcrumb" })
-      .getByRole("button", { name: block.label }),
+      .getByRole("navigation", { name: "Graph path" })
+      .getByRole("button", { name: block.label, exact: true }),
   ).toBeVisible();
   await expect
     .poll(() =>
@@ -125,7 +100,11 @@ test("real artifact graph, scoped nesting, tensor and evidence inspection", asyn
       ),
     )
     .toBe(true);
-  await page.getByRole("button", { name: "Collapse", exact: true }).click();
+  await page
+    .getByRole("navigation", { name: "Graph path" })
+    .getByRole("button")
+    .first()
+    .click();
   await expect(page.locator(".react-flow__node")).toHaveCount(
     rootGraph.nodes.length,
   );
@@ -134,6 +113,152 @@ test("real artifact graph, scoped nesting, tensor and evidence inspection", asyn
     await page.locator("html").evaluate((element) => element.clientWidth),
   );
   expect(errors).toEqual([]);
+});
+
+test("click and keyboard edge selection expose the original relationship", async ({
+  page,
+}) => {
+  await mockService(page);
+  await openAnalysis(page);
+  await expect(page.getByTestId("graph-canvas")).toBeVisible();
+  const edges = page.locator(".react-flow__edge");
+  await expect(edges).toHaveCount(rootGraph.edges.length);
+  await expectGraphFramed(page);
+  const clickPoint = await edges
+    .first()
+    .locator(".react-flow__edge-interaction")
+    .evaluate((element) => {
+      const path = element as SVGPathElement;
+      const point = path.getPointAtLength(path.getTotalLength() * 0.25);
+      const screen = new DOMPoint(point.x, point.y).matrixTransform(
+        path.getScreenCTM()!,
+      );
+      return { x: screen.x, y: screen.y };
+    });
+  await page.mouse.click(clickPoint.x, clickPoint.y);
+  const inspector = page.getByRole("complementary", { name: "Inspector" });
+  await expect(inspector).toContainText("Source component");
+  await expect(inspector).toContainText(rootGraph.edges[0].source);
+  await expect(inspector).toContainText(rootGraph.edges[0].target);
+  const back = page.getByRole("button", { name: "Back to graph", exact: true });
+  if (await back.isVisible()) await back.click();
+
+  const keyboardEdge = edges.nth(1);
+  await keyboardEdge.focus();
+  await keyboardEdge.press("Enter");
+  await expect(inspector).toContainText(rootGraph.edges[1].source);
+  await expect(inspector).toContainText(rootGraph.edges[1].target);
+  if (await back.isVisible()) await back.click();
+  await expect(keyboardEdge).toHaveClass(/selected/);
+});
+
+test("opening a nested graph clears a previously selected connection", async ({
+  page,
+}) => {
+  await mockService(page);
+  await openAnalysis(page);
+  await expect(page.getByTestId("graph-canvas")).toBeVisible();
+  await page.locator(".react-flow__edge").first().click();
+  const inspector = page.getByRole("complementary", { name: "Inspector" });
+  await expect(
+    inspector.getByRole("heading", { name: "Connection" }),
+  ).toBeVisible();
+
+  const back = page.getByRole("button", { name: "Back to graph", exact: true });
+  if (await back.isVisible()) await back.click();
+  await page
+    .getByRole("button", { name: "Open components", exact: true })
+    .isVisible()
+    .then(async (visible) => {
+      if (visible)
+        await page
+          .getByRole("button", { name: "Open components", exact: true })
+          .click();
+    });
+  await page
+    .getByRole("button", {
+      name: `Open ${block.label} nested graph`,
+      exact: true,
+    })
+    .click();
+  await expect(
+    page.getByRole("navigation", { name: "Graph path" }).getByRole("button", {
+      name: block.label,
+      exact: true,
+    }),
+  ).toBeVisible();
+  const nestedNode = graphs.get(block.child_graph_id!)!.nodes[0];
+  await graphNode(page, nestedNode.label);
+  await expect(
+    inspector.getByRole("heading", { name: "Inspector" }),
+  ).toBeVisible();
+  await expect(inspector).not.toContainText("Source component");
+});
+
+test("nested navigation preserves each graph viewport through resize and reduced motion", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await mockService(page);
+  await openAnalysis(page);
+  await expect(page.getByTestId("graph-canvas")).toBeVisible();
+
+  await graphNode(page, embedding.label);
+  await expect(
+    page.getByRole("complementary", { name: "Inspector" }),
+  ).toBeVisible();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(
+    page.getByRole("button", { name: "Back to graph" }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Back to graph" }).click();
+
+  await graphNode(page, block.label);
+  await page
+    .getByRole("button", { name: "Back to graph", exact: true })
+    .click();
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.getByRole("button", { name: "Zoom in" }).click();
+  const viewport = page.locator(".react-flow__viewport");
+  const rootTransform = await viewport.getAttribute("style");
+  await page
+    .getByRole("button", { name: "Open components", exact: true })
+    .click();
+  await page
+    .getByRole("button", {
+      name: `Open ${block.label} nested graph`,
+      exact: true,
+    })
+    .click();
+  await expect(page.getByTestId("graph-canvas")).toBeVisible();
+  await page
+    .getByRole("navigation", { name: "Graph path" })
+    .getByRole("button")
+    .first()
+    .click();
+  await expect(page.getByTestId("graph-canvas")).toBeVisible();
+  await expect.poll(() => viewport.getAttribute("style")).toBe(rootTransform);
+
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  expect(
+    await page.evaluate(
+      () => matchMedia("(prefers-reduced-motion: reduce)").matches,
+    ),
+  ).toBe(true);
+  await page.getByRole("button", { name: "Fit graph" }).click();
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.addStyleTag({ content: "html { zoom: 2; }" });
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          Math.max(
+            document.documentElement.scrollWidth,
+            document.body.scrollWidth,
+          ) <= window.innerWidth,
+      ),
+    )
+    .toBe(true);
 });
 
 test("503 health disables new analysis without hiding recent reports", async ({
@@ -154,11 +279,7 @@ test("503 health disables new analysis without hiding recent reports", async ({
       reason: "Worker unavailable",
     },
   });
-  await page.goto("/");
-  await expect(page.getByTestId("graph-canvas")).toBeVisible();
-  await expect(page).toHaveURL(/analysis=job-test/);
-  await expect(page.locator(".service-state")).toHaveText("API degraded");
-  await expect(page.locator(".service-dot")).not.toHaveClass(/online/);
+  await page.goto("/app");
   await expect(page.locator(".availability-note")).toContainText(
     "Worker unavailable",
   );
@@ -166,19 +287,12 @@ test("503 health disables new analysis without hiding recent reports", async ({
     .getByLabel("Hugging Face model", { exact: true })
     .fill("org/model");
   await expect(
-    page.getByRole("button", { name: "Analyze Model", exact: true }),
+    page.getByRole("button", { name: "Inspect model", exact: true }),
   ).toBeDisabled();
-  if (isMobile)
-    await page
-      .getByRole("button", { name: "Open recent analyses" })
-      .first()
-      .click();
-  await page.locator(".recent-link").click();
-  await expect(page.getByRole("heading", { level: 1 })).toHaveText(
+  await openAnalysis(page);
+  await expect(page.getByTestId("graph-canvas")).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1 })).toContainText(
     analysisFor().model_id,
-  );
-  await expect(page.locator(".model-actions .cache-label")).toHaveText(
-    "Cached",
   );
   await showQuestions(page, isMobile);
   await expect(page.getByLabel("Ask about model evidence")).toBeDisabled();
@@ -198,9 +312,10 @@ test("new visitor starts with an empty workspace", async ({
   page,
 }, testInfo) => {
   const requests = await mockService(page, { noRecent: true });
-  await page.goto("/");
-  await expect(page.locator(".service-state")).toHaveText("API v1");
-  await expect(page.getByText("No analysis selected").first()).toBeVisible();
+  await page.goto("/app");
+  await expect(
+    page.getByText(/select a model|inspect a model/i).first(),
+  ).toBeVisible();
   await expect(page.getByTestId("graph-canvas")).toHaveCount(0);
   await expect(page).not.toHaveURL(/analysis=/);
   await expect(page.locator(".model-metrics")).toHaveCount(0);
@@ -208,13 +323,12 @@ test("new visitor starts with an empty workspace", async ({
     .getByLabel("Hugging Face model", { exact: true })
     .fill("org/model");
   await expect(
-    page.getByRole("button", { name: "Analyze Model", exact: true }),
+    page.getByRole("button", { name: "Inspect model", exact: true }),
   ).toBeEnabled();
   await page.screenshot({ path: testInfo.outputPath("empty-workspace.png") });
   expect(
     requests.some((request) => /\/analyses\/[^/?]+/.test(request.path)),
   ).toBe(false);
-  await expect(page.locator(".recent-link")).toHaveCount(0);
   expect(requests.some((request) => request.path.includes("/examples"))).toBe(
     false,
   );
@@ -225,6 +339,9 @@ test("legacy example query cannot synthesize an analysis or graph", async ({
 }) => {
   const requests = await mockService(page);
   await page.goto("/?analysis=example-gpt2");
+  await expect(page).toHaveURL(
+    /\/app\/analyses\/example-gpt2(?:\?view=architecture)?$/,
+  );
   await expect(page.getByRole("alert")).toContainText("Analysis not found");
   await expect(page.getByTestId("graph-canvas")).toHaveCount(0);
   expect(requests.some((request) => request.path.includes("/examples"))).toBe(
@@ -239,13 +356,12 @@ test("optional AI configuration does not disable healthy model analysis", async 
   page,
 }) => {
   await mockService(page, { ai: false, noRecent: true });
-  await page.goto("/");
-  await expect(page.locator(".service-state")).toHaveText("API v1");
+  await page.goto("/app");
   await page
     .getByLabel("Hugging Face model", { exact: true })
     .fill("org/model");
   await expect(
-    page.getByRole("button", { name: "Analyze Model", exact: true }),
+    page.getByRole("button", { name: "Inspect model", exact: true }),
   ).toBeEnabled();
 });
 
@@ -254,15 +370,15 @@ for (const healthError of ["network", "invalid"] as const)
     page,
   }) => {
     await mockService(page, { healthError });
-    await page.goto("/?analysis=job-test");
-    await expect(page.getByTestId("graph-canvas")).toBeVisible();
-    await expect(page.locator(".service-state")).toHaveText("API unavailable");
-    await expect(page.locator(".service-dot")).not.toHaveClass(/online/);
+    await page.goto("/app");
+    await expect(page.locator(".availability-note")).toContainText(
+      "New analyses unavailable",
+    );
     await page
       .getByLabel("Hugging Face model", { exact: true })
       .fill("org/model");
     await expect(
-      page.getByRole("button", { name: "Analyze Model", exact: true }),
+      page.getByRole("button", { name: "Inspect model", exact: true }),
     ).toBeDisabled();
   });
 
@@ -276,26 +392,30 @@ test("submits exact contract and cancels a pending job", async ({ page }) => {
     dimensions: {},
   };
   const requests = await mockService(page, { job });
-  await page.goto("/");
+  await page.goto("/app");
   await page
     .getByLabel("Hugging Face model", { exact: true })
     .fill("org/new-model");
   await page
-    .getByRole("button", { name: "Analyze Model", exact: true })
+    .getByRole("button", { name: "Inspect model", exact: true })
     .click();
   await expect(
-    page.getByRole("button", { name: "Cancel pending job" }),
+    page.getByRole("button", { name: "Cancel inspection", exact: true }),
   ).toBeVisible();
-  await expect(page.getByText("Analyzing model")).toBeVisible();
-  await expect(page.locator(".job-progress")).toContainText(
+  await expect(
+    page.getByRole("progressbar", { name: "Inspection in progress" }),
+  ).toBeVisible();
+  await expect(page.locator(".progress-stage")).toContainText(
     "Resolving artifacts",
   );
   expect(requests.find((request) => request.method === "POST")?.body).toEqual({
     model: "org/new-model",
   });
-  await page.getByRole("button", { name: "Cancel pending job" }).click();
+  await page
+    .getByRole("button", { name: "Cancel inspection", exact: true })
+    .click();
   await expect(
-    page.getByText("Analysis cancelled", { exact: true }),
+    page.getByRole("heading", { name: "Inspection cancelled", exact: true }),
   ).toBeVisible();
   expect(
     requests.some(
@@ -318,7 +438,7 @@ test("polls until completed and renders actual returned graph", async ({
     },
     pollComplete: true,
   });
-  await page.goto("/?analysis=job-test");
+  await openAnalysis(page);
   await expect(page.getByTestId("graph-canvas")).toBeVisible();
   await expect(
     page.getByRole("button", { name: "Cancel pending job" }),
@@ -330,7 +450,7 @@ test("AI response keeps provenance and citation jumps to associated component", 
   isMobile,
 }) => {
   const requests = await mockService(page);
-  await page.goto("/?analysis=job-test");
+  await openAnalysis(page);
   await expect(page.getByTestId("graph-canvas")).toBeVisible();
   await graphNode(page, embedding.label);
   await showQuestions(page, isMobile);
@@ -371,7 +491,7 @@ for (const unknown of [false, true])
         }
       : analysisFor("job-test");
     await mockService(page, { metadataCitation: true, job: analysis });
-    await page.goto(`/?analysis=${analysis.id}`);
+    await openAnalysis(page, analysis.id);
     await expect(page.getByTestId("graph-canvas")).toBeVisible();
     await showQuestions(page, isMobile);
     await page
@@ -411,10 +531,14 @@ for (const unknown of [false, true])
       path: testInfo.outputPath("metadata-citation.png"),
     });
     if (isMobile)
-      await page
-        .getByRole("navigation", { name: "Workspace views" })
-        .getByRole("button", { name: "Graph", exact: true })
-        .click();
+      await page.getByRole("link", { name: "Architecture" }).click();
+    await graphNode(page, block.label);
+    await expect(
+      page.getByTestId("inspector").getByRole("tab", { name: /^Component/ }),
+    ).toHaveAttribute("aria-selected", "true");
+    await expect(
+      page.getByTestId("inspector").locator(".citation-record"),
+    ).toHaveCount(0);
     await expect(
       page.getByLabel("Export analysis", { exact: true }),
     ).toBeVisible();
@@ -422,21 +546,11 @@ for (const unknown of [false, true])
 
 test("exports JSON and ZIP through the authenticated API", async ({ page }) => {
   await mockService(page);
-  await page.goto("/");
-  await expect(page.getByTestId("graph-canvas")).toBeVisible();
+  await openAnalysis(page, "job-test", "report");
   for (const label of ["Report JSON", "Complete ZIP"]) {
     await page.getByLabel("Export analysis", { exact: true }).click();
-    await expect
-      .poll(async () => {
-        const anchor = (await page
-          .getByLabel("Export analysis", { exact: true })
-          .boundingBox())!;
-        const menu = (await page.locator(".export-options").boundingBox())!;
-        return Math.abs(menu.y - anchor.y - anchor.height - 6);
-      })
-      .toBeLessThan(1);
     const downloaded = page.waitForEvent("download");
-    await page.getByRole("button", { name: label, exact: true }).click();
+    await page.getByRole("menuitem", { name: label, exact: true }).click();
     expect((await downloaded).suggestedFilename()).toMatch(
       label.endsWith("JSON") ? /\.json$/ : /\.zip$/,
     );
@@ -456,13 +570,14 @@ test("partial and symbolic dimensions remain honest", async ({
     },
     symbolic: true,
   });
-  await page.goto("/?analysis=job-test");
-  await expect(page.getByTestId("graph-canvas")).toBeVisible();
-  await expect(page.locator(".partial-notice")).toContainText(
-    "Partial analysis",
-  );
+  await openAnalysis(page, "job-test", "overview");
   await expect(page.locator(".model-metrics")).toContainText("0");
   await expect(page.locator(".model-metrics")).toContainText("Unknown");
+  await page.getByRole("link", { name: "Architecture", exact: true }).click();
+  await expect(page.getByTestId("graph-canvas")).toBeVisible();
+  await expect(
+    page.locator(".workspace-header").getByLabel("Analysis status: partial"),
+  ).toBeVisible();
   await graphNode(page, embedding.label);
   await showDetails(page, isMobile);
   await expect(page.locator(".port").first()).toContainText("[batch, sequence");
@@ -476,7 +591,7 @@ test("tensor pagination requests bounded pages with stable selection", async ({
   isMobile,
 }) => {
   const requests = await mockService(page, { paginated: true });
-  await page.goto("/?analysis=job-test");
+  await openAnalysis(page);
   await expect(page.getByTestId("graph-canvas")).toBeVisible();
   await graphNode(page, embedding.label);
   await showDetails(page, isMobile);
@@ -495,12 +610,12 @@ for (const status of [422, 429, 503])
     page,
   }) => {
     await mockService(page, { postStatus: status });
-    await page.goto("/");
+    await page.goto("/app");
     await page
       .getByLabel("Hugging Face model", { exact: true })
       .fill("org/model");
     await page
-      .getByRole("button", { name: "Analyze Model", exact: true })
+      .getByRole("button", { name: "Inspect model", exact: true })
       .click();
     await expect(page.getByRole("alert")).toContainText(
       "Analysis could not be started",
@@ -513,7 +628,7 @@ for (const status of [404, 410])
     page,
   }) => {
     await mockService(page, { getStatus: status });
-    await page.goto("/?analysis=job-test");
+    await openAnalysis(page);
     await expect(page.getByRole("alert")).toContainText(
       status === 410 ? "Analysis has expired" : "Analysis not found",
     );
@@ -525,7 +640,7 @@ test("unavailable AI returns a structured error without fabricated answer", asyn
   isMobile,
 }) => {
   await mockService(page, { questionError: true });
-  await page.goto("/");
+  await openAnalysis(page);
   await expect(page.getByTestId("graph-canvas")).toBeVisible();
   await showQuestions(page, isMobile);
   await page.getByLabel("Ask about model evidence").fill("What is known?");
@@ -538,7 +653,7 @@ test("unavailable AI returns a structured error without fabricated answer", asyn
 
 test("empty service does not synthesize a graph", async ({ page }) => {
   await mockService(page, { noRecent: true });
-  await page.goto("/");
-  await expect(page.getByText("No analysis selected").first()).toBeVisible();
+  await page.goto("/app");
+  await expect(page.getByText("No analyses yet")).toBeVisible();
   await expect(page.getByTestId("graph-canvas")).toHaveCount(0);
 });
