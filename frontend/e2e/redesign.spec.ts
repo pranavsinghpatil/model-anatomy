@@ -200,6 +200,9 @@ test("mode, view changes and keyboard panel resizing preserve inspection context
     .getByRole("button", { name: "Readable view", exact: true })
     .click();
   const viewport = page.locator(".react-flow__viewport");
+  // Search focuses at up to 1.2x. Readable view settles at 1x in this desktop
+  // canvas; capture that result before asserting mode changes preserve it.
+  await expect(viewport).toHaveAttribute("style", /scale\(1\)/);
   const beforeMode = await viewport.getAttribute("style");
   for (const mode of ["Learn", "Research"] as const) {
     await setMode(page, mode);

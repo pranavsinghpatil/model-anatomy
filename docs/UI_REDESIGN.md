@@ -91,6 +91,7 @@ Verified on Windows with Chromium, 2026-10-13:
 - The complete deterministic Playwright run passes **92 tests** in desktop and
   mobile projects. Its 14 live cases are deliberately skipped without
   `E2E_LIVE_API`; all **14 live cases also pass** in separate real-service runs.
+  A final combined real-service run passes all **106 cases** with no skips.
 - Architecture is checked at 320, 390, 768, 1024, 1440 and 1920px in both modes
   and themes, with 12 axe scans reporting zero violations. Entry/report layouts
   and long model IDs, tensor names and artifact URLs also pass every target width
