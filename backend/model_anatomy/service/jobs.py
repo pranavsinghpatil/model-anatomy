@@ -17,7 +17,7 @@ from .database import Blob, CacheEntry, Database, Guest, Job, Mutex, RateBucket,
 from .errors import ServiceError
 from .storage import storage_for
 
-TERMINAL = {"completed", "partial", "unsupported", "failed", "timed_out", "cancelled"}
+TERMINAL = {"completed", "partial", "inspected", "unsupported", "failed", "timed_out", "cancelled"}
 
 
 def timestamp(value: float) -> str:
@@ -72,6 +72,34 @@ def cache_key(
 
 def ir_summary(data: dict) -> dict:
     metadata = data["metadata"]
+    inspection = metadata.get("inspection")
+    if inspection and inspection.get("kind") == "artifact_inspection":
+        return {
+            "architecture": None,
+            "root_graph_id": None,
+            "parameter_count": None,
+            "dimensions": {},
+            "input_names": [],
+            "warnings": metadata.get("analysis_report", {}).get("warnings", []),
+            "limitations": metadata.get("limitations", []),
+            "quality": {
+                "mode": "artifact_inspection",
+                "forward_executed": False,
+                "runtime_trace_available": False,
+            },
+            "partial_reasons": [],
+            "engine_version": metadata.get("engine_version"),
+            "result_status": "inspected",
+            "inspection": {
+                "kind": "artifact_inspection",
+                "reason_code": inspection["reason_code"],
+                "message": inspection["message"],
+                "file_count": len(inspection.get("files", [])),
+                "tensor_count": len(data.get("tensors", {})),
+                "checkpoint_tensor_element_count": metadata.get("checkpoint_tensor_element_count"),
+                "checkpoint_available": inspection.get("checkpoint_available", False),
+            },
+        }
     report = metadata.get("analysis_report", {})
     warnings = list(dict.fromkeys(report.get("warnings", [])))
     quality = {}
@@ -143,6 +171,7 @@ def job_detail(job: Job, summary: dict | None = None) -> dict:
         "dimensions": summary.get("dimensions", {}),
         "input_names": summary.get("input_names", []),
         "cached": job.cached,
+        "inspection": summary.get("inspection"),
     }
 
 
@@ -201,7 +230,14 @@ class JobService:
             window = int(self.clock() // seconds)
             bucket = session.get(RateBucket, (key, window))
             if bucket and bucket.count >= limit:
-                raise ServiceError(429, "rate_limited", "Hourly guest or daily global allowance exhausted")
+                minutes = math.ceil(((window + 1) * seconds - self.clock()) / 60)
+                scope = "Daily shared" if key.startswith("global:") else "Hourly visitor"
+                action_label = "analysis" if action == "jobs" else "AI question"
+                raise ServiceError(
+                    429,
+                    "rate_limited",
+                    f"{scope} {action_label} allowance reached ({limit}). Try again in {max(1, minutes)} minutes.",
+                )
             if bucket:
                 bucket.count += 1
             else:

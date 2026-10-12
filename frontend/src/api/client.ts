@@ -1,5 +1,6 @@
 import type {
   AnalysisDetail,
+  ArtifactInspectionResponse,
   AnalysesResponse,
   ArchitectureGraph,
   Health,
@@ -113,6 +114,11 @@ export const api = {
     }),
   analysis: (id: string, signal?: AbortSignal) =>
     request<AnalysisDetail>(`/analyses/${segment(id)}`, { signal }),
+  artifacts: (id: string, offset = 0, limit = 50, signal?: AbortSignal) =>
+    request<ArtifactInspectionResponse>(
+      `/analyses/${segment(id)}/artifacts?offset=${offset}&limit=${limit}`,
+      { signal },
+    ),
   cancel: (id: string) =>
     request<AnalysisDetail>(`/analyses/${segment(id)}`, { method: "DELETE" }),
   graph: (id: string, graphId: string, signal?: AbortSignal) =>

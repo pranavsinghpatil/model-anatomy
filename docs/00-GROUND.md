@@ -34,6 +34,14 @@ but are never served as application analyses.
 
 Safetensors is tensor evidence, not a computation graph. The reconstruction fuses configuration, executable structure, module hierarchy, graph tracing where possible, source, and tensor metadata. Unknown or untraceable facts stay explicit; the system never fills gaps with plausible architecture.
 
+When native architecture reconstruction is unavailable, the web application may
+return a separate **Artifacts inspected** result. This shows the pinned repository
+file inventory and, where checkpoint selection is unambiguous, verified tensor
+headers. It contains no architecture graph and makes no unique parameter count,
+module ownership, execution-order or semantic-coverage claim. Malformed metadata
+still fails validation. The CLI remains strict unless artifact inspection is
+explicitly requested internally by the web worker.
+
 ## Product sequence
 
 ```text

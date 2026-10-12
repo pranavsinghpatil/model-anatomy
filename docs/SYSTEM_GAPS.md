@@ -30,10 +30,27 @@ Family support and size support are separate
 claims: a successful larger text model says nothing about image/video semantics,
 and a small vision model would not establish large-model capacity.
 
+## Artifact Inspection Is Not Architecture Support
+
+The web worker can return a separate `inspected` result for repositories without
+a supported native architecture, adapter-only repositories, missing Safetensors,
+or checkpoint selection/metadata budget constraints. This preserves the pinned
+file inventory and unambiguous validated tensor headers when available. It does
+not provide a graph, unique model parameter total, module ownership or semantic
+coverage. Malformed metadata and provider failures still fail honestly.
+
+The reported Kolibri-1 revision has 116,303 indexed tensor records, above the
+20,000-record inspection budget; its native architecture is also unavailable in
+the installed Transformers version. Do not promise its full graph or increase
+resource limits without separate validation. The Qwen Image multiple-angles
+repository is a LoRA adapter, not its own complete diffusion pipeline.
+See `test_artifact_inspection_integration.py` for pinned acceptance cases.
+
 ## Actual Bounds
 
-- Model input resolves to an immutable Hugging Face commit and requires `config.json`
-  plus PyTorch-format Safetensors. It does not accept arbitrary model files or
+- Architecture reconstruction resolves to an immutable Hugging Face commit and requires `config.json`
+  plus PyTorch-format Safetensors. Artifact inspection may show file inventory
+  without either, but never infers a graph. It does not accept arbitrary model files or
   load checkpoint tensor payloads. The report explicitly records zero payload
   bytes read. See [artifacts.py](../backend/model_anatomy/src/artifacts.py) and
   [pipeline.py](../backend/model_anatomy/src/pipeline.py).

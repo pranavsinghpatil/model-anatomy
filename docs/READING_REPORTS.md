@@ -32,6 +32,24 @@ and **Warnings** for its specific reasons. Unsupported means the artifact or
 architecture cannot be inspected safely under current policy. Failed, timed out
 and cancelled are unsuccessful jobs, not substitute model reports.
 
+## What Artifacts Inspected Means
+
+**Artifacts inspected** is not a completed architecture and is not a renamed
+partial report. The repository was pinned and its actual files were inspected,
+but the application cannot safely construct its architecture. The page states
+why, and shows verified tensor names, shapes, dtypes and source links when an
+unambiguous Safetensors checkpoint fits the inspection budget. No graph is drawn.
+
+**Checkpoint elements are not unique model parameters.** Adapter tensors,
+quantization scales and repeated storage may be included. The parameter total
+and architecture coverage therefore remain unknown. File presence also does not
+mean every checkpoint header was inspected. JSON, Markdown, audit, diagnostics
+and ZIP exports remain available; Mermaid and architecture questions do not.
+
+To retest an old failed submission after an engine fix, submit its model ID
+again. Existing saved failures are not rewritten into new results. The local
+testing launcher increases the allowance without deleting quota history.
+
 ## Report Checks
 
 | Check | What it measures |

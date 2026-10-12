@@ -115,6 +115,14 @@ class CheckpointMetadata:
         return [request for shard in self.shards.values() for request in shard.requests]
 
 
+class AmbiguousCheckpointError(ArtifactError):
+    """The repository has multiple checkpoint candidates without an authoritative index."""
+
+
+class InspectionBudgetError(ArtifactError):
+    """Well-formed checkpoint metadata exceeded a configured inspection budget."""
+
+
 def _unique_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
     result: dict[str, Any] = {}
     for key, value in pairs:
@@ -135,12 +143,13 @@ def parse_safetensors_header(header_bytes: bytes, file_size: int) -> Safetensors
     if not isinstance(metadata, dict) or not all(isinstance(v, str) for v in metadata.values()):
         raise ArtifactError("Safetensors file metadata must contain strings")
     tensors: dict[str, TensorMetadata] = {}
+    tensor_budget_exceeded = False
     spans = []
     for name, info in header.items():
         if name == "__metadata__":
             continue
         if len(tensors) >= limits.MAX_CHECKPOINT_TENSORS:
-            raise ArtifactError("Checkpoint exceeds the supported tensor record count")
+            tensor_budget_exceeded = True
         if not isinstance(info, dict):
             raise ArtifactError(f"Invalid tensor entry: {name}")
         dtype, shape, offsets = info.get("dtype"), info.get("shape"), info.get("data_offsets")
@@ -155,7 +164,8 @@ def parse_safetensors_header(header_bytes: bytes, file_size: int) -> Safetensors
             or offsets[1] - offsets[0] != prod(shape) * DTYPE_BYTES[dtype]
         ):
             raise ArtifactError(f"Invalid tensor byte offsets: {name}")
-        tensors[name] = TensorMetadata(name, dtype, tuple(shape), prod(shape), tuple(offsets))
+        if not tensor_budget_exceeded:
+            tensors[name] = TensorMetadata(name, dtype, tuple(shape), prod(shape), tuple(offsets))
         spans.append((offsets[0], offsets[1]))
     cursor = 0
     for start, end in sorted(spans):
@@ -164,6 +174,8 @@ def parse_safetensors_header(header_bytes: bytes, file_size: int) -> Safetensors
         cursor = end
     if 8 + len(header_bytes) + cursor != file_size:
         raise ArtifactError("Safetensors header offsets disagree with file size")
+    if tensor_budget_exceeded:
+        raise InspectionBudgetError("Checkpoint exceeds the supported tensor record count")
     return SafetensorsMetadata(
         tensors, metadata, hashlib.sha256(header_bytes).hexdigest(), len(header_bytes), file_size, header
     )
@@ -211,15 +223,13 @@ class MetadataClient:
         if not all(isinstance(item, dict) and isinstance(item.get("rfilename"), str) for item in siblings):
             raise ArtifactError("Hugging Face repository file metadata is invalid")
         files = {item["rfilename"] for item in siblings}
-        if not any(name.endswith((".safetensors", ".safetensors.index.json")) for name in files):
-            raise ArtifactError("Repository has no Safetensors checkpoint; it is outside the target scope")
-        if "config.json" not in files:
-            raise ArtifactError("Repository has no config.json")
         self.repository_files[(reference.model_id, sha)] = files
         return sha
 
     def checkpoint(self, reference: ModelReference, revision: str) -> CheckpointMetadata:
         files = self.repository_files[(reference.model_id, revision)]
+        if not any(name.endswith((".safetensors", ".safetensors.index.json")) for name in files):
+            raise ArtifactError("Repository has no Safetensors checkpoint; it is outside the target scope")
         index_name = "model.safetensors.index.json"
         if reference.filename.endswith(".index.json"):
             index_name = reference.filename
@@ -232,11 +242,9 @@ class MetadataClient:
             mapping = index.get("weight_map")
             if not isinstance(mapping, dict) or not mapping:
                 raise ArtifactError("Safetensors index has no weight_map")
-            if len(mapping) > limits.MAX_CHECKPOINT_TENSORS:
-                raise ArtifactError("Checkpoint index exceeds the supported tensor record count")
-            shard_names = (
-                sorted(set(mapping.values())) if all(isinstance(v, str) for v in mapping.values()) else []
-            )
+            if not all(isinstance(key, str) and isinstance(value, str) for key, value in mapping.items()):
+                raise ArtifactError("Safetensors index has an invalid weight_map")
+            shard_names = sorted(set(mapping.values()))
             if not shard_names or any(
                 name not in files
                 or not name.endswith(".safetensors")
@@ -245,22 +253,24 @@ class MetadataClient:
                 for name in shard_names
             ):
                 raise ArtifactError("Safetensors index references invalid or missing shard files")
+            if len(mapping) > limits.MAX_CHECKPOINT_TENSORS:
+                raise InspectionBudgetError("Checkpoint index exceeds the supported tensor record count")
         else:
             index = None
             filename = reference.filename
             if filename not in files:
                 alternatives = sorted(n for n in files if "/" not in n and n.endswith(".safetensors"))
                 if len(alternatives) != 1:
-                    raise ArtifactError("Cannot select an unambiguous Safetensors checkpoint")
+                    raise AmbiguousCheckpointError("Cannot select an unambiguous Safetensors checkpoint")
                 filename = alternatives[0]
             shard_names = [filename]
             mapping = None
         tensors, shards, tensor_files = {}, {}, {}
         if len(shard_names) > MAX_CHECKPOINT_SHARDS:
-            raise ArtifactError("Checkpoint exceeds the supported shard count")
+            raise InspectionBudgetError("Checkpoint exceeds the supported shard count")
         for filename in shard_names:
             if len(tensors) >= limits.MAX_CHECKPOINT_TENSORS:
-                raise ArtifactError("Checkpoint exceeds the supported tensor record count")
+                raise InspectionBudgetError("Checkpoint exceeds the supported tensor record count")
             shard = self.safetensors(reference.url(filename, revision))
             if shard.metadata.get("format") not in {None, "pt"}:
                 raise ArtifactError("Safetensors checkpoint is not in the PyTorch target scope")
@@ -316,10 +326,12 @@ class MetadataClient:
         audit_start = len(self.audit)
         prefix, file_size = self.range(url, 0, 7)
         length = struct.unpack("<Q", prefix)[0]
-        if length < 2 or length > MAX_HEADER_BYTES or 8 + length > file_size:
-            raise ArtifactError(f"Invalid or excessive Safetensors header length: {length}")
+        if length < 2 or 8 + length > file_size:
+            raise ArtifactError(f"Invalid Safetensors header length: {length}")
+        if length > MAX_HEADER_BYTES:
+            raise InspectionBudgetError("Safetensors header length is excessive for the inspection budget")
         if self.header_bytes_read + length + 8 > MAX_TOTAL_HEADER_BYTES:
-            raise ArtifactError("Checkpoint metadata exceeds the total inspection budget")
+            raise InspectionBudgetError("Checkpoint metadata exceeds the total inspection budget")
         body, second_size = self.range(url, 8, 8 + length - 1)
         self.header_bytes_read += length + 8
         if second_size != file_size:

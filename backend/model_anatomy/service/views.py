@@ -4,6 +4,7 @@ import io
 import json
 import zipfile
 from dataclasses import asdict, replace
+from html import escape
 
 from model_anatomy.src.ir import ModelIR
 from model_anatomy.src.render import mermaid
@@ -22,10 +23,39 @@ def load_ir(data: bytes | str) -> ModelIR:
 
 
 def graph(ir: ModelIR, graph_id: str):
+    if ir.metadata.get("inspection", {}).get("kind") == "artifact_inspection":
+        raise ServiceError(
+            409,
+            "architecture_unavailable",
+            "This report contains verified artifacts, not an architecture graph",
+        )
     for item in ir.root_graph.walk():
         if item.id == graph_id:
             return item
     raise ServiceError(404, "not_found", "Graph not found")
+
+
+def artifact_view(ir: ModelIR, offset: int = 0, limit: int = 50) -> dict:
+    inspection = ir.metadata.get("inspection", {})
+    files = inspection.get("files", ir.metadata.get("artifacts", {}).get("repository_files", []))
+    names = sorted(ir.tensors)
+    tensors = [dict(ir.tensors[name], name=name) for name in names[offset : offset + limit]]
+    return {
+        "kind": inspection.get("kind", "architecture"),
+        "reason_code": inspection.get("reason_code"),
+        "message": inspection.get("message"),
+        "revision": ir.metadata["revision"],
+        "files": files[offset : offset + limit],
+        "file_count": len(files),
+        "tensors": tensors,
+        "tensor_count": len(names),
+        "checkpoint_tensor_element_count": ir.metadata.get("checkpoint_tensor_element_count"),
+        "checkpoint_available": inspection.get("checkpoint_available", bool(tensors)),
+        "source_config": ir.metadata.get("source_config"),
+        "evidence": [asdict(item) for item in ir.evidence],
+        "offset": offset,
+        "limit": limit,
+    }
 
 
 def public_node(node) -> dict:
@@ -86,25 +116,42 @@ def export_files(ir: ModelIR) -> dict[str, bytes]:
     def encode(data):
         return (json.dumps(data, indent=2, sort_keys=True, allow_nan=False) + "\n").encode()
 
-    rendered = mermaid(ir.root_graph)
-    markdown = f"# {ir.model_id}\n\nRevision: `{ir.metadata.get('revision')}`\n\n```mermaid\n{rendered}```\n"
+    inspection = ir.metadata.get("inspection", {})
+    artifacts_only = inspection.get("kind") == "artifact_inspection"
+    rendered = "" if artifacts_only else mermaid(ir.root_graph)
+    markdown = f"# {ir.model_id}\n\nRevision: `{ir.metadata.get('revision')}`\n\n"
+    if artifacts_only:
+        markdown += f"## Architecture unavailable\n\n{inspection['message']}\n\n"
+        markdown += f"Verified tensor records: {len(ir.tensors)}. Tensor elements are not a model parameter count.\n\n"
+        markdown += (
+            "## Repository files\n\n"
+            + "\n".join(
+                "- <code>" + escape(name).replace("\r", "&#13;").replace("\n", "&#10;") + "</code>"
+                for name in inspection.get("files", [])
+            )
+            + "\n"
+        )
+    else:
+        markdown += f"```mermaid\n{rendered}```\n"
     limitations = ir.metadata.get("limitations", [])
     if limitations:
         markdown += "\n## Limitations\n\n" + "\n".join(f"- {value}" for value in limitations) + "\n"
     files = {
         "model.json": ir.to_json().encode(),
-        "root.mmd": rendered.encode(),
         "model.md": markdown.encode(),
         "diagnostics.json": encode(
             {
                 "analysis_report": ir.metadata.get("analysis_report"),
                 "semantic": ir.raw_structure.get("semantic_diagnostics"),
                 "static_flow": ir.raw_structure.get("static_flow_reports"),
+                "inspection": inspection or None,
             }
         ),
         "artifact_audit.json": encode(ir.metadata.get("artifacts", {})),
     }
-    for item in ir.root_graph.walk():
+    if not artifacts_only:
+        files["root.mmd"] = rendered.encode()
+    for item in [] if artifacts_only else ir.root_graph.walk():
         # Archive names are assigned independently of user-controlled graph IDs.
         index = len(files)
         files[f"graphs/{index}.mmd"] = mermaid(item).encode()
@@ -112,6 +159,12 @@ def export_files(ir: ModelIR) -> dict[str, bytes]:
 
 
 def export(ir: ModelIR, format: str) -> tuple[bytes, str, str]:
+    if format == "mermaid" and ir.metadata.get("inspection", {}).get("kind") == "artifact_inspection":
+        raise ServiceError(
+            409,
+            "architecture_unavailable",
+            "No architecture diagram is available for this artifact inspection",
+        )
     files = export_files(ir)
     formats = {
         "json": ("model.json", "application/json"),

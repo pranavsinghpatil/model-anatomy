@@ -417,6 +417,12 @@ h1 {
 .status-partial .status-dot {
   background: #b99642;
 }
+.status-inspected {
+  color: #425b5d;
+}
+.status-inspected .status-dot {
+  background: #718a8d;
+}
 .status-running,
 .status-queued {
   color: var(--violet);
@@ -682,6 +688,16 @@ summary::-webkit-details-marker {
   flex-shrink: 0;
   background: #fcfdfd;
   gap: 8px;
+}
+.artifact-inspection-controls {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  min-height: 39px;
+  padding: 0 16px;
+  border-top: 1px solid var(--border);
+  background: #fcfdfd;
 }
 .breadcrumbs {
   display: flex;
@@ -1877,5 +1893,220 @@ summary::-webkit-details-marker {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     scroll-behavior: auto !important;
+  }
+}
+.artifact-inspection {
+  width: min(100%, 1180px);
+  height: 100%;
+  min-height: 0;
+  margin: 0 auto;
+  padding: 28px clamp(16px, 4vw, 48px) 48px;
+  overflow: auto;
+  background: #fff;
+}
+.artifact-inspection-header,
+.artifact-inspection-title,
+.artifact-inspection-stats,
+.artifact-section-heading,
+.artifact-pagination,
+.artifact-pagination > div {
+  display: flex;
+  align-items: center;
+}
+.artifact-inspection-header {
+  justify-content: space-between;
+  gap: 24px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--border);
+}
+.artifact-inspection-title {
+  align-items: flex-start;
+  gap: 12px;
+  color: #425b5d;
+}
+.artifact-inspection-title h2 {
+  margin: 5px 0 0;
+  color: #282c30;
+  font-size: 20px;
+}
+.artifact-inspection-stats {
+  flex-wrap: wrap;
+  gap: 12px 24px;
+}
+.artifact-inspection-stats > div {
+  display: grid;
+  gap: 4px;
+}
+.artifact-inspection-stats span,
+.artifact-inspection-revision span,
+.artifact-section-heading > span {
+  color: var(--muted);
+  font-size: 11px;
+}
+.artifact-inspection-stats strong {
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+.artifact-inspection-reason {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  padding: 14px 0;
+}
+.artifact-inspection-reason code,
+.artifact-inspection-revision code {
+  color: #425b5d;
+  overflow-wrap: anywhere;
+}
+.artifact-inspection-reason p {
+  margin: 0;
+  line-height: 1.5;
+}
+.artifact-inspection-revision {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 0 0 20px;
+}
+.artifact-section {
+  min-width: 0;
+  margin-top: 16px;
+}
+.artifact-section-heading {
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid var(--border);
+}
+.artifact-section-heading h3 {
+  margin: 0;
+  padding: 10px 0;
+  font-size: 13px;
+}
+.artifact-file-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+  gap: 1px 18px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.artifact-file-list li,
+.artifact-tensor-table td,
+.artifact-tensor-table th {
+  min-width: 0;
+  padding: 9px 8px;
+  text-align: left;
+  vertical-align: top;
+}
+.artifact-file-list a,
+.artifact-tensor-table a {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 6px;
+  color: #176c64;
+  text-decoration: none;
+}
+.artifact-file-list code,
+.artifact-tensor-table code {
+  overflow-wrap: anywhere;
+}
+.artifact-table-wrap {
+  max-width: 100%;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--border);
+}
+.artifact-tensor-table {
+  width: 100%;
+  min-width: 1000px;
+  table-layout: fixed;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.artifact-tensor-table tr > :nth-child(1) {
+  width: 38%;
+}
+.artifact-tensor-table tr > :nth-child(2) {
+  width: 12%;
+}
+.artifact-tensor-table tr > :nth-child(3) {
+  width: 8%;
+}
+.artifact-tensor-table tr > :nth-child(4) {
+  width: 12%;
+}
+.artifact-tensor-table tr > :nth-child(5) {
+  width: 30%;
+}
+.artifact-tensor-table th {
+  border-bottom: 1px solid var(--border);
+  color: #59636a;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.artifact-tensor-table tbody th[scope="row"] {
+  white-space: normal;
+}
+.artifact-tensor-table td {
+  border-bottom: 1px solid #edf0f1;
+  white-space: normal;
+}
+.artifact-tensor-table a {
+  min-width: 0;
+  max-width: 100%;
+}
+.artifact-tensor-table a code,
+.artifact-tensor-table tbody th code {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+.artifact-pagination {
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 0;
+  color: var(--muted);
+}
+.artifact-pagination > div {
+  gap: 8px;
+}
+.artifact-pagination button {
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: #fff;
+}
+.artifact-empty {
+  margin: 10px 8px;
+  color: var(--muted);
+}
+.artifact-source-details {
+  margin-top: 12px;
+  border-top: 1px solid var(--border);
+}
+.artifact-source-details > summary {
+  padding: 12px 0;
+  color: #425b5d;
+  cursor: pointer;
+}
+.artifact-source-details pre {
+  max-width: 100%;
+  overflow: auto;
+}
+@media (max-width: 760px) {
+  .artifact-inspection {
+    padding: 18px 14px 28px;
+  }
+  .artifact-inspection-header {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .artifact-inspection-stats {
+    width: 100%;
+    justify-content: space-between;
+    gap: 12px;
   }
 }

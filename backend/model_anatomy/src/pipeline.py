@@ -11,7 +11,9 @@ from dataclasses import replace
 import requests
 
 from .adapters import adapter_for
-from .artifacts import MetadataClient, parse_reference
+from .artifact_inspection import build_artifact_inspection, has_adapter_tensors
+from .artifacts import AmbiguousCheckpointError, InspectionBudgetError, MetadataClient, parse_reference
+from .errors import UnsupportedModelError
 from .facts import inspect_native_model
 from .hierarchy import HierarchyBuilder
 from .inputs import InputResolver
@@ -27,13 +29,18 @@ def reconstruct(
     client: MetadataClient | None = None,
     revision: str | None = None,
     on_progress: Callable[[str], None] | None = None,
+    allow_artifact_inspection: bool = False,
 ) -> ModelIR:
     """Construct metadata and a semantic hierarchy; never execute forward or load weights."""
     reference = parse_reference(value)
     if client is None:
         with requests.Session() as session:
             return reconstruct(
-                value, client=MetadataClient(session), revision=revision, on_progress=on_progress
+                value,
+                client=MetadataClient(session),
+                revision=revision,
+                on_progress=on_progress,
+                allow_artifact_inspection=allow_artifact_inspection,
             )
     audit_start = len(client.audit)
     progress = on_progress or (lambda stage: None)
@@ -52,12 +59,128 @@ def reconstruct(
     else:
         revision = client.resolve(reference)
     progress("reading_metadata")
-    config_url = reference.url("config.json", revision)
-    config_data = client.json(config_url)
-    config = load_native_config(config_data)
-    checkpoint = client.checkpoint(reference, revision)
+    files = client.repository_files[(reference.model_id, revision)]
+    if reference.explicit_filename and reference.filename not in files:
+        from .errors import ArtifactError
+
+        raise ArtifactError(f"Requested Safetensors artifact is missing: {reference.filename}")
+    config_data = client.json(reference.url("config.json", revision)) if "config.json" in files else None
+    if config_data is None and not allow_artifact_inspection:
+        from .errors import ArtifactError
+
+        raise ArtifactError("Repository has no config.json")
+
+    has_safetensors = any(name.endswith((".safetensors", ".safetensors.index.json")) for name in files)
+    adapter_config = None
+    if allow_artifact_inspection and "adapter_config.json" in files:
+        adapter_config = client.json(reference.url("adapter_config.json", revision))
+
+    config = None
+    native_error = None
+    if config_data is not None:
+        try:
+            config = load_native_config(config_data)
+        except UnsupportedModelError as exc:
+            if not allow_artifact_inspection:
+                raise
+            native_error = exc
+
+    if not has_safetensors:
+        if not allow_artifact_inspection:
+            from .errors import ArtifactError
+
+            raise ArtifactError("Repository has no Safetensors checkpoint; it is outside the target scope")
+        reason = (
+            "adapter_requires_base_model"
+            if adapter_config is not None
+            else "architecture_config_unavailable"
+            if config_data is None
+            else "safetensors_unavailable"
+        )
+        return build_artifact_inspection(
+            reference,
+            revision,
+            files,
+            client.audit,
+            audit_start=audit_start,
+            config_data=config_data,
+            checkpoint=None,
+            reason_code=reason,
+        )
+
+    try:
+        checkpoint = client.checkpoint(reference, revision)
+    except AmbiguousCheckpointError:
+        if not allow_artifact_inspection:
+            raise
+        return build_artifact_inspection(
+            reference,
+            revision,
+            files,
+            client.audit,
+            audit_start=audit_start,
+            config_data=config_data,
+            checkpoint=None,
+            reason_code=(
+                "adapter_requires_base_model"
+                if adapter_config is not None
+                else "checkpoint_selection_required"
+            ),
+        )
+    except InspectionBudgetError:
+        if not allow_artifact_inspection:
+            raise
+        return build_artifact_inspection(
+            reference,
+            revision,
+            files,
+            client.audit,
+            audit_start=audit_start,
+            config_data=config_data,
+            checkpoint=None,
+            reason_code="metadata_budget_exceeded",
+        )
+
+    reason = None
+    if allow_artifact_inspection:
+        reason = (
+            "adapter_requires_base_model"
+            if adapter_config is not None or has_adapter_tensors(checkpoint)
+            else "architecture_config_unavailable"
+            if config_data is None
+            else "native_architecture_unavailable"
+            if native_error is not None
+            else None
+        )
+    if reason is not None:
+        return build_artifact_inspection(
+            reference,
+            revision,
+            files,
+            client.audit,
+            audit_start=audit_start,
+            config_data=config_data,
+            checkpoint=checkpoint,
+            reason_code=reason,
+        )
+
     progress("building_structure")
-    model, selection = instantiate_native(config)
+    try:
+        model, selection = instantiate_native(config)
+    except UnsupportedModelError:
+        if not allow_artifact_inspection:
+            raise
+        return build_artifact_inspection(
+            reference,
+            revision,
+            files,
+            client.audit,
+            audit_start=audit_start,
+            config_data=config_data,
+            checkpoint=checkpoint,
+            reason_code="native_architecture_unavailable",
+        )
+    config_url = reference.url("config.json", revision)
     raw = inspect_native_model(model, checkpoint)
     adapter = adapter_for(config.model_type)
     if adapter:
@@ -95,6 +218,7 @@ def reconstruct(
         for name, shard in checkpoint.shards.items()
     }
     artifact_data = {
+        "repository_files": sorted(files),
         "config_url": config_url,
         "config_canonical_sha256": hashlib.sha256(
             json.dumps(config_data, sort_keys=True).encode()

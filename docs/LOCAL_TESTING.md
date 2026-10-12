@@ -22,6 +22,18 @@ per day. Cached submissions also consume an admission. Visitor jobs expire after
 24 hours; reusable cache entries last seven days. An expired link is not a broken
 engine and must not display another visitor's or a replacement report.
 
+For manual exploration beyond those defaults, stop the existing API, worker and frontend
+and run `powershell -ExecutionPolicy Bypass -File scripts/start-local.ps1` from
+the repository root. The script starts hidden local processes, preserves the
+existing `.local/app-v1` database and reports, and applies bounded local limits:
+100 jobs per visitor/hour, 500 jobs globally/day, 100 AI questions per
+visitor/hour, and 500 AI questions globally/day. Parameters may set each limit
+from 1 to 1,000. It refuses to attach to listeners already using ports 8001/5173 or a
+running worker lease, because those processes cannot receive new settings. Existing
+quota records are preserved and continue to count until their normal windows
+expire. The regular settings defaults remain 2/20 jobs and 10/100 AI questions.
+Launcher logs are written to `.local/app-v1/local-testing/`.
+
 ## Expected Facts
 
 These counts are verified at the pinned revisions in the committed engine tests.

@@ -220,3 +220,22 @@ The user does not yet have cloud credentials. Local validation must remain usabl
 without them. Deployment preparation and a real visitor-owned benchmark can be
 reviewed now; Supabase, Nebius/NVIDIA inference, HTTPS and hosted load/recovery
 verification remain explicit release blockers until setup and real checks occur.
+
+## D-025 - Verified artifact inspection is distinct from architecture reconstruction
+**2026-10-12 - accepted by user**
+
+The user approved showing verified artifact inspection when architecture support
+is unavailable, with no invented graph. Add a terminal `inspected` outcome,
+separate from completed/partial architecture reports. Pin the repository revision,
+list its actual files, and read bounded Safetensors headers only when checkpoint
+selection is unambiguous. Do not execute custom model code, fetch weights, infer
+dataflow from tensor names, or equate tensor elements with unique model parameters.
+Missing format/configuration and unsupported native classes may produce this
+explicit result; malformed configuration, corrupt headers and transport failures
+remain failures. Graphs, diagram exports and architecture questions are unavailable
+for these reports; verified artifacts and non-diagram exports remain accessible
+only to the owning visitor. Keep the CLI strict and invalidate engine cache identity.
+
+Use an explicit local launcher profile with bounded higher allowances for manual
+testing. Do not clear rate records, replace visitor identity, or weaken deployment
+defaults. Keep support claims tied to fresh pinned model evidence.

@@ -424,7 +424,7 @@ test("exports JSON and ZIP through the authenticated API", async ({ page }) => {
   await mockService(page);
   await page.goto("/");
   await expect(page.getByTestId("graph-canvas")).toBeVisible();
-  for (const label of ["Architecture JSON", "Complete ZIP"]) {
+  for (const label of ["Report JSON", "Complete ZIP"]) {
     await page.getByLabel("Export analysis", { exact: true }).click();
     await expect
       .poll(async () => {

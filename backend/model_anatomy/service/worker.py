@@ -16,6 +16,7 @@ from dataclasses import replace
 from uuid import uuid4
 
 from model_anatomy.api.settings import Settings
+from model_anatomy.src.errors import AnatomyError, ArtifactError, UnsupportedModelError
 
 from .database import Job
 from .errors import ServiceError
@@ -100,7 +101,7 @@ def child_main(settings: Settings, job_id: str, owner: str) -> None:
         def reconstruct(*args, **kwargs):
             from model_anatomy.src.pipeline import reconstruct as engine_reconstruct
 
-            return engine_reconstruct(*args, **kwargs)
+            return engine_reconstruct(*args, **kwargs, allow_artifact_inspection=True)
 
         with requests.Session() as session:
             execute_job(service, job_id, owner, MetadataClient(session), reconstruct, parse_reference)
@@ -137,14 +138,14 @@ def classify_failure(exc: BaseException) -> tuple[str, str, str, bool]:
             "failed",
             status in {429, 502, 503, 504},
         )
-    if type(exc).__name__ == "UnsupportedModelError":
+    if isinstance(exc, UnsupportedModelError):
         return (
             "unsupported_model",
             "Model is outside the engine's supported native scope",
             "unsupported",
             False,
         )
-    if type(exc).__name__ in {"ArtifactError", "AnatomyError"}:
+    if isinstance(exc, (ArtifactError, AnatomyError)):
         return "invalid_artifacts", "Artifacts are unsupported, malformed, or inconsistent", "failed", False
     return (
         "reconstruction_failed",

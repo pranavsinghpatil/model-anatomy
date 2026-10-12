@@ -91,7 +91,11 @@ def test_pipeline_emits_valid_inspectable_report_without_weights(tiny_model):
     assert ir.metadata["analysis_report"]["forward_executed"] is False
     assert ir.metadata["analysis_report"]["checkpoint_parameter_coverage"] == 1
     assert stages == [
-        "resolving", "reading_metadata", "building_structure", "analyzing_components", "validating"
+        "resolving",
+        "reading_metadata",
+        "building_structure",
+        "analyzing_components",
+        "validating",
     ]
     assert ModelIR.from_json(ir.to_json()).to_dict() == ir.to_dict()
     assert "flowchart TD" in mermaid(ir.root_graph)
@@ -124,7 +128,8 @@ def test_native_vision_metadata_and_component_views_keep_ownership():
     assert component["node"]["kind"] == "classifier"
     assert component["node"]["parameter_count"] == 250
     assert [tensor["name"] for tensor in component["tensors"]] == [
-        "classifier.bias", "classifier.weight",
+        "classifier.bias",
+        "classifier.weight",
     ]
     assert all(tensor["parameter_refs"] for tensor in component["tensors"])
     assert ModelIR.from_json(ir.to_json()).to_dict() == ir.to_dict()

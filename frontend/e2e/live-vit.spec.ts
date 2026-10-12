@@ -74,7 +74,7 @@ test("live ViT patches, CLS selection and tensor inspection", async ({
   await checks.locator("summary").click();
   await page.getByTestId("analysis-scope").locator("summary").click();
   const report = await (await page.request.get(`${path}/exports/json`)).json();
-  expect(report.metadata.engine_version).toBe("2026.10.12.2");
+  expect(report.metadata.engine_version).toMatch(/^\d{4}\.\d{2}\.\d{2}\.\d+$/);
   expect(report.metadata.engine_version).toBe(result.engine_version);
   expect(report.metadata.artifacts.weight_payload_bytes_read).toBe(0);
   const root = (await (

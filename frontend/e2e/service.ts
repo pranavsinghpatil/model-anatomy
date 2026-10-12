@@ -5,6 +5,7 @@ import type {
   AnalysisDetail,
   AnalysisSummary,
   ArchitectureGraph,
+  ArtifactInspectionResponse,
   Evidence,
   GraphNode,
   Health,
@@ -97,6 +98,7 @@ export type Scenario = {
   pollComplete?: boolean;
   symbolic?: boolean;
   paginated?: boolean;
+  artifactPages?: ArtifactInspectionResponse[];
 };
 export async function mockService(page: Page, scenario: Scenario = {}) {
   const requests: { method: string; path: string; body: unknown }[] = [];
@@ -180,6 +182,15 @@ export async function mockService(page: Page, scenario: Scenario = {}) {
     }
     if (id !== "job-test") return error(404, "not_found", "Analysis not found");
     const collection = graphMap(artifact.root_graph);
+    if (parts[2] === "artifacts") {
+      const offset = Number(url.searchParams.get("offset") ?? 0);
+      const page = scenario.artifactPages?.find(
+        (item) => item.offset === offset,
+      );
+      if (!page)
+        return error(404, "not_found", "Artifact page fixture not found");
+      return json(page);
+    }
     if (parts[2] === "graphs") {
       if (scenario.graphError)
         return error(503, "graph_unavailable", "Stored graph unavailable");

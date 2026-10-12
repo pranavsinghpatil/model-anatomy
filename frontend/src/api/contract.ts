@@ -1,8 +1,11 @@
 import type { components } from "./generated";
 
+export type InspectionSummary = components["schemas"]["InspectionSummary"];
+export type ArtifactInspectionResponse =
+  components["schemas"]["ArtifactInspectionResponse"];
 export type AnalysisDetail = components["schemas"]["AnalysisDetail"];
 export type AnalysisSummary = components["schemas"]["AnalysisSummary"];
-export type AnalysisStatus = AnalysisDetail["status"];
+export type AnalysisStatus = components["schemas"]["AnalysisDetail"]["status"];
 export type Evidence = components["schemas"]["Evidence"];
 export type TensorSpec = components["schemas"]["TensorSpec"];
 export type Dimension = NonNullable<TensorSpec["shape"]>[number];

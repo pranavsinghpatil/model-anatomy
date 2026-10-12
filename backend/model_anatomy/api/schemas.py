@@ -46,7 +46,15 @@ class Question(BaseModel):
 
 
 AnalysisStatus = Literal[
-    "queued", "running", "completed", "partial", "unsupported", "failed", "timed_out", "cancelled"
+    "queued",
+    "running",
+    "completed",
+    "partial",
+    "inspected",
+    "unsupported",
+    "failed",
+    "timed_out",
+    "cancelled",
 ]
 EvidenceKind = Literal["direct", "derived", "reconstructed", "unknown"]
 
@@ -75,6 +83,16 @@ class AnalysisQuality(BaseModel):
     mode: str | None = None
 
 
+class InspectionSummary(BaseModel):
+    kind: Literal["artifact_inspection"]
+    reason_code: str
+    message: str
+    file_count: int
+    tensor_count: int
+    checkpoint_tensor_element_count: int | None
+    checkpoint_available: bool
+
+
 class AnalysisDetail(BaseModel):
     id: str
     model_id: str
@@ -95,6 +113,7 @@ class AnalysisDetail(BaseModel):
     cached: bool
     dimensions: Dimensions
     input_names: list[str] = Field(default_factory=list)
+    inspection: InspectionSummary | None = None
 
 
 class AnalysisSummary(AnalysisDetail):
@@ -170,6 +189,23 @@ class TensorRecord(BaseModel):
     role: str | None = None
     evidence_kind: EvidenceKind | None = None
     role_evidence_kind: EvidenceKind | None = None
+
+
+class ArtifactInspectionResponse(BaseModel):
+    kind: Literal["artifact_inspection", "architecture"]
+    reason_code: str | None
+    message: str | None
+    revision: str
+    files: list[str]
+    file_count: int
+    tensors: list[TensorRecord]
+    tensor_count: int
+    checkpoint_tensor_element_count: int | None
+    checkpoint_available: bool
+    source_config: dict[str, Any] | None
+    evidence: list[Evidence]
+    offset: int
+    limit: int
 
 
 class NodeInspection(BaseModel):

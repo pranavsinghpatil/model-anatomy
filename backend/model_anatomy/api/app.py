@@ -16,11 +16,12 @@ from starlette.exceptions import HTTPException
 from model_anatomy.service.ai import ExplanationService
 from model_anatomy.service.errors import ServiceError
 from model_anatomy.service.jobs import JobService
-from model_anatomy.service.views import export, graph_view, load_ir, node_view
+from model_anatomy.service.views import artifact_view, export, graph_view, load_ir, node_view
 
 from .schemas import (
     AnalysesResponse,
     AnalysisDetail,
+    ArtifactInspectionResponse,
     CreateAnalysis,
     ErrorResponse,
     GraphResponse,
@@ -70,7 +71,7 @@ def create_app(settings: Settings | None = None, *, service=None, explanation=No
         docs_url="/docs" if config.docs_enabled else None,
         redoc_url=None,
         openapi_url="/openapi.json" if config.docs_enabled else None,
-        responses={status: {"model": ErrorResponse} for status in (404, 410, 422, 429, 503)},
+        responses={status: {"model": ErrorResponse} for status in (404, 409, 410, 422, 429, 503)},
     )
     app.state.service_ready = False
     app.state.jobs = jobs
@@ -114,7 +115,7 @@ def create_app(settings: Settings | None = None, *, service=None, explanation=No
 
     def artifact(request: Request, analysis_id: str):
         job = jobs.get(analysis_id, guest(request))
-        if job.status not in {"completed", "partial"} or not job.blob_digest:
+        if job.status not in {"completed", "partial", "inspected"} or not job.blob_digest:
             raise ServiceError(503, "analysis_not_ready", "Analysis metadata is not available yet")
         return load_ir(jobs.storage.get(job.blob_digest))
 
@@ -247,6 +248,15 @@ def create_app(settings: Settings | None = None, *, service=None, explanation=No
     def get_analysis(analysis_id: str, request: Request):
         return detail(request, analysis_id)
 
+    @app.get("/api/v1/analyses/{analysis_id}/artifacts", response_model=ArtifactInspectionResponse)
+    def get_artifacts(
+        analysis_id: str,
+        request: Request,
+        offset: int = Query(default=0, ge=0),
+        limit: int = Query(default=50, ge=1, le=100),
+    ):
+        return artifact_view(artifact(request, analysis_id), offset, limit)
+
     @app.delete("/api/v1/analyses/{analysis_id}", response_model=AnalysisDetail)
     def cancel_analysis(analysis_id: str, request: Request):
         return jobs.cancel(analysis_id, guest(request))
@@ -276,6 +286,12 @@ def create_app(settings: Settings | None = None, *, service=None, explanation=No
     @app.post("/api/v1/analyses/{analysis_id}/questions", response_model=QuestionAnswer)
     def ask(analysis_id: str, body: Question, request: Request):
         ir = artifact(request, analysis_id)
+        if ir.metadata.get("inspection", {}).get("kind") == "artifact_inspection":
+            raise ServiceError(
+                409,
+                "architecture_unavailable",
+                "Architecture explanations require a reconstructed architecture; verified artifacts remain available",
+            )
         if not ai.available:
             raise ServiceError(
                 503, "ai_unavailable", "Set NEBIUS_API_KEY and NEBIUS_MODEL to enable explanations"

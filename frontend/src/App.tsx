@@ -31,13 +31,14 @@ import {
   Warnings,
 } from "./components/Common";
 import { Inspector, matchesCitation } from "./components/Inspector";
+import { ArtifactInspection } from "./components/ArtifactInspection";
 import { Questions } from "./components/Questions";
 import { GraphCanvas } from "./graph/GraphCanvas";
 
 type Crumb = { id: string; label: string };
 type Panel = "graph" | "details" | "questions";
 const exportFormats: { format: ExportFormat; label: string }[] = [
-  { format: "json", label: "Architecture JSON" },
+  { format: "json", label: "Report JSON" },
   { format: "zip", label: "Complete ZIP" },
   { format: "mermaid", label: "Mermaid" },
   { format: "markdown", label: "Markdown" },
@@ -97,8 +98,12 @@ export function App() {
       pending(query.state.data?.status) ? 1500 : false,
   });
   const detail = analysis.data;
-  const graphId = path.at(-1)?.id ?? detail?.root_graph_id ?? null;
+  const artifactInspection = detail?.status === "inspected";
+  const graphId = artifactInspection
+    ? null
+    : (path.at(-1)?.id ?? detail?.root_graph_id ?? null);
   const ready = graphReady(detail?.status) && !analysis.error;
+  const canExport = ready || artifactInspection;
   const graph = useQuery({
     queryKey: ["graph", analysisId, graphId],
     queryFn: ({ signal }) => api.graph(analysisId!, graphId!, signal),
@@ -270,17 +275,19 @@ export function App() {
     ? "No analysis selected"
     : pending(detail?.status)
       ? "Analyzing model"
-      : detail?.status === "partial"
-        ? "Partial analysis has no graph"
-        : detail?.status === "completed"
-          ? "No graph returned"
-          : detail?.status === "unsupported"
-            ? "Unsupported architecture"
-            : detail?.status === "cancelled"
-              ? "Analysis cancelled"
-              : detail?.status === "timed_out"
-                ? "Analysis timed out"
-                : "Architecture unavailable";
+      : detail?.status === "inspected"
+        ? "Architecture unavailable"
+        : detail?.status === "partial"
+          ? "Partial analysis has no graph"
+          : detail?.status === "completed"
+            ? "No graph returned"
+            : detail?.status === "unsupported"
+              ? "Unsupported architecture"
+              : detail?.status === "cancelled"
+                ? "Analysis cancelled"
+                : detail?.status === "timed_out"
+                  ? "Analysis timed out"
+                  : "Architecture unavailable";
   const inspect = (node: GraphNode) => {
     setSelectedNodeId(node.id);
     setCitation(null);
@@ -446,7 +453,9 @@ export function App() {
                 <div>
                   <span className="eyebrow">
                     {detail
-                      ? (detail.architecture ?? "Architecture unknown")
+                      ? artifactInspection
+                        ? "Artifacts inspected"
+                        : (detail.architecture ?? "Architecture unknown")
                       : "Workspace"}
                   </span>
                   <h1>{detail?.model_id ?? "Model Anatomy"}</h1>
@@ -485,9 +494,9 @@ export function App() {
                   <summary
                     aria-label="Export analysis"
                     title="Export analysis"
-                    aria-disabled={!ready || exporting !== null}
+                    aria-disabled={!canExport || exporting !== null}
                     onClick={(event) => {
-                      if (!ready || exporting) event.preventDefault();
+                      if (!canExport || exporting) event.preventDefault();
                     }}
                   >
                     {exporting ? (
@@ -498,21 +507,26 @@ export function App() {
                     <ChevronDown size={12} />
                   </summary>
                   <div className="export-options" style={exportPosition}>
-                    {exportFormats.map((item) => (
-                      <button
-                        key={item.format}
-                        disabled={!ready || exporting !== null}
-                        onClick={() => void download(item.format)}
-                      >
-                        <Download size={13} />
-                        {item.label}
-                      </button>
-                    ))}
+                    {exportFormats
+                      .filter(
+                        (item) =>
+                          !artifactInspection || item.format !== "mermaid",
+                      )
+                      .map((item) => (
+                        <button
+                          key={item.format}
+                          disabled={!canExport || exporting !== null}
+                          onClick={() => void download(item.format)}
+                        >
+                          <Download size={13} />
+                          {item.label}
+                        </button>
+                      ))}
                   </div>
                 </details>
               </div>
             </div>
-            {detail && (
+            {detail && !artifactInspection && (
               <div className="model-metrics">
                 <div>
                   <span>Parameters</span>
@@ -568,7 +582,7 @@ export function App() {
                     : ""}
                 </div>
               )}
-              {detail && (
+              {detail && !artifactInspection && (
                 <details
                   className="analysis-report"
                   data-testid="report-checks"
@@ -662,6 +676,7 @@ export function App() {
                 </details>
               )}
               {detail &&
+                !artifactInspection &&
                 (detail.engine_version ||
                   (detail.limitations?.length ?? 0) > 0) && (
                   <details
@@ -695,71 +710,83 @@ export function App() {
             {cancel.error && <ErrorNotice error={cancel.error} />}
             {exportError && <ErrorNotice error={exportError} />}
           </div>
-          <div className="graph-toolbar">
-            <nav className="breadcrumbs" aria-label="Graph breadcrumb">
-              {breadcrumb.map((crumb, index) => (
-                <span key={`${crumb.id}:${index}`}>
-                  {index > 0 && <ChevronRight size={13} />}
-                  <button
-                    aria-current={
-                      index === breadcrumb.length - 1 ? "page" : undefined
-                    }
-                    onClick={() => {
-                      setPath(breadcrumb.slice(0, index + 1));
-                      setSelectedNodeId(null);
-                      setCitation(null);
-                      setInspectorOpen(false);
-                    }}
-                  >
-                    {crumb.label}
-                  </button>
-                </span>
-              ))}
-            </nav>
-            {path.length > 1 && (
-              <button
-                className="collapse-button"
-                onClick={() => {
-                  setPath((value) => value.slice(0, -1));
-                  setSelectedNodeId(null);
-                  setCitation(null);
-                  setInspectorOpen(false);
-                }}
-              >
-                <Layers size={14} />
-                Collapse
-                <ArrowRight size={12} />
-              </button>
-            )}
-            <div className="panel-controls">
-              <IconButton
-                label="Model questions"
-                aria-pressed={inspectorOpen && rightTab === "questions"}
-                onClick={() => {
-                  setRightTab("questions");
-                  setInspectorOpen(true);
-                  setPanel("questions");
-                }}
-              >
-                <MessageSquare size={16} />
-              </IconButton>
-              <IconButton
-                label={
-                  inspectorOpen ? "Close analysis panel" : "Open analysis panel"
-                }
-                aria-expanded={inspectorOpen}
-                onClick={() => {
-                  setInspectorOpen((value) => !value);
-                  setRightTab("details");
-                  setPanel("details");
-                }}
-              >
-                <PanelRightOpen size={16} />
-              </IconButton>
+          {!artifactInspection && (
+            <div className="graph-toolbar">
+              <nav className="breadcrumbs" aria-label="Graph breadcrumb">
+                {breadcrumb.map((crumb, index) => (
+                  <span key={`${crumb.id}:${index}`}>
+                    {index > 0 && <ChevronRight size={13} />}
+                    <button
+                      aria-current={
+                        index === breadcrumb.length - 1 ? "page" : undefined
+                      }
+                      onClick={() => {
+                        setPath(breadcrumb.slice(0, index + 1));
+                        setSelectedNodeId(null);
+                        setCitation(null);
+                        setInspectorOpen(false);
+                      }}
+                    >
+                      {crumb.label}
+                    </button>
+                  </span>
+                ))}
+              </nav>
+              {path.length > 1 && (
+                <button
+                  className="collapse-button"
+                  onClick={() => {
+                    setPath((value) => value.slice(0, -1));
+                    setSelectedNodeId(null);
+                    setCitation(null);
+                    setInspectorOpen(false);
+                  }}
+                >
+                  <Layers size={14} />
+                  Collapse
+                  <ArrowRight size={12} />
+                </button>
+              )}
+              <div className="panel-controls">
+                <IconButton
+                  label="Model questions"
+                  aria-pressed={inspectorOpen && rightTab === "questions"}
+                  onClick={() => {
+                    setRightTab("questions");
+                    setInspectorOpen(true);
+                    setPanel("questions");
+                  }}
+                >
+                  <MessageSquare size={16} />
+                </IconButton>
+                <IconButton
+                  label={
+                    inspectorOpen
+                      ? "Close analysis panel"
+                      : "Open analysis panel"
+                  }
+                  aria-expanded={inspectorOpen}
+                  onClick={() => {
+                    setInspectorOpen((value) => !value);
+                    setRightTab("details");
+                    setPanel("details");
+                  }}
+                >
+                  <PanelRightOpen size={16} />
+                </IconButton>
+              </div>
             </div>
-          </div>
+          )}
           <div className="canvas-area">
-            {analysis.error ? (
+            {artifactInspection && analysisId ? (
+              <ArtifactInspection
+                key={analysisId}
+                analysisId={analysisId}
+                modelId={detail.model_id}
+                revision={detail.revision}
+                summary={detail.inspection}
+              />
+            ) : analysis.error ? (
               <div className="canvas-state">
                 <ErrorNotice
                   error={analysis.error}
@@ -799,19 +826,44 @@ export function App() {
               </div>
             )}
           </div>
-          <footer className="graph-footer">
-            <span>
-              <span className="legend-line" />
-              Dataflow
-            </span>
-            <span>
-              <span className="legend-line relation" />
-              Structural relation
-            </span>
-            <span className="footer-id" title={graphId ?? ""}>
-              {graphId ?? "No graph"}
-            </span>
-          </footer>
+          {artifactInspection && (
+            <div className="artifact-inspection-controls">
+              <IconButton
+                label="Questions unavailable for artifact inspection"
+                disabled
+              >
+                <MessageSquare size={16} />
+              </IconButton>
+              <IconButton
+                label={
+                  inspectorOpen ? "Close analysis panel" : "Open analysis panel"
+                }
+                aria-expanded={inspectorOpen}
+                onClick={() => {
+                  setInspectorOpen((value) => !value);
+                  setRightTab("details");
+                  setPanel("details");
+                }}
+              >
+                <PanelRightOpen size={16} />
+              </IconButton>
+            </div>
+          )}
+          {!artifactInspection && (
+            <footer className="graph-footer">
+              <span>
+                <span className="legend-line" />
+                Dataflow
+              </span>
+              <span>
+                <span className="legend-line relation" />
+                Structural relation
+              </span>
+              <span className="footer-id" title={graphId ?? ""}>
+                {graphId ?? "No graph"}
+              </span>
+            </footer>
+          )}
         </main>
         <aside
           className={`right-panel right-${rightTab} ${inspectorOpen ? "is-open" : ""}`}
@@ -833,6 +885,12 @@ export function App() {
               <button
                 role="tab"
                 aria-selected={rightTab === "questions"}
+                disabled={artifactInspection}
+                title={
+                  artifactInspection
+                    ? "Questions unavailable for artifact inspection"
+                    : undefined
+                }
                 onClick={() => setRightTab("questions")}
               >
                 <MessageSquare size={15} />
@@ -878,6 +936,11 @@ export function App() {
                 nodeId={selectedNodeId ?? undefined}
                 nodeLabel={selectedNode?.label}
                 ready={ready}
+                disabledReason={
+                  artifactInspection
+                    ? "Questions unavailable for artifact inspection"
+                    : undefined
+                }
                 available={serviceHealth?.ai_available === true}
                 jump={jumpCitation}
               />
@@ -894,7 +957,11 @@ export function App() {
       <nav className="mobile-tabs" aria-label="Workspace views">
         {(
           [
-            { id: "graph", icon: Network, label: "Graph" },
+            {
+              id: "graph",
+              icon: artifactInspection ? FileSearch : Network,
+              label: artifactInspection ? "Artifacts" : "Graph",
+            },
             { id: "details", icon: FileSearch, label: "Details" },
             { id: "questions", icon: MessageSquare, label: "Questions" },
           ] as const
@@ -902,6 +969,12 @@ export function App() {
           <button
             key={item.id}
             aria-current={panel === item.id ? "page" : undefined}
+            disabled={artifactInspection && item.id === "questions"}
+            title={
+              artifactInspection && item.id === "questions"
+                ? "Questions unavailable for artifact inspection"
+                : undefined
+            }
             onClick={() => {
               setPanel(item.id);
               if (item.id !== "graph") setRightTab(item.id);

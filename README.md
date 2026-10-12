@@ -23,6 +23,11 @@ an interactive nested graph and tensor inspector, exports, and an evidence-bound
 Nemotron explanation integration. Hosted operation still requires cloud setup
 and deployment verification; configured integration is not live inference evidence.
 
+Repositories whose architecture cannot be reconstructed can return a distinct
+**Artifacts inspected** result with pinned files and verified tensor headers,
+never a guessed graph or model parameter total. See
+[artifact acceptance and retesting](docs/ARTIFACT_INSPECTION_ACCEPTANCE.md).
+
 ## Inspect a model
 
 ```powershell
@@ -54,6 +59,17 @@ cd frontend
 npm ci
 npm run dev
 ```
+
+For manual testing with higher local quotas, stop the existing API, worker and frontend,
+then run `powershell -ExecutionPolicy Bypass -File scripts/start-local.ps1`.
+It starts the API, worker, and frontend in hidden windows, uses
+the existing `.local/app-v1` data, and writes logs beneath that directory. The
+local profile allows up to 100 jobs per visitor/hour, 500 jobs globally/day,
+100 AI questions per visitor/hour, and 500 AI questions globally/day. Each
+limit can be lowered or raised up to 1,000 with the script parameters. This
+does not change the normal 2/20 job and 10/100 AI defaults. The script refuses
+to reuse listeners on ports 8001/5173 or an active worker lease, since those processes would
+keep their current settings; it does not stop processes or clear quota records.
 
 Open [the application](http://127.0.0.1:5173) or [API docs](http://127.0.0.1:8001/docs).
 No sign-in is required. There are no prepared reports or demo endpoints: paste

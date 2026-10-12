@@ -60,6 +60,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/analyses/{analysis_id}/artifacts": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get Artifacts */
+    get: operations["get_artifacts_api_v1_analyses__analysis_id__artifacts_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/analyses/{analysis_id}/graphs/{graph_id}": {
     parameters: {
       query?: never;
@@ -156,6 +173,7 @@ export interface components {
         | "running"
         | "completed"
         | "partial"
+        | "inspected"
         | "unsupported"
         | "failed"
         | "timed_out"
@@ -185,6 +203,7 @@ export interface components {
       dimensions: components["schemas"]["Dimensions"];
       /** Input Names */
       input_names?: string[];
+      inspection?: components["schemas"]["InspectionSummary"] | null;
     };
     /** AnalysisError */
     AnalysisError: {
@@ -233,6 +252,7 @@ export interface components {
         | "running"
         | "completed"
         | "partial"
+        | "inspected"
         | "unsupported"
         | "failed"
         | "timed_out"
@@ -262,6 +282,43 @@ export interface components {
       dimensions: components["schemas"]["Dimensions"];
       /** Input Names */
       input_names?: string[];
+      inspection?: components["schemas"]["InspectionSummary"] | null;
+    };
+    /** ArtifactInspectionResponse */
+    ArtifactInspectionResponse: {
+      /**
+       * Kind
+       * @enum {string}
+       */
+      kind: "artifact_inspection" | "architecture";
+      /** Reason Code */
+      reason_code: string | null;
+      /** Message */
+      message: string | null;
+      /** Revision */
+      revision: string;
+      /** Files */
+      files: string[];
+      /** File Count */
+      file_count: number;
+      /** Tensors */
+      tensors: components["schemas"]["TensorRecord"][];
+      /** Tensor Count */
+      tensor_count: number;
+      /** Checkpoint Tensor Element Count */
+      checkpoint_tensor_element_count: number | null;
+      /** Checkpoint Available */
+      checkpoint_available: boolean;
+      /** Source Config */
+      source_config: {
+        [key: string]: unknown;
+      } | null;
+      /** Evidence */
+      evidence: components["schemas"]["Evidence"][];
+      /** Offset */
+      offset: number;
+      /** Limit */
+      limit: number;
     };
     /** Citation */
     Citation: {
@@ -425,6 +482,26 @@ export interface components {
       /** Worker */
       worker: boolean;
     };
+    /** InspectionSummary */
+    InspectionSummary: {
+      /**
+       * Kind
+       * @constant
+       */
+      kind: "artifact_inspection";
+      /** Reason Code */
+      reason_code: string;
+      /** Message */
+      message: string;
+      /** File Count */
+      file_count: number;
+      /** Tensor Count */
+      tensor_count: number;
+      /** Checkpoint Tensor Element Count */
+      checkpoint_tensor_element_count: number | null;
+      /** Checkpoint Available */
+      checkpoint_available: boolean;
+    };
     /** NodeInspection */
     NodeInspection: {
       /** Graph Id */
@@ -548,6 +625,15 @@ export interface operations {
           "application/json": components["schemas"]["ErrorResponse"];
         };
       };
+      /** @description Conflict */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
       /** @description Gone */
       410: {
         headers: {
@@ -606,6 +692,15 @@ export interface operations {
       };
       /** @description Not Found */
       404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Conflict */
+      409: {
         headers: {
           [name: string]: unknown;
         };
@@ -682,6 +777,15 @@ export interface operations {
           "application/json": components["schemas"]["ErrorResponse"];
         };
       };
+      /** @description Conflict */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
       /** @description Gone */
       410: {
         headers: {
@@ -742,6 +846,15 @@ export interface operations {
       };
       /** @description Not Found */
       404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Conflict */
+      409: {
         headers: {
           [name: string]: unknown;
         };
@@ -816,6 +929,94 @@ export interface operations {
           "application/json": components["schemas"]["ErrorResponse"];
         };
       };
+      /** @description Conflict */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Gone */
+      410: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Unprocessable Entity */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Too Many Requests */
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Service Unavailable */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  get_artifacts_api_v1_analyses__analysis_id__artifacts_get: {
+    parameters: {
+      query?: {
+        offset?: number;
+        limit?: number;
+      };
+      header?: never;
+      path: {
+        analysis_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ArtifactInspectionResponse"];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Conflict */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
       /** @description Gone */
       410: {
         headers: {
@@ -877,6 +1078,15 @@ export interface operations {
       };
       /** @description Not Found */
       404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Conflict */
+      409: {
         headers: {
           [name: string]: unknown;
         };
@@ -956,6 +1166,15 @@ export interface operations {
           "application/json": components["schemas"]["ErrorResponse"];
         };
       };
+      /** @description Conflict */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
       /** @description Gone */
       410: {
         headers: {
@@ -1017,6 +1236,15 @@ export interface operations {
       };
       /** @description Not Found */
       404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Conflict */
+      409: {
         headers: {
           [name: string]: unknown;
         };
@@ -1088,6 +1316,15 @@ export interface operations {
       };
       /** @description Not Found */
       404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Conflict */
+      409: {
         headers: {
           [name: string]: unknown;
         };

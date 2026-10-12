@@ -13,6 +13,7 @@ export function Questions({
   nodeLabel,
   available,
   ready,
+  disabledReason,
   jump,
 }: {
   analysisId: string;
@@ -21,6 +22,7 @@ export function Questions({
   nodeLabel?: string;
   available?: boolean;
   ready: boolean;
+  disabledReason?: string;
   jump: (citation: Citation) => Promise<void>;
 }) {
   const [question, setQuestion] = useState("");
@@ -42,7 +44,8 @@ export function Questions({
       setQuestion("");
     },
   });
-  const disabled = available === false || !ready || ask.isPending;
+  const disabled =
+    Boolean(disabledReason) || available === false || !ready || ask.isPending;
   return (
     <div className="questions" data-testid="questions">
       <div className="question-context">
@@ -55,11 +58,13 @@ export function Questions({
             <MessageSquare size={26} />
             <strong>Questions about this model</strong>
             <p>
-              {available === false
-                ? "AI service unavailable"
-                : !ready
-                  ? "Waiting for analysis"
-                  : "No questions yet"}
+              {disabledReason
+                ? disabledReason
+                : available === false
+                  ? "AI service unavailable"
+                  : !ready
+                    ? "Waiting for analysis"
+                    : "No questions yet"}
             </p>
           </div>
         )}
@@ -143,9 +148,11 @@ export function Questions({
         <textarea
           id="question-input"
           placeholder={
-            available === false
-              ? "AI service unavailable"
-              : "Ask about this model..."
+            disabledReason
+              ? disabledReason
+              : available === false
+                ? "AI service unavailable"
+                : "Ask about this model..."
           }
           value={question}
           onChange={(event) => setQuestion(event.target.value)}
@@ -155,11 +162,13 @@ export function Questions({
         />
         <div className="question-form-footer">
           <span>
-            {available === undefined
-              ? "AI availability unknown"
-              : available
-                ? "Evidence-bound answers"
-                : "AI unavailable"}
+            {disabledReason
+              ? disabledReason
+              : available === undefined
+                ? "AI availability unknown"
+                : available
+                  ? "Evidence-bound answers"
+                  : "AI unavailable"}
           </span>
           <button
             className="send-button"

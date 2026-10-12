@@ -124,11 +124,13 @@ def load_native_config(data: dict[str, Any]) -> PretrainedConfig:
     model_type = data.get("model_type")
     if not isinstance(model_type, str) or data.get("auto_map"):
         raise UnsupportedModelError("A native Transformers config is required; remote code is disabled")
+    from transformers.models.auto.configuration_auto import CONFIG_MAPPING
+
+    if model_type not in CONFIG_MAPPING:
+        raise UnsupportedModelError(f"No native Transformers config for model_type={model_type}")
     try:
         config = AutoConfig.for_model(model_type, **{k: v for k, v in data.items() if k != "model_type"})
-    except (KeyError, ValueError) as exc:
-        raise UnsupportedModelError(f"No native Transformers config for model_type={model_type}") from exc
-    except TypeError as exc:
+    except (KeyError, ValueError, TypeError) as exc:
         raise ArtifactError(f"Invalid native configuration: {exc}") from exc
     except RecursionError as exc:
         raise ArtifactError("Native configuration is too deeply nested") from exc
@@ -170,7 +172,9 @@ def instantiate_native(config: PretrainedConfig) -> tuple[torch.nn.Module, dict[
             model = auto_class.from_config(config, trust_remote_code=False)
             model.tie_weights()
             model.eval()
-    except (ImportError, RuntimeError, ValueError, TypeError, NotImplementedError) as exc:
+    except (ValueError, TypeError) as exc:
+        raise ArtifactError(f"Invalid native model configuration for {config.model_type}: {exc}") from exc
+    except (ImportError, RuntimeError, NotImplementedError) as exc:
         raise UnsupportedModelError(
             f"Native meta construction failed for {config.model_type}: {exc}"
         ) from exc
