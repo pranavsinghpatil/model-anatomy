@@ -91,6 +91,9 @@ From `frontend`, run `npm run generate:api`, `npm run build` and `npm run test:e
 See [service integration](docs/SERVICE_INTEGRATION.md) for configuration, the trust
 boundary and release gates, and [live backend acceptance](docs/LIVE_BACKEND_ACCEPTANCE.md)
 for real HTTP-to-worker evidence. Cloud deployment remains a separate delivery.
+The [CPU deployment candidate](docs/DEPLOYMENT.md), [real-job benchmarks](docs/BENCHMARKS.md)
+and [submission checklist](docs/HACKATHON_SUBMISSION.md) describe setup and the
+unmet hosted-release gates. No cloud credentials are needed for local inspection.
 
 ## Hackathon fit
 
