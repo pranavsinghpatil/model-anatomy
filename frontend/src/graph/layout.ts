@@ -97,6 +97,10 @@ export async function layoutGraph(
     nodes: graph.nodes.map((original) => ({
       id: scopedNodeId(graph.id, original.id),
       type: "anatomy",
+      // These match the fixed card and ELK dimensions. Controlled React Flow
+      // nodes need dimensions on the user node for the minimap to render them.
+      width: 242,
+      height: 108,
       position: positions.get(scopedNodeId(graph.id, original.id)) ?? {
         x: 0,
         y: 0,

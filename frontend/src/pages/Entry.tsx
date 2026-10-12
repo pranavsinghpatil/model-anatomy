@@ -211,6 +211,7 @@ export function Landing() {
 }
 export function Start() {
   const active = useRef(true);
+  const submissionPath = useRef(window.location.pathname);
   useEffect(() => {
     active.current = true;
     return () => {
@@ -231,7 +232,13 @@ export function Start() {
     onSuccess: (job) => {
       client.setQueryData(["analysis", job.id], job);
       void client.invalidateQueries({ queryKey: ["analyses"] });
-      if (!active.current) return;
+      // History changes before a concurrent route transition unmounts Start.
+      // A completed submission must respect that newer navigation intent.
+      if (
+        !active.current ||
+        window.location.pathname !== submissionPath.current
+      )
+        return;
       void navigate(
         `/app/analyses/${encodeURIComponent(job.id)}?view=${job.status === "inspected" ? "artifacts" : mode === "learn" ? "overview" : "architecture"}`,
       );

@@ -99,6 +99,9 @@ Verified on Windows with Chromium, 2026-10-13:
   resizing, nested viewport restoration, reduced motion, late responses,
   cancellation, recovery, clipboard/export failures and bounded tensor pagination
   pass. Selecting a new component clears prior citation overrides and connections.
+  The minimap renders the actual node count using the fixed card dimensions.
+  Late submissions respect history changes during concurrent route transitions;
+  affected navigation, graph and resizing checks also pass 30 repeated cases.
 - Actual SmolLM2-360M jobs complete the Learn and Research submission → component
   → tensors → evidence → JSON journey on desktop and mobile. The pinned report
   records 361,821,120 unique parameters.

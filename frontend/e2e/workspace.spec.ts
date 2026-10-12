@@ -118,12 +118,21 @@ test("real artifact graph, scoped nesting, tensor and evidence inspection", asyn
 test("click and keyboard edge selection expose the original relationship", async ({
   page,
 }) => {
+  // Hit-test a settled SVG path. Fit transitions otherwise move it between
+  // reading its screen coordinates and dispatching the pointer event.
+  await page.emulateMedia({ reducedMotion: "reduce" });
   await mockService(page);
   await openAnalysis(page);
   await expect(page.getByTestId("graph-canvas")).toBeVisible();
   const edges = page.locator(".react-flow__edge");
   await expect(edges).toHaveCount(rootGraph.edges.length);
   await expectGraphFramed(page);
+  const minimap = page.getByTestId("rf__minimap");
+  if (await minimap.isVisible()) {
+    await expect(minimap.locator(".react-flow__minimap-node")).toHaveCount(
+      rootGraph.nodes.length,
+    );
+  }
   const clickPoint = await edges
     .first()
     .locator(".react-flow__edge-interaction")

@@ -45,6 +45,7 @@ function Workspace({ id }: { id: string }) {
   const [exporting, setExporting] = useState<ExportFormat | null>(null);
   const [exportError, setExportError] = useState<Error | null>(null);
   const active = useRef(true);
+  const submissionPath = useRef(window.location.pathname);
   useEffect(() => {
     active.current = true;
     return () => {
@@ -89,7 +90,11 @@ function Workspace({ id }: { id: string }) {
     onSuccess: (job) => {
       client.setQueryData(["analysis", job.id], job);
       void client.invalidateQueries({ queryKey: ["analyses"] });
-      if (!active.current) return;
+      if (
+        !active.current ||
+        window.location.pathname !== submissionPath.current
+      )
+        return;
       void navigate(
         `/app/analyses/${encodeURIComponent(job.id)}?view=${job.status === "inspected" ? "artifacts" : mode === "learn" ? "overview" : "architecture"}`,
       );
