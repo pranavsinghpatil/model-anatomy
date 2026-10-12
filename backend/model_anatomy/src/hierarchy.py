@@ -414,6 +414,7 @@ class HierarchyBuilder:
                 "runtime_verified": False,
                 "warnings": flow.warnings,
                 "analysis_scope": "eval, no cache, no training loss, canonical modality inputs",
+                "profile_assumptions": flow.profile_assumptions,
                 **(
                     {
                         "shape_basis": "native ViT source and config; fixed resolution, unmasked, no interpolation"
@@ -427,6 +428,7 @@ class HierarchyBuilder:
             "warnings": flow.warnings,
             "event_count": len(flow.events),
             "sequential_containers": sorted(flow.sequential_containers),
+            "profile_assumptions": flow.profile_assumptions,
         }
         if not flow.events:
             graph.metadata["topology"] = "structural_only"

@@ -9,6 +9,7 @@ import torch
 import transformers
 from transformers import AutoConfig, AutoModel, PretrainedConfig
 
+from . import limits
 from .errors import ArtifactError, UnsupportedModelError
 
 _CONSTRUCTING = ContextVar("model_anatomy_meta_construction", default=False)
@@ -19,24 +20,103 @@ def _forbid_forward(module: torch.nn.Module, inputs: tuple[Any, ...]) -> None:
         raise UnsupportedModelError("Native construction attempted forward execution; it is disabled")
 
 
+_DIMENSION_FIELDS = {
+    "vocab_size",
+    "n_positions",
+    "n_embd",
+    "n_layer",
+    "n_head",
+    "hidden_size",
+    "num_hidden_layers",
+    "num_attention_heads",
+}
+_LAYER_FIELDS = {
+    "n_layer",
+    "num_hidden_layers",
+    "num_layers",
+    "num_decoder_layers",
+    "num_encoder_layers",
+    "encoder_layers",
+    "decoder_layers",
+}
+_STAGE_DEPTH_MODEL_TYPES = {"bit", "swin", "swinv2", "donut-swin", "maskformer-swin"}
+_IMPLICIT_BACKBONE_STAGE_TYPES = {
+    "dpt": "bit",
+    "mask2former": "swin",
+    "maskformer": "swin",
+    "oneformer": "swin",
+    "vit-hybrid": "bit",
+}
+
+
 def _validate_embedded_config(data: dict[str, Any]) -> None:
-    if data.get("auto_map"):
-        raise UnsupportedModelError("Native configuration is required; remote code is disabled")
-    if data.get("use_pretrained_backbone") or data.get("pretrained"):
-        raise UnsupportedModelError(
-            "Pretrained backbone initialization is disabled; weights must not be loaded"
+    if not isinstance(data, dict):
+        raise ArtifactError("Native configuration must be an object")
+    pending: list[tuple[Any, int, str | None]] = [(data, 0, None)]
+    visited = 0
+    while pending:
+        value, depth, inherited_stage_type = pending.pop()
+        if not isinstance(value, (dict, list)):
+            continue
+        visited += 1
+        if visited > limits.MAX_CONFIG_CONTAINER_NODES:
+            raise ArtifactError("Configuration exceeds the nested metadata node limit")
+        if depth > limits.MAX_CONFIG_NESTING_DEPTH:
+            raise ArtifactError("Configuration exceeds the nested metadata depth limit")
+        if isinstance(value, list):
+            pending.extend((item, depth + 1, None) for item in value if isinstance(item, (dict, list)))
+            continue
+
+        if value.get("auto_map"):
+            raise UnsupportedModelError("Native configuration is required; remote code is disabled")
+        if value.get("use_pretrained_backbone") or value.get("pretrained"):
+            raise UnsupportedModelError(
+                "Pretrained backbone initialization is disabled; weights must not be loaded"
+            )
+        if value.get("backbone") and value.get("backbone_config") is None:
+            raise UnsupportedModelError(
+                "External backbone resolution is disabled; embedded backbone_config is required"
+            )
+        model_type = value.get("model_type")
+        stage_type = model_type if isinstance(model_type, str) else inherited_stage_type
+        if stage_type in _STAGE_DEPTH_MODEL_TYPES and "depths" in value:
+            depths = value["depths"]
+            if not isinstance(depths, list) or not depths:
+                raise ArtifactError("Invalid configuration layer schedule: depths")
+            if len(depths) > limits.MAX_MODEL_LAYERS:
+                raise UnsupportedModelError(
+                    f"Model exceeds the supported layer count ({limits.MAX_MODEL_LAYERS})"
+                )
+            if any(type(depth) is not int or depth <= 0 for depth in depths):
+                raise ArtifactError("Invalid configuration layer schedule: depths")
+            if sum(depths) > limits.MAX_MODEL_LAYERS:
+                raise UnsupportedModelError(
+                    f"Model exceeds the supported layer count ({limits.MAX_MODEL_LAYERS})"
+                )
+        for name in _DIMENSION_FIELDS | _LAYER_FIELDS:
+            if name not in value:
+                continue
+            dimension = value[name]
+            if type(dimension) is not int or dimension <= 0:
+                raise ArtifactError(f"Invalid configuration dimension: {name}")
+            if name in _LAYER_FIELDS and dimension > limits.MAX_MODEL_LAYERS:
+                raise UnsupportedModelError(
+                    f"Model exceeds the supported layer count ({limits.MAX_MODEL_LAYERS})"
+                )
+        implicit_stage_type = None
+        if isinstance(model_type, str):
+            implicit_stage_type = _IMPLICIT_BACKBONE_STAGE_TYPES.get(model_type)
+            if model_type == "dpt" and not value.get("is_hybrid"):
+                implicit_stage_type = None
+        pending.extend(
+            (
+                item,
+                depth + 1,
+                implicit_stage_type if name == "backbone_config" else None,
+            )
+            for name, item in value.items()
+            if isinstance(item, (dict, list))
         )
-    if data.get("backbone") and data.get("backbone_config") is None:
-        raise UnsupportedModelError(
-            "External backbone resolution is disabled; embedded backbone_config is required"
-        )
-    for value in data.values():
-        if isinstance(value, dict):
-            _validate_embedded_config(value)
-        elif isinstance(value, list):
-            for item in value:
-                if isinstance(item, dict):
-                    _validate_embedded_config(item)
 
 
 def load_native_config(data: dict[str, Any]) -> PretrainedConfig:
@@ -44,27 +124,14 @@ def load_native_config(data: dict[str, Any]) -> PretrainedConfig:
     model_type = data.get("model_type")
     if not isinstance(model_type, str) or data.get("auto_map"):
         raise UnsupportedModelError("A native Transformers config is required; remote code is disabled")
-    for name in (
-        "vocab_size",
-        "n_positions",
-        "n_embd",
-        "n_layer",
-        "n_head",
-        "hidden_size",
-        "num_hidden_layers",
-        "num_attention_heads",
-    ):
-        if name in data and (type(data[name]) is not int or data[name] <= 0):
-            raise ArtifactError(f"Invalid configuration dimension: {name}")
-    for name in ("n_layer", "num_hidden_layers", "num_layers", "num_decoder_layers"):
-        if name in data and (type(data[name]) is not int or not 1 <= data[name] <= 512):
-            raise UnsupportedModelError("Model exceeds the supported layer count (512)")
     try:
         config = AutoConfig.for_model(model_type, **{k: v for k, v in data.items() if k != "model_type"})
     except (KeyError, ValueError) as exc:
         raise UnsupportedModelError(f"No native Transformers config for model_type={model_type}") from exc
     except TypeError as exc:
         raise ArtifactError(f"Invalid native configuration: {exc}") from exc
+    except RecursionError as exc:
+        raise ArtifactError("Native configuration is too deeply nested") from exc
     if not type(config).__module__.startswith("transformers."):
         raise UnsupportedModelError("Third-party config implementations are outside the target scope")
     return config

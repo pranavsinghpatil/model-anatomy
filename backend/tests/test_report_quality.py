@@ -38,6 +38,14 @@ def test_complete_report_with_method_scope_has_no_extraction_warnings():
     assert summary["limitations"] == data["metadata"]["limitations"]
     assert summary["quality"]["forward_executed"] is False
     assert summary["engine_version"] == "recorded-engine"
+    assert summary["input_names"] == []
+
+
+@pytest.mark.parametrize("names", [["input_ids"], ["pixel_values"], ["input_ids", "pixel_values"]])
+def test_input_applicability_is_projected_from_recorded_facts_not_architecture_name(names):
+    data = complete_report()
+    data["metadata"]["inputs"] = {"input_specs": {name: {"shape": None, "dtype": None} for name in names}}
+    assert ir_summary(data)["input_names"] == sorted(names)
 
 
 def test_actual_warnings_are_not_removed_even_when_the_same_text_is_a_limitation():

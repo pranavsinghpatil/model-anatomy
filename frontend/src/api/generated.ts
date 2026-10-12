@@ -183,6 +183,8 @@ export interface components {
       /** Cached */
       cached: boolean;
       dimensions: components["schemas"]["Dimensions"];
+      /** Input Names */
+      input_names?: string[];
     };
     /** AnalysisError */
     AnalysisError: {
@@ -258,6 +260,8 @@ export interface components {
       /** Cached */
       cached: boolean;
       dimensions: components["schemas"]["Dimensions"];
+      /** Input Names */
+      input_names?: string[];
     };
     /** Citation */
     Citation: {

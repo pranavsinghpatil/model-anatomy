@@ -1,7 +1,7 @@
 # System Gaps and Acceptance Gates
 
 This is an implementation audit, not a support promise. Status describes evidence
-in this repository as of 2026-10-09. "Tested" means there is a pinned real-model
+in this repository as of 2026-10-12. "Tested" means there is a pinned real-model
 engine or live HTTP acceptance path; a generic code path or fixture is not proof
 that a model family works end to end.
 
@@ -13,12 +13,12 @@ verification sections below describe historical test runs, not current features.
 
 | Family / scale | Status | Evidence and boundary |
 | --- | --- | --- |
-| Decoder-only text, GPT-2 (~124M) and SmolLM2-135M | **Tested** | Pinned real-model engine checks assert revision, parameter count, dimensions, full checkpoint parameter mapping, graph validity, no forward pass, and zero weight payload reads. See [test_engine_integration.py](../backend/tests/test_engine_integration.py) and [ENGINE_ACCEPTANCE.md](ENGINE_ACCEPTANCE.md). Reports may be partial: symbolic dataflow shapes and static classifications are not runtime observations. |
-| Decoder-only text, SmolLM2-360M | **Tested** | A real non-prepared model traverses local HTTP, worker, graph/tensor inspection, JSON/ZIP export, exact-revision cache, and honest missing-repository failure. The report is partial and reads zero weight payload bytes. This is local Windows evidence, not cloud capacity evidence. See [test_live_http.py](../backend/tests/test_live_http.py) and [LIVE_BACKEND_ACCEPTANCE.md](LIVE_BACKEND_ACCEPTANCE.md). |
-| Qwen3-4B-Thinking-2507 (~4.02B) | **Tested engine; locally observed HTTP result** | Pinned revision `768f209d9ea81521153ed38c47d515654e938aea` passes the committed real-engine checks: 4,022,468,096 unique parameters, 36 layers, hidden size 2560, complete checkpoint parameter mapping, valid graph/IR round-trip and zero weight payload reads. Its non-prepared local HTTP job also finished as partial. This is not proof of larger text or other modalities. |
-| Text models larger than the tested Qwen 4B checkpoint | **Unverified** | There is no parameter-count ceiling. Meta construction still creates the complete module hierarchy and IR; header-only weight access does not make those steps constant-memory. Service jobs are bounded by a 4 GiB memory setting and 120 seconds, and recognized top-level native layer fields reject more than 512 layers. See [registry.py](../backend/model_anatomy/src/registry.py), [settings.py](../backend/model_anatomy/api/settings.py), and [ENGINE_ACCEPTANCE.md](ENGINE_ACCEPTANCE.md). |
+| Decoder-only text, GPT-2 (~124M) and SmolLM2-135M | **Tested canonical static architecture** | October 12 pinned engine checks require all four coverage ratios of 1, no extraction warnings, exact revision/dimensions, full checkpoint parameter mapping, graph validation, no forward pass and zero weight payload reads. See [test_engine_integration.py](../backend/tests/test_engine_integration.py) and [ENGINE_ACCEPTANCE.md](ENGINE_ACCEPTANCE.md). Static shapes and classifications are not runtime observations or proof of every input path. |
+| Decoder-only text, SmolLM2-360M | **Tested local application path** | Fresh live desktop/mobile browser tests require completed status, no extraction warnings, nested graph/tensor inspection and exports. The local HTTP acceptance also checks exact-revision cache, visitor isolation, limits and honest missing-repository failure. This is local Windows evidence, not cloud capacity evidence. See [test_live_http.py](../backend/tests/test_live_http.py) and [LIVE_BACKEND_ACCEPTANCE.md](LIVE_BACKEND_ACCEPTANCE.md); earlier partial results there are historical. |
+| Qwen3-4B-Thinking-2507 (~4.02B) | **Tested canonical static engine** | Pinned revision `768f209d9ea81521153ed38c47d515654e938aea` passes the October 12 engine checks: 4,022,468,096 unique parameters, 36 layers, hidden size 2560, all four coverage ratios of 1, no extraction warnings, valid graph/IR round-trip and zero weight payload reads. Earlier local HTTP partial results use an older engine. This is not proof of larger text or other modalities. |
+| Text models larger than the tested Qwen 4B checkpoint | **Unverified** | There is no parameter-count ceiling. Meta construction still creates the complete module hierarchy and IR; header-only weight access does not make those steps constant-memory. Service jobs are bounded by a 4 GiB memory setting and 120 seconds, and recognized nested scalar/per-stage layer fields reject more than 512 layers. See [registry.py](../backend/model_anatomy/src/registry.py), [settings.py](../backend/model_anatomy/api/settings.py), and [ENGINE_ACCEPTANCE.md](ENGINE_ACCEPTANCE.md). |
 | Encoder-decoder text | **Unverified** | Input and graph code has encoder/decoder sequence conventions, but there is no pinned end-to-end encoder-decoder acceptance model. Cross-attention and decoder wiring therefore have no family-level proof. |
-| Google ViT image classification (~86.57M) | **Tested canonical static architecture; completed report** | `google/vit-base-patch16-224` at `10064cc17b69d623a025c9e90e11230cc8ba6967`: 86,567,656 parameters, 200 tensors, `[B,3,224,224]` pixels, 196 patches, CLS/position addition to `[B,197,768]`, encoder output projections/residuals, CLS selection `[B,768]` and classifier `[B,1000]`. Engine `2026.10.09.2` preserves known Q/K/V named-output shapes; all scoped edges now have shapes, all native modules are classified and all checkpoint parameters map. No extraction warnings or payload reads. Fresh HTTP-worker and real desktop/mobile tests require completed status. Shapes describe fixed-resolution, unmasked inputs without interpolation, not runtime observations. Preprocessing and other vision architectures remain unverified. |
+| Google ViT image classification (~86.57M) | **Tested canonical static architecture; completed report** | `google/vit-base-patch16-224` at `10064cc17b69d623a025c9e90e11230cc8ba6967`: 86,567,656 parameters, 200 tensors, `[B,3,224,224]` pixels, 196 patches, CLS/position addition to `[B,197,768]`, encoder output projections/residuals, CLS selection `[B,768]` and classifier `[B,1000]`. Engine `2026.10.12.2` retains known Q/K/V named-output shapes; all scoped edges have shapes, all native modules are classified and all checkpoint parameters map. No extraction warnings or payload reads. Fresh HTTP-worker and real desktop/mobile tests require completed status. Shapes describe fixed-resolution, unmasked inputs without interpolation, not runtime observations. Preprocessing and other vision architectures remain unverified. |
 | Image-text / multimodal | **Unverified** | No pinned multimodal model or modality-bridge acceptance test exists. Generic module classification and input names do not establish the relationship between image encoder, projector/resampler, text decoder, and modality-specific evidence. |
 | Audio | **Unverified** | `input_features` and `input_values` receive generic symbolic specs, but no real audio model or audio-specific task/output semantics are tested. |
 | Video | **Unsupported by the current explicit input description; otherwise unverified** | There is no video/frame/temporal input name or video-specific shape convention in `InputResolver`; the public `TensorSpec` can carry symbolic dimensions but does not identify a modality or temporal semantics. Native construction might succeed for some architectures, but that would not demonstrate a trustworthy video graph. |
@@ -39,12 +39,17 @@ and a small vision model would not establish large-model capacity.
   [pipeline.py](../backend/model_anatomy/src/pipeline.py).
 - Configuration JSON is limited to 1 MiB; index JSON to 16 MiB. A shard header
   is limited to 16 MiB, total Safetensors headers to 64 MiB, and checkpoints to
-  64 shards. These bound metadata transfer, not total tensor count, module count,
-  or IR size.
-- Recognized top-level layer fields over 512 are rejected; nested composite
-  config dimensions do not receive the same validation. There is no
-  explicit parameter-count, tensor-count, repository-file-count, or graph-node
-  cap in the cited reconstruction path.
+  64 shards. These bound metadata transfer, not weight size.
+- Recognized scalar and per-stage layer counts are limited to 512, including
+  nested dictionaries/lists. Configuration containers are limited to depth 64
+  and 50,000 container records. Repository file records are limited to 8,192;
+  checkpoint tensor records to 20,000 in total; native module, parameter and
+  buffer records to 20,000 each. This limits records, not parameter elements.
+  Native record checks run after meta construction, so they are not a complete
+  pre-construction memory guarantee for arbitrary native families.
+- Graph traversal is iterative and rejects cycles/shared graph objects. Limits
+  are 1,024 graphs, depth 64, 20,000 total nodes and 50,000 total edges. Stored
+  reports default to 32 MiB. These budgets do not establish larger-model support.
 - Worker jobs have a 120-second deadline and 4 GiB memory setting. On Linux the
   child applies an address-space limit; deployment separately configures a 4 GiB
   container memory cap. Windows local runs enforce timeout but not that memory
@@ -61,9 +66,11 @@ and a small vision model would not establish large-model capacity.
 
 ## Prioritized Acceptance Gaps
 
-**Current closure gate:** the user has paused expansion. Close existing extraction
-warnings, report accuracy and summary applicability before starting any of the
-family, scale or deployment additions below. See [READING_REPORTS.md](READING_REPORTS.md)
+**Current closure gate:** close the existing documented product and system gaps
+before adding extra features or model families. The October 12 hardening closes
+GPT-2's padding guard and vocabulary applicability for vision reports. Hosted
+operation still needs credentials and acceptance evidence. See [LOCAL_TESTING.md](LOCAL_TESTING.md)
+and [READING_REPORTS.md](READING_REPORTS.md)
 for report meanings and the manual verification sequence. The queue below records
 future acceptance requirements; it does not authorize moving past this gate.
 
@@ -110,13 +117,35 @@ future acceptance requirements; it does not authorize moving past this gate.
 | System | Current evidence | Next gate |
 | --- | --- | --- |
 | Artifact resolution | Pinned Safetensors and index/header safety checks, no payload fallback | Additional formats need their own safe metadata readers. Common revision-tree URLs are not accepted yet. Never enable pickle loading to improve coverage. |
-| Semantic engine | Real text and canonical ViT patch/CLS/output semantics; explicit unknowns | First resolve GPT-2's native padding-diagnostic static warning with evidence. Family additions remain paused; masked/interpolated vision paths need separate acceptance. |
-| Scale/resource control | Separate worker, timeout, bounded headers/shards/report, tested 4B text engine | Nested dimension validation, module/tensor/graph budgets, measured larger checkpoints, and actual Linux memory-limit evidence. |
+| Semantic engine | Four pinned canonical models now require complete static coverage with no warnings; native tracing predicate identities/source hashes are recorded | Broader Python control-flow proof and masked/interpolated variants need separate acceptance; unknown predicates remain warnings. |
+| Scale/resource control | Separate worker, timeout, bounded headers/shards/report, nested layer checks and explicit native/tensor/graph record budgets | Measured larger checkpoints, additional native config forms and actual Linux/container memory evidence. |
 | Jobs/API | Real text and image cold/cache jobs, isolation, limits, exports; worker lifecycle unit tests | Repeat crash/restart/concurrent submission/retention tests against hosted PostgreSQL, not only local SQLite. |
 | Storage/cache | Local storage tested; private Supabase adapter/configuration exists | Real private-bucket integration, expired artifacts, provider outage and integrity recovery on the deployed service. |
 | AI explanations | Evidence-bound provider integration and adversarial unit tests | Actual Nebius/NVIDIA credentials/model call, outage checks and evaluated citation correctness. Currently unavailable in the running app. |
-| Frontend | Readable focused canvas, explicit overview, reversible panels, nesting/tensors/exports checked desktop/mobile | Modality-appropriate summaries, dense graph/long label accessibility and further visual polish using real reports. This is a first layout correction, not a finished redesign. |
+| Frontend | Readable canvas, reversible panels, nested inspection/exports, input-fact-based vocabulary applicability checked desktop/mobile | Dense graph/long label accessibility and further visual polish using real reports; no universal modality claim. |
 | Deployment | Local live API/worker evidence; deployment configuration remains a separate tranche | Nebius access/credits, HTTPS, Linux containers, PostgreSQL/private storage and live inference before claiming production readiness. |
+
+## October 12 Hardening Verification
+
+- Final engine `2026.10.12.2`: 222 backend/infrastructure tests passed with both
+  real Hugging Face and HTTP-worker acceptance enabled. One Linux-only memory
+  test skipped on Windows; one existing Starlette TestClient deprecation warning
+  remains. Infrastructure helpers are a separate delivery increment.
+- Four pinned engine cases require no extraction warnings, all four static
+  coverage ratios of 1, exact dimensions/parameters and zero weight payload reads.
+  The final rerun includes the Qwen named-mask condition and decorated methods.
+- Source regression tests retain uncertain assignment/return dependencies, mark
+  conditional continuation calls and exclude environments from terminated paths.
+- Browser checks: 62 deterministic desktop/mobile checks, plus six real local
+  browser checks using the final engine. Nested text/image graphs, tensor evidence,
+  downloads, empty visitor state and the removed examples route are covered.
+- Frontend build/types, formatting, generated OpenAPI types, Ruff, Python
+  compilation and scoped whitespace checks pass. Native construction still
+  precedes native-record limits; general Python control-flow completeness and
+  universal modality support are not claimed.
+- Cloud credentials, actual Supabase/NVIDIA use, public HTTPS and deployed
+  capacity/recovery remain blocked on setup and real acceptance. The running
+  local application needs no cloud account. See [LOCAL_TESTING.md](LOCAL_TESTING.md).
 
 ## Initial Gap Pass Verification
 

@@ -202,3 +202,21 @@ Keep test-only fixtures and mocks for deterministic safety/failure regression
 tests, plus separate real HTTP/worker acceptance; neither becomes runtime data.
 Preserve historical CLI reports as evidence, not served product content. Pause
 new features until this removal is verified and the user can test it locally.
+
+## D-024 - Close current correctness and bounded-runtime gaps before extras
+**2026-10-12 - accepted**
+
+Resume development against the documented first-release agenda, not additional
+features or universal model support. Resolve known native tracing predicates by
+callable identity under the canonical static profile, retaining source hashes
+and assumptions; never suppress arbitrary opaque functions by name. Unknown
+conditions with returning branches must retain alternatives and report uncertainty.
+Derive report applicability from recorded input facts, not architecture-name
+heuristics. Explicit nested configuration, tensor/native record and graph budgets
+supplement, but do not replace, worker isolation and Linux resource enforcement.
+Invalidate extraction cache identity without rewriting saved reports.
+
+The user does not yet have cloud credentials. Local validation must remain usable
+without them. Deployment preparation and a real visitor-owned benchmark can be
+reviewed now; Supabase, Nebius/NVIDIA inference, HTTPS and hosted load/recovery
+verification remain explicit release blockers until setup and real checks occur.

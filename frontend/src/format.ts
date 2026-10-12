@@ -1,5 +1,25 @@
 import type { Dimension } from "./api/contract";
 
+export type ReportDimension = "hidden" | "heads" | "layers" | "vocabulary";
+
+export function reportDimensionKeys(analysis: {
+  input_names?: string[];
+  dimensions: { vocabulary?: number | null };
+}): ReportDimension[] {
+  const hasTextInputs =
+    analysis.input_names?.some((name) =>
+      ["input_ids", "decoder_input_ids"].includes(name),
+    ) ?? false;
+  const hasLegacyVocabulary =
+    typeof analysis.dimensions.vocabulary === "number";
+  return [
+    "hidden",
+    "heads",
+    "layers",
+    ...(hasTextInputs || hasLegacyVocabulary ? (["vocabulary"] as const) : []),
+  ];
+}
+
 export function count(
   value: number | null | undefined,
   compact = false,

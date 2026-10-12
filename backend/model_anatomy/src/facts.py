@@ -10,6 +10,7 @@ from typing import Any
 import torch
 import transformers
 
+from . import limits
 from .artifacts import CheckpointMetadata, SafetensorsMetadata
 from .errors import ArtifactError
 
@@ -48,10 +49,27 @@ ATTRIBUTES = (
 def inspect_native_model(
     model: torch.nn.Module, checkpoint: CheckpointMetadata | SafetensorsMetadata
 ) -> dict[str, Any]:
+    if len(checkpoint.tensors) > limits.MAX_CHECKPOINT_TENSORS:
+        raise ArtifactError("Checkpoint exceeds the supported tensor record count")
+    module_items = []
+    for item in model.named_modules(remove_duplicate=False):
+        if len(module_items) >= limits.MAX_NATIVE_MODULE_RECORDS:
+            raise ArtifactError("Native model exceeds the supported module record count")
+        module_items.append(item)
+    named_items = []
+    for item in model.named_parameters(remove_duplicate=False):
+        if len(named_items) >= limits.MAX_NATIVE_PARAMETER_RECORDS:
+            raise ArtifactError("Native model exceeds the supported parameter record count")
+        named_items.append(item)
+    buffer_items = []
+    for item in model.named_buffers(remove_duplicate=False):
+        if len(buffer_items) >= limits.MAX_NATIVE_BUFFER_RECORDS:
+            raise ArtifactError("Native model exceeds the supported buffer record count")
+        buffer_items.append(item)
     modules: dict[str, dict[str, Any]] = {}
     source_types: dict[str, dict[str, Any]] = {}
     fingerprints = {}
-    for path, module in model.named_modules(remove_duplicate=False):
+    for path, module in module_items:
         qualified = f"{type(module).__module__}.{type(module).__name__}"
         attributes = {}
         for name in ATTRIBUTES:
@@ -93,7 +111,7 @@ def inspect_native_model(
             except (OSError, TypeError):
                 source_types[qualified] = {"qualified_name": qualified + ".forward", "sha256": None}
         fingerprints[path] = source_types[qualified]
-    named = dict(model.named_parameters(remove_duplicate=False))
+    named = dict(named_items)
     prefix = model.base_model_prefix + "." if model.base_model_prefix else ""
     renamings = []
     try:
@@ -156,7 +174,7 @@ def inspect_native_model(
         }
     buffers = {
         name: {"shape": list(buffer.shape), "dtype": str(buffer.dtype), "device": buffer.device.type}
-        for name, buffer in model.named_buffers(remove_duplicate=False)
+        for name, buffer in buffer_items
     }
     extras = {}
     for name, tensor in checkpoint.tensors.items():

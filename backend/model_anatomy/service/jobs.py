@@ -111,6 +111,7 @@ def ir_summary(data: dict) -> dict:
         "root_graph_id": data["root_graph"]["id"],
         "parameter_count": metadata.get("unique_parameter_count"),
         "dimensions": metadata.get("dimensions", {}),
+        "input_names": sorted(metadata.get("inputs", {}).get("input_specs", {})),
         "warnings": warnings,
         "limitations": list(dict.fromkeys(metadata.get("limitations", []))),
         "quality": quality,
@@ -140,6 +141,7 @@ def job_detail(job: Job, summary: dict | None = None) -> dict:
         "parameter_count": summary.get("parameter_count"),
         "root_graph_id": summary.get("root_graph_id"),
         "dimensions": summary.get("dimensions", {}),
+        "input_names": summary.get("input_names", []),
         "cached": job.cached,
     }
 
@@ -163,7 +165,7 @@ class JobService:
         if (
             job.blob_digest
             and job.status in {"completed", "partial"}
-            and "quality" not in (job.summary or {})
+            and not {"quality", "input_names"}.issubset(job.summary or {})
         ):
             summary = self._legacy_summary(job.blob_digest)
             detail = job_detail(job, summary)

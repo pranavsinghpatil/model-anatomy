@@ -22,6 +22,7 @@ type Artifact = {
     revision: string;
     unique_parameter_count: number;
     dimensions: AnalysisDetail["dimensions"];
+    inputs: { input_specs: Record<string, unknown> };
     analysis_report: { warnings: string[] };
   };
   tensors: Record<string, Record<string, unknown>>;
@@ -77,6 +78,7 @@ export function analysisFor(id = "job-test"): AnalysisDetail {
     root_graph_id: artifact.root_graph.id,
     cached: false,
     dimensions: artifact.metadata.dimensions,
+    input_names: Object.keys(artifact.metadata.inputs.input_specs),
   };
 }
 export type Scenario = {

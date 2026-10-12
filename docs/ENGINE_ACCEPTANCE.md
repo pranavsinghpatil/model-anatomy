@@ -19,10 +19,18 @@ GPT-2 matches the existing 160 checkpoint tensor records, 12 layers, 768 hidden
 dimensions, and five nested graphs. SmolLM2 has 30 layers and 576 hidden dimensions.
 Both match all native parameter identities to checkpoint metadata.
 
-These are static reports, not runtime traces. GPT-2 retains an opaque tracing-call
-warning. SmolLM2 has known shapes for approximately 94.8% of its dataflow edges.
-Neither report's semantic coverage is a proof that every runtime path is known.
-The web application must preserve these qualifications and show partial results.
+These were the initial October 8 results. Fresh October 12 checks with engine
+`2026.10.12.2` require four coverage ratios of 1 and no extraction warnings for
+GPT-2, SmolLM2-135M, Qwen3-4B-Thinking-2507 and canonical ViT. Native tracing
+guards are resolved by callable identity under the static profile, with source
+hashes and assumptions retained in graph metadata and static-flow diagnostics.
+Same-named custom predicates remain unresolved; uncertain return branches retain
+both dependencies and produce a warning. No helper or forward method is executed.
+Named assignments in conditions are interpreted directly; decorated methods use
+their original source globals. A builtin container-type check is resolved only
+by callable/type identity for known scalar literals, never a same-named override.
+These remain static reports, not runtime traces or proof of every runtime path.
+Genuinely incomplete reports remain partial, and old saved reports stay immutable.
 
 ## Reproduce
 
@@ -47,8 +55,10 @@ as the CLI. Supported stages are `resolving`, `reading_metadata`,
 `building_structure`, `analyzing_components`, and `validating`.
 
 Header inspection is bounded to 16 MiB per shard, 64 MiB overall, and 64 shards.
-Native construction rejects models with more than 512 layers. These limits do
-not replace the separate worker's process timeout and memory boundary.
+Recognized scalar and per-stage layer counts are limited to 512 even in nested
+configs. Additional explicit metadata budgets cover repository files, checkpoint
+tensors, native records and graph traversal; see [system bounds](SYSTEM_GAPS.md).
+They do not replace the separate worker's process timeout and memory boundary.
 
 The two-minute worker deadline applies to web jobs; direct CLI runs remain a
 developer diagnostic tool. The new `--preview-dir` option prevents diagnostic

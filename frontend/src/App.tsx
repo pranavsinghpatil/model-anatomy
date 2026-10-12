@@ -22,7 +22,7 @@ import {
 } from "lucide-react";
 import { api, graphReady, pending } from "./api/client";
 import type { Citation, ExportFormat, GraphNode } from "./api/contract";
-import { count, time } from "./format";
+import { count, reportDimensionKeys, time } from "./format";
 import {
   ErrorNotice,
   IconButton,
@@ -410,19 +410,23 @@ export function App() {
             {recent.data?.analyses.length === 0 && (
               <p className="empty-copy">No recent jobs</p>
             )}
-            {recent.data?.analyses.map((job) => (
-              <button
-                className={`recent-link ${job.id === analysisId ? "active" : ""}`}
-                key={job.id}
-                onClick={() => choose(job.id)}
-              >
-                <strong title={job.model_id}>{job.model_id}</strong>
-                <span>
-                  <Status status={job.status} />
-                  <small>{time(job.created_at)}</small>
-                </span>
-              </button>
-            ))}
+            {recent.data?.analyses.map((stored) => {
+              const job =
+                !analysis.error && stored.id === detail?.id ? detail : stored;
+              return (
+                <button
+                  className={`recent-link ${job.id === analysisId ? "active" : ""}`}
+                  key={job.id}
+                  onClick={() => choose(job.id)}
+                >
+                  <strong title={job.model_id}>{job.model_id}</strong>
+                  <span>
+                    <Status status={job.status} />
+                    <small>{time(job.created_at)}</small>
+                  </span>
+                </button>
+              );
+            })}
           </section>
           <div className="sidebar-footer">
             <Braces size={14} />
@@ -516,24 +520,22 @@ export function App() {
                     {count(detail?.parameter_count, true)}
                   </strong>
                 </div>
-                {(["hidden", "heads", "layers", "vocabulary"] as const).map(
-                  (key) => (
-                    <div key={key}>
-                      <span>
-                        {key === "hidden"
-                          ? "Hidden size"
-                          : key === "vocabulary"
-                            ? "Vocabulary"
-                            : key[0].toUpperCase() + key.slice(1)}
-                      </span>
-                      <strong>
-                        {typeof detail?.dimensions[key] === "number"
-                          ? count(detail.dimensions[key] as number)
-                          : (detail?.dimensions[key] ?? "Unknown")}
-                      </strong>
-                    </div>
-                  ),
-                )}
+                {reportDimensionKeys(detail).map((key) => (
+                  <div key={key} data-testid={`model-metric-${key}`}>
+                    <span>
+                      {key === "hidden"
+                        ? "Hidden size"
+                        : key === "vocabulary"
+                          ? "Vocabulary"
+                          : key[0].toUpperCase() + key.slice(1)}
+                    </span>
+                    <strong>
+                      {typeof detail?.dimensions[key] === "number"
+                        ? count(detail.dimensions[key] as number)
+                        : (detail?.dimensions[key] ?? "Unknown")}
+                    </strong>
+                  </div>
+                ))}
               </div>
             )}
             {detail && (

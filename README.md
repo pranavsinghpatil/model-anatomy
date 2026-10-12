@@ -76,6 +76,10 @@ Production uses Supabase PostgreSQL and a private Storage bucket. Backend-only
 available NVIDIA Nemotron ID, never a placeholder. Graph facts do not depend on AI.
 Do not commit secrets or model weights.
 
+For a step-by-step manual check and expected real-model facts, use the
+[local testing guide](docs/LOCAL_TESTING.md). Completed reports still describe
+canonical static architecture, not executed model predictions.
+
 ```powershell
 uv run --no-sync pytest -q backend/tests
 uv run --no-sync ruff check backend

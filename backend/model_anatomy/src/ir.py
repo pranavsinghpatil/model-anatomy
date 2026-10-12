@@ -7,6 +7,7 @@ from collections.abc import Iterator
 from dataclasses import asdict, dataclass, field
 from typing import Any, Literal
 
+from . import limits
 from .errors import AnatomyError
 from .version import IR_SCHEMA_VERSION
 
@@ -75,10 +76,29 @@ class Graph:
 
     def walk(self) -> Iterator[Graph]:
         """Yield this graph and each nested graph in stable preorder."""
-        yield self
-        for node in self.nodes:
-            if node.child_graph is not None:
-                yield from node.child_graph.walk()
+        pending = [(self, 0)]
+        seen: set[int] = set()
+        nodes = edges = 0
+        while pending:
+            graph, depth = pending.pop()
+            if id(graph) in seen:
+                raise AnatomyError("Graph hierarchy contains a cycle or shared graph object")
+            seen.add(id(graph))
+            nodes += len(graph.nodes)
+            edges += len(graph.edges)
+            if (
+                len(seen) > limits.MAX_GRAPHS
+                or depth > limits.MAX_GRAPH_DEPTH
+                or nodes > limits.MAX_GRAPH_NODES
+                or edges > limits.MAX_GRAPH_EDGES
+            ):
+                raise AnatomyError("Graph hierarchy exceeds the supported metadata budget")
+            yield graph
+            pending.extend(
+                (node.child_graph, depth + 1)
+                for node in reversed(graph.nodes)
+                if node.child_graph is not None
+            )
 
     def validate(self) -> None:
         graph_ids: set[str] = set()

@@ -94,6 +94,7 @@ class AnalysisDetail(BaseModel):
     root_graph_id: str | None
     cached: bool
     dimensions: Dimensions
+    input_names: list[str] = Field(default_factory=list)
 
 
 class AnalysisSummary(AnalysisDetail):

@@ -43,6 +43,8 @@ test("live ViT patches, CLS selection and tensor inspection", async ({
   expect(result.status).toBe("completed");
   expect(result.parameter_count).toBe(86_567_656);
   expect(result.warnings).toEqual([]);
+  expect(result.input_names).toEqual(["pixel_values"]);
+  await expect(page.getByTestId("model-metric-vocabulary")).toHaveCount(0);
   expect(result.partial_reasons).toEqual([]);
   expect(result.limitations?.length ?? 0).toBeGreaterThan(0);
   expect(result.quality).toMatchObject({
@@ -72,7 +74,8 @@ test("live ViT patches, CLS selection and tensor inspection", async ({
   await checks.locator("summary").click();
   await page.getByTestId("analysis-scope").locator("summary").click();
   const report = await (await page.request.get(`${path}/exports/json`)).json();
-  expect(report.metadata.engine_version).toBe("2026.10.09.2");
+  expect(report.metadata.engine_version).toBe("2026.10.12.2");
+  expect(report.metadata.engine_version).toBe(result.engine_version);
   expect(report.metadata.artifacts.weight_payload_bytes_read).toBe(0);
   const root = (await (
     await page.request.get(`${path}/graphs/${result.root_graph_id}`)

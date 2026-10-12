@@ -1,6 +1,110 @@
 import { expect, test } from "@playwright/test";
 import { analysisFor, mockService } from "./service";
 
+test("selected report status stays consistent while recent jobs are still stale", async ({
+  page,
+  isMobile,
+}) => {
+  const job = {
+    ...analysisFor("job-test"),
+    status: "completed" as const,
+    stage: "completed",
+  };
+  await mockService(page, {
+    job,
+    recent: [{ ...job, status: "running", stage: "analyzing_components" }],
+  });
+  await page.goto(`/?analysis=${job.id}`);
+  await expect(page.getByTestId("graph-canvas")).toBeVisible();
+  if (isMobile)
+    await page
+      .getByRole("button", { name: "Open recent analyses" })
+      .first()
+      .click();
+  const recent = page.locator(".recent-link.active");
+  await expect(
+    recent.getByRole("status", { name: "Analysis status: completed" }),
+  ).toBeVisible();
+  await expect(
+    recent.getByRole("status", { name: "Analysis status: running" }),
+  ).toHaveCount(0);
+});
+
+test("text report shows established vocabulary and keeps missing dimensions unknown", async ({
+  page,
+}) => {
+  const base = analysisFor("job-test");
+  const analysis = {
+    ...base,
+    dimensions: { ...base.dimensions, heads: null },
+  };
+  await mockService(page, { job: analysis });
+  await page.goto(`/?analysis=${analysis.id}`);
+  await expect(page.getByTestId("graph-canvas")).toBeVisible();
+
+  const metrics = page.locator(".model-metrics");
+  await expect(metrics.getByTestId("model-metric-vocabulary")).toContainText(
+    "50,257",
+  );
+  await expect(
+    metrics.getByTestId("model-metric-heads").locator("strong"),
+  ).toHaveText("Unknown");
+});
+
+test("vision report omits text vocabulary", async ({ page }) => {
+  const base = analysisFor("job-test");
+  const analysis = {
+    ...base,
+    architecture: "ViTForImageClassification",
+    dimensions: { hidden: 768, heads: 12, layers: 12, vocabulary: null },
+    input_names: ["pixel_values"],
+  };
+  await mockService(page, { job: analysis });
+  await page.goto(`/?analysis=${analysis.id}`);
+  await expect(page.getByTestId("graph-canvas")).toBeVisible();
+
+  const metrics = page.locator(".model-metrics");
+  await expect(metrics.getByTestId("model-metric-hidden")).toBeVisible();
+  await expect(metrics.getByTestId("model-metric-vocabulary")).toHaveCount(0);
+});
+
+test("text input evidence establishes vocabulary for classification wrappers", async ({
+  page,
+}) => {
+  const analysis = {
+    ...analysisFor("job-test"),
+    architecture: "BertForSequenceClassification",
+    dimensions: { hidden: 768, heads: 12, layers: 12, vocabulary: 30522 },
+    input_names: ["input_ids"],
+  };
+  await mockService(page, { job: analysis });
+  await page.goto(`/?analysis=${analysis.id}`);
+  await expect(page.getByTestId("graph-canvas")).toBeVisible();
+  await expect(
+    page.locator(".model-metrics").getByTestId("model-metric-vocabulary"),
+  ).toContainText("30,522");
+});
+
+test("text input evidence keeps an unreported vocabulary honestly unknown", async ({
+  page,
+}) => {
+  const analysis = {
+    ...analysisFor("job-test"),
+    architecture: null,
+    dimensions: { hidden: 768, heads: 12, layers: 12, vocabulary: null },
+    input_names: ["input_ids"],
+  };
+  await mockService(page, { job: analysis });
+  await page.goto(`/?analysis=${analysis.id}`);
+  await expect(page.getByTestId("graph-canvas")).toBeVisible();
+  await expect(
+    page
+      .locator(".model-metrics")
+      .getByTestId("model-metric-vocabulary")
+      .locator("strong"),
+  ).toHaveText("Unknown");
+});
+
 test("completed report separates revision, scope, checks, and warnings", async ({
   page,
 }) => {

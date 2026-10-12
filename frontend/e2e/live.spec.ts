@@ -73,7 +73,9 @@ test("live model submission reaches a stored architecture", async ({
   const result = (await (
     await page.request.get(`/api/v1/analyses/${created.id}`)
   ).json()) as AnalysisDetail;
-  expect(["completed", "partial"]).toContain(result.status);
+  expect(result.status).toBe("completed");
+  expect(result.warnings).toEqual([]);
+  expect(result.input_names).toEqual(["input_ids"]);
   expect(result.model_id).toBe("HuggingFaceTB/SmolLM2-360M");
   expect(result.parameter_count).toBe(361_821_120);
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(

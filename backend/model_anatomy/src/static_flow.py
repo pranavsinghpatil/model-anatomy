@@ -3,14 +3,18 @@
 from __future__ import annotations
 
 import ast
+import builtins
+import hashlib
 import inspect
 import math
 import operator as arithmetic
 import textwrap
 from dataclasses import dataclass, field
+from types import ModuleType
 from typing import Any
 
 import torch
+from transformers.utils.import_utils import is_torch_fx_proxy, is_torchdynamo_compiling
 
 UNKNOWN = object()
 
@@ -43,10 +47,24 @@ class StaticFlow:
     outputs: StaticValue = field(default_factory=StaticValue)
     sequential_containers: set[str] = field(default_factory=set)
     warnings: list[str] = field(default_factory=list)
+    profile_assumptions: list[dict[str, Any]] = field(default_factory=list)
 
 
 def combine(values: list[StaticValue]) -> StaticValue:
     return StaticValue(list(dict.fromkeys(ref for value in values for ref in value.refs)))
+
+
+def merge_outputs(values: list[StaticValue]) -> StaticValue:
+    if len(values) == 1:
+        return values[0]
+    result = combine(values)
+    field_names = {name for value in values for name in (value.fields or {})}
+    if field_names:
+        result.fields = {
+            name: combine([value.fields[name] for value in values if value.fields and name in value.fields])
+            for name in field_names
+        }
+    return result
 
 
 class StaticFlowAnalyzer:
@@ -59,10 +77,13 @@ class StaticFlowAnalyzer:
         self.env: dict[str, StaticValue] = {"self": StaticValue(module_path=module_path)}
         self.depth = 0
         self.counter = 0
+        self.source_globals: dict[str, Any] = {}
+        self.returned: list[StaticValue] = []
 
     def analyze(self) -> StaticFlow:
         try:
-            method = type(self.module).forward
+            method = inspect.unwrap(type(self.module).forward)
+            self.source_globals = method.__globals__
             tree = ast.parse(textwrap.dedent(inspect.getsource(method)))
             function = next(n for n in tree.body if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef)))
         except (OSError, TypeError, SyntaxError, StopIteration) as exc:
@@ -117,6 +138,7 @@ class StaticFlowAnalyzer:
             else:
                 self.env[name] = StaticValue(constant=None)
         self.statements(function.body)
+        self.flow.outputs = merge_outputs(self.returned)
         return self.flow
 
     def input(self, name: str) -> StaticValue:
@@ -152,8 +174,8 @@ class StaticFlowAnalyzer:
                     else StaticValue([(ref, str(index)) for ref, _ in value.refs]),
                 )
 
-    def statements(self, statements: list[ast.stmt]) -> None:
-        for node in statements:
+    def statements(self, statements: list[ast.stmt]) -> bool:
+        for index, node in enumerate(statements):
             if isinstance(node, ast.Assign):
                 value = self.expression(node.value)
                 for target in node.targets:
@@ -167,30 +189,46 @@ class StaticFlowAnalyzer:
                 )
             elif isinstance(node, ast.Return):
                 self.flow.outputs = self.expression(node.value)
-                return
+                self.returned.append(self.flow.outputs)
+                return True
             elif isinstance(node, ast.Expr):
                 self.expression(node.value)
             elif isinstance(node, ast.If):
                 condition = self.expression(node.test).constant
                 if condition is not UNKNOWN:
-                    self.statements(node.body if condition else node.orelse)
+                    if self.statements(node.body if condition else node.orelse):
+                        return True
                 else:
                     # Do not speculate through dynamic guards. Preserve dependencies of assignments,
                     # but explicitly mark module calls reached on either possible branch.
                     before, start = dict(self.env), len(self.flow.events)
-                    self.statements(node.body)
+                    left_returns = self.statements(node.body)
                     left = dict(self.env)
                     self.env = dict(before)
-                    self.statements(node.orelse)
-                    for name in left.keys() | self.env.keys():
-                        a, b = left.get(name, StaticValue()), self.env.get(name, StaticValue())
-                        self.env[name] = a if a == b else combine([a, b])
+                    right_returns = self.statements(node.orelse)
+                    assignments_changed = before != left or before != self.env
+                    if left_returns != right_returns:
+                        self.env = self.env if left_returns else left
+                    else:
+                        for name in left.keys() | self.env.keys():
+                            a, b = left.get(name, StaticValue()), self.env.get(name, StaticValue())
+                            self.env[name] = a if a == b else combine([a, b])
                     for event in self.flow.events[start:]:
-                        event.metadata["conditional"] = ast.unparse(node.test)
-                    if len(self.flow.events) > start:
+                        self.mark_conditional(event, ast.unparse(node.test))
+                    if len(self.flow.events) > start or left_returns or right_returns or assignments_changed:
                         self.flow.warnings.append(
                             f"Conditional source path is unresolved: {ast.unparse(node.test)}"
                         )
+                    if left_returns and right_returns:
+                        return True
+                    if left_returns or right_returns:
+                        start = len(self.flow.events)
+                        returned = self.statements(statements[index + 1 :])
+                        condition = ast.unparse(node.test)
+                        continuation = f"not ({condition})" if left_returns else condition
+                        for event in self.flow.events[start:]:
+                            self.mark_conditional(event, continuation)
+                        return returned
             elif isinstance(node, ast.For):
                 iterable = self.expression(node.iter)
                 if iterable.module_path is not None:
@@ -220,7 +258,14 @@ class StaticFlowAnalyzer:
                 else:
                     self.flow.warnings.append(f"Loop could not be statically resolved at line {node.lineno}")
             elif isinstance(node, (ast.With, ast.Try)):
-                self.statements(node.body)
+                if self.statements(node.body):
+                    return True
+        return False
+
+    @staticmethod
+    def mark_conditional(event: FlowEvent, condition: str) -> None:
+        existing = event.metadata.get("conditional")
+        event.metadata["conditional"] = f"({existing}) and ({condition})" if existing else condition
 
     def operation(
         self, node: ast.AST, left: StaticValue, right: StaticValue, operator: ast.operator
@@ -309,6 +354,71 @@ class StaticFlowAnalyzer:
             return StaticValue(constant=getattr(value.constant, name, UNKNOWN))
         return StaticValue([(ref, name) for ref, _ in value.refs])
 
+    def canonical_predicate(self, node: ast.Call, arguments: dict[str, StaticValue]) -> StaticValue | None:
+        """Resolve native predicates by identity, never by the spelling of a call."""
+        if any(isinstance(arg, ast.Starred) for arg in node.args) or any(
+            keyword.arg is None for keyword in node.keywords
+        ):
+            return None
+        parts = []
+        expression = node.func
+        while isinstance(expression, ast.Attribute):
+            parts.append(expression.attr)
+            expression = expression.value
+        if not isinstance(expression, ast.Name) or expression.id in self.env:
+            return None
+        function = self.source_globals.get(expression.id, vars(builtins).get(expression.id, UNKNOWN))
+        for name in reversed(parts):
+            if not isinstance(function, ModuleType):
+                return None
+            function = vars(function).get(name, UNKNOWN)
+        if function is isinstance:
+            if len(node.args) != 2 or node.keywords or not isinstance(node.args[1], ast.Name):
+                return None
+            target_name = node.args[1].id
+            if target_name in self.env:
+                return None
+            target = self.source_globals.get(target_name, vars(builtins).get(target_name, UNKNOWN))
+            value = arguments["0"].constant
+            if any(target is container for container in (dict, list, tuple)) and type(value) in (
+                type(None),
+                bool,
+                int,
+                float,
+                str,
+            ):
+                return StaticValue(constant=False)
+            return None
+        if function is is_torch_fx_proxy:
+            value = arguments.get("0", arguments.get("x", StaticValue()))
+            if len(arguments) != 1 or not (
+                value.refs or type(value.constant) in (type(None), bool, int, float, str)
+            ):
+                return None
+            basis = "Canonical inputs and source dependencies are tensors, not FX Proxy objects"
+        elif any(
+            function is predicate
+            for predicate in (torch.jit.is_tracing, is_torchdynamo_compiling, torch.compiler.is_compiling)
+        ):
+            if arguments or node.args or node.keywords:
+                return None
+            basis = "Canonical static profile does not execute forward, JIT tracing or compilation"
+        else:
+            return None
+        try:
+            source_hash = hashlib.sha256(inspect.getsource(function).encode()).hexdigest()
+        except (OSError, TypeError):
+            return None
+        assumption = {
+            "predicate": f"{function.__module__}.{function.__qualname__}",
+            "source_sha256": source_hash,
+            "value": False,
+            "basis": basis,
+        }
+        if assumption not in self.flow.profile_assumptions:
+            self.flow.profile_assumptions.append(assumption)
+        return StaticValue(constant=False)
+
     def expression(self, node: ast.AST | None) -> StaticValue:
         if node is None:
             return StaticValue(constant=None)
@@ -316,6 +426,10 @@ class StaticFlowAnalyzer:
             return StaticValue(constant=node.value)
         if isinstance(node, ast.Name):
             return self.env.get(node.id, StaticValue())
+        if isinstance(node, ast.NamedExpr):
+            value = self.expression(node.value)
+            self.assign(node.target, value)
+            return value
         if isinstance(node, ast.Attribute):
             return self.attribute(self.expression(node.value), node.attr)
         if isinstance(node, (ast.Tuple, ast.List)):
@@ -459,6 +573,9 @@ class StaticFlowAnalyzer:
             arguments.update(
                 {kw.arg: self.expression(kw.value) for kw in node.keywords if kw.arg is not None}
             )
+            predicate = self.canonical_predicate(node, arguments)
+            if predicate is not None:
+                return predicate
             if function.module_path is not None and function.method is None:
                 return self.event(node, function.module_path, "module", function.module_path, arguments)
             if function.method is not None and self.depth < 3:
@@ -539,7 +656,7 @@ class StaticFlowAnalyzer:
     ) -> StaticValue:
         module = self.model.get_submodule(path) if path else self.model
         try:
-            method = getattr(type(module), method_name)
+            method = inspect.unwrap(getattr(type(module), method_name))
             function = next(
                 n
                 for n in ast.parse(textwrap.dedent(inspect.getsource(method))).body
@@ -548,12 +665,21 @@ class StaticFlowAnalyzer:
         except (AttributeError, OSError, TypeError, SyntaxError, StopIteration):
             self.flow.warnings.append(f"Helper source unavailable: {path}.{method_name}; dependencies only")
             return combine(values)
-        old_env, old_output = self.env, self.flow.outputs
+        old_env, old_output, old_globals, old_returned = (
+            self.env,
+            self.flow.outputs,
+            self.source_globals,
+            self.returned,
+        )
+        self.source_globals = method.__globals__
+        self.returned = []
         self.env = {"self": StaticValue(module_path=path)}
         self.env.update({arg.arg: value for arg, value in zip(function.args.args[1:], values)})
         self.depth += 1
         self.statements(function.body)
-        result = self.flow.outputs
+        result = merge_outputs(self.returned)
         self.depth -= 1
         self.env, self.flow.outputs = old_env, old_output
+        self.source_globals = old_globals
+        self.returned = old_returned
         return result

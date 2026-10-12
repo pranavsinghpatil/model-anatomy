@@ -32,6 +32,10 @@ def test_real_pinned_model(model_id, revision, parameters, layers, hidden):
     assert ir.metadata["analysis_report"]["checkpoint_parameter_coverage"] == 1
     assert ir.metadata["artifacts"]["weight_payload_bytes_read"] == 0
     assert ir.metadata["analysis_report"]["forward_executed"] is False
+    assert ir.metadata["analysis_report"]["warnings"] == []
+    assert ir.metadata["analysis_report"]["semantic_coverage"] == 1
+    assert ir.metadata["analysis_report"]["module_semantic_coverage"] == 1
+    assert ir.metadata["analysis_report"]["tensor_shape_coverage"] == 1
     ir.root_graph.validate()
     assert ModelIR.from_json(ir.to_json()).to_dict() == ir.to_dict()
     assert ir.metadata["analysis_report"]["unmapped_checkpoint_tensors"] == []

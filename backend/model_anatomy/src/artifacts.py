@@ -13,6 +13,7 @@ from urllib.parse import quote, unquote, urlsplit
 
 import requests
 
+from . import limits
 from .errors import ArtifactError
 
 MAX_HEADER_BYTES = 16 * 1024 * 1024
@@ -126,7 +127,7 @@ def _unique_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
 def parse_safetensors_header(header_bytes: bytes, file_size: int) -> SafetensorsMetadata:
     try:
         header = json.loads(header_bytes, object_pairs_hook=_unique_object)
-    except (ValueError, UnicodeError) as exc:
+    except (ValueError, UnicodeError, RecursionError) as exc:
         raise ArtifactError(f"Invalid Safetensors JSON header: {exc}") from exc
     if not isinstance(header, dict) or not header_bytes.startswith(b"{"):
         raise ArtifactError("Safetensors header must be a JSON object")
@@ -138,6 +139,8 @@ def parse_safetensors_header(header_bytes: bytes, file_size: int) -> Safetensors
     for name, info in header.items():
         if name == "__metadata__":
             continue
+        if len(tensors) >= limits.MAX_CHECKPOINT_TENSORS:
+            raise ArtifactError("Checkpoint exceeds the supported tensor record count")
         if not isinstance(info, dict):
             raise ArtifactError(f"Invalid tensor entry: {name}")
         dtype, shape, offsets = info.get("dtype"), info.get("shape"), info.get("data_offsets")
@@ -186,7 +189,7 @@ class MetadataClient:
                 raise ArtifactError("JSON metadata exceeds the size limit")
             try:
                 result = json.loads(body, object_pairs_hook=_unique_object)
-            except (ValueError, UnicodeError) as exc:
+            except (ValueError, UnicodeError, RecursionError) as exc:
                 raise ArtifactError(f"Invalid JSON metadata: {url}") from exc
             if not isinstance(result, dict):
                 raise ArtifactError("Expected a metadata object")
@@ -201,9 +204,11 @@ class MetadataClient:
         if not isinstance(sha, str) or not re.fullmatch(r"[0-9a-f]{40}", sha):
             raise ArtifactError("Hugging Face did not return an immutable commit SHA")
         siblings = info.get("siblings", [])
-        if not isinstance(siblings, list) or not all(
-            isinstance(item, dict) and isinstance(item.get("rfilename"), str) for item in siblings
-        ):
+        if not isinstance(siblings, list):
+            raise ArtifactError("Hugging Face repository file metadata is invalid")
+        if len(siblings) > limits.MAX_REPOSITORY_FILES:
+            raise ArtifactError("Repository exceeds the supported file record count")
+        if not all(isinstance(item, dict) and isinstance(item.get("rfilename"), str) for item in siblings):
             raise ArtifactError("Hugging Face repository file metadata is invalid")
         files = {item["rfilename"] for item in siblings}
         if not any(name.endswith((".safetensors", ".safetensors.index.json")) for name in files):
@@ -227,6 +232,8 @@ class MetadataClient:
             mapping = index.get("weight_map")
             if not isinstance(mapping, dict) or not mapping:
                 raise ArtifactError("Safetensors index has no weight_map")
+            if len(mapping) > limits.MAX_CHECKPOINT_TENSORS:
+                raise ArtifactError("Checkpoint index exceeds the supported tensor record count")
             shard_names = (
                 sorted(set(mapping.values())) if all(isinstance(v, str) for v in mapping.values()) else []
             )
@@ -252,6 +259,8 @@ class MetadataClient:
         if len(shard_names) > MAX_CHECKPOINT_SHARDS:
             raise ArtifactError("Checkpoint exceeds the supported shard count")
         for filename in shard_names:
+            if len(tensors) >= limits.MAX_CHECKPOINT_TENSORS:
+                raise ArtifactError("Checkpoint exceeds the supported tensor record count")
             shard = self.safetensors(reference.url(filename, revision))
             if shard.metadata.get("format") not in {None, "pt"}:
                 raise ArtifactError("Safetensors checkpoint is not in the PyTorch target scope")
@@ -259,6 +268,8 @@ class MetadataClient:
             for name, tensor in shard.tensors.items():
                 if name in tensors:
                     raise ArtifactError(f"Duplicate tensor across Safetensors shards: {name}")
+                if len(tensors) >= limits.MAX_CHECKPOINT_TENSORS:
+                    raise ArtifactError("Checkpoint exceeds the supported tensor record count")
                 tensors[name], tensor_files[name] = tensor, filename
         if mapping is not None and mapping != tensor_files:
             raise ArtifactError("Safetensors shard headers disagree with the index weight_map")

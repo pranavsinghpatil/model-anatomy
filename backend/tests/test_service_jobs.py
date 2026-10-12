@@ -107,6 +107,21 @@ def test_legacy_terminal_status_matches_artifact_assessment_without_database_rew
     assert persisted.summary == {"warnings": []}
 
 
+def test_summary_predating_input_applicability_is_read_from_immutable_report(service):
+    guest = visitor(service)
+    job_id = service.create(guest, "gpt2")["id"]
+    service.claim("worker-a")
+    finish(service, job_id)
+    with service.db.write() as session:
+        job = session.get(Job, job_id)
+        summary = dict(job.summary)
+        summary.pop("input_names")
+        job.summary = summary
+    expected = sorted(document()["metadata"]["inputs"]["input_specs"])
+    assert service.present(service.get(job_id, guest))["input_names"] == expected
+    assert "input_names" not in service.get(job_id, guest).summary
+
+
 def test_global_worker_lease_and_claim_serialize_independent_connections(service):
     owner = visitor(service)
     jobs = [service.create(owner, "gpt2")["id"] for _ in range(2)]
