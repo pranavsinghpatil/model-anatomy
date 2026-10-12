@@ -17,21 +17,35 @@ Open the URL printed by Vite. `/api` and `/health` proxy to `http://127.0.0.1:80
 Set `API_PROXY_TARGET` in the environment or `.env.local` to change the upstream.
 Browser requests use `/api/v1` and root `/health` with same-origin guest cookies.
 In production, serve `dist/` and reverse-proxy both `/api` and `/health` to the HTTP service.
-On entry, the workspace restores the visitor's most recent job when one exists.
-Otherwise it opens with an empty canvas and model input.
+Configure the production server to return `index.html` for application routes.
+The landing page is `/`, submission and visitor-owned history are at `/app`, and
+reports use `/app/analyses/:id?view=overview|architecture|artifacts|report`.
+Legacy `/?analysis=:id` links redirect to the report. Recent analyses require an
+explicit Continue action; a new visitor sees an empty history.
 
-The canvas starts at a readable scale rather than shrinking a long architecture
-to fit the screen. Fit graph gives the complete overview; Readable view restores
-the inspection scale. Search and the minimap navigate components outside the
-viewport. Desktop history is collapsible, and the inspector opens on selection
-instead of reserving space for an empty panel. Mobile keeps separate workspace
-views. Architecture facts and graph direction are unchanged by these controls.
+Research mode opens Architecture; Learn opens Overview and offers an authored
+guide beside the same report data. Theme (System by default) and mode (Research
+by default) are remembered locally. Graph selection, breadcrumbs, viewports,
+inspector tab and panel sizes are retained per analysis during the browser session.
+Switching mode keeps this context. No model report is stored in localStorage.
+
+The canvas starts at a readable scale. Fit graph gives the complete overview;
+Readable view restores the inspection scale. Search is scoped to the current
+graph. Selecting a component opens its inspector; opening a nested graph requires
+an explicit action. The component list provides a keyboard alternative to the
+canvas. Desktop panels resize; narrower screens use a component drawer, and
+below 1024px the graph and inspector have separate views with return navigation.
+
+Light and dark semantic tokens, local Inter/JetBrains Mono fonts, Radix controls,
+and reduced-motion support form the shared design system. See
+[UI_REDESIGN.md](../docs/UI_REDESIGN.md) and [THIRD_PARTY.md](THIRD_PARTY.md).
 
 ## Verification
 
 ```powershell
 npm run typecheck
 npm run build
+npm run format:check
 npx playwright install chromium
 npm run test:e2e
 ```
@@ -53,9 +67,22 @@ browser Origin header, and the API rejects unlisted mutation origins. These are
 explicit local development origins, not production settings. `E2E_BASE_URL` can
 override the browser URL (for example, port 5173 with the default API configuration).
 Both a running HTTP service and worker are required for live submission. Each
-viewport submits one SmolLM2-360M job under its own guest cookie and
-verifies its real parameter count and recent-job restoration. Screenshots and traces go to the ignored
-`test-results/` directory.
+viewport exercises both Research and Learn journeys with real SmolLM2-360M jobs,
+graph/component/tensor/evidence inspection, JSON export, and explicit recent
+analysis continuation. Other `live-*.spec.ts` files cover artifact-only, GGUF and
+ViT results. Screenshots and traces go to ignored `test-results*/` directories.
+
+The deterministic suite includes keyboard interaction, scoped citations,
+pagination, cancellation and recovery, unavailable AI, clipboard/export failures,
+and responsive axe checks. These route fixtures are test data only. Their evidence
+does not replace the separate live service acceptance run.
+
+On 2026-10-13 the redesign passed the production build, formatting and unchanged
+generated-contract checks, **92 deterministic desktop/mobile tests**, and all
+**14 separate live cases**. Both modes and themes passed the six target widths
+from 320 to 1920px, long identifiers and a 200% CSS zoom regression. Twelve axe
+scans reported no violations. See the [verification record](../docs/UI_REDESIGN.md#verification-record)
+for model evidence and the limits of local Chromium validation.
 
 ## Contract Integration
 
@@ -93,7 +120,10 @@ Navigation follows at most 100 returned child graphs; an unresolved association
 shows an honest error while retaining the citation source and locator. AI text is
 rendered as plain text and cannot change architecture data.
 
-## Ownership
+## Scope
 
-All changes are confined to `frontend/**`. No backend, infrastructure, root
-dependency files, branches, commits, or pull requests are created by this workstream.
+This redesign changes frontend presentation and project documentation. Backend
+API contracts, reconstruction logic, ownership checks and report schemas remain
+unchanged. Artifact-only results expose files, tensors, metadata and supported
+exports; they do not gain a fabricated architecture, runtime verification or AI
+answers. Model comparison, Model Autopsy and inference remain separate work.
