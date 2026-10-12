@@ -256,3 +256,15 @@ Keep the CLI architecture path strict. Return the existing graph-free `inspected
 outcome, and invalidate cache identity without rewriting previous analyses.
 Full Bonsai hybrid-attention reconstruction and broader modality semantics remain
 separate acceptance gates; this decision does not claim universal support.
+
+## D-027 - Organize inspection around orientation, architecture, artifacts and evidence
+**2026-10-12 - accepted by user; implemented 2026-10-13**
+
+Introduce a routed technical workspace with Learn and Research modes using the
+same real report. Keep submission on Start, explicit visitor-owned continuation,
+theme preferences, and session graph/selection/viewport state. Separate Overview,
+Architecture, Artifacts and Report to contain dense details. Use free Radix
+primitives, resizable panels and local fonts. Learn definitions are authored
+general guidance, never model-specific inferred facts. Artifact-only results
+retain graph-free behavior and supported exports. API and IR schemas do not
+change. See `UI_REDESIGN.md` for responsive layouts and domain boundaries.
