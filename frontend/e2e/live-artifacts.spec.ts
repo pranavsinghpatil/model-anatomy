@@ -51,12 +51,15 @@ for (const item of cases) {
     await page.getByRole("link", { name: "Artifacts", exact: true }).click();
     const view = page.getByTestId("artifact-inspection");
     await expect(view).toBeVisible({ timeout: 130_000 });
+    await view.getByText("Inspection reason", { exact: true }).click();
     await expect(view).toContainText(item.reason);
+    await view.locator(".artifact-inspection-identity summary").click();
     await expect(page.getByTestId("artifact-revision")).toHaveText(
       item.revision,
     );
-    await expect(page.getByTestId("artifact-tensor-count")).toHaveText(
-      String(item.tensors),
+    await expect(page.getByTestId("artifact-tensor-count")).toHaveAttribute(
+      "title",
+      new Intl.NumberFormat("en-US").format(item.tensors),
     );
     await expect(page.getByTestId("graph-canvas")).toHaveCount(0);
     expect(graphRequests).toEqual([]);
@@ -78,7 +81,7 @@ for (const item of cases) {
       await page
         .getByRole("button", { name: "Next tensor page", exact: true })
         .click();
-      await expect(view).toContainText("Page 2");
+      await expect(view.getByText(/Showing 51–/)).toBeVisible();
     }
     const overflow = await page.evaluate(
       () => document.documentElement.scrollWidth > window.innerWidth,

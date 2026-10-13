@@ -146,6 +146,9 @@ test("declared repository profile and nested Safetensors index remain selectable
   await browser.goto(`/?analysis=${job.id}`);
 
   const inspection = browser.getByTestId("artifact-inspection");
+  await inspection
+    .getByText("Repository profile and declared components", { exact: true })
+    .click();
   await expect(inspection.getByTestId("model-profile")).toContainText(
     "text-to-image",
   );
@@ -238,11 +241,14 @@ test("selected split GGUF reports file elements and native axis order", async ({
   });
   await openAnalysis(browser, job.id, "artifacts");
   const view = browser.getByTestId("artifact-inspection");
+  await view.getByText("Split checkpoint metadata", { exact: true }).click();
   await view.getByRole("tab", { name: /^Tensors/ }).click();
   await expect(view).toContainText("Selected file elements");
-  await expect(view).toContainText("only the selected file");
-  await expect(view).toContainText("GGML axis order");
-  await expect(view).toContainText("589,824");
+  await expect(view).toContainText("only the explicitly selected file");
+  await expect(view).toContainText("GGML native axis order");
+  await expect(
+    view.getByTestId("artifact-inspection-stats").locator("dd").nth(2),
+  ).toHaveAttribute("title", "589,824");
   await expect(browser.getByTestId("graph-canvas")).toHaveCount(0);
 });
 
@@ -291,11 +297,13 @@ test("inspected artifacts stay graph-free and paginate verified metadata", async
 
   const inspection = browser.getByTestId("artifact-inspection");
   await expect(
-    inspection.getByRole("heading", { name: "Architecture unavailable" }),
+    inspection.getByRole("heading", { name: "Artifacts" }),
   ).toBeVisible();
+  await inspection.getByText("Inspection reason", { exact: true }).click();
   await expect(
     inspection.getByText("architecture_not_supported"),
   ).toBeVisible();
+  await inspection.locator(".artifact-inspection-identity summary").click();
   await expect(inspection.getByTestId("artifact-revision")).toHaveText(
     revision,
   );
@@ -391,13 +399,17 @@ test("inspected artifacts stay graph-free and paginate verified metadata", async
   await inspection.getByRole("button", { name: "Next tensor page" }).click();
   await tensorRequestStarted;
   try {
-    await expect(inspection.getByText("1-50 of 51")).toBeVisible();
+    await expect(
+      inspection.getByText("1–50 of 51", { exact: true }),
+    ).toBeVisible();
   } finally {
     releaseTensorPage();
   }
   await browser.unroute(tensorPageRoute);
   await expect(inspection.getByText("encoder.layer.50.weight")).toBeVisible();
-  await expect(inspection.getByText("51-51 of 51")).toBeVisible();
+  await expect(
+    inspection.getByText("51–51 of 51", { exact: true }),
+  ).toBeVisible();
   await expect(
     inspection.getByRole("button", { name: "Previous tensor page" }),
   ).toBeEnabled();
@@ -466,9 +478,8 @@ test("inspected report keeps supported exports and omits Mermaid", async ({
   await expect(scope).toBeVisible();
   await expect(reportChecks.locator("details")).toHaveCount(0);
   await expect(scope.locator("details")).toHaveCount(0);
-  const identity = browser.locator(".report-section").filter({
-    has: browser.getByRole("heading", { name: "Artifact identity" }),
-  });
+  const identity = browser.locator(".report-identity-details");
+  await identity.locator("summary").click();
   await expect(
     identity.getByText("2030.01.01.1", { exact: true }),
   ).toBeVisible();

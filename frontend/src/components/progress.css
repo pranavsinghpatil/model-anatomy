@@ -1,0 +1,84 @@
+.progress-page {
+  background: var(--background);
+  gap: 16px;
+}
+.progress-model {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  max-width: min(100%, 680px);
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+.progress-model span {
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+.inspection-steps {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0;
+  width: min(640px, 100%);
+  margin: 16px 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--surface);
+}
+.inspection-steps > div {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 20px 12px;
+  font-size: 11px;
+  color: var(--muted);
+  border-right: 1px solid var(--border);
+}
+.inspection-steps > div:last-child {
+  border: 0;
+}
+.inspection-steps .is-current {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 7%, var(--surface));
+}
+.inspection-steps small {
+  font-size: 9px;
+}
+.workspace-shell .primary-views a[aria-disabled="true"] {
+  opacity: 0.5;
+  cursor: default;
+}
+.inspector-definition {
+  border-left: 2px solid var(--border);
+  margin: 12px 0;
+  padding-left: 12px;
+}
+.definition-label {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 550;
+}
+.inspector-definition .inspector-purpose {
+  font-size: 12px;
+  line-height: 1.65;
+  margin-top: 4px;
+}
+@media (max-width: 767px) {
+  .inspection-steps {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .inspection-steps > div {
+    border-bottom: 1px solid var(--border);
+    padding: 12px;
+  }
+  .inspection-steps > div:nth-child(2) {
+    border-right: 0;
+  }
+  .inspection-steps > div:nth-child(3) {
+    border-bottom: 0;
+  }
+}

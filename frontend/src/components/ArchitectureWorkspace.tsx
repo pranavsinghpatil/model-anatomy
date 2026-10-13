@@ -20,6 +20,7 @@ import type {
 } from "../api/contract";
 import { shape } from "../format";
 import { GraphCanvas } from "../graph/GraphCanvas";
+import { nodeTitle } from "../graph/presentation";
 import { Inspector, EvidenceList } from "./Inspector";
 import { Questions } from "./Questions";
 import { Button, Drawer } from "./ui";
@@ -27,8 +28,10 @@ import {
   useMedia,
   type WorkspaceSession,
   type Crumb,
+  type GraphLayoutPreference,
 } from "../state/workspace";
 import type { Dispatch, SetStateAction } from "react";
+import "./architecture.css";
 type Props = {
   analysis: AnalysisDetail;
   graph: ArchitectureGraph;
@@ -148,10 +151,13 @@ export function ArchitectureWorkspace({
             >
               <span className="outline-mark" />
               <span>
-                <strong>{node.label}</strong>
+                <strong>{nodeTitle(node)}</strong>
                 <small>
                   {node.kind.replaceAll("_", " ")}
                   {node.repeat > 1 ? ` · ${node.repeat} instances` : ""}
+                  {nodeTitle(node) !== node.label && (
+                    <span className="outline-module-type">{node.label}</span>
+                  )}
                 </small>
               </span>
             </button>
@@ -277,6 +283,18 @@ export function ArchitectureWorkspace({
         open={open}
         viewport={state.viewports[graph.id]}
         onViewportChange={viewport}
+        layoutPreference={
+          state.graphLayouts[graph.id] ?? {
+            direction: "DOWN",
+            density: "compact",
+          }
+        }
+        onLayoutPreferenceChange={(preference: GraphLayoutPreference) =>
+          setState((s) => ({
+            ...s,
+            graphLayouts: { ...s.graphLayouts, [graph.id]: preference },
+          }))
+        }
         selectEdge={(value) => {
           onClearCitation();
           setEdge(value);
@@ -294,7 +312,9 @@ export function ArchitectureWorkspace({
           <i className="structural" />
           Structural relation
         </span>
-        <span title={graph.id}>{graph.id}</span>
+        <span title={graph.id}>
+          Select a component to inspect · arrow opens nested graph
+        </span>
       </footer>
     </div>
   );

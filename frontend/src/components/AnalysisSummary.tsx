@@ -1,33 +1,104 @@
 import { Link } from "react-router-dom";
-import { ArrowRight, BookOpen, FileCheck2, Network } from "lucide-react";
+import {
+  ArrowRight,
+  BookOpen,
+  FileCheck2,
+  FileSearch,
+  Network,
+} from "lucide-react";
 import type { AnalysisDetail } from "../api/contract";
 import { count, dimensionCount, reportDimensionKeys } from "../format";
 import { CopyButton } from "./ui";
 import { Status } from "./Common";
 import { usePreferences } from "../state/preferences";
+import "./analysis-summary.css";
+
 export function Overview({ detail }: { detail: AnalysisDetail }) {
   const { mode } = usePreferences();
   const artifact = detail.status === "inspected";
+  const inspection = detail.inspection;
+  const modelName = detail.model_id.split("/").at(-1) ?? detail.model_id;
+
   return (
-    <div className="content-page overview-page">
-      <div className="page-heading">
-        <span className="eyebrow">MODEL ORIENTATION</span>
-        <h1>{detail.model_id.split("/").at(-1)}</h1>
-        <p>
-          {artifact
-            ? "Verified artifacts are available. Architecture reconstruction is unavailable for this inspection."
-            : "A model-specific reconstruction, grounded in its recorded artifacts."}
-        </p>
-      </div>
-      <section className="overview-identity">
+    <div
+      className={`content-page overview-page summary-page${artifact ? " is-artifact-only" : ""}`}
+    >
+      <header className="summary-heading">
         <div>
-          <span className="eyebrow">{detail.model_id.split("/")[0]}</span>
-          <h2>{detail.architecture ?? "Architecture unknown"}</h2>
+          <span className="eyebrow">MODEL ORIENTATION</span>
+          <h1>{modelName}</h1>
+          <p>{detail.model_id}</p>
         </div>
         <Status status={detail.status} />
+      </header>
+
+      <section className="summary-identity" aria-label="Analysis identity">
+        <div>
+          <span className="eyebrow">
+            {detail.model_id.split("/")[0] || "Model repository"}
+          </span>
+          <h2>
+            {artifact
+              ? "Artifact inspection"
+              : (detail.architecture ?? "Architecture unknown")}
+          </h2>
+        </div>
+        <div className="summary-revision">
+          <span>Verified revision</span>
+          <code data-testid="model-revision">
+            {detail.revision ?? "Unknown"}
+          </code>
+          {detail.revision && (
+            <CopyButton value={detail.revision} label="Copy revision" />
+          )}
+        </div>
       </section>
-      {!artifact && (
-        <dl className="model-metrics">
+
+      {artifact ? (
+        <section
+          className="summary-artifact-outcome"
+          aria-labelledby="summary-artifact-title"
+        >
+          <div className="summary-artifact-mark">
+            <FileSearch size={20} aria-hidden="true" />
+          </div>
+          <div className="summary-artifact-copy">
+            <span className="eyebrow">NO ARCHITECTURE GRAPH</span>
+            <h2 id="summary-artifact-title">
+              The repository was verified at this revision.
+            </h2>
+            <p>
+              {inspection?.message ??
+                "Architecture reconstruction was unavailable for this inspection."}
+            </p>
+            <p>
+              File inventory and bounded tensor headers are evidence about the
+              stored artifacts. They do not establish component ownership,
+              computation order, or a unique model parameter count.
+            </p>
+            {inspection?.reason_code && (
+              <code className="summary-reason-code">
+                {inspection.reason_code}
+              </code>
+            )}
+          </div>
+          <dl className="summary-artifact-facts">
+            <div>
+              <dt>Repository files</dt>
+              <dd>{count(inspection?.file_count)}</dd>
+            </div>
+            <div>
+              <dt>Tensor headers</dt>
+              <dd>{count(inspection?.tensor_count)}</dd>
+            </div>
+            <div>
+              <dt>Checkpoint selected</dt>
+              <dd>{inspection?.checkpoint_available ? "Yes" : "No"}</dd>
+            </div>
+          </dl>
+        </section>
+      ) : (
+        <dl className="model-metrics summary-metrics">
           <div>
             <dt>Parameters</dt>
             <dd title={count(detail.parameter_count)}>
@@ -50,71 +121,83 @@ export function Overview({ detail }: { detail: AnalysisDetail }) {
           ))}
         </dl>
       )}
-      <div className="revision-block">
-        <span>Model revision</span>
-        <code data-testid="model-revision">{detail.revision ?? "Unknown"}</code>
-        {detail.revision && (
-          <CopyButton value={detail.revision} label="Copy revision" />
-        )}
-      </div>
-      <section className="explore-next">
+
+      <section className="explore-next summary-next">
         <div className="section-title">
           <div>
-            <BookOpen size={18} />
+            <BookOpen size={18} aria-hidden="true" />
             <h2>
               {mode === "learn"
-                ? "A path to understanding"
-                : "Continue your inspection"}
+                ? "Where to go next"
+                : "Continue this inspection"}
             </h2>
           </div>
+          <p>
+            {artifact
+              ? "Start with the verified files, then inspect available tensor headers."
+              : "Move from the model summary to its structure or recorded report."}
+          </p>
         </div>
         <div className="next-actions">
-          <Link to={`?view=${artifact ? "artifacts" : "architecture"}`}>
-            <Network size={22} />
+          <Link
+            className={artifact ? "summary-primary-link" : undefined}
+            to={`?view=${artifact ? "artifacts" : "architecture"}`}
+          >
+            {artifact ? (
+              <FileSearch size={21} aria-hidden="true" />
+            ) : (
+              <Network size={21} aria-hidden="true" />
+            )}
             <div>
               <h3>
                 {artifact
-                  ? "Explore verified artifacts"
+                  ? "Inspect files and choose a checkpoint"
                   : "Explore the architecture"}
               </h3>
               <p>
                 {artifact
-                  ? "Read the file inventory and available tensor metadata."
-                  : "Select a component to see its purpose, shapes and evidence."}
+                  ? "Selection is explicit when a repository has multiple checkpoints or components."
+                  : "Select a component to review its shape, tensors, and supporting evidence."}
               </p>
             </div>
-            <ArrowRight size={18} />
+            <ArrowRight size={18} aria-hidden="true" />
           </Link>
           <Link to="?view=report">
-            <FileCheck2 size={22} />
+            <FileCheck2 size={21} aria-hidden="true" />
             <div>
-              <h3>Understand the report’s scope</h3>
+              <h3>Review report scope</h3>
               <p>
-                Review coverage, unresolved checks and the inspection method.
+                See what the recorded checks establish and which limits apply.
               </p>
             </div>
-            <ArrowRight size={18} />
+            <ArrowRight size={18} aria-hidden="true" />
           </Link>
         </div>
       </section>
-      <div className="scope-note">
-        <strong>Static inspection</strong>
-        <p>
-          Shapes and structure describe the recorded inspection. Coverage is not
-          runtime verification; unknown facts remain explicit.
-        </p>
-      </div>
+
+      {!artifact && (
+        <div className="scope-note">
+          <strong>Static reconstruction</strong>
+          <p>
+            Recorded structure and coverage describe this inspection. They do
+            not establish runtime behavior for every possible execution path.
+          </p>
+        </div>
+      )}
     </div>
   );
 }
+
 const coverage = (value: number | null | undefined) =>
   value == null ? "Unknown" : `${(value * 100).toFixed(1)}%`;
 const bool = (value: boolean | null | undefined) =>
   value == null ? "Unknown" : value ? "Yes" : "No";
+
 export function Report({ detail }: { detail: AnalysisDetail }) {
   const q = detail.quality;
   const artifact = detail.status === "inspected";
-  const checks: [[string, string | number], ...[string, string | number][]] = [
+  const inspection = detail.inspection;
+  const checks: [string, string | number][] = [
     ["Semantic coverage", coverage(q?.semantic_coverage)],
     ["Module semantic coverage", coverage(q?.module_semantic_coverage)],
     [
@@ -131,24 +214,66 @@ export function Report({ detail }: { detail: AnalysisDetail }) {
     ["Runtime trace available", bool(q?.runtime_trace_available)],
     ["Mode", q?.mode ?? "Unknown"],
   ];
+
   return (
-    <div className="content-page report-page">
-      <div className="page-heading">
-        <span className="eyebrow">TRUST & PROVENANCE</span>
-        <h1>Inspection report</h1>
-        <p>
-          What this inspection established, and where its boundaries remain.
-        </p>
-      </div>
-      <section className="report-section" data-testid="report-checks">
-        <h2>Report checks</h2>
-        {artifact ? (
+    <div
+      className={`content-page report-page summary-page${artifact ? " is-artifact-only" : ""}`}
+    >
+      <header className="summary-heading">
+        <div>
+          <span className="eyebrow">TRUST & PROVENANCE</span>
+          <h1>Inspection report</h1>
           <p>
-            Architecture coverage is unavailable for an artifact-only
-            inspection. Tensor element counts do not establish unique model
-            parameter counts.
+            {detail.model_id} · revision {detail.revision ?? "unknown"}
           </p>
-        ) : (
+        </div>
+        <Status status={detail.status} />
+      </header>
+
+      {artifact ? (
+        <section
+          className="report-section report-outcome"
+          data-testid="report-checks"
+        >
+          <div className="report-outcome-heading">
+            <FileSearch size={19} aria-hidden="true" />
+            <div>
+              <span className="eyebrow">ARTIFACTS INSPECTED</span>
+              <h2>Verified facts and boundaries</h2>
+            </div>
+          </div>
+          <p>
+            {inspection?.message ??
+              "Architecture reconstruction was unavailable for this inspection."}
+          </p>
+          {inspection?.reason_code && (
+            <code className="summary-reason-code">
+              {inspection.reason_code}
+            </code>
+          )}
+          <dl className="report-checks report-artifact-facts">
+            <div>
+              <dt>Repository files in pinned revision</dt>
+              <dd>{count(inspection?.file_count)}</dd>
+            </div>
+            <div>
+              <dt>Tensor headers inspected</dt>
+              <dd>{count(inspection?.tensor_count)}</dd>
+            </div>
+            <div>
+              <dt>Checkpoint selected</dt>
+              <dd>{inspection?.checkpoint_available ? "Yes" : "No"}</dd>
+            </div>
+          </dl>
+          <p className="report-boundary">
+            No architecture graph or semantic coverage is available for this
+            result. Tensor element totals do not establish unique model
+            parameters, module ownership, or dataflow.
+          </p>
+        </section>
+      ) : (
+        <section className="report-section" data-testid="report-checks">
+          <h2>Coverage and checks</h2>
           <dl className="report-checks">
             {checks.map(([label, value]) => (
               <div key={label}>
@@ -157,52 +282,59 @@ export function Report({ detail }: { detail: AnalysisDetail }) {
               </div>
             ))}
           </dl>
-        )}
-        <h3>Incomplete checks</h3>
-        {detail.partial_reasons?.length ? (
-          <ul>
-            {detail.partial_reasons.map((reason, i) => (
-              <li key={i}>{reason}</li>
-            ))}
-          </ul>
-        ) : (
+        </section>
+      )}
+
+      <div className="report-columns">
+        <section className="report-section" data-testid="analysis-scope">
+          <span className="eyebrow">METHOD</span>
+          <h2>Analysis scope</h2>
           <p>
-            {detail.status === "partial"
-              ? "This report is partial; no specific incomplete-check details were returned."
-              : "No incomplete-check details returned."}
+            {artifact
+              ? "The result records a pinned repository inventory and any bounded checkpoint headers that were safe to inspect. It does not reconstruct an architecture."
+              : "Static inspection describes artifact-backed structure. Coverage does not establish runtime correctness or every possible execution path."}
           </p>
-        )}
-      </section>
-      <section className="report-section">
-        <h2>Warnings</h2>
-        {detail.warnings.length ? (
-          <ul>
-            {detail.warnings.map((warning, i) => (
-              <li key={i}>{warning}</li>
-            ))}
-          </ul>
-        ) : (
-          <p>No warnings returned.</p>
-        )}
-      </section>
-      <section className="report-section" data-testid="analysis-scope">
-        <h2>Analysis scope</h2>
-        <p>
-          Static inspection describes artifact-backed structure. Coverage does
-          not establish runtime correctness or every possible execution path.
-        </p>
-        {detail.limitations?.length ? (
-          <ul>
-            {detail.limitations.map((limitation, i) => (
-              <li key={i}>{limitation}</li>
-            ))}
-          </ul>
-        ) : (
-          <p>No additional method limitations returned.</p>
-        )}
-      </section>
-      <section className="report-section">
-        <h2>Artifact identity</h2>
+          {detail.limitations?.length ? (
+            <ul>
+              {detail.limitations.map((limitation, i) => (
+                <li key={i}>{limitation}</li>
+              ))}
+            </ul>
+          ) : (
+            <p>No additional method limitations returned.</p>
+          )}
+        </section>
+        <section className="report-section report-warning-section">
+          <span className="eyebrow">ATTENTION</span>
+          <h2>Warnings and incomplete checks</h2>
+          {detail.warnings.length ? (
+            <ul>
+              {detail.warnings.map((warning, i) => (
+                <li key={i}>{warning}</li>
+              ))}
+            </ul>
+          ) : (
+            <p>No warnings returned.</p>
+          )}
+          {detail.partial_reasons?.length ? (
+            <ul>
+              {detail.partial_reasons.map((reason, i) => (
+                <li key={`reason-${i}`}>{reason}</li>
+              ))}
+            </ul>
+          ) : detail.status === "partial" ? (
+            <p>
+              This report is partial; no specific incomplete-check details were
+              returned.
+            </p>
+          ) : (
+            <p>No incomplete-check details returned.</p>
+          )}
+        </section>
+      </div>
+
+      <details className="report-section report-identity-details">
+        <summary>Artifact identity and report metadata</summary>
         <dl className="report-checks">
           <div>
             <dt>Model ID</dt>
@@ -236,7 +368,7 @@ export function Report({ detail }: { detail: AnalysisDetail }) {
             </dd>
           </div>
         </dl>
-      </section>
+      </details>
     </div>
   );
 }

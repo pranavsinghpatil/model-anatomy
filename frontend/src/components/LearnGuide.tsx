@@ -73,12 +73,14 @@ const guideSteps: { id: LearnStep; label: string; copy: string }[] = [
 export function componentPurpose(node: GraphNode | null) {
   if (!node)
     return "Select a component to inspect its reported inputs, outputs, tensors, and evidence.";
-  const kind = node.kind.toLowerCase();
-  const definition = componentDefinitions[kind];
-  const fact = `Reported fact: “${node.label}” is recorded with kind “${node.kind}”.`;
-  return definition
-    ? `General meaning: ${definition} ${fact}`
-    : `General meaning: no authored definition is available for this kind. Purpose unknown. ${fact}`;
+  return componentMeaning(node.kind);
+}
+
+export function componentMeaning(kind: string) {
+  return (
+    componentDefinitions[kind.toLowerCase()] ??
+    "Purpose unknown for this component kind."
+  );
 }
 
 export function LearnGuide({
@@ -102,40 +104,55 @@ export function LearnGuide({
   };
 
   return (
-    <section className="learn-guide" aria-label="How to read this report">
-      <header>
-        <span className="eyebrow">Reading guide</span>
-        <p>
+    <details className="learn-guide" aria-label="How to read this report">
+      <summary>
+        <span>Graph guide</span>
+        <small>
           {isArtifactOnly
-            ? `Repository and checkpoint metadata for ${analysis.model_id} at revision ${analysis.revision ?? "Unknown"}.`
+            ? "Repository metadata"
             : node
-              ? componentPurpose(node)
-              : `Architecture report for ${analysis.model_id} at revision ${analysis.revision ?? "Unknown"}.`}
-        </p>
-      </header>
-      {isArtifactOnly ? (
-        <p className="learn-guide-copy">
-          Artifact metadata comes from the repository inspection response.
-        </p>
-      ) : (
-        <>
-          <nav className="learn-guide-steps" aria-label="Reading guide topics">
-            {guideSteps.map((step) => (
-              <button
-                key={step.id}
-                type="button"
-                aria-pressed={selected.id === step.id}
-                onClick={() => chooseStep(step.id)}
-              >
-                {step.label}
-              </button>
-            ))}
-          </nav>
-          <p className="learn-guide-copy" aria-live="polite">
-            {selected.copy}
+              ? `${node.label} · ${node.kind.replaceAll("_", " ")}`
+              : "Select a node, edge, or connection to inspect reported facts"}
+        </small>
+      </summary>
+      <div className="learn-guide-content">
+        <header>
+          <span className="eyebrow">Reading guide</span>
+          <p>
+            {isArtifactOnly
+              ? `Repository and checkpoint metadata for ${analysis.model_id} at revision ${analysis.revision ?? "Unknown"}.`
+              : node
+                ? componentPurpose(node)
+                : `Architecture report for ${analysis.model_id} at revision ${analysis.revision ?? "Unknown"}.`}
           </p>
-        </>
-      )}
-    </section>
+        </header>
+        {isArtifactOnly ? (
+          <p className="learn-guide-copy">
+            Artifact metadata comes from the repository inspection response.
+          </p>
+        ) : (
+          <>
+            <nav
+              className="learn-guide-steps"
+              aria-label="Reading guide topics"
+            >
+              {guideSteps.map((step) => (
+                <button
+                  key={step.id}
+                  type="button"
+                  aria-pressed={selected.id === step.id}
+                  onClick={() => chooseStep(step.id)}
+                >
+                  {step.label}
+                </button>
+              ))}
+            </nav>
+            <p className="learn-guide-copy" aria-live="polite">
+              {selected.copy}
+            </p>
+          </>
+        )}
+      </div>
+    </details>
   );
 }

@@ -5,13 +5,13 @@ and quickly reaching its tensors and provenance. It adds no backend or IR contra
 
 ## Navigation and information hierarchy
 
-`/` introduces the method with an explicitly labeled illustration. `/app` accepts
+After the user's usability review, `/` and `/app` now open one tool entry screen. It accepts
 a public HF ID, repository URL, or explicit checkpoint URL and lists only the
 visitor's analyses. Recent analyses require an explicit continuation action.
 `/app/analyses/:id?view=overview|architecture|artifacts|report` identifies the
 selected analysis and primary view; old `/?analysis=...` links redirect.
 
-Research defaults to Architecture; Learn defaults to Overview. Once a workspace
+Research and Learn both default to Architecture. Once a workspace
 view is selected, changing mode preserves the view, graph path, selection,
 inspector tab and viewport. Session memory is keyed by analysis and graph; theme
 and mode alone persist in local storage. No reports are placed in local storage.
@@ -23,7 +23,9 @@ Report separates coverage, incomplete checks, warnings, method scope and identit
 
 ## Annotated wireframes
 
-See [desktop and mobile wireframes](design/workspace-wireframes.svg).
+The original [desktop and mobile wireframes](design/workspace-wireframes.svg) record
+the first design. The implemented tool-first revision is described in
+[CANVAS_WORKSPACE.md](CANVAS_WORKSPACE.md); it removes the marketing/start split.
 
 At 1280px the component navigator starts at 240px; the inspector opens at 360px.
 Keyboard-operable separators resize the panels while preserving graph state.

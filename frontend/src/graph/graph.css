@@ -9,6 +9,7 @@
   width: 100%;
   height: 100%;
   min-height: 0;
+  container-type: inline-size;
   color: var(--text, #243036);
 }
 
@@ -18,59 +19,6 @@
   width: calc(100% - 20px) !important;
   height: calc(100% - 102px) !important;
   background: var(--background, #f8faf9);
-}
-
-.model-node {
-  width: 242px;
-  height: 108px;
-  padding: 12px 13px;
-  border: 1px solid var(--border, #cbd4d8);
-  border-radius: 5px;
-  background: var(--surface, #fff);
-  color: var(--text, #243036);
-  box-shadow: 0 2px 4px color-mix(in srgb, var(--text, #243036) 5%, transparent);
-  text-align: left;
-}
-
-.model-node.is-selected {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 20%, transparent);
-}
-
-.model-node.is-dimmed {
-  opacity: 0.24;
-}
-.node-kind,
-.node-footer {
-  color: var(--muted);
-}
-.kind-mark {
-  background: var(--accent);
-}
-.kind-mark.violet {
-  background: var(--graph-child);
-}
-.repeat {
-  margin-left: auto;
-  padding: 1px 4px;
-  border-radius: 2px;
-  background: var(--soft);
-  color: var(--accent);
-}
-.node-title {
-  color: var(--text);
-}
-.node-open {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: 0;
-  background: transparent;
-  color: var(--accent);
-  cursor: pointer;
-}
-.model-node .react-flow__handle {
-  opacity: 0;
 }
 
 .graph-canvas .react-flow__edge-path {
@@ -91,7 +39,14 @@
 .graph-canvas.is-distant .react-flow__edge-textbg {
   display: none;
 }
-
+.graph-canvas:not(.show-edge-labels)
+  .react-flow__edge:not(.selected)
+  .react-flow__edge-text,
+.graph-canvas:not(.show-edge-labels)
+  .react-flow__edge:not(.selected)
+  .react-flow__edge-textbg {
+  display: none;
+}
 .graph-zoom {
   position: absolute;
   z-index: 5;
@@ -115,6 +70,12 @@
   align-items: center;
   gap: 6px;
   min-width: 0;
+  max-width: calc(100% - 24px);
+  overflow: visible;
+  flex-wrap: wrap;
+}
+.canvas-tools::-webkit-scrollbar {
+  display: none;
 }
 .canvas-tools > .icon-button {
   width: 34px;
@@ -123,6 +84,39 @@
   border-color: var(--border);
   background: var(--surface);
   color: var(--text);
+}
+.layout-direction {
+  display: inline-flex;
+  height: 34px;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 9px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 10px;
+  cursor: pointer;
+}
+.layout-direction:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.layout-direction:hover:not(:disabled),
+.layout-direction.active {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.zoom-readout {
+  min-width: 42px;
+  padding: 0 6px;
+  color: var(--muted);
+  font-size: 10px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
 }
 .graph-search {
   position: relative;
@@ -235,15 +229,22 @@
 
 @media (max-width: 640px) {
   .graph-canvas > .react-flow {
-    inset: 64px 8px 48px;
+    inset: 104px 8px 48px;
     width: calc(100% - 16px) !important;
-    height: calc(100% - 112px) !important;
+    height: calc(100% - 152px) !important;
   }
   .canvas-tools {
     inset-inline: 8px;
   }
   .graph-search {
-    width: min(230px, calc(100vw - 112px));
+    width: min(200px, calc(100vw - 112px));
+  }
+  .layout-direction {
+    width: 34px;
+    padding: 0;
+  }
+  .layout-direction > span {
+    display: none;
   }
   .canvas-caption {
     right: 10px;
@@ -253,6 +254,66 @@
   .graph-zoom {
     left: 8px;
     bottom: 55px;
+  }
+}
+.inventory-shelf {
+  position: absolute;
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+  padding: 12px 16px;
+  pointer-events: none;
+  color: var(--muted);
+}
+.inventory-shelf > strong {
+  display: block;
+  font-size: 13px;
+  color: var(--text);
+  font-weight: 550;
+}
+.inventory-shelf > span {
+  display: block;
+  font-size: 10px;
+  margin-top: 3px;
+}
+.outline-module-type {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.inspector-native-type {
+  display: block;
+  color: var(--muted);
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+@container (max-width: 900px) {
+  .canvas-tools .layout-direction {
+    width: 34px;
+    padding: 0;
+  }
+  .canvas-tools .layout-direction > span {
+    display: none;
+  }
+  .graph-search {
+    width: 200px;
+  }
+}
+@container (max-width: 520px) {
+  .graph-canvas > .react-flow {
+    inset: 104px 8px 48px;
+    width: calc(100% - 16px) !important;
+    height: calc(100% - 152px) !important;
+  }
+}
+
+@media (max-width: 900px) {
+  .layout-direction {
+    width: 34px;
+    padding: 0;
+  }
+  .layout-direction > span {
+    display: none;
   }
 }
 

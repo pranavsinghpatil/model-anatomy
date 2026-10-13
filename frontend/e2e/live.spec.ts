@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 import type { AnalysisDetail, ArchitectureGraph } from "../src/api/contract";
 import { expectGraphFramed, graphNode } from "./helpers";
 
-test("live start does not restore a recent analysis without an explicit choice", async ({
+test("live entry opens directly and only continues a recent analysis when selected", async ({
   page,
 }) => {
   test.skip(
@@ -15,19 +15,33 @@ test("live start does not restore a recent analysis without an explicit choice",
 
   await page.goto("/");
   await expect(
-    page.getByRole("heading", { name: /From open weights/ }),
+    page.getByRole("heading", {
+      name: "Open a model. Understand its structure.",
+    }),
+  ).toBeVisible();
+  await expect(
+    page.getByLabel("Hugging Face model", { exact: true }),
   ).toBeVisible();
   await expect(page.getByTestId("graph-canvas")).toHaveCount(0);
   await page.goto("/app");
   await expect(
-    page.getByRole("heading", { name: "Meet your model." }),
+    page.getByRole("heading", {
+      name: "Open a model. Understand its structure.",
+    }),
+  ).toBeVisible();
+  await expect(
+    page.getByLabel("Hugging Face model", { exact: true }),
   ).toBeVisible();
   await expect(page.locator(".workspace-shell")).toHaveCount(0);
   await expect(page.getByTestId("graph-canvas")).toHaveCount(0);
-  const continueRecent = page.getByRole("link", {
-    name: "Continue recent analysis",
-    exact: true,
-  });
+  expect(
+    appRequests.some((url) => new URL(url).pathname.includes("/graphs/")),
+  ).toBe(false);
+  const continueRecent = page
+    .getByRole("link", {
+      name: /^Continue analysis of /,
+    })
+    .first();
   if (await continueRecent.count()) {
     const href = await continueRecent.getAttribute("href");
     expect(href).toMatch(/^\/app\/analyses\//);
@@ -36,9 +50,6 @@ test("live start does not restore a recent analysis without an explicit choice",
   }
   expect(
     appRequests.some((url) => new URL(url).pathname === "/api/v1/examples"),
-  ).toBe(false);
-  expect(
-    appRequests.some((url) => new URL(url).pathname.includes("/graphs/")),
   ).toBe(false);
 });
 
@@ -77,9 +88,8 @@ for (const mode of ["Research", "Learn"] as const) {
     const created = (await response.json()) as AnalysisDetail;
     await expect(page).toHaveURL(new RegExp(`/app/analyses/${created.id}`));
 
-    const defaultView = mode === "Research" ? "Architecture" : "Overview";
     await expect(
-      page.getByRole("link", { name: defaultView, exact: true }),
+      page.getByRole("link", { name: "Architecture", exact: true }),
     ).toHaveAttribute("aria-current", "page", { timeout: 130_000 });
     const analysisPath = `/api/v1/analyses/${created.id}`;
     await expect
@@ -100,11 +110,6 @@ for (const mode of ["Research", "Learn"] as const) {
     expect(result.input_names).toEqual(["input_ids"]);
     expect(result.parameter_count).toBe(361_821_120);
 
-    if (mode === "Learn") {
-      await page
-        .getByRole("link", { name: "Architecture", exact: true })
-        .click();
-    }
     await expect(page.getByTestId("graph-canvas")).toBeVisible({
       timeout: 130_000,
     });

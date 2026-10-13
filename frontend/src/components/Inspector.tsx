@@ -27,6 +27,7 @@ import {
 import { ErrorNotice, IconButton, Loading, Warnings } from "./Common";
 import { componentPurpose } from "./LearnGuide";
 import "./inspection.css";
+import { nodeTitle } from "../graph/presentation";
 
 export const matchesCitation = (
   evidence: Pick<Evidence, "source" | "kind" | "locator">,
@@ -239,8 +240,14 @@ export function Inspector({
     <div className="inspector" data-testid="inspector">
       <div className="inspector-heading">
         <span className="eyebrow">{resolved.kind.replaceAll("_", " ")}</span>
-        <h2>{resolved.label}</h2>
-        <p className="inspector-purpose">{componentPurpose(resolved)}</p>
+        <h2>{nodeTitle(resolved)}</h2>
+        {nodeTitle(resolved) !== resolved.label && (
+          <code className="inspector-native-type">{resolved.label}</code>
+        )}
+        <div className="inspector-definition">
+          <span className="definition-label">Component kind guide</span>
+          <p className="inspector-purpose">{componentPurpose(resolved)}</p>
+        </div>
         <details className="metadata">
           <summary>Module path</summary>
           <code className="inspector-long-path">

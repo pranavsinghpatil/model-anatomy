@@ -1,7 +1,13 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import * as Tabs from "@radix-ui/react-tabs";
-import { ExternalLink, FileSearch, ScanSearch } from "lucide-react";
+import {
+  ArrowRight,
+  ExternalLink,
+  FileSearch,
+  ScanSearch,
+  Search,
+} from "lucide-react";
 import { api } from "../api/client";
 import type { InspectionSummary } from "../api/contract";
 import { count, shape, valueText } from "../format";
@@ -79,7 +85,7 @@ function tensorArtifactUrl(
 
 function range(offset: number, limit: number, total: number) {
   if (!total || offset >= total) return `0 of ${count(total)}`;
-  return `${offset + 1}-${Math.min(offset + limit, total)} of ${count(total)}`;
+  return `${offset + 1}–${Math.min(offset + limit, total)} of ${count(total)}`;
 }
 
 export function ArtifactInspection({
@@ -102,6 +108,9 @@ export function ArtifactInspection({
   const [filesOffset, setFilesOffset] = useState(0);
   const [tensorsOffset, setTensorsOffset] = useState(0);
   const [tab, setTab] = useState("files");
+  const [fileSearch, setFileSearch] = useState("");
+  const [focusFileInventory, setFocusFileInventory] = useState(false);
+  const filesHeadingRef = useRef<HTMLHeadingElement>(null);
   const filesInspection = useQuery({
     queryKey: ["artifacts", analysisId, "files", filesOffset],
     queryFn: ({ signal }) =>
@@ -130,84 +139,156 @@ export function ArtifactInspection({
       "pipeline_components_require_selection",
     ) ??
       false);
+  const checkpointSelectionRequired =
+    reasonCode === "checkpoint_selection_required";
+  const selectionRequired =
+    checkpointSelectionRequired || pipelineSelectionRequired;
   const inspectionError =
     filesInspection.error ?? tensorsInspection.error ?? undefined;
+  const filteredFiles = (filesPage?.files ?? []).filter((file) =>
+    file.toLocaleLowerCase().includes(fileSearch.trim().toLocaleLowerCase()),
+  );
+
+  useEffect(() => {
+    if (!focusFileInventory || tab !== "files" || !filesPage) return;
+    const frame = window.requestAnimationFrame(() => {
+      const heading = filesHeadingRef.current;
+      heading?.scrollIntoView({ behavior: "smooth", block: "start" });
+      heading?.focus({ preventScroll: true });
+      setFocusFileInventory(false);
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [filesPage, focusFileInventory, tab]);
 
   return (
     <section className="artifact-inspection" data-testid="artifact-inspection">
       <header className="artifact-inspection-header">
         <div className="artifact-inspection-title">
-          <FileSearch size={20} />
+          <FileSearch size={20} aria-hidden="true" />
           <div>
-            <span className="eyebrow">Artifacts inspected</span>
-            <h2>
-              {architecture
-                ? "Architecture report"
-                : "Architecture unavailable"}
-            </h2>
-          </div>
-        </div>
-        <div className="artifact-inspection-stats">
-          <div>
-            <span>Files</span>
-            <strong data-testid="artifact-file-count">
-              {count(fileCount)}
-            </strong>
-          </div>
-          <div>
-            <span>Tensors</span>
-            <strong data-testid="artifact-tensor-count">
-              {count(tensorCount)}
-            </strong>
-          </div>
-          <div>
-            <span>
-              {page?.checkpoint_format === "gguf"
-                ? "Selected file elements"
-                : "Checkpoint elements"}
+            <span className="eyebrow">
+              {architecture ? "INSPECTION" : "ARTIFACT INSPECTION"}
             </span>
-            <strong>
-              {count(
-                page?.checkpoint_format === "gguf"
-                  ? page.selected_file_tensor_element_count
-                  : (page?.checkpoint_tensor_element_count ??
-                      summary?.checkpoint_tensor_element_count),
-              )}
-            </strong>
+            <h1>Artifacts</h1>
+            {!architecture && (
+              <p>Repository inspected · no reconstructed graph</p>
+            )}
           </div>
         </div>
+        <details className="artifact-inspection-identity">
+          <summary>
+            <strong>{modelId}</strong>
+            <code data-testid="artifact-revision">
+              {pageRevision ?? "Unknown"}
+            </code>
+          </summary>
+          <p>Verified revision used to inspect this repository.</p>
+        </details>
       </header>
 
-      <div className="artifact-inspection-reason">
-        {reasonCode && <code>{reasonCode}</code>}
-        <p>{message ?? "Inspection details unavailable."}</p>
-        {(reasonCode === "checkpoint_selection_required" ||
-          pipelineSelectionRequired) && (
-          <strong data-testid="checkpoint-selection-callout">
-            {pipelineSelectionRequired
-              ? "Pipeline components require selection. No file was chosen automatically."
-              : "Checkpoint selection required. No file was chosen automatically."}
-            {pipelineSelectionRequired && (
-              <>
-                {" "}
-                <code>pipeline_components_require_selection</code>
-              </>
-            )}
-          </strong>
-        )}
-        {page?.selected_file_split_metadata && (
-          <p>
-            Split checkpoint: this report covers only the selected file.{" "}
-            Reported parts:{" "}
-            {page.selected_file_split_metadata["split.count"] ?? "Unknown"}.
-          </p>
-        )}
-      </div>
+      {!architecture && (message || reasonCode) && (
+        <section
+          className="artifact-reason"
+          aria-label="Architecture reconstruction status"
+        >
+          <strong>Architecture reconstruction unavailable</strong>
+          {message && <p>{message}</p>}
+          {reasonCode && (
+            <details>
+              <summary>Inspection reason</summary>
+              <code>{reasonCode}</code>
+            </details>
+          )}
+        </section>
+      )}
 
-      <div className="artifact-inspection-revision">
-        <span>Verified revision</span>
-        <code data-testid="artifact-revision">{pageRevision ?? "Unknown"}</code>
-      </div>
+      <dl
+        className="artifact-inspection-stats"
+        aria-label="Verified artifact counts"
+        data-testid="artifact-inspection-stats"
+      >
+        <div>
+          <dt>Files</dt>
+          <dd data-testid="artifact-file-count" title={count(fileCount)}>
+            {count(fileCount, true)}
+          </dd>
+        </div>
+        <div>
+          <dt>Tensor headers</dt>
+          <dd data-testid="artifact-tensor-count" title={count(tensorCount)}>
+            {count(tensorCount, true)}
+          </dd>
+        </div>
+        <div>
+          <dt>
+            {page?.checkpoint_format === "gguf"
+              ? "Selected file elements"
+              : "Checkpoint elements"}
+          </dt>
+          <dd
+            title={count(
+              page?.checkpoint_format === "gguf"
+                ? page.selected_file_tensor_element_count
+                : (page?.checkpoint_tensor_element_count ??
+                    summary?.checkpoint_tensor_element_count),
+            )}
+          >
+            {count(
+              page?.checkpoint_format === "gguf"
+                ? page.selected_file_tensor_element_count
+                : (page?.checkpoint_tensor_element_count ??
+                    summary?.checkpoint_tensor_element_count),
+              true,
+            )}
+          </dd>
+        </div>
+      </dl>
+
+      {!architecture && (
+        <details className="artifact-scope-disclosure">
+          <summary>What this inspection establishes</summary>
+          <p>
+            It verifies the pinned file inventory and available bounded tensor
+            headers. It does not establish graph structure, component ownership,
+            execution order, or unique model parameter counts.
+          </p>
+        </details>
+      )}
+
+      {selectionRequired && (
+        <section
+          className="artifact-selection-action"
+          aria-labelledby="artifact-selection-title"
+          data-testid="checkpoint-selection-callout"
+        >
+          <div>
+            <span className="artifact-outcome-label">Next step</span>
+            <h3 id="artifact-selection-title">
+              {pipelineSelectionRequired
+                ? "Choose the checkpoint for the component you want to inspect."
+                : "Choose a checkpoint file to read its tensor headers."}
+            </h3>
+            <p>
+              {pipelineSelectionRequired
+                ? "This repository declares multiple pipeline components. Nothing was selected automatically."
+                : "Several checkpoint variants are present, so no variant was selected automatically."}
+            </p>
+            {pipelineSelectionRequired && (
+              <code>pipeline_components_require_selection</code>
+            )}
+          </div>
+          <button
+            type="button"
+            className="artifact-primary-action"
+            onClick={() => {
+              setTab("files");
+              setFocusFileInventory(true);
+            }}
+          >
+            Review checkpoint files <ArrowRight size={16} aria-hidden="true" />
+          </button>
+        </section>
+      )}
 
       {inspectionError && (
         <ErrorNotice
@@ -220,109 +301,11 @@ export function ArtifactInspection({
       )}
       {(filesInspection.isPending ||
         (tab === "tensors" && tensorsInspection.isPending)) && (
-        <Loading text="Loading artifact metadata" />
+        <Loading text="Loading verified artifact metadata" />
       )}
 
       {page && (
         <>
-          {profile && (
-            <section
-              className="artifact-inspection-reason artifact-model-profile"
-              aria-label="Declared model profile"
-              data-testid="model-profile"
-            >
-              <h3>Repository profile</h3>
-              <dl>
-                <dt>Repository kind</dt>
-                <dd>{profile.repository_kind}</dd>
-                {profile.declared_task && (
-                  <>
-                    <dt>Declared task</dt>
-                    <dd>{profile.declared_task}</dd>
-                  </>
-                )}
-                {profile.declared_library && (
-                  <>
-                    <dt>Declared library</dt>
-                    <dd>{profile.declared_library}</dd>
-                  </>
-                )}
-                {profile.config_model_type && (
-                  <>
-                    <dt>Config model type</dt>
-                    <dd>{profile.config_model_type}</dd>
-                  </>
-                )}
-                {profile.declared_architectures.length > 0 && (
-                  <>
-                    <dt>Declared architectures</dt>
-                    <dd>{profile.declared_architectures.join(", ")}</dd>
-                  </>
-                )}
-                {profile.formats.length > 0 && (
-                  <>
-                    <dt>Formats</dt>
-                    <dd>{profile.formats.join(", ")}</dd>
-                  </>
-                )}
-                {profile.selected_file && (
-                  <>
-                    <dt>Selected file</dt>
-                    <dd>
-                      <code style={{ overflowWrap: "anywhere" }}>
-                        {profile.selected_file}
-                      </code>
-                    </dd>
-                  </>
-                )}
-                {profile.selected_config && (
-                  <>
-                    <dt>Selected config</dt>
-                    <dd>
-                      <code style={{ overflowWrap: "anywhere" }}>
-                        {profile.selected_config}
-                      </code>
-                    </dd>
-                  </>
-                )}
-              </dl>
-              {profile.components.length > 0 && (
-                <div>
-                  <strong>Declared components</strong>
-                  <ul>
-                    {profile.components.map((component) => (
-                      <li key={component.path}>
-                        <code style={{ overflowWrap: "anywhere" }}>
-                          {component.path}
-                        </code>
-                        {component.library && ` · ${component.library}`}
-                        {component.declared_class &&
-                          ` · ${component.declared_class}`}
-                        {component.checkpoint_files.length > 0 && (
-                          <span style={{ overflowWrap: "anywhere" }}>
-                            {" · "}
-                            {component.checkpoint_files.join(", ")}
-                          </span>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-              {profile.architecture_blockers.length > 0 && (
-                <div>
-                  <strong>Architecture blockers</strong>
-                  <ul>
-                    {profile.architecture_blockers.map((blocker) => (
-                      <li key={blocker}>
-                        <code>{blocker}</code>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </section>
-          )}
           <Tabs.Root
             className="artifact-tabs"
             value={tab}
@@ -348,7 +331,16 @@ export function ArtifactInspection({
                 aria-labelledby="artifact-files-title"
               >
                 <div className="artifact-section-heading">
-                  <h3 id="artifact-files-title">Repository files</h3>
+                  <div>
+                    <h3
+                      id="artifact-files-title"
+                      ref={filesHeadingRef}
+                      tabIndex={-1}
+                    >
+                      Repository file inventory
+                    </h3>
+                    <p>Only files from the pinned revision are listed.</p>
+                  </div>
                   <span>
                     {range(
                       filesPage?.offset ?? 0,
@@ -357,25 +349,41 @@ export function ArtifactInspection({
                     )}
                   </span>
                 </div>
-                {filesPage?.files.length ? (
+                <label className="artifact-file-search">
+                  <Search size={16} aria-hidden="true" />
+                  <span className="sr-only">Filter files on this page</span>
+                  <input
+                    type="search"
+                    value={fileSearch}
+                    onChange={(event) => setFileSearch(event.target.value)}
+                    placeholder="Filter files on this page"
+                  />
+                </label>
+                {filteredFiles.length ? (
                   <ul className="artifact-file-list">
-                    {filesPage.files.map((file) => {
-                      const href = artifactUrl(
-                        modelId,
-                        filesPage.revision,
-                        file,
-                      );
+                    {filteredFiles.map((file) => {
+                      const href = pageRevision
+                        ? artifactUrl(modelId, pageRevision, file)
+                        : null;
                       const fileKind = checkpointFileKind(file);
                       return (
                         <li key={file}>
-                          {href ? (
-                            <a href={href} target="_blank" rel="noreferrer">
-                              <code>{file}</code>
-                              <ExternalLink size={13} aria-hidden="true" />
-                            </a>
-                          ) : (
-                            <code>{file}</code>
-                          )}
+                          <div className="artifact-file-name">
+                            {href ? (
+                              <a
+                                href={href}
+                                target="_blank"
+                                rel="noreferrer"
+                                title={file}
+                              >
+                                <code>{file}</code>
+                                <ExternalLink size={13} aria-hidden="true" />
+                              </a>
+                            ) : (
+                              <code title={file}>{file}</code>
+                            )}
+                            {fileKind && <small>{fileKind}</small>}
+                          </div>
                           {href && fileKind && (
                             <IconButton
                               label={`Inspect ${file} (${fileKind})`}
@@ -383,16 +391,18 @@ export function ArtifactInspection({
                               onClick={() => onInspectFile(href)}
                             >
                               <ScanSearch size={16} />
+                              <span>Inspect</span>
                             </IconButton>
                           )}
-                          {href && fileKind && <small>{fileKind}</small>}
                         </li>
                       );
                     })}
                   </ul>
                 ) : filesPage ? (
                   <p className="artifact-empty">
-                    No files returned for this page.
+                    {fileSearch
+                      ? "No files on this page match that filter."
+                      : "No files returned for this page."}
                   </p>
                 ) : null}
               </section>
@@ -401,16 +411,23 @@ export function ArtifactInspection({
                 aria-label="Repository file pages"
               >
                 <span>
-                  Page {Math.floor((filesPage?.offset ?? 0) / pageSize) + 1}
+                  Showing{" "}
+                  {range(
+                    filesPage?.offset ?? 0,
+                    filesPage?.limit ?? page.limit,
+                    page.file_count,
+                  )}{" "}
+                  files
                 </span>
                 <div>
                   <button
                     type="button"
                     aria-label="Previous file page"
                     disabled={filesOffset === 0 || filesInspection.isFetching}
-                    onClick={() =>
-                      setFilesOffset((value) => Math.max(0, value - pageSize))
-                    }
+                    onClick={() => {
+                      setFileSearch("");
+                      setFilesOffset((value) => Math.max(0, value - pageSize));
+                    }}
                   >
                     Previous
                   </button>
@@ -421,7 +438,10 @@ export function ArtifactInspection({
                       filesOffset + pageSize >= fileCount ||
                       filesInspection.isFetching
                     }
-                    onClick={() => setFilesOffset((value) => value + pageSize)}
+                    onClick={() => {
+                      setFileSearch("");
+                      setFilesOffset((value) => value + pageSize);
+                    }}
                   >
                     Next
                   </button>
@@ -440,7 +460,13 @@ export function ArtifactInspection({
                 aria-labelledby="artifact-tensors-title"
               >
                 <div className="artifact-section-heading">
-                  <h3 id="artifact-tensors-title">Checkpoint tensors</h3>
+                  <div>
+                    <h3 id="artifact-tensors-title">Verified tensor headers</h3>
+                    <p>
+                      Header metadata only; payloads and computation are not
+                      inspected.
+                    </p>
+                  </div>
                   <span>
                     {range(
                       tensorsPage?.offset ?? 0,
@@ -453,9 +479,9 @@ export function ArtifactInspection({
                   <table className="artifact-tensor-table">
                     <thead>
                       <tr>
-                        <th scope="col">Tensor</th>
+                        <th scope="col">Tensor name</th>
                         <th scope="col">Shape</th>
-                        <th scope="col">Dtype</th>
+                        <th scope="col">Type</th>
                         <th scope="col">Elements</th>
                         <th scope="col">Artifact</th>
                       </tr>
@@ -469,21 +495,23 @@ export function ArtifactInspection({
                         );
                         return (
                           <tr key={`${tensor.artifact}:${tensor.name}`}>
-                            <th scope="row">
+                            <th scope="row" title={tensor.name}>
                               <code>{tensor.name}</code>
                             </th>
                             <td>
-                              <code>{shape(tensor.shape)}</code>
+                              <code title={shape(tensor.shape)}>
+                                {shape(tensor.shape)}
+                              </code>
                               {tensor.shape_convention ===
                                 "ggml_dimensions" && (
-                                <small>GGML axis order</small>
+                                <small>GGML native axis order</small>
                               )}
                             </td>
                             <td>
                               <code>{tensor.dtype || "Unknown"}</code>
                             </td>
                             <td>{count(tensor.parameter_count)}</td>
-                            <td>
+                            <td title={tensor.artifact}>
                               {href ? (
                                 <a href={href} target="_blank" rel="noreferrer">
                                   <code>{tensor.artifact}</code>
@@ -511,7 +539,13 @@ export function ArtifactInspection({
                 aria-label="Checkpoint tensor pages"
               >
                 <span>
-                  Page {Math.floor((tensorsPage?.offset ?? 0) / pageSize) + 1}
+                  Showing{" "}
+                  {range(
+                    tensorsPage?.offset ?? 0,
+                    tensorsPage?.limit ?? page.limit,
+                    page.tensor_count,
+                  )}{" "}
+                  tensors
                 </span>
                 <div>
                   <button
@@ -544,6 +578,142 @@ export function ArtifactInspection({
             </Tabs.Content>
           </Tabs.Root>
 
+          {profile && (
+            <details className="artifact-source-details artifact-profile-details">
+              <summary>Repository profile and declared components</summary>
+              <section
+                className="artifact-model-profile"
+                aria-label="Declared model profile"
+                data-testid="model-profile"
+              >
+                <dl>
+                  <dt>Repository kind</dt>
+                  <dd>{profile.repository_kind}</dd>
+                  {profile.declared_task && (
+                    <>
+                      <dt>Declared task</dt>
+                      <dd>{profile.declared_task}</dd>
+                    </>
+                  )}
+                  {profile.declared_library && (
+                    <>
+                      <dt>Declared library</dt>
+                      <dd>{profile.declared_library}</dd>
+                    </>
+                  )}
+                  {profile.config_model_type && (
+                    <>
+                      <dt>Config model type</dt>
+                      <dd>{profile.config_model_type}</dd>
+                    </>
+                  )}
+                  {profile.declared_architectures.length > 0 && (
+                    <>
+                      <dt>Declared architectures</dt>
+                      <dd>{profile.declared_architectures.join(", ")}</dd>
+                    </>
+                  )}
+                  {profile.formats.length > 0 && (
+                    <>
+                      <dt>Formats</dt>
+                      <dd>{profile.formats.join(", ")}</dd>
+                    </>
+                  )}
+                  {profile.selected_file && (
+                    <>
+                      <dt>Selected file</dt>
+                      <dd>
+                        <code>{profile.selected_file}</code>
+                      </dd>
+                    </>
+                  )}
+                  {profile.selected_config && (
+                    <>
+                      <dt>Selected config</dt>
+                      <dd>
+                        <code>{profile.selected_config}</code>
+                      </dd>
+                    </>
+                  )}
+                </dl>
+                {profile.components.length > 0 && (
+                  <div>
+                    <h4>Declared components</h4>
+                    <ul>
+                      {profile.components.map((component) => (
+                        <li key={component.path}>
+                          <strong>{component.path}</strong>
+                          {(component.library || component.declared_class) && (
+                            <span>
+                              {[component.library, component.declared_class]
+                                .filter(Boolean)
+                                .join(" · ")}
+                            </span>
+                          )}
+                          {component.checkpoint_files.length > 0 && (
+                            <ul>
+                              {component.checkpoint_files.map((file) => {
+                                const href = pageRevision
+                                  ? artifactUrl(modelId, pageRevision, file)
+                                  : null;
+                                return (
+                                  <li key={file}>
+                                    <code>{file}</code>
+                                    {href && checkpointFileKind(file) && (
+                                      <button
+                                        type="button"
+                                        disabled={inspectionDisabled}
+                                        onClick={() => onInspectFile(href)}
+                                      >
+                                        Select this component checkpoint
+                                      </button>
+                                    )}
+                                  </li>
+                                );
+                              })}
+                            </ul>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {profile.architecture_blockers.length > 0 && (
+                  <div>
+                    <h4>Architecture blockers</h4>
+                    <ul>
+                      {profile.architecture_blockers.map((blocker) => (
+                        <li key={blocker}>
+                          <code>{blocker}</code>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </section>
+            </details>
+          )}
+          {page.selected_file_split_metadata && (
+            <details className="artifact-source-details">
+              <summary>Split checkpoint metadata</summary>
+              <p>
+                This report covers only the explicitly selected file in a split
+                checkpoint.
+              </p>
+              <dl className="artifact-metadata-list">
+                {Object.entries(page.selected_file_split_metadata).map(
+                  ([key, value]) => (
+                    <div key={key}>
+                      <dt>
+                        <code>{key}</code>
+                      </dt>
+                      <dd>{count(value)}</dd>
+                    </div>
+                  ),
+                )}
+              </dl>
+            </details>
+          )}
           {page.source_config && (
             <details className="artifact-source-details">
               <summary>Source configuration</summary>

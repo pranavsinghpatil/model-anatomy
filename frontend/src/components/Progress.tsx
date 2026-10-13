@@ -1,8 +1,17 @@
 import { Link } from "react-router-dom";
-import { LoaderCircle, ShieldCheck, Square } from "lucide-react";
+import {
+  LoaderCircle,
+  ShieldCheck,
+  Square,
+  GitBranch,
+  FileSearch,
+  Network,
+  FileCheck2,
+} from "lucide-react";
 import type { AnalysisDetail } from "../api/contract";
 import { Button } from "./ui";
 import { Status } from "./Common";
+import "./progress.css";
 const stages: Record<string, [string, string]> = {
   queued: [
     "Waiting for the worker",
@@ -52,6 +61,10 @@ export function Progress({
   ];
   return (
     <div className="progress-page">
+      <div className="progress-model">
+        <Network size={16} />
+        <span>{detail.model_id}</span>
+      </div>
       <span className="progress-symbol">
         <LoaderCircle size={30} className="spin" />
       </span>
@@ -67,6 +80,35 @@ export function Progress({
         <Status status={detail.status} />
         <code>{detail.stage ?? detail.status}</code>
       </div>
+      <div className="inspection-steps" aria-label="Inspection workflow">
+        {[
+          {
+            Icon: GitBranch,
+            label: "Resolve revision",
+            active: ["queued", "resolving_revision", "checking_cache"],
+          },
+          {
+            Icon: FileSearch,
+            label: "Read artifacts",
+            active: ["resolving", "reading_metadata"],
+          },
+          {
+            Icon: Network,
+            label: "Map structure",
+            active: ["building_structure", "analyzing_components"],
+          },
+          { Icon: FileCheck2, label: "Check findings", active: ["validating"] },
+        ].map(({ Icon, label, active }) => (
+          <div
+            key={label}
+            className={active.includes(detail.stage) ? "is-current" : undefined}
+          >
+            <Icon size={18} />
+            <span>{label}</span>
+            {active.includes(detail.stage) && <small>Current stage</small>}
+          </div>
+        ))}
+      </div>
       <Button disabled={cancelling} onClick={cancel}>
         <Square size={14} />
         {cancelling ? "Cancelling…" : "Cancel inspection"}
@@ -74,7 +116,7 @@ export function Progress({
       <div className="progress-note">
         <ShieldCheck size={16} />
         <span>
-          Only completed stages are facts. Duration varies by repository.
+          The highlighted stage comes from the server. No weights are loaded.
         </span>
       </div>
     </div>
@@ -113,8 +155,11 @@ export function Recovery({ detail }: { detail: AnalysisDetail }) {
           <p>{detail.error.message}</p>
         </div>
       )}
-      <Link className="button button-primary" to="/app">
-        Start a new inspection
+      <Link
+        className="button button-primary"
+        to={`/?model=${encodeURIComponent(detail.model_id)}`}
+      >
+        Edit model and retry
       </Link>
     </div>
   );

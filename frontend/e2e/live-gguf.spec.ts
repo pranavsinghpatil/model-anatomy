@@ -23,9 +23,16 @@ test("live Bonsai GGUF selection exposes verified tensors without inventing a gr
     .getByRole("button", { name: "Inspect model", exact: true })
     .click();
   const inspection = page.getByTestId("artifact-inspection");
+  await expect(
+    inspection.getByText("Architecture reconstruction unavailable", {
+      exact: true,
+    }),
+  ).toBeVisible({ timeout: 130_000 });
+  await inspection.getByText("Inspection reason", { exact: true }).click();
   await expect(inspection).toContainText("checkpoint_selection_required", {
     timeout: 130_000,
   });
+  await inspection.locator(".artifact-inspection-identity summary").click();
   await expect(page.getByTestId("artifact-revision")).toHaveText(revision);
   const submitted = page.waitForResponse(
     (response) =>

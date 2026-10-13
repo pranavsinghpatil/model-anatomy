@@ -1,10 +1,16 @@
 import { useEffect, useState } from "react";
 import type { Viewport } from "@xyflow/react";
 export type Crumb = { id: string; label: string };
+export type GraphLayoutPreference = {
+  direction: "DOWN" | "RIGHT";
+  density: "compact" | "detailed";
+  connectionLabels?: boolean;
+};
 export type WorkspaceSession = {
   path: Crumb[];
   selected: Record<string, string | null>;
   viewports: Record<string, Viewport>;
+  graphLayouts: Record<string, GraphLayoutPreference>;
   inspectorTab: "module" | "tensors" | "evidence";
   inspectorOpen: boolean;
   questions: boolean;
@@ -19,6 +25,7 @@ export function useWorkspaceSession(id: string) {
         path: [],
         selected: {},
         viewports: {},
+        graphLayouts: {},
         inspectorTab: "module",
         inspectorOpen: false,
         questions: false,

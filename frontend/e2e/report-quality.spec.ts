@@ -158,11 +158,12 @@ test("completed report separates revision, scope, checks, and warnings", async (
   await expect(
     page.locator(".workspace-header").getByLabel("Analysis status: completed"),
   ).toBeVisible();
+  await page.locator(".report-identity-details summary").click();
   await expect(page.getByTestId("model-revision")).toHaveText(base.revision!);
 
   const checks = page.getByTestId("report-checks");
   await expect(
-    checks.getByRole("heading", { name: "Report checks" }),
+    checks.getByRole("heading", { name: "Coverage and checks" }),
   ).toBeVisible();
   await expect(checks.locator("dd").filter({ hasText: "100.0%" })).toHaveCount(
     4,
@@ -175,13 +176,11 @@ test("completed report separates revision, scope, checks, and warnings", async (
   await expect(
     scope.getByRole("heading", { name: "Analysis scope" }),
   ).toBeVisible();
-  await expect(
-    page.locator(".report-section").filter({
-      has: page.getByRole("heading", { name: "Artifact identity" }),
-    }),
-  ).toContainText("1.2.3");
+  const identity = page.locator(".report-identity-details");
+  await identity.locator("summary").click();
+  await expect(identity).toContainText("1.2.3");
   await expect(scope).toContainText("Forward execution was not requested.");
-  await expect(page.getByTestId("report-checks")).toContainText(
+  await expect(page.locator(".report-warning-section")).toContainText(
     "No incomplete-check details returned.",
   );
   await expect(
@@ -215,16 +214,17 @@ test("partial report shows specific missing checks and unknown quality", async (
   await expect(
     page.locator(".workspace-header").getByLabel("Analysis status: partial"),
   ).toBeVisible();
+  await page.locator(".report-identity-details summary").click();
   await expect(page.getByTestId("model-revision")).toHaveText(
     analysis.revision!,
   );
 
   const checks = page.getByTestId("report-checks");
   await expect(
-    checks.getByRole("heading", { name: "Report checks" }),
+    checks.getByRole("heading", { name: "Coverage and checks" }),
   ).toBeVisible();
   await expect(checks).toContainText("Unknown");
-  await expect(checks).toContainText(
+  await expect(page.locator(".report-warning-section")).toContainText(
     "Tensor shape comparison could not be completed.",
   );
   await expect(checks).not.toContainText("100.0%");
@@ -234,7 +234,7 @@ test("partial report shows specific missing checks and unknown quality", async (
     scope.getByRole("heading", { name: "Analysis scope" }),
   ).toBeVisible();
   await expect(scope).toContainText("Custom module details are unavailable.");
-  await expect(checks).toContainText(
+  await expect(page.locator(".report-warning-section")).toContainText(
     "Tensor shape comparison could not be completed.",
   );
 });
@@ -252,13 +252,17 @@ test("actual extraction warnings remain visible separately from scope", async ({
   await openAnalysis(page, analysis.id, "report");
   await expect(page.getByTestId("report-checks")).toBeVisible();
   await expect(
-    page
-      .locator(".report-section")
-      .filter({ has: page.getByRole("heading", { name: "Warnings" }) }),
+    page.locator(".report-section").filter({
+      has: page.getByRole("heading", {
+        name: "Warnings and incomplete checks",
+      }),
+    }),
   ).toContainText(analysis.warnings[0]);
   await expect(
-    page
-      .locator(".report-section")
-      .filter({ has: page.getByRole("heading", { name: "Warnings" }) }),
+    page.locator(".report-section").filter({
+      has: page.getByRole("heading", {
+        name: "Warnings and incomplete checks",
+      }),
+    }),
   ).not.toContainText(analysis.limitations[0]);
 });

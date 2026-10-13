@@ -237,18 +237,23 @@ test("mode, view changes and keyboard panel resizing preserve inspection context
   ).toHaveAttribute("aria-selected", "true");
 });
 
-test("late submission response does not redirect a visitor who left the start screen", async ({
+test("late submission response does not redirect a visitor who continued an existing analysis", async ({
   page,
 }) => {
   await mockService(page);
   let release!: () => void;
+  let postStarted!: () => void;
   const gate = new Promise<void>((resolve) => {
     release = resolve;
   });
+  const started = new Promise<void>((resolve) => {
+    postStarted = resolve;
+  });
   await page.route("**/api/v1/analyses", async (route) => {
     if (route.request().method() !== "POST") return route.fallback();
+    postStarted();
     await gate;
-    await route.fulfill({ json: analysisFor(), status: 202 });
+    await route.fulfill({ json: analysisFor("late-created"), status: 202 });
   });
   await page.goto("/app");
   await page
@@ -257,20 +262,21 @@ test("late submission response does not redirect a visitor who left the start sc
   await page
     .getByRole("button", { name: "Inspect model", exact: true })
     .click();
-  await page
-    .getByRole("link", { name: "Model Anatomy home", exact: true })
-    .click();
   const response = page.waitForResponse(
     (response) =>
       response.request().method() === "POST" &&
       response.url().endsWith("/api/v1/analyses"),
   );
+  await started;
+  await page.getByRole("link", { name: /^Continue analysis of / }).click();
+  await expect(page).toHaveURL(/\/app\/analyses\/job-test/);
+  await expect(page.getByTestId("graph-canvas")).toBeVisible();
   release();
   await response;
-  await expect(page).toHaveURL(/\/$/);
   await expect(
-    page.getByRole("heading", { name: /From open weights/ }),
+    page.getByRole("link", { name: "Architecture", exact: true }),
   ).toBeVisible();
+  await expect(page).toHaveURL(/\/app\/analyses\/job-test/);
 });
 
 test("entry pages and long report identifiers fit every target width in both themes", async ({

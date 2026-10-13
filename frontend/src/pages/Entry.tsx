@@ -2,213 +2,65 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
+  ArrowDownRight,
   ArrowRight,
-  Box,
-  FileCheck2,
+  CircleHelp,
   FileSearch,
   GitBranch,
   History,
   Network,
-  ScanSearch,
   ShieldCheck,
 } from "lucide-react";
 import { api } from "../api/client";
-import { time } from "../format";
 import { ErrorNotice, Loading, Status } from "../components/Common";
 import { Button, ModeControl, ThemeControl } from "../components/ui";
 import { usePreferences } from "../state/preferences";
 import { useRecent, useService } from "../state/queries";
-export function Brand() {
+import "./entry.css";
+
+const examples = [
+  "HuggingFaceTB/SmolLM2-135M",
+  "google-bert/bert-base-uncased",
+  "distilbert/distilbert-base-uncased",
+];
+
+function Brand() {
   return (
-    <Link className="brand" to="/" aria-label="Model Anatomy home">
-      <span className="brand-icon">
-        <Network size={21} />
+    <Link className="entry-brand" to="/" aria-label="Model Anatomy home">
+      <span className="entry-brand-mark" aria-hidden="true">
+        <Network size={19} strokeWidth={1.8} />
       </span>
-      <span>
-        Model Anatomy
-        <span className="brand-caption">OPEN WEIGHTS. OPEN QUESTIONS.</span>
-      </span>
+      <span className="entry-brand-name">Model Anatomy</span>
     </Link>
   );
 }
-function PublicHeader() {
+
+function FooterBrand() {
   return (
-    <header className="public-header">
+    <span className="entry-footer-brand">
+      <span className="entry-brand-mark" aria-hidden="true">
+        <Network size={14} />
+      </span>
+      <span className="entry-brand-name">Model Anatomy</span>
+    </span>
+  );
+}
+
+function EntryHeader() {
+  return (
+    <header className="entry-header">
       <Brand />
-      <nav aria-label="Main navigation">
-        <a className="desktop-link" href="/#method">
-          How it works
+      <nav className="entry-header-actions" aria-label="Page controls">
+        <a className="entry-history-link" href="#recent">
+          <History size={15} />
+          <span>Your analyses</span>
         </a>
         <ThemeControl />
-        <Link className="button button-secondary" to="/app">
-          Open workspace <ArrowRight size={16} />
-        </Link>
       </nav>
     </header>
   );
 }
-const capabilities = [
-  {
-    Icon: GitBranch,
-    title: "See the structure",
-    copy: "Navigate architecture from the model level to individual components, with repeated blocks kept readable.",
-  },
-  {
-    Icon: ScanSearch,
-    title: "Inspect the details",
-    copy: "Read input and output shapes, parameters and checkpoint tensor metadata in their component context.",
-  },
-  {
-    Icon: FileCheck2,
-    title: "Verify the facts",
-    copy: "Trace facts to artifacts and recorded evidence. See what is known, derived or still unresolved.",
-  },
-];
-export function Landing() {
-  return (
-    <div className="public-page">
-      <PublicHeader />
-      <main id="main" tabIndex={-1}>
-        <section className="hero">
-          <div className="hero-copy">
-            <span className="eyebrow">
-              <span className="accent-dot" />
-              THE MODEL, UNDER THE HOOD
-            </span>
-            <h1>
-              From open weights
-              <br />
-              to clear understanding<span className="accent-text">.</span>
-            </h1>
-            <p>
-              Explore a model’s structure. Inspect its tensors. Follow every
-              fact back to the evidence.
-            </p>
-            <div className="hero-actions">
-              <Link className="button button-primary" to="/app">
-                Inspect a model <ArrowRight size={18} />
-              </Link>
-              <a className="text-link" href="#method">
-                See how it works <span aria-hidden="true">↘</span>
-              </a>
-            </div>
-            <div className="hero-footnote">
-              <ShieldCheck size={16} />
-              Static inspection · Pinned revisions · Explicit unknowns
-            </div>
-          </div>
-          <figure
-            className="method-illustration"
-            aria-label="Illustration of the reconstruction process"
-          >
-            <div className="illustration-top">
-              <span>
-                <Network size={15} />
-                THE RECONSTRUCTION PROCESS
-              </span>
-              <span className="subtle-label">ILLUSTRATION</span>
-            </div>
-            <div className="process-source">
-              <Box size={24} />
-              <div>
-                <strong>Your Hugging Face model</strong>
-                <span>Repository ID or model URL</span>
-              </div>
-              <span className="source-tag">INPUT</span>
-            </div>
-            <div className="process-line" />
-            <div className="process-evidence">
-              {[
-                {
-                  Icon: FileSearch,
-                  title: "Artifact metadata",
-                  copy: "Configuration · tensor headers",
-                },
-                {
-                  Icon: GitBranch,
-                  title: "Model structure",
-                  copy: "Modules · semantic relationships",
-                },
-              ].map(({ Icon, title, copy }) => (
-                <div key={title}>
-                  <Icon size={19} />
-                  <strong>{title}</strong>
-                  <span>{copy}</span>
-                </div>
-              ))}
-            </div>
-            <div className="process-line" />
-            <div className="process-result">
-              <Network size={24} />
-              <div>
-                <strong>An inspectable architecture</strong>
-                <span>Components, tensors and provenance</span>
-              </div>
-              <FileCheck2 size={20} />
-            </div>
-            <figcaption>
-              A method illustration. Results depend on the model’s supported
-              artifacts.
-            </figcaption>
-          </figure>
-        </section>
-        <section className="capabilities" aria-label="Capabilities">
-          {capabilities.map(({ Icon, title, copy }, index) => (
-            <article key={title}>
-              <div className="capability-heading">
-                <Icon size={22} />
-                <span>0{index + 1}</span>
-              </div>
-              <h2>{title}</h2>
-              <p>{copy}</p>
-            </article>
-          ))}
-        </section>
-        <section className="method-section" id="method">
-          <div>
-            <span className="eyebrow">BUILT FOR UNDERSTANDING</span>
-            <h2>
-              Inspect first.
-              <br />
-              Understand with evidence.
-            </h2>
-          </div>
-          <div>
-            <p>
-              Model Anatomy combines configuration, instantiated module
-              structure and bounded checkpoint metadata to reconstruct supported
-              architectures.
-            </p>
-            <p>
-              Inspection is static. Coverage does not prove runtime behavior.
-              When architecture reconstruction is unavailable, you can inspect
-              verified repository artifacts instead.
-            </p>
-            <Link className="text-link" to="/app">
-              Bring a model into focus <ArrowRight size={16} />
-            </Link>
-          </div>
-        </section>
-        <section className="final-cta">
-          <div>
-            <span className="eyebrow">YOUR NEXT QUESTION STARTS HERE</span>
-            <h2>What’s inside your model?</h2>
-          </div>
-          <Link className="button button-primary" to="/app">
-            Inspect a model <ArrowRight size={18} />
-          </Link>
-        </section>
-      </main>
-      <footer className="public-footer">
-        <span>Model Anatomy</span>
-        <span>Artifact-backed inspection. Honest boundaries.</span>
-        <Link to="/app">
-          Workspace <ArrowRight size={14} />
-        </Link>
-      </footer>
-    </div>
-  );
-}
+
 export function Start() {
   const active = useRef(true);
   const submissionPath = useRef(window.location.pathname);
@@ -218,7 +70,10 @@ export function Start() {
       active.current = false;
     };
   }, []);
-  const [model, setModel] = useState("");
+
+  const [model, setModel] = useState(
+    () => new URLSearchParams(window.location.search).get("model") ?? "",
+  );
   const navigate = useNavigate();
   const client = useQueryClient();
   const { mode } = usePreferences();
@@ -232,157 +87,325 @@ export function Start() {
     onSuccess: (job) => {
       client.setQueryData(["analysis", job.id], job);
       void client.invalidateQueries({ queryKey: ["analyses"] });
-      // History changes before a concurrent route transition unmounts Start.
-      // A completed submission must respect that newer navigation intent.
+      // A late response can update visitor history, but must not override a
+      // route change made while the request was running.
       if (
         !active.current ||
         window.location.pathname !== submissionPath.current
       )
         return;
-      void navigate(
-        `/app/analyses/${encodeURIComponent(job.id)}?view=${job.status === "inspected" ? "artifacts" : mode === "learn" ? "overview" : "architecture"}`,
-      );
+      const view = job.status === "inspected" ? "artifacts" : "architecture";
+      void navigate(`/app/analyses/${encodeURIComponent(job.id)}?view=${view}`);
     },
   });
+
   return (
-    <div className="public-page start-page">
-      <PublicHeader />
-      <main id="main" tabIndex={-1} className="start-main">
-        <div className="start-intro">
-          <span className="eyebrow">INSPECTION WORKSPACE</span>
-          <h1>Meet your model.</h1>
-          <p>Start with a repository. Explore what the artifacts tell us.</p>
-        </div>
-        <section className="submission-card" aria-labelledby="submission-title">
-          <div className="submission-heading">
-            <h2 id="submission-title">Inspect a model</h2>
-            <ModeControl />
-          </div>
-          <form
-            onSubmit={(event) => {
-              event.preventDefault();
-              if (model.trim() && available && !create.isPending)
-                create.mutate(model.trim());
-            }}
-          >
-            <label htmlFor="model-input">Hugging Face model</label>
-            <div className="submission-input">
-              <Box size={18} />
-              <input
-                id="model-input"
-                required
-                maxLength={512}
-                placeholder="namespace/model or Hugging Face URL"
-                autoComplete="off"
-                value={model}
-                onChange={(event) => setModel(event.target.value)}
-              />
-              <Button
-                type="submit"
-                variant="primary"
-                disabled={!available || !model.trim() || create.isPending}
-              >
-                {create.isPending ? "Starting…" : "Inspect model"}
-                <ArrowRight size={17} />
-              </Button>
-            </div>
-            <p className="input-help">
-              Paste a public model ID, repository URL or a pinned checkpoint
-              file URL.
-            </p>
-          </form>
-          <div className="mode-explanation">
-            <strong>
-              {mode === "learn"
-                ? "Start with the bigger picture."
-                : "Go straight to the architecture."}
-            </strong>
-            <p>
-              {mode === "learn"
-                ? "A guided introduction connects components, shapes, tensors and evidence."
-                : "A compact technical workspace for exploring components and provenance."}{" "}
-              You can switch modes anytime.
-            </p>
-          </div>
-          {health.isPending && <Loading text="Checking inspection service" />}
-          {!available && !health.isPending && (
-            <div className="availability-note" role="status">
-              <strong>New analyses unavailable</strong>
-              <p>
-                {service?.reason ??
-                  health.error?.message ??
-                  "The inspection service is not ready."}{" "}
-                Existing analyses remain accessible.
+    <div className="entry-page">
+      <EntryHeader />
+      <main id="main" tabIndex={-1} className="entry-main">
+        <section className="entry-launch" aria-labelledby="entry-title">
+          <div className="entry-primary">
+            <div className="entry-heading">
+              <span className="entry-kicker">
+                <span className="entry-kicker-mark" aria-hidden="true" />
+                MODEL INSPECTION WORKSPACE
+              </span>
+              <h1 id="entry-title">Open a model. Understand its structure.</h1>
+              <p className="entry-lede">
+                Submit a Hugging Face model to inspect its architecture,
+                components, tensors, and supporting evidence.
               </p>
-              <Button onClick={() => void health.refetch()}>Check again</Button>
             </div>
-          )}
-          {create.error && <ErrorNotice error={create.error} />}
-        </section>
-        <section className="recent-section" aria-labelledby="recent-title">
-          <div className="section-title">
-            <div>
-              <History size={18} />
-              <h2 id="recent-title">Your recent analyses</h2>
-            </div>
-            {jobs[0] && (
-              <Link
-                className="text-link"
-                to={`/app/analyses/${encodeURIComponent(jobs[0].id)}`}
+
+            <section className="entry-submit" aria-labelledby="submit-title">
+              <div className="entry-submit-heading">
+                <div>
+                  <h2 id="submit-title">Inspect a model</h2>
+                </div>
+                <ModeControl />
+              </div>
+              <div
+                className={`entry-live-service ${health.isPending ? "is-checking" : available ? "is-ready" : "is-unavailable"}`}
+                role="status"
+                aria-live="polite"
               >
-                Continue recent analysis <ArrowRight size={16} />
-              </Link>
-            )}
+                <span className="entry-live-dot" aria-hidden="true" />
+                <span>
+                  {health.isPending
+                    ? "Checking service availability"
+                    : available
+                      ? "Inspection service ready"
+                      : "Inspection service unavailable"}
+                </span>
+              </div>
+              <form
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  if (model.trim() && available && !create.isPending)
+                    create.mutate(model.trim());
+                }}
+              >
+                <label className="entry-field-label" htmlFor="model-input">
+                  Hugging Face model
+                </label>
+                <div className="entry-input-row">
+                  <input
+                    id="model-input"
+                    name="model"
+                    required
+                    maxLength={512}
+                    placeholder="namespace/model or https://huggingface.co/…"
+                    autoComplete="off"
+                    spellCheck={false}
+                    value={model}
+                    onChange={(event) => setModel(event.target.value)}
+                  />
+                  <Button
+                    type="submit"
+                    variant="primary"
+                    disabled={!available || !model.trim() || create.isPending}
+                    aria-busy={create.isPending}
+                  >
+                    {create.isPending ? "Starting…" : "Inspect model"}
+                    <ArrowRight size={16} />
+                  </Button>
+                </div>
+                <p className="entry-field-help">
+                  Public repositories and pinned checkpoint file URLs are
+                  accepted.
+                </p>
+              </form>
+
+              <div
+                className="entry-examples"
+                role="group"
+                aria-labelledby="entry-examples-title"
+              >
+                <span id="entry-examples-title">Try an example</span>
+                <div>
+                  {examples.map((example) => (
+                    <button
+                      className="entry-example-chip"
+                      type="button"
+                      key={example}
+                      onClick={() => setModel(example)}
+                      aria-label={`Fill model field with ${example}`}
+                    >
+                      {example}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {!available && !health.isPending && (
+                <div
+                  className="entry-service entry-service-unavailable"
+                  role="status"
+                >
+                  <div>
+                    <strong>New analyses are unavailable</strong>
+                    <p>
+                      {service?.reason ??
+                        health.error?.message ??
+                        "The inspection service is not ready."}{" "}
+                      Existing analyses remain accessible below.
+                    </p>
+                  </div>
+                  <Button type="button" onClick={() => void health.refetch()}>
+                    Check again
+                  </Button>
+                </div>
+              )}
+              {create.error && <ErrorNotice error={create.error} />}
+
+              <div className="entry-mode-note">
+                <span className="entry-mode-icon" aria-hidden="true">
+                  {mode === "learn" ? (
+                    <CircleHelp size={17} />
+                  ) : (
+                    <GitBranch size={17} />
+                  )}
+                </span>
+                <p>
+                  <strong>{mode === "learn" ? "Learn" : "Research"}</strong>
+                  {mode === "learn"
+                    ? " adds a reading guide beside the architecture so you can explore each idea in context."
+                    : " opens the technical architecture workspace with components and evidence ready to inspect."}
+                </p>
+              </div>
+            </section>
           </div>
-          <p className="muted">
-            Analyses belong to this visitor session and remain available until
-            they expire.
+
+          <aside className="entry-next" aria-labelledby="next-title">
+            <div className="entry-next-topline">
+              <span>THE INSPECTION PATH</span>
+              <ArrowDownRight size={16} aria-hidden="true" />
+            </div>
+            <h2 id="next-title">What happens next</h2>
+            <ol>
+              <li>
+                <span className="entry-next-number">01</span>
+                <div>
+                  <strong>Pin the repository revision</strong>
+                  <p>Every result points to a specific model snapshot.</p>
+                </div>
+              </li>
+              <li>
+                <span className="entry-next-number">02</span>
+                <div>
+                  <strong>Read model artifacts</strong>
+                  <p>
+                    Configuration and checkpoint metadata inform inspection.
+                  </p>
+                </div>
+              </li>
+              <li>
+                <span className="entry-next-number">03</span>
+                <div>
+                  <strong>Explore the reported structure</strong>
+                  <p>Open components and trace facts to their evidence.</p>
+                </div>
+              </li>
+            </ol>
+            <div className="entry-next-foot">
+              <ShieldCheck size={16} />
+              <span>Unknown or unsupported details stay explicit.</span>
+            </div>
+          </aside>
+        </section>
+
+        <details className="entry-boundaries">
+          <summary>
+            <FileSearch size={16} />
+            <span>What can this inspect?</span>
+            <span className="entry-boundary-hint">
+              Support and safety boundaries
+            </span>
+          </summary>
+          <div className="entry-boundary-content">
+            <p>
+              Architecture reconstruction depends on the model’s native
+              implementation and artifacts. Unsupported models may still return
+              a verified artifact inventory, without an architecture graph.
+            </p>
+            <p>
+              Inspection does not execute publisher code or download model
+              weights. It reports known facts, derivations, and unresolved
+              details separately; support varies by model family and artifact
+              layout.
+            </p>
+          </div>
+        </details>
+
+        <section
+          className="entry-recent"
+          id="recent"
+          aria-labelledby="recent-title"
+        >
+          <div className="entry-section-heading">
+            <div>
+              <span className="entry-step-label">YOUR WORKSPACE</span>
+              <h2 id="recent-title">Recent analyses</h2>
+            </div>
+            <span className="entry-recent-count">
+              {recent.data
+                ? `${jobs.length} ${jobs.length === 1 ? "analysis" : "analyses"}`
+                : "Visitor-owned history"}
+            </span>
+          </div>
+          <p className="entry-recent-copy">
+            Analyses submitted from this visitor session. Select one to continue
+            where you left off.
           </p>
-          {recent.isPending && <Loading text="Loading recent analyses" />}
+          {recent.isPending && <Loading text="Loading your analyses" />}
           {recent.error && (
             <ErrorNotice
               error={recent.error}
               retry={() => void recent.refetch()}
             />
           )}
-          <div className="recent-list">
-            {jobs.map((job) => (
-              <Link
-                className="recent-row"
-                key={job.id}
-                to={`/app/analyses/${encodeURIComponent(job.id)}`}
-              >
-                <span className="recent-icon">
-                  <Box size={20} />
-                </span>
-                <span className="recent-model">
-                  <strong>{job.model_id}</strong>
-                  <small>{time(job.created_at)}</small>
-                </span>
-                <Status status={job.status} />
-                <ArrowRight size={16} />
-              </Link>
-            ))}
-          </div>
-          {recent.data && !jobs.length && (
-            <div className="recent-empty">
-              <History size={24} />
-              <h3>No analyses yet</h3>
-              <p>
-                Your submitted models will appear here. Start with the model you
-                want to understand.
-              </p>
+          {jobs.length > 0 && (
+            <div className="entry-table-wrap">
+              <table className="entry-table">
+                <thead>
+                  <tr>
+                    <th scope="col">Model</th>
+                    <th scope="col">Revision</th>
+                    <th scope="col">Submitted</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">
+                      <span className="sr-only">Action</span>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {jobs.map((job) => (
+                    <tr key={job.id}>
+                      <td>
+                        <Link
+                          className="entry-model-link"
+                          to={`/app/analyses/${encodeURIComponent(job.id)}?view=${job.status === "inspected" ? "artifacts" : "architecture"}`}
+                        >
+                          <span className="entry-model-icon" aria-hidden="true">
+                            <Network size={16} />
+                          </span>
+                          <span>
+                            <strong>{job.model_id}</strong>
+                            <small>
+                              {job.architecture ?? "Architecture pending"}
+                            </small>
+                          </span>
+                        </Link>
+                      </td>
+                      <td className="entry-revision">
+                        {job.revision ? job.revision.slice(0, 12) : "Pending"}
+                      </td>
+                      <td className="entry-time">
+                        <time dateTime={job.created_at}>
+                          {new Date(job.created_at).toLocaleString([], {
+                            month: "short",
+                            day: "numeric",
+                            hour: "numeric",
+                            minute: "2-digit",
+                          })}
+                        </time>
+                      </td>
+                      <td>
+                        <Status status={job.status} />
+                      </td>
+                      <td>
+                        <Link
+                          className="entry-continue"
+                          to={`/app/analyses/${encodeURIComponent(job.id)}?view=${job.status === "inspected" ? "artifacts" : "architecture"}`}
+                          aria-label={`Continue analysis of ${job.model_id}`}
+                        >
+                          Continue <ArrowRight size={14} />
+                        </Link>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          {recent.data && jobs.length === 0 && (
+            <div className="entry-empty">
+              <span className="entry-empty-icon" aria-hidden="true">
+                <History size={19} />
+              </span>
+              <div>
+                <strong>No analyses in this session yet</strong>
+                <p>Submit a model above and its report will appear here.</p>
+              </div>
             </div>
           )}
         </section>
-        <div className="start-boundary">
-          <ShieldCheck size={17} />
-          <p>
-            Actual artifacts, explicit limitations. Custom code is not executed.
-            Architecture support varies; verified metadata stays useful.
-          </p>
-        </div>
       </main>
+      <footer className="entry-footer">
+        <FooterBrand />
+        <span>Artifact-backed inspection with explicit evidence.</span>
+        <a href="#main">Back to top</a>
+      </footer>
     </div>
   );
 }

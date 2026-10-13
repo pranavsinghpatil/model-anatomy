@@ -7,7 +7,7 @@ import {
   useLocation,
 } from "react-router-dom";
 import { Preferences } from "./state/preferences";
-import { Landing, Start } from "./pages/Entry";
+import { Start } from "./pages/Entry";
 import { Loading } from "./components/Common";
 const Workspace = lazy(() => import("./pages/Workspace"));
 function RouteFocus() {
@@ -23,7 +23,7 @@ function Home() {
   return legacy ? (
     <Navigate replace to={`/app/analyses/${encodeURIComponent(legacy)}`} />
   ) : (
-    <Landing />
+    <Start />
   );
 }
 export function App() {

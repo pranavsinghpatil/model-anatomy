@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 import {
   expectGraphFramed,
   expectReadableGraph,
@@ -17,18 +17,43 @@ import {
   rootGraph,
 } from "./service";
 
-test("readable graph with reversible workspace panels", async ({
+async function clickVisibleEdge(page: Page, edge: Locator) {
+  const point = await edge.evaluate((edgeElement) => {
+    const edgeId = edgeElement.getAttribute("data-id");
+    const path = edgeElement.querySelector(
+      ".react-flow__edge-interaction",
+    ) as SVGPathElement | null;
+    if (!edgeId || !path) throw new Error("Edge has no interaction path");
+
+    const length = path.getTotalLength();
+    for (let step = 1; step < 20; step += 1) {
+      const point = path.getPointAtLength((length * step) / 20);
+      const screen = new DOMPoint(point.x, point.y).matrixTransform(
+        path.getScreenCTM()!,
+      );
+      const hit = document.elementFromPoint(screen.x, screen.y);
+      if (
+        hit?.closest(".react-flow__edge")?.getAttribute("data-id") === edgeId
+      ) {
+        return { x: screen.x, y: screen.y };
+      }
+    }
+    throw new Error(`Edge ${edgeId} has no exposed hit-test point`);
+  });
+  await page.mouse.click(point.x, point.y);
+}
+
+test("whole architecture opens framed with a readable inspection view and reversible panels", async ({
   page,
   isMobile,
 }, testInfo) => {
   await mockService(page);
   await openAnalysis(page);
   await expect(page.getByTestId("graph-canvas")).toBeVisible();
-  await expectReadableGraph(page);
+  await expectGraphFramed(page);
   await page.screenshot({
     path: testInfo.outputPath("readable-workspace.png"),
   });
-  await expectGraphFramed(page);
   await page
     .getByRole("button", { name: "Readable view", exact: true })
     .click();
@@ -70,7 +95,7 @@ test("real artifact graph, scoped nesting, tensor and evidence inspection", asyn
   await expectGraphFramed(page);
   await expect(
     page.locator(`[data-node-id="${block.id}"] .repeat`),
-  ).toContainText(`${block.repeat}x`);
+  ).toContainText(`×${block.repeat}`);
   await page.screenshot({ path: testInfo.outputPath("workspace.png") });
   await graphNode(page, embedding.label);
   await showDetails(page, isMobile);
@@ -133,18 +158,7 @@ test("click and keyboard edge selection expose the original relationship", async
       rootGraph.nodes.length,
     );
   }
-  const clickPoint = await edges
-    .first()
-    .locator(".react-flow__edge-interaction")
-    .evaluate((element) => {
-      const path = element as SVGPathElement;
-      const point = path.getPointAtLength(path.getTotalLength() * 0.25);
-      const screen = new DOMPoint(point.x, point.y).matrixTransform(
-        path.getScreenCTM()!,
-      );
-      return { x: screen.x, y: screen.y };
-    });
-  await page.mouse.click(clickPoint.x, clickPoint.y);
+  await clickVisibleEdge(page, edges.first());
   const inspector = page.getByRole("complementary", { name: "Inspector" });
   await expect(inspector).toContainText("Source component");
   await expect(inspector).toContainText(rootGraph.edges[0].source);
@@ -167,7 +181,7 @@ test("opening a nested graph clears a previously selected connection", async ({
   await mockService(page);
   await openAnalysis(page);
   await expect(page.getByTestId("graph-canvas")).toBeVisible();
-  await page.locator(".react-flow__edge").first().click();
+  await clickVisibleEdge(page, page.locator(".react-flow__edge").first());
   const inspector = page.getByRole("complementary", { name: "Inspector" });
   await expect(
     inspector.getByRole("heading", { name: "Connection" }),
@@ -289,9 +303,11 @@ test("503 health disables new analysis without hiding recent reports", async ({
     },
   });
   await page.goto("/app");
-  await expect(page.locator(".availability-note")).toContainText(
-    "Worker unavailable",
-  );
+  await expect(
+    page
+      .getByRole("status")
+      .filter({ hasText: "New analyses are unavailable" }),
+  ).toContainText("Worker unavailable");
   await page
     .getByLabel("Hugging Face model", { exact: true })
     .fill("org/model");
@@ -380,9 +396,11 @@ for (const healthError of ["network", "invalid"] as const)
   }) => {
     await mockService(page, { healthError });
     await page.goto("/app");
-    await expect(page.locator(".availability-note")).toContainText(
-      "New analyses unavailable",
-    );
+    await expect(
+      page
+        .getByRole("status")
+        .filter({ hasText: "New analyses are unavailable" }),
+    ).toContainText("New analyses are unavailable");
     await page
       .getByLabel("Hugging Face model", { exact: true })
       .fill("org/model");
@@ -667,6 +685,6 @@ test("unavailable AI returns a structured error without fabricated answer", asyn
 test("empty service does not synthesize a graph", async ({ page }) => {
   await mockService(page, { noRecent: true });
   await page.goto("/app");
-  await expect(page.getByText("No analyses yet")).toBeVisible();
+  await expect(page.getByText("No analyses in this session yet")).toBeVisible();
   await expect(page.getByTestId("graph-canvas")).toHaveCount(0);
 });

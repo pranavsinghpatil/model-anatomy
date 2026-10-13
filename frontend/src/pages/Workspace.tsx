@@ -6,7 +6,16 @@ import {
   useSearchParams,
 } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronDown, Download, Plus, ArrowLeft } from "lucide-react";
+import {
+  ChevronDown,
+  Download,
+  Plus,
+  Network,
+  LayoutDashboard,
+  Files,
+  FileCheck2,
+  ChevronRight,
+} from "lucide-react";
 import { api, graphReady, pending } from "../api/client";
 import type { Citation, ExportFormat } from "../api/contract";
 import { ErrorNotice, Loading, Status } from "../components/Common";
@@ -20,7 +29,15 @@ import { matchesCitation } from "../components/Inspector";
 import { useRecent, useService } from "../state/queries";
 import { usePreferences } from "../state/preferences";
 import { useWorkspaceSession, type Crumb } from "../state/workspace";
-const views = ["overview", "architecture", "artifacts", "report"] as const;
+import { count, dimensionCount } from "../format";
+import "./workspace.css";
+const views = ["architecture", "overview", "artifacts", "report"] as const;
+const viewIcons = {
+  architecture: Network,
+  overview: LayoutDashboard,
+  artifacts: Files,
+  report: FileCheck2,
+};
 const formats: { format: ExportFormat; label: string }[] = [
   { format: "json", label: "Report JSON" },
   { format: "zip", label: "Complete ZIP" },
@@ -64,7 +81,7 @@ function Workspace({ id }: { id: string }) {
   const viewParam = search.get("view");
   const view =
     views.find((v) => v === viewParam) ??
-    (artifact ? "artifacts" : mode === "learn" ? "overview" : "architecture");
+    (artifact ? "artifacts" : "architecture");
   useEffect(() => {
     if (artifact && pending(previousStatus.current))
       setSearch({ view: "artifacts" }, { replace: true });
@@ -96,7 +113,7 @@ function Workspace({ id }: { id: string }) {
       )
         return;
       void navigate(
-        `/app/analyses/${encodeURIComponent(job.id)}?view=${job.status === "inspected" ? "artifacts" : mode === "learn" ? "overview" : "architecture"}`,
+        `/app/analyses/${encodeURIComponent(job.id)}?view=${job.status === "inspected" ? "artifacts" : "architecture"}`,
       );
     },
   });
@@ -188,11 +205,18 @@ function Workspace({ id }: { id: string }) {
   return (
     <main id="main" tabIndex={-1} className="workspace-shell">
       <header className="workspace-header">
-        <Link className="workspace-home" to="/app" aria-label="Back to start">
-          <ArrowLeft size={17} />
+        <Link
+          className="workspace-home"
+          to="/"
+          aria-label="Back to start"
+          title="Model Anatomy · All analyses"
+        >
+          <Network size={23} />
         </Link>
         <div className="model-switcher">
-          <span className="eyebrow">MODEL ANATOMY</span>
+          <span className="workspace-product">
+            Model Anatomy <ChevronRight size={12} /> <span>Inspection</span>
+          </span>
           <Menu
             label="Switch model"
             trigger={
@@ -259,134 +283,207 @@ function Workspace({ id }: { id: string }) {
           </Menu>
         </div>
       </header>
-      <nav className="primary-views" aria-label="Workspace views">
-        {views.map((item) => (
-          <Link
-            key={item}
-            to={`?view=${item}`}
-            aria-current={view === item ? "page" : undefined}
-          >
-            {item[0].toUpperCase() + item.slice(1)}
-          </Link>
-        ))}
-      </nav>
-      {exportError && <ErrorNotice error={exportError} />}{" "}
-      {cancel.error && <ErrorNotice error={cancel.error} />}{" "}
-      {create.error && <ErrorNotice error={create.error} />}
-      {analysis.error ? (
-        <div className="page-state">
-          <ErrorNotice
-            error={analysis.error}
-            retry={() => void analysis.refetch()}
-          />
-          <Link className="button button-primary" to="/app">
-            Start a new inspection
-          </Link>
-        </div>
-      ) : !detail ? (
-        <div className="page-state">
-          <Loading text="Loading analysis" />
-        </div>
-      ) : pending(detail.status) ? (
-        <Progress
-          detail={detail}
-          cancel={() => cancel.mutate(id)}
-          cancelling={cancel.isPending}
-        />
-      ) : !ready && !artifact ? (
-        <Recovery detail={detail} />
-      ) : (
-        <div className={`workspace-content view-${view}`}>
-          {view === "architecture" && (
-            <h1 className="sr-only">{detail.model_id} architecture</h1>
-          )}
-          {view === "overview" && <Overview detail={detail} />}
-          {view === "report" && <Report detail={detail} />}
-          {view === "artifacts" && (
-            <div className="artifacts-page">
-              <ArtifactInspection
-                key={id}
-                architecture={!artifact}
-                analysisId={id}
-                modelId={detail.model_id}
-                revision={detail.revision}
-                summary={detail.inspection}
-                onInspectFile={(url) => create.mutate(url)}
-                inspectionDisabled={!available || create.isPending}
+      <div className="workbench-body">
+        <nav className="primary-views" aria-label="Workspace views">
+          {views.map((item) => {
+            const Icon = viewIcons[item];
+            return (
+              <Link
+                key={item}
+                to={`?view=${item}`}
+                aria-current={view === item ? "page" : undefined}
+                aria-disabled={!ready && !artifact ? true : undefined}
+                tabIndex={!ready && !artifact ? -1 : undefined}
+                onClick={(event) => {
+                  if (!ready && !artifact) event.preventDefault();
+                }}
+                title={
+                  item === "architecture" && artifact
+                    ? "No architecture was reconstructed; see available artifacts"
+                    : undefined
+                }
+              >
+                <Icon size={20} strokeWidth={1.7} />
+                <span>{item[0].toUpperCase() + item.slice(1)}</span>
+              </Link>
+            );
+          })}
+        </nav>
+        <div className="workbench-main">
+          {exportError && <ErrorNotice error={exportError} />}{" "}
+          {cancel.error && <ErrorNotice error={cancel.error} />}{" "}
+          {create.error && <ErrorNotice error={create.error} />}
+          {analysis.error ? (
+            <div className="page-state">
+              <ErrorNotice
+                error={analysis.error}
+                retry={() => void analysis.refetch()}
               />
-              {mode === "learn" && <LearnGuide analysis={detail} node={null} />}
+              <Link className="button button-primary" to="/app">
+                Start a new inspection
+              </Link>
+            </div>
+          ) : !detail ? (
+            <div className="page-state">
+              <Loading text="Loading analysis" />
+            </div>
+          ) : pending(detail.status) ? (
+            <Progress
+              detail={detail}
+              cancel={() => cancel.mutate(id)}
+              cancelling={cancel.isPending}
+            />
+          ) : !ready && !artifact ? (
+            <Recovery detail={detail} />
+          ) : (
+            <div className={`workspace-content view-${view}`}>
+              {view === "architecture" && !artifact && (
+                <div
+                  className="model-context"
+                  role="region"
+                  aria-label="Model context"
+                  tabIndex={0}
+                >
+                  <span className="context-architecture">
+                    <Network size={14} />{" "}
+                    {detail.architecture ?? "Architecture"}
+                  </span>
+                  <span>
+                    <strong>{count(detail.parameter_count, true)}</strong>{" "}
+                    parameters
+                  </span>
+                  {detail.dimensions.layers != null && (
+                    <span>
+                      <strong>
+                        {dimensionCount(detail.dimensions.layers)}
+                      </strong>{" "}
+                      layers
+                    </span>
+                  )}
+                  {detail.dimensions.hidden != null && (
+                    <span>
+                      <strong>
+                        {dimensionCount(detail.dimensions.hidden)}
+                      </strong>{" "}
+                      hidden size
+                    </span>
+                  )}
+                  <Link to="?view=report" className="context-report">
+                    {detail.status === "partial"
+                      ? "Partial reconstruction · view findings"
+                      : "Inspection findings"}
+                    <ChevronRight size={13} />
+                  </Link>
+                </div>
+              )}
+              {view === "architecture" && (
+                <h1 className="sr-only">{detail.model_id} architecture</h1>
+              )}
+              {view === "overview" && <Overview detail={detail} />}
+              {view === "report" && <Report detail={detail} />}
+              {view === "artifacts" && (
+                <div className="artifacts-page">
+                  <ArtifactInspection
+                    key={id}
+                    architecture={!artifact}
+                    analysisId={id}
+                    modelId={detail.model_id}
+                    revision={detail.revision}
+                    summary={detail.inspection}
+                    onInspectFile={(url) => create.mutate(url)}
+                    inspectionDisabled={!available || create.isPending}
+                  />
+                  {mode === "learn" && (
+                    <LearnGuide analysis={detail} node={null} />
+                  )}
+                </div>
+              )}
+              {view === "architecture" &&
+                (artifact ? (
+                  <div className="page-state">
+                    <h1>Architecture unavailable</h1>
+                    <p>
+                      This result contains verified repository artifacts and
+                      metadata. No architecture graph was reconstructed.
+                    </p>
+                    <Link
+                      className="button button-primary"
+                      to="?view=artifacts"
+                    >
+                      Explore artifacts
+                    </Link>
+                  </div>
+                ) : graph.error ? (
+                  <div className="page-state">
+                    <ErrorNotice
+                      error={graph.error}
+                      retry={() => void graph.refetch()}
+                    />
+                  </div>
+                ) : graph.data ? (
+                  <>
+                    <ArchitectureWorkspace
+                      analysis={detail}
+                      graph={graph.data}
+                      state={state}
+                      setState={setState}
+                      citation={citation}
+                      onClearCitation={() => {
+                        if (citation)
+                          setState((s) => ({ ...s, inspectorTab: "module" }));
+                        setCitation(null);
+                      }}
+                      onCitation={jump}
+                      ai={service?.ai_available === true}
+                    />
+                    {mode === "learn" && (
+                      <LearnGuide
+                        analysis={detail}
+                        node={
+                          graph.data.nodes.find(
+                            (n) => n.id === state.selected[graph.data.id],
+                          ) ?? null
+                        }
+                        onStep={(step) => {
+                          if (step !== "orient")
+                            setState((s) => ({
+                              ...s,
+                              selected: {
+                                ...s.selected,
+                                [graph.data.id]:
+                                  s.selected[graph.data.id] ??
+                                  graph.data.nodes.find(
+                                    (node) =>
+                                      node.kind !== "input" &&
+                                      node.kind !== "output",
+                                  )?.id ??
+                                  graph.data.nodes[0]?.id ??
+                                  null,
+                              },
+                              inspectorOpen: true,
+                              questions: false,
+                              inspectorTab:
+                                step === "tensors"
+                                  ? "tensors"
+                                  : step === "evidence"
+                                    ? "evidence"
+                                    : "module",
+                            }));
+                        }}
+                      />
+                    )}
+                  </>
+                ) : graphId ? (
+                  <div className="page-state">
+                    <Loading text="Loading architecture graph" />
+                  </div>
+                ) : (
+                  <Recovery detail={detail} />
+                ))}
             </div>
           )}
-          {view === "architecture" &&
-            (artifact ? (
-              <div className="page-state">
-                <h1>Architecture unavailable</h1>
-                <p>
-                  This result contains verified repository artifacts and
-                  metadata. No architecture graph was reconstructed.
-                </p>
-                <Link className="button button-primary" to="?view=artifacts">
-                  Explore artifacts
-                </Link>
-              </div>
-            ) : graph.error ? (
-              <div className="page-state">
-                <ErrorNotice
-                  error={graph.error}
-                  retry={() => void graph.refetch()}
-                />
-              </div>
-            ) : graph.data ? (
-              <>
-                <ArchitectureWorkspace
-                  analysis={detail}
-                  graph={graph.data}
-                  state={state}
-                  setState={setState}
-                  citation={citation}
-                  onClearCitation={() => {
-                    if (citation)
-                      setState((s) => ({ ...s, inspectorTab: "module" }));
-                    setCitation(null);
-                  }}
-                  onCitation={jump}
-                  ai={service?.ai_available === true}
-                />
-                {mode === "learn" && (
-                  <LearnGuide
-                    analysis={detail}
-                    node={
-                      graph.data.nodes.find(
-                        (n) => n.id === state.selected[graph.data.id],
-                      ) ?? null
-                    }
-                    onStep={(step) => {
-                      if (step === "orient") setSearch({ view: "overview" });
-                      else
-                        setState((s) => ({
-                          ...s,
-                          inspectorOpen: true,
-                          questions: false,
-                          inspectorTab:
-                            step === "tensors"
-                              ? "tensors"
-                              : step === "evidence"
-                                ? "evidence"
-                                : "module",
-                        }));
-                    }}
-                  />
-                )}
-              </>
-            ) : graphId ? (
-              <div className="page-state">
-                <Loading text="Loading architecture graph" />
-              </div>
-            ) : (
-              <Recovery detail={detail} />
-            ))}
         </div>
-      )}
+      </div>
     </main>
   );
 }

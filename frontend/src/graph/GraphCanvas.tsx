@@ -2,78 +2,35 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Background,
   BackgroundVariant,
-  Handle,
   MiniMap,
-  Position,
   ReactFlow,
   ReactFlowProvider,
+  ViewportPortal,
   useReactFlow,
   useStore,
   type Viewport,
-  type NodeProps,
 } from "@xyflow/react";
 import {
   ArrowDownToLine,
-  ChevronRight,
+  ArrowLeftRight,
+  Focus,
   ScanEye,
   Layers,
   Maximize,
   Search,
   ZoomIn,
   ZoomOut,
+  Tags,
 } from "lucide-react";
 import type { ArchitectureGraph, GraphEdge, GraphNode } from "../api/contract";
 import { count, scopedNodeId } from "../format";
+import { ModelNode } from "./AnatomyNode";
+import { nodeTitle } from "./presentation";
+import type { GraphLayoutPreference } from "../state/workspace";
 import { ErrorNotice, IconButton, Loading } from "../components/Common";
 import { layoutGraph, type AnatomyEdge, type AnatomyNode } from "./layout";
 import "./graph.css";
 
-function ModelNode({ data, selected }: NodeProps<AnatomyNode>) {
-  const node = data.original;
-  return (
-    <div
-      className={`model-node ${selected ? "is-selected" : ""} ${data.dimmed ? "is-dimmed" : ""}`}
-      data-node-id={node.id}
-    >
-      <Handle type="target" position={Position.Top} />
-      <div className="node-kind">
-        <span className={`kind-mark ${node.child_graph_id ? "violet" : ""}`} />
-        {node.kind.replaceAll("_", " ")}
-        {node.repeat > 1 && (
-          <span
-            className="repeat"
-            title={node.repetition?.mode ?? "Unknown repetition mode"}
-          >
-            <Layers size={11} />
-            {count(node.repeat)}x
-          </span>
-        )}
-      </div>
-      <div className="node-title" title={node.label}>
-        {node.label}
-      </div>
-      <div className="node-footer">
-        <span title={count(node.parameter_count)}>
-          {count(node.parameter_count, true)} params
-        </span>
-        {node.child_graph_id && (
-          <button
-            className="node-open nodrag nopan"
-            aria-label={`Open ${node.label}`}
-            title={`Open ${node.label}`}
-            onClick={(event) => {
-              event.stopPropagation();
-              data.openGraph(node);
-            }}
-          >
-            <ChevronRight size={16} />
-          </button>
-        )}
-      </div>
-      <Handle type="source" position={Position.Bottom} />
-    </div>
-  );
-}
 const nodeTypes = { anatomy: ModelNode };
 
 function readableAnchor(nodes: AnatomyNode[], selectedNode?: string | null) {
@@ -96,6 +53,8 @@ function Canvas({
   open,
   viewport,
   onViewportChange,
+  layoutPreference,
+  onLayoutPreferenceChange,
   selectEdge,
 }: {
   graph: ArchitectureGraph;
@@ -105,15 +64,24 @@ function Canvas({
   open: (node: GraphNode) => void;
   viewport?: Viewport;
   onViewportChange?: (viewport: Viewport) => void;
+  layoutPreference: GraphLayoutPreference;
+  onLayoutPreferenceChange: (preference: GraphLayoutPreference) => void;
   selectEdge?: (edge: GraphEdge | null) => void;
 }) {
   const [layout, setLayout] = useState<{
     nodes: AnatomyNode[];
     edges: AnatomyEdge[];
   } | null>(null);
+  const [layoutSignature, setLayoutSignature] = useState<string | null>(null);
   const [error, setError] = useState<Error | null>(null);
   const [search, setSearch] = useState("");
   const [attempt, setAttempt] = useState(0);
+  const [direction, setDirection] = useState(layoutPreference.direction);
+  const [density, setDensity] = useState(layoutPreference.density);
+  const [connectionLabels, setConnectionLabels] = useState(
+    layoutPreference.connectionLabels ?? false,
+  );
+  const [neighborhood, setNeighborhood] = useState(false);
   const [zoom, setZoom] = useState(viewport?.zoom ?? 1);
   const [reduceMotion, setReduceMotion] = useState(
     () =>
@@ -124,6 +92,7 @@ function Canvas({
   const canvasWidth = useStore((s) => s.width);
   const canvasHeight = useStore((s) => s.height);
   const lastSelection = useRef({ node: selectedNode, width: 0 });
+  const fitAfterLayout = useRef(false);
   useEffect(() => {
     const previous = lastSelection.current;
     lastSelection.current = { node: selectedNode, width: canvasWidth };
@@ -140,14 +109,18 @@ function Canvas({
     const top = node.position.y * current.zoom + current.y;
     if (
       left < 20 ||
-      left + 242 * current.zoom > canvasWidth - 20 ||
+      left + (node.width ?? 216) * current.zoom > canvasWidth - 20 ||
       top < 20 ||
-      top + 108 * current.zoom > canvasHeight - 20
+      top + (node.height ?? 64) * current.zoom > canvasHeight - 20
     )
-      void flow.setCenter(node.position.x + 121, node.position.y + 54, {
-        zoom: current.zoom,
-        duration: reduceMotion ? 0 : 150,
-      });
+      void flow.setCenter(
+        node.position.x + (node.width ?? 216) / 2,
+        node.position.y + (node.height ?? 64) / 2,
+        {
+          zoom: current.zoom,
+          duration: reduceMotion ? 0 : 150,
+        },
+      );
   }, [
     selectedNode,
     layout,
@@ -167,11 +140,15 @@ function Canvas({
   useEffect(() => {
     let active = true;
     setLayout(null);
+    setLayoutSignature(null);
     setError(null);
     setSearch("");
-    layoutGraph(graph)
+    layoutGraph(graph, direction, density)
       .then((result) => {
-        if (active) setLayout(result);
+        if (active) {
+          setLayout(result);
+          setLayoutSignature(`${direction}:${density}`);
+        }
       })
       .catch((error) => {
         if (active)
@@ -182,22 +159,35 @@ function Canvas({
     return () => {
       active = false;
     };
-  }, [graph, attempt]);
+  }, [graph, attempt, direction, density]);
   useEffect(() => {
-    if (!layout || viewport) return;
+    if (
+      !layout ||
+      layoutSignature !== `${direction}:${density}` ||
+      (viewport && !fitAfterLayout.current)
+    )
+      return;
+    fitAfterLayout.current = false;
     const frame = requestAnimationFrame(() => {
       if (!layout.nodes.length) return;
       void flow.fitView({
-        // Focus a component: a zoom floor on a wide graph can crop both branches.
-        nodes: [readableAnchor(layout.nodes)],
-        padding: 0.25,
-        minZoom: 0.85,
+        padding: 0.18,
+        minZoom: 0.08,
         maxZoom: 1,
         duration: 0,
       });
     });
     return () => cancelAnimationFrame(frame);
-  }, [layout, flow, viewport]);
+  }, [layout, layoutSignature, direction, density, flow, viewport]);
+  const connected = useMemo(() => {
+    if (!selectedNode) return new Set<string>();
+    const ids = new Set([selectedNode]);
+    for (const edge of graph.edges) {
+      if (edge.source === selectedNode) ids.add(edge.target);
+      if (edge.target === selectedNode) ids.add(edge.source);
+    }
+    return ids;
+  }, [graph.edges, selectedNode]);
   const nodes = useMemo(
     () =>
       layout?.nodes.map((node) => ({
@@ -207,14 +197,15 @@ function Canvas({
           ...node.data,
           openGraph: open,
           dimmed: Boolean(
-            search &&
-            !`${node.data.original.label} ${node.data.original.module_path ?? ""}`
-              .toLowerCase()
-              .includes(search.toLowerCase()),
+            (search &&
+              !`${node.data.original.label} ${node.data.original.module_path ?? ""}`
+                .toLowerCase()
+                .includes(search.toLowerCase())) ||
+            (neighborhood && !connected.has(node.data.original.id)),
           ),
         },
       })) ?? [],
-    [layout, selectedNode, open, search],
+    [layout, selectedNode, open, search, neighborhood, connected],
   );
   const matches = graph.nodes.filter((node) =>
     `${node.label} ${node.module_path ?? ""}`
@@ -226,8 +217,17 @@ function Canvas({
       layout?.edges.map((edge) => ({
         ...edge,
         selected: edge.data?.original === selectedEdge,
+        style: {
+          ...edge.style,
+          opacity:
+            (neighborhood || selectedNode) &&
+            edge.source !== scopedNodeId(graph.id, selectedNode ?? "") &&
+            edge.target !== scopedNodeId(graph.id, selectedNode ?? "")
+              ? 0.25
+              : 1,
+        },
       })) ?? [],
-    [layout, selectedEdge],
+    [layout, selectedEdge, neighborhood, graph.id, selectedNode],
   );
   if (error)
     return (
@@ -254,7 +254,7 @@ function Canvas({
     );
   return (
     <div
-      className={`graph-canvas ${zoom < 0.55 ? "is-distant" : ""}`}
+      className={`graph-canvas ${connectionLabels ? "show-edge-labels" : ""} ${zoom < 0.6 ? "is-distant" : ""} ${zoom < 0.85 ? "is-overview" : ""} ${zoom >= 0.85 ? "is-detailed" : ""}`}
       data-testid="graph-canvas"
     >
       <ReactFlow<AnatomyNode, AnatomyEdge>
@@ -304,17 +304,6 @@ function Canvas({
         nodesConnectable={false}
         deleteKeyCode={null}
         edgesFocusable={true}
-        {...(!viewport
-          ? {
-              fitView: true,
-              fitViewOptions: {
-                nodes: [readableAnchor(layout.nodes)],
-                padding: 0.25,
-                minZoom: 0.85,
-                maxZoom: 1,
-              },
-            }
-          : {})}
         minZoom={0.08}
         maxZoom={1.8}
         proOptions={{ hideAttribution: true }}
@@ -329,6 +318,32 @@ function Canvas({
           size={1}
           color="var(--graph-grid)"
         />
+        {nodes.some((node) => node.data.isolated) && (
+          <ViewportPortal>
+            <div
+              className="inventory-shelf"
+              style={{
+                left:
+                  Math.min(
+                    ...nodes
+                      .filter((node) => node.data.isolated)
+                      .map((node) => node.position.x),
+                  ) - 16,
+                top: 12,
+                width: 296,
+                height:
+                  Math.max(
+                    ...nodes
+                      .filter((node) => node.data.isolated)
+                      .map((node) => node.position.y + (node.height ?? 0)),
+                  ) + 4,
+              }}
+            >
+              <strong>Unconnected components</strong>
+              <span>No connections were returned for these modules.</span>
+            </div>
+          </ViewportPortal>
+        )}
         {canvasWidth >= 700 && canvasHeight >= 360 && (
           <MiniMap
             className="graph-minimap"
@@ -389,7 +404,7 @@ function Canvas({
                         });
                     }}
                   >
-                    {node.label}
+                    {nodeTitle(node)}
                   </button>
                 ))
               ) : (
@@ -423,6 +438,83 @@ function Canvas({
           }
         >
           <ScanEye size={16} />
+        </IconButton>
+        <button
+          className="layout-direction"
+          type="button"
+          aria-label={`Switch to ${direction === "DOWN" ? "horizontal" : "vertical"} layout`}
+          title={`Current layout: ${direction === "DOWN" ? "vertical" : "horizontal"}`}
+          onClick={() => {
+            fitAfterLayout.current = true;
+            const next = direction === "DOWN" ? "RIGHT" : "DOWN";
+            setDirection(next);
+            onLayoutPreferenceChange({
+              direction: next,
+              density,
+              connectionLabels,
+            });
+          }}
+        >
+          <ArrowLeftRight size={15} />
+          <span>{direction === "DOWN" ? "Vertical" : "Horizontal"}</span>
+        </button>
+        <button
+          className={`layout-direction density-toggle ${density === "detailed" ? "active" : ""}`}
+          type="button"
+          aria-label={
+            density === "compact"
+              ? "Show detailed node cards"
+              : "Show compact node cards"
+          }
+          aria-pressed={density === "detailed"}
+          onClick={() => {
+            fitAfterLayout.current = true;
+            const next = density === "compact" ? "detailed" : "compact";
+            setDensity(next);
+            onLayoutPreferenceChange({
+              direction,
+              density: next,
+              connectionLabels,
+            });
+          }}
+        >
+          <Layers size={15} />
+          <span>{density === "compact" ? "Details" : "Compact"}</span>
+        </button>
+        <button
+          className={`layout-direction neighborhood-toggle ${neighborhood ? "active" : ""}`}
+          type="button"
+          aria-pressed={neighborhood}
+          aria-label="Focus selected component and connected neighbors"
+          disabled={!selectedNode}
+          onClick={() => setNeighborhood((value) => !value)}
+        >
+          <Focus size={15} />
+          <span>Neighbors</span>
+        </button>
+        <span
+          className="zoom-readout"
+          aria-label={`Zoom level ${Math.round(zoom * 100)} percent`}
+        >
+          {Math.round(zoom * 100)}%
+        </span>
+        <IconButton
+          label={
+            connectionLabels
+              ? "Hide connection labels"
+              : "Show connection labels"
+          }
+          aria-pressed={connectionLabels}
+          onClick={() => {
+            setConnectionLabels(!connectionLabels);
+            onLayoutPreferenceChange({
+              direction,
+              density,
+              connectionLabels: !connectionLabels,
+            });
+          }}
+        >
+          <Tags size={16} />
         </IconButton>
       </div>
       <div className="canvas-caption">

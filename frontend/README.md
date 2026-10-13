@@ -18,23 +18,28 @@ Set `API_PROXY_TARGET` in the environment or `.env.local` to change the upstream
 Browser requests use `/api/v1` and root `/health` with same-origin guest cookies.
 In production, serve `dist/` and reverse-proxy both `/api` and `/health` to the HTTP service.
 Configure the production server to return `index.html` for application routes.
-The landing page is `/`, submission and visitor-owned history are at `/app`, and
+Both `/` and `/app` open the same directly usable submission and history screen;
 reports use `/app/analyses/:id?view=overview|architecture|artifacts|report`.
 Legacy `/?analysis=:id` links redirect to the report. Recent analyses require an
 explicit Continue action; a new visitor sees an empty history.
 
-Research mode opens Architecture; Learn opens Overview and offers an authored
+Research and Learn both open Architecture; Learn offers a contextual authored
 guide beside the same report data. Theme (System by default) and mode (Research
 by default) are remembered locally. Graph selection, breadcrumbs, viewports,
 inspector tab and panel sizes are retained per analysis during the browser session.
 Switching mode keeps this context. No model report is stored in localStorage.
 
-The canvas starts at a readable scale. Fit graph gives the complete overview;
-Readable view restores the inspection scale. Search is scoped to the current
+The canvas starts with the complete graph framed using compact components.
+Readable view focuses the selected component at an inspection scale. Direction,
+node density and connection-label preferences are retained per graph. Search is scoped to the current
 graph. Selecting a component opens its inspector; opening a nested graph requires
 an explicit action. The component list provides a keyboard alternative to the
 canvas. Desktop panels resize; narrower screens use a component drawer, and
 below 1024px the graph and inspector have separate views with return navigation.
+
+Native class inventories use their recorded module paths to distinguish repeated
+class names. Components without returned edges appear in a separate inventory
+area; no missing dataflow is supplied by the UI. See [CANVAS_WORKSPACE.md](../docs/CANVAS_WORKSPACE.md).
 
 Light and dark semantic tokens, local Inter/JetBrains Mono fonts, Radix controls,
 and reduced-motion support form the shared design system. See
