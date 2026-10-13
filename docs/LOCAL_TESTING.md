@@ -36,6 +36,41 @@ Launcher logs are written to `.local/app-v1/local-testing/`.
 
 ## Debugging a Failed Analysis
 
+For a readable local terminal view, use the API environment's Python:
+
+```powershell
+python -m model_anatomy.service.debug --data-dir .local/app-v1 --follow
+```
+
+It reads API and worker JSON events and follows new entries. Routine polling
+timings are hidden by default; `--requests` includes them. Ctrl+C stops the
+viewer, not the API/worker. To inspect one saved analysis and its event history:
+
+```powershell
+python -m model_anatomy.service.debug --data-dir .local/app-v1 --analysis-id ANALYSIS_ID
+```
+
+This local operator command reads SQLite in read-only mode, verifies the private
+report's content hash, and prints the same recorded partial checks and warnings
+as the report, plus root relationship counts and isolated components. It does
+not contact Hugging Face, execute a model, clear a cache or change saved reports.
+It is not a public endpoint and requires local filesystem access. It supports
+the local SQLite/private-files profile, not hosted Supabase diagnostics.
+`--log-dir .local/app-v1/local-testing` selects logs from the regular launcher.
+An immutable cached report retains its existing gaps; a fast cache hit is not
+evidence that extraction issues were fixed.
+
+Text following is best-effort, not an exactly-once audit stream. File identity,
+prefix/boundary checkpoints and size changes detect normal rotation/truncation;
+concurrent rotation can repeat records. Persisted jobs and immutable reports
+remain the source of truth. Malformed oversized log records stop the viewer
+explicitly instead of consuming unbounded memory.
+
+The October 13 operator terminal uses the isolated Python executable at
+`.local/native-runtime-env/Scripts/python.exe` and the existing `.local/app-v1`
+data. That environment points to the backend worktree while the UI chat owns
+the primary frontend checkout.
+
 Start the local profile with `-LogLevel DEBUG` to include progress and HTTP timing.
 For manually started services, set `MODEL_ANATOMY_LOG_LEVEL=DEBUG` in **both**
 API and worker environments before startup. INFO is the regular default; DEBUG

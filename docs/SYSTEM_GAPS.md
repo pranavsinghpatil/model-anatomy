@@ -7,6 +7,11 @@ that a model family works end to end.
 
 ## Current Evidence
 
+The October 13 graph audit identified source-output field tracking and incomplete
+modality input profiles in EmbeddingGemma2, in addition to layout issues. See
+`GRAPH_EXTRACTION_GAPS.md`; the native partial report is not complete multimodal
+dataflow, and a cache hit does not close those gaps.
+
 The runtime now serves only submitted visitor-owned jobs. Prepared examples and
 their endpoint have been removed. References to prepared checks in earlier
 verification sections below describe historical test runs, not current features.

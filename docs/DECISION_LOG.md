@@ -300,3 +300,20 @@ JSON API/worker lifecycle events, with configurable DEBUG progress/timing and
 safe exception type/frame locations. Do not log exception messages, source lines,
 locals, raw request/model URLs, cookies, questions or credentials. Keep logs
 backend-only; no public debug endpoint or visitor-isolation bypass is added.
+
+## D-029 - Expose Operator Evidence and Separate Graph Defects
+**2026-10-13 - debugging increment**
+
+The user wants visible terminal logs and specific explanations for partial models.
+Add a local read-only diagnostics command that verifies stored reports, prints
+recorded quality/warnings and root connectivity, and follows readable API/worker
+events. Keep polling noise optional, terminal control characters sanitized, file
+reading bounded, and cache/job/visitor state unchanged. This local operator tool
+does not become a public logs API or hosted database administration interface.
+
+The user's EmbeddingGemma2 result reused a real partial cache entry. Its graph
+has both presentation defects and source extraction defects: returned output
+field writes are ignored, and audio/video input profiles are incomplete. Record
+these in `GRAPH_EXTRACTION_GAPS.md` with source-backed regression gates before
+changing the engine or cache identity. The UI chat received verified findings
+with explicit user authorization; preserve its concurrent frontend work.
