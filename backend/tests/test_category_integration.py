@@ -20,6 +20,15 @@ pytestmark = [
     "model,revision,architecture,tensors,task,input_name,input_shape",
     [
         (
+            "google/embeddinggemma-2",
+            "914f7f89142e33e77833254d9c9b90c3cef7303b",
+            "EmbeddingGemma2Model",
+            1376,
+            "feature-extraction",
+            "input_ids",
+            ["B", "S"],
+        ),
+        (
             "google-t5/t5-small",
             "df1b051c49625cf57a3d0d8d3863ed4d13564fe4",
             "T5ForConditionalGeneration",
@@ -77,6 +86,17 @@ def test_pinned_native_category(model, revision, architecture, tensors, task, in
     if architecture == "SwinForImageClassification":
         assert ir.metadata["dimensions"]["heads"] == [3, 6, 12, 24]
         assert ir.metadata["dimensions"]["layers"] == 12
+    if architecture == "EmbeddingGemma2Model":
+        assert ir.metadata["unique_parameter_count"] == 744371488
+        assert ir.metadata["versions"]["transformers"] == "5.19.0"
+        assert {"vision_tower", "audio_tower", "language_model", "embed_vision", "embed_audio"} <= set(
+            ir.raw_structure["modules"]
+        )
+        assert ir.metadata["inputs"]["input_specs"]["pixel_values"]["shape"] is None
+        assert ir.metadata["inputs"]["input_specs"]["pixel_values_videos"]["shape"] is None
+        assert ir.metadata["inputs"]["input_specs"]["input_features"]["shape"] is None
+        language_model = next(node for node in ir.root_graph.nodes if node.module_path == "language_model")
+        assert language_model.kind not in {"embedding", "embeddings"}
     assert ir.metadata["analysis_report"]["forward_executed"] is False
     assert ir.metadata["artifacts"]["weight_payload_bytes_read"] == 0
     assert ir.root_graph.nodes

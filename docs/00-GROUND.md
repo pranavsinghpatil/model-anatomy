@@ -21,6 +21,12 @@ component selection and pinned partial reports across text, image, audio, video
 and image-text. Their remaining semantic gaps are acceptance work, not grounds
 for a universal support claim. See `DYNAMIC_ROUTING_ACCEPTANCE.md`.
 
+The October 13 native-runtime increment pins Transformers 5.19.0 and reconstructs
+EmbeddingGemma2's native text, vision and audio module hierarchy instead of
+returning only checkpoint inventory. Wrapped projections retain their actual
+source graphs; unresolved operations and modality dimensions remain explicit.
+See `NATIVE_RUNTIME_ACCEPTANCE.md` for the pinned evidence and remaining gates.
+
 The [hackathon release](https://nebiusglobalaihackathon.devpost.com/) must run on Nebius Token Factory or Nebius AI Cloud and use an NVIDIA open-source model. The integration is an optional, evidence-bound explanation layer: it may summarize or answer questions about the completed reconstruction, but must never infer the graph or overwrite evidence.
 
 ## Non-goals for this release

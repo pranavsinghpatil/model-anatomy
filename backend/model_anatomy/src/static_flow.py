@@ -14,6 +14,7 @@ from types import ModuleType
 from typing import Any
 
 import torch
+from transformers.utils import import_utils as transformers_import_utils
 from transformers.utils.import_utils import is_torch_fx_proxy, is_torchdynamo_compiling
 
 UNKNOWN = object()
@@ -389,7 +390,17 @@ class StaticFlowAnalyzer:
             ):
                 return StaticValue(constant=False)
             return None
-        if function is is_torch_fx_proxy:
+        if function is getattr(transformers_import_utils, "is_tracing", None):
+            if len(arguments) > 1 or any(key not in ("0", "tensor") for key in arguments):
+                return None
+            value = next(iter(arguments.values()), StaticValue(constant=None))
+            if not (value.refs or type(value.constant) in (type(None), bool, int, float, str)):
+                return None
+            basis = (
+                "Canonical static profile uses tensor dependencies without forward execution, "
+                "FX proxies, fake tensors, JIT/JAX tracing, compilation or CUDA capture"
+            )
+        elif function is is_torch_fx_proxy:
             value = arguments.get("0", arguments.get("x", StaticValue()))
             if len(arguments) != 1 or not (
                 value.refs or type(value.constant) in (type(None), bool, int, float, str)

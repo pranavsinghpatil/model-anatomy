@@ -23,6 +23,7 @@ class Settings(BaseSettings):
     )
     docs_enabled: bool = True
     environment: Literal["local", "production"] = "local"
+    log_level: Literal["INFO", "DEBUG", "WARNING", "ERROR"] = "INFO"
     data_dir: Path = Path(".local/model-anatomy")
     database_url: str | None = Field(
         default=None, validation_alias=AliasChoices("DATABASE_URL", "MODEL_ANATOMY_DATABASE_URL"), repr=False

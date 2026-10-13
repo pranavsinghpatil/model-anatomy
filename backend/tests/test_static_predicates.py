@@ -4,10 +4,13 @@ from types import SimpleNamespace
 
 import pytest
 import torch
+from transformers.utils import import_utils as transformers_import_utils
 from transformers.utils.import_utils import is_torch_fx_proxy as native_fx_predicate
 from transformers.utils.import_utils import is_torchdynamo_compiling
 
 from model_anatomy.src.static_flow import StaticFlowAnalyzer
+
+native_combined_predicate = getattr(transformers_import_utils, "is_tracing", None)
 
 
 def is_torch_fx_proxy(x):
@@ -39,6 +42,31 @@ class OpaqueGuard(NativeGuards):
         else:
             result = x + x
         return result
+
+
+class CombinedGuard(NativeGuards):
+    def forward(self, x):
+        if native_combined_predicate(tensor=x):
+            return x + x
+        return self.layer(x)
+
+
+class CombinedNoArgumentGuard(NativeGuards):
+    def forward(self, x):
+        if native_combined_predicate():
+            return x + x
+        return self.layer(x)
+
+
+def is_tracing(tensor=None):
+    raise AssertionError("Model helpers must never execute")
+
+
+class SpoofedCombinedGuard(NativeGuards):
+    def forward(self, x):
+        if is_tracing(x):
+            return x + x
+        return self.layer(x)
 
 
 class ShadowedGuard(NativeGuards):
@@ -140,6 +168,23 @@ def test_native_guards_are_source_audited_and_resolve_only_canonical_branch():
     assert any("is_torch_fx_proxy" in item["predicate"] for item in flow.profile_assumptions)
 
 
+@pytest.mark.skipif(native_combined_predicate is None, reason="Requires native combined tracing guard")
+@pytest.mark.parametrize("model_class", [CombinedGuard, CombinedNoArgumentGuard])
+def test_combined_native_tracing_guard_is_identity_checked_and_source_audited(model_class):
+    flow = analyze(model_class())
+    assert flow.warnings == []
+    assert [event.module_path for event in flow.events] == ["layer"]
+    assert len(flow.profile_assumptions) == 1
+    assert flow.profile_assumptions[0]["predicate"].endswith(".is_tracing")
+    assert len(flow.profile_assumptions[0]["source_sha256"]) == 64
+
+
+def test_spoofed_combined_tracing_guard_remains_unknown_without_execution():
+    flow = analyze(SpoofedCombinedGuard())
+    assert flow.profile_assumptions == []
+    assert any("Conditional source path is unresolved" in warning for warning in flow.warnings)
+
+
 @pytest.mark.parametrize("model_class", [OpaqueGuard, ShadowedGuard])
 def test_same_name_or_shadowed_predicates_remain_unknown_without_execution(model_class):
     flow = analyze(model_class())
@@ -169,7 +214,9 @@ def test_tiny_native_gpt2_no_longer_has_an_opaque_padding_guard():
     paths = {path: SimpleNamespace(kind="backbone") for path, _ in model.named_modules()}
     flow = StaticFlowAnalyzer(model, "transformer", paths).analyze()
     assert flow.warnings == []
-    assert any("is_torch_fx_proxy" in item["predicate"] for item in flow.profile_assumptions)
+    assert any(
+        item["predicate"].endswith((".is_torch_fx_proxy", ".is_tracing")) for item in flow.profile_assumptions
+    )
 
 
 @pytest.mark.parametrize("model_class", [ConditionalReturns, TwoConditionalReturns])

@@ -67,18 +67,29 @@ class InputResolver:
             if name == "hidden_states" and type(module).__name__ == "ViTOutput":
                 hidden = module.dense.in_features
         heads = getattr(config, "num_attention_heads", None) or getattr(config, "num_heads", None)
+        scalar_heads = type(heads) is int and heads > 0
         if name == "position_bias":
             module = self.model.get_submodule(path) if path else self.model
             cross = "cross" in type(module).__name__.lower() or "encdec" in type(module).__name__.lower()
             return TensorSpec(
-                [1, heads, sequence, "S" if cross else sequence] if heads else None,
+                [1, heads, sequence, "S" if cross else sequence] if scalar_heads else None,
                 self.activation_dtype,
                 name,
             )
         if name == "position_embeddings":
-            dimension = getattr(config, "head_dim", None) or (hidden // heads if hidden and heads else None)
+            dimension = getattr(config, "head_dim", None)
+            if (
+                dimension is None
+                and scalar_heads
+                and type(hidden) is int
+                and hidden > 0
+                and hidden % heads == 0
+            ):
+                dimension = hidden // heads
             return TensorSpec(
-                ["B", sequence, dimension] if dimension else None, self.activation_dtype, "rotary_cos_sin"
+                ["B", sequence, dimension] if type(dimension) is int and dimension > 0 else None,
+                self.activation_dtype,
+                "rotary_cos_sin",
             )
         if name in {"input_ids", "decoder_input_ids", "token_type_ids"}:
             return TensorSpec(["B", sequence], "I64", name)
@@ -118,6 +129,11 @@ class InputResolver:
         if name in {"pixel_values_videos", "video_pixel_values"}:
             return TensorSpec(None, self.activation_dtype, name)
         if name == "input_features":
+            if not (
+                getattr(config, "model_type", None) == "whisper"
+                and type(self.model).__module__ == "transformers.models.whisper.modeling_whisper"
+            ):
+                return TensorSpec(None, self.activation_dtype, name)
             return TensorSpec(
                 ["B", getattr(config, "num_mel_bins", "F"), "Frames"], self.activation_dtype, name
             )

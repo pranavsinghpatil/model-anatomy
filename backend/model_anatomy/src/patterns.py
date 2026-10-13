@@ -199,8 +199,11 @@ class SemanticAnalyzer:
             )
         if "patch" in class_name and "convolution" in descendant_kinds:
             return result("patch_embedding", 0.98, "patch ownership plus convolutional projection")
-        if "embedding" in class_name and (
-            "embedding" in descendant_kinds or "patch_embedding" in descendant_kinds
+        if (
+            "embedding" in class_name
+            and not attention
+            and not feed_forward
+            and ("embedding" in descendant_kinds or "patch_embedding" in descendant_kinds)
         ):
             return result("embeddings", 0.97, "composite embedding subtree")
         if "rotary" in class_name and hasattr(module, "inv_freq"):

@@ -2,6 +2,7 @@
 
 from types import SimpleNamespace
 
+import pytest
 import torch
 from transformers import CLIPConfig, VideoMAEConfig
 
@@ -69,3 +70,43 @@ def test_unknown_composite_image_video_packing_stays_unknown():
 
 def test_other_video_families_are_not_assigned_videomae_axis_order():
     assert InputResolver(CompositeModel("timesformer")).spec("pixel_values").shape is None
+
+
+def test_unverified_audio_layout_is_not_assigned_whisper_axis_order():
+    model = CompositeModel("embedding_gemma2")
+    model.config.audio_config = SimpleNamespace(hidden_size=1024)
+    assert InputResolver(model).spec("input_features").shape is None
+
+
+def test_standalone_unknown_audio_layout_stays_unknown_even_with_mel_bins():
+    model = CompositeModel("other_audio")
+    model.config.num_mel_bins = 128
+    assert InputResolver(model).spec("input_features").shape is None
+
+
+@pytest.mark.parametrize("heads", [[3, 6, 12, 24], 0, -1, True])
+def test_non_scalar_or_invalid_heads_do_not_crash_or_create_nested_position_dimensions(heads):
+    model = CompositeModel("staged_encoder")
+    model.config.hidden_size = 96
+    model.config.num_attention_heads = heads
+    resolver = InputResolver(model)
+    assert resolver.spec("position_bias").shape is None
+    assert resolver.spec("position_embeddings").shape is None
+
+
+@pytest.mark.parametrize("dimension", [0, -1, True, [4, 8]])
+def test_invalid_explicit_position_dimension_is_not_replaced_or_used(dimension):
+    model = CompositeModel("encoder")
+    model.config.hidden_size = 96
+    model.config.num_attention_heads = 3
+    model.config.head_dim = dimension
+    assert InputResolver(model).spec("position_embeddings").shape is None
+
+
+def test_scalar_position_dimensions_remain_supported():
+    model = CompositeModel("encoder")
+    model.config.hidden_size = 96
+    model.config.num_attention_heads = 3
+    resolver = InputResolver(model)
+    assert resolver.spec("position_bias").shape == [1, 3, "S", "S"]
+    assert resolver.spec("position_embeddings").shape == ["B", "S", 32]

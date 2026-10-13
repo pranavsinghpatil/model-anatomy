@@ -27,25 +27,30 @@ def build_attention(builder: HierarchyBuilder, path: str) -> Graph:
         getattr(getattr(module, "config", builder.model.config), "num_attention_heads", None)
         or getattr(getattr(module, "config", builder.model.config), "num_heads", None),
     )
-    head_dim = attributes.get("head_dim") or attributes.get("key_value_proj_dim")
+    head_dim = attributes.get("head_dim", attributes.get("key_value_proj_dim"))
     fused = "c_attn" in children
     projection_sets = [("q_proj", "k_proj", "v_proj"), ("query", "key", "value"), ("q", "k", "v")]
     names = next((group for group in projection_sets if all(name in children for name in group)), None)
     output_path = next(
         (children[name] for name in ("o_proj", "c_proj", "o", "out_proj", "dense") if name in children), None
     )
-    if heads is None or (not fused and names is None):
+    if type(heads) is not int or heads <= 0 or (not fused and names is None):
         return builder.source_graph(path)
     if fused:
         packed_path = children["c_attn"]
-        width = builder.model.get_submodule(packed_path).nf
+        width = getattr(builder.model.get_submodule(packed_path), "nf", None)
+        if type(width) is not int or width <= 0 or width % 3:
+            return builder.source_graph(path)
         query_width = width // 3
         kv_width = query_width
         projection_specs = [TensorSpec(["B", sequence, width], builder.inputs.activation_dtype, "packed_qkv")]
     else:
-        query_width = builder.model.get_submodule(children[names[0]]).out_features
-        kv_width = builder.model.get_submodule(children[names[1]]).out_features
-        value_width = builder.model.get_submodule(children[names[2]]).out_features
+        query_width, kv_width, value_width = (
+            getattr(builder.model.get_submodule(children[name]), "out_features", None) for name in names
+        )
+        # Wrapped or non-linear projections require their actual source graph.
+        if any(type(width) is not int or width <= 0 for width in (query_width, kv_width, value_width)):
+            return builder.source_graph(path)
         if kv_width != value_width:
             return builder.source_graph(path)
         projection_specs = [
@@ -53,8 +58,9 @@ def build_attention(builder: HierarchyBuilder, path: str) -> Graph:
             TensorSpec(["B", key_sequence, kv_width], builder.inputs.activation_dtype, "k"),
             TensorSpec(["B", key_sequence, kv_width], builder.inputs.activation_dtype, "v"),
         ]
-    head_dim = head_dim or query_width // heads
-    if query_width != heads * head_dim or kv_width % head_dim:
+    if head_dim is None:
+        head_dim = query_width // heads
+    if type(head_dim) is not int or head_dim <= 0 or query_width != heads * head_dim or kv_width % head_dim:
         return builder.source_graph(path)
     kv_heads = kv_width // head_dim
     if heads % kv_heads:

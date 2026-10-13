@@ -89,44 +89,38 @@ def test_native_vit_static_semantics_and_source_flow():
     assert classifier.kind == "classifier"
     assert output_shape(classifier) == ["B", 10]
 
-    output_modules = [
-        node
-        for node in nodes
-        if node.module_path
-        and node.module_path.rsplit(".", 1)[-1] in {"output", "attention_output"}
-        and node.module_type in {"ViTOutput", "ViTSelfOutput"}
-    ]
-    assert {node.module_type for node in output_modules} == {"ViTOutput", "ViTSelfOutput"}
-    assert all(node.kind == "projection_block" for node in output_modules)
-    assert all(
-        any(
-            "native ViT" in reason and "forward source" in reason
-            for reason in node.metadata["classification"]["evidence"]
-        )
-        for node in output_modules
+    # The pinned native runtime places both residual additions in ViTLayer.
+    layer = module_node(nodes, "vit.layers.0")
+    layer_graph = layer.child_graph
+    assert layer_graph is not None
+    by_id = {node.id: node for node in layer_graph.nodes}
+    residuals = [node for node in layer_graph.nodes if node.kind == "residual"]
+    assert len(residuals) == 2
+    for index, residual in enumerate(residuals):
+        incoming = [
+            edge for edge in layer_graph.edges if edge.target == residual.id and edge.relation == "dataflow"
+        ]
+        assert len(incoming) == 2
+        skip = next(edge for edge in incoming if edge.target_port == "skip")
+        assert by_id[skip.source].kind == ("input" if index == 0 else "residual")
+        if index:
+            assert skip.source == residuals[0].id
+        branch = next(edge for edge in incoming if edge.target_port == "left")
+        assert by_id[branch.source].kind == "dropout"
+        assert all(edge.tensor.shape == ["B", 5, 24] and edge.evidence for edge in incoming)
+        assert output_shape(residual) == ["B", 5, 24]
+        assert residual.evidence
+    assert any(
+        edge.source == residuals[-1].id and by_id[edge.target].kind == "output" for edge in layer_graph.edges
     )
 
-    vit_output = next(node for node in output_modules if node.module_type == "ViTOutput")
-    assert ["B", 5, 48] in [tensor.shape for tensor in vit_output.inputs]
-    assert output_shape(vit_output) == ["B", 5, 24]
-    output_graph = vit_output.child_graph
-    assert output_graph is not None
-    residual = next(n for n in output_graph.nodes if n.kind == "residual")
-    incoming = [e for e in output_graph.edges if e.target == residual.id and e.relation == "dataflow"]
-    by_id = {n.id: n for n in output_graph.nodes}
-    assert len(incoming) == 2
-    assert {by_id[e.source].kind for e in incoming} == {"dropout", "input"}
-    skip = next(e for e in incoming if e.target_port == "skip")
-    assert by_id[skip.source].metadata["argument_name"] == "input_tensor"
-    assert all(e.tensor.shape == ["B", 5, 24] and e.evidence for e in incoming)
-    assert output_shape(residual) == ["B", 5, 24]
-    assert any(e.source == residual.id and by_id[e.target].kind == "output" for e in output_graph.edges)
-    self_output = next(n for n in output_modules if n.module_type == "ViTSelfOutput")
-    assert self_output.child_graph is not None
-    assert not any(n.kind == "residual" for n in self_output.child_graph.nodes)
-
-    unknown_modules = ir.raw_structure["semantic_diagnostics"]["unknown_components"]
-    assert all(node.module_path not in unknown_modules for node in output_modules)
+    expansion = module_node(nodes, "vit.layers.0.mlp.fc1")
+    contraction = module_node(nodes, "vit.layers.0.mlp.fc2")
+    assert output_shape(expansion) == ["B", 5, 48]
+    assert output_shape(contraction) == ["B", 5, 24]
+    attention_projection = module_node(nodes, "vit.layers.0.attention.o_proj")
+    assert output_shape(attention_projection) == ["B", 5, 24]
+    assert all(node.evidence for node in (expansion, contraction, attention_projection))
 
 
 def test_native_vit_nonsquare_image_size_preserves_patch_grid_shape():

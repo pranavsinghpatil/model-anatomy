@@ -2,7 +2,9 @@ param(
     [int]$GuestJobsPerHour = 100,
     [int]$GlobalJobsPerDay = 500,
     [int]$GuestQuestionsPerHour = 100,
-    [int]$GlobalQuestionsPerDay = 500
+    [int]$GlobalQuestionsPerDay = 500,
+    [ValidateSet('INFO', 'DEBUG', 'WARNING', 'ERROR')]
+    [string]$LogLevel = 'INFO'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -49,6 +51,7 @@ if (Get-NetTCPConnection -State Listen -LocalPort 5173 -ErrorAction SilentlyCont
 
 $settings = @{
     MODEL_ANATOMY_ENVIRONMENT = 'local'
+    MODEL_ANATOMY_LOG_LEVEL = $LogLevel
     MODEL_ANATOMY_PORT = '8001'
     MODEL_ANATOMY_DATA_DIR = $dataDir
     MODEL_ANATOMY_DATABASE_URL = $databaseUrl

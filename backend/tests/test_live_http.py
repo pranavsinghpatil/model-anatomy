@@ -1,6 +1,7 @@
 """Opt-in real HTTP -> durable worker -> Hugging Face inspection, with no mocks."""
 
 import io
+import json
 import os
 import re
 import socket
@@ -46,6 +47,7 @@ def live_backend(tmp_path):
     }
     env.update(
         MODEL_ANATOMY_DATA_DIR=str(tmp_path / "live-data"),
+        MODEL_ANATOMY_LOG_LEVEL="DEBUG",
         PYTHONPATH=str(ROOT / "backend"),
     )
     processes = []
@@ -117,10 +119,12 @@ def live_backend(tmp_path):
     [
         ("HuggingFaceTB/SmolLM2-360M", "f8027fd0eaeea54caa13c31d31b9fdc459c38b49", 361821120, "embedding"),
         ("google/vit-base-patch16-224", "10064cc17b69d623a025c9e90e11230cc8ba6967", 86567656, "classifier"),
+        ("google/embeddinggemma-2", "914f7f89142e33e77833254d9c9b90c3cef7303b", 744371488, "unknown"),
     ],
 )
 def test_real_model_submission_graph_tensors_exports_and_cache(
     live_backend,
+    tmp_path,
     model,
     revision,
     parameters,
@@ -151,8 +155,13 @@ def test_real_model_submission_graph_tensors_exports_and_cache(
         )
         config_response.raise_for_status()
         config = config_response.json()
-    assert detail["dimensions"]["hidden"] == config["hidden_size"]
-    assert detail["dimensions"]["layers"] == config["num_hidden_layers"]
+    if "text_config" in config:
+        # Composite dimensions are not one global hidden width/layer count.
+        assert detail["dimensions"]["hidden"] is None
+        assert detail["dimensions"]["layers"] is None
+    else:
+        assert detail["dimensions"]["hidden"] == config["hidden_size"]
+        assert detail["dimensions"]["layers"] == config["num_hidden_layers"]
     path = f"/api/v1/analyses/{detail['id']}"
     graph = client.get(f"{path}/graphs/{detail['root_graph_id']}").json()
     repeated = next(node for node in graph["nodes"] if node["child_graph_id"])
@@ -164,6 +173,17 @@ def test_real_model_submission_graph_tensors_exports_and_cache(
     assert report["model_id"] == model
     assert report["metadata"]["artifacts"]["weight_payload_bytes_read"] == 0
     assert report["tensors"] and report["metadata"]["analysis_report"]["checkpoint_parameter_coverage"] == 1
+    if model == "google/embeddinggemma-2":
+        assert detail["architecture"] == "EmbeddingGemma2Model"
+        assert detail["engine_version"] == "2026.10.13.1"
+        assert len(report["tensors"]) == 1376
+        assert detail["status"] == "partial" and detail["warnings"]
+        assert {"vision_tower", "audio_tower", "language_model"} <= {
+            node["module_path"] for node in graph["nodes"] if node["module_path"]
+        }
+        for input_name in ("input_features", "pixel_values", "pixel_values_videos"):
+            assert report["metadata"]["inputs"]["input_specs"][input_name]["shape"] is None
+        assert report["metadata"]["analysis_report"]["forward_executed"] is False
     if component_kind == "classifier":
         assert report["metadata"]["inputs"]["input_specs"]["pixel_values"]["shape"] == ["B", 3, 224, 224]
         assert [tensor["name"] for tensor in node["tensors"]] == ["classifier.bias", "classifier.weight"]
@@ -196,6 +216,33 @@ def test_real_model_submission_graph_tensors_exports_and_cache(
         assert "prepared" not in failed and failed["root_graph_id"] is None
         assert failed["parameter_count"] is None and failed["architecture"] is None
         assert other.get(f"/api/v1/analyses/{failed['id']}/exports/json").status_code == 503
+    events = [
+        json.loads(line)
+        for name in ("api", "worker")
+        for line in (tmp_path / f"{name}.log").read_text(encoding="utf-8").splitlines()
+        if line.startswith("{")
+    ]
+    submitted = next(
+        event
+        for event in events
+        if event["event"] == "analysis_submitted" and event["analysis_id"] == detail["id"]
+    )
+    assert submitted["request_id"] == response.headers["X-Request-ID"]
+    assert any(
+        event["event"] == "analysis_resolved"
+        and event["analysis_id"] == detail["id"]
+        and event["revision"] == revision
+        for event in events
+    )
+    failed_event = next(
+        event
+        for event in events
+        if event["event"] == "analysis_failed" and event["analysis_id"] == failed["id"]
+    )
+    assert failed_event["code"] == "artifact_http"
+    assert failed_event["stage"] == "resolving_revision"
+    assert failed_event["exception_type"] == "HTTPError" and failed_event["frames"]
+    assert "message" not in failed_event and "model_input" not in failed_event
     print(
         f"Real live report: {model}@{detail['revision']}; {detail['parameter_count']} parameters; "
         f"{len(report['tensors'])} tensors; cold+cached+honest failure verified"

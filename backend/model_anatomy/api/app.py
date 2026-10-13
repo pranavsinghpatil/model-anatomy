@@ -1,6 +1,7 @@
 """HTTP boundary for metadata jobs; never import or run model extraction here."""
 
 import logging
+import time
 from contextlib import asynccontextmanager
 from uuid import uuid4
 
@@ -14,6 +15,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from starlette.exceptions import HTTPException
 
 from model_anatomy.service.ai import ExplanationService
+from model_anatomy.service.diagnostics import configure_logging, log_event
 from model_anatomy.service.errors import ServiceError
 from model_anatomy.service.jobs import JobService
 from model_anatomy.service.views import artifact_view, export, graph_view, load_ir, node_view
@@ -39,6 +41,7 @@ COOKIE = "model_anatomy_visitor"
 
 def create_app(settings: Settings | None = None, *, service=None, explanation=None) -> FastAPI:
     config = settings if settings is not None else Settings()
+    configure_logging(config.log_level)
     jobs = service or JobService(config)
     ai = explanation or ExplanationService(config)
 
@@ -48,9 +51,9 @@ def create_app(settings: Settings | None = None, *, service=None, explanation=No
             jobs.initialize()
             verify_migrations()
             app.state.service_ready = True
-        except (ServiceError, SQLAlchemyError, OSError):
+        except (ServiceError, SQLAlchemyError, OSError) as exc:
             app.state.service_ready = False
-            logger.error("service initialization unavailable")
+            log_event(logger, "service_initialization_failed", exception=exc, level=logging.ERROR)
         yield
         jobs.db.engine.dispose()
         if explanation is None:
@@ -87,6 +90,15 @@ def create_app(settings: Settings | None = None, *, service=None, explanation=No
     )
 
     def error(request, status: int, code: str, message: str, headers=None):
+        log_event(
+            logger,
+            "request_rejected",
+            request_id=request.state.request_id,
+            status=status,
+            code=code,
+            method=request.method,
+            level=logging.WARNING,
+        )
         return JSONResponse(
             status_code=status,
             content={"error": {"code": code, "message": message, "request_id": request.state.request_id}},
@@ -121,6 +133,7 @@ def create_app(settings: Settings | None = None, *, service=None, explanation=No
 
     @app.middleware("http")
     async def observe(request: Request, call_next):
+        started = time.monotonic()
         request.state.request_id = uuid4().hex
         origin = request.headers.get("origin")
         same_origin = str(request.url.replace(path="", query="")).rstrip("/")
@@ -147,10 +160,23 @@ def create_app(settings: Settings | None = None, *, service=None, explanation=No
                 response = await call_next(request)
             except ServiceError as exc:
                 response = error(request, exc.status, exc.code, exc.message)
-            except (SQLAlchemyError, OSError):
+            except (SQLAlchemyError, OSError) as exc:
+                log_event(
+                    logger,
+                    "request_dependency_failed",
+                    request_id=request.state.request_id,
+                    exception=exc,
+                    level=logging.ERROR,
+                )
                 response = error(request, 503, "service_unavailable", "Service dependency unavailable")
-            except Exception:  # noqa: BLE001 - never expose unexpected dependency internals
-                logger.error("request failed unexpectedly request_id=%s", request.state.request_id)
+            except Exception as exc:  # noqa: BLE001 - never expose unexpected dependency internals
+                log_event(
+                    logger,
+                    "request_failed",
+                    request_id=request.state.request_id,
+                    exception=exc,
+                    level=logging.ERROR,
+                )
                 response = error(request, 503, "service_unavailable", "Service dependency unavailable")
         if response.status_code >= 400 and "application/json" not in response.headers.get("content-type", ""):
             headers = {k: v for k, v in response.headers.items() if k.startswith("access-control")}
@@ -169,11 +195,14 @@ def create_app(settings: Settings | None = None, *, service=None, explanation=No
                 samesite="lax",
                 path="/",
             )
-        logger.info(
-            "request_id=%s method=%s status=%s",
-            request.state.request_id,
-            request.method,
-            response.status_code,
+        log_event(
+            logger,
+            "request_finished",
+            request_id=request.state.request_id,
+            method=request.method,
+            status=response.status_code,
+            duration_ms=(time.monotonic() - started) * 1000,
+            level=logging.DEBUG,
         )
         return response
 
@@ -242,7 +271,17 @@ def create_app(settings: Settings | None = None, *, service=None, explanation=No
         ),
     )
     def create_analysis(body: CreateAnalysis, request: Request):
-        return jobs.create(guest(request), body.model)
+        created = jobs.create(guest(request), body.model)
+        log_event(
+            logger,
+            "analysis_submitted",
+            request_id=request.state.request_id,
+            analysis_id=created["id"],
+            model_id=created["model_id"],
+            engine_version=created["engine_version"],
+            stage=created["stage"],
+        )
+        return created
 
     @app.get("/api/v1/analyses/{analysis_id}", response_model=AnalysisDetail)
     def get_analysis(analysis_id: str, request: Request):

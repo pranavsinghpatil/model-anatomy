@@ -19,6 +19,7 @@ from model_anatomy.api.settings import Settings
 from model_anatomy.src.errors import AnatomyError, ArtifactError, UnsupportedModelError
 
 from .database import Job
+from .diagnostics import configure_logging, log_event
 from .errors import ServiceError
 from .jobs import JobService, cache_key
 
@@ -60,10 +61,26 @@ def execute_job(service: JobService, job_id: str, owner: str, client, reconstruc
     if job.engine_version != service.settings.engine_version:
         raise ServiceError(503, "engine_version_mismatch", "Queued job requires a different engine version")
     reference = parse_reference(job.model_input)
+    started = time.monotonic()
+    log_event(
+        logger,
+        "analysis_started",
+        analysis_id=job_id,
+        model_id=reference.model_id,
+        engine_version=job.engine_version,
+        stage=job.stage,
+    )
     if job.revision:
         reference = replace(reference, revision=job.revision)
     revision = client.resolve(reference)
     service.resolved(job_id, owner, reference.model_id, revision)
+    context = {
+        "analysis_id": job_id,
+        "model_id": reference.model_id,
+        "revision": revision,
+        "engine_version": job.engine_version,
+    }
+    log_event(logger, "analysis_resolved", **context, stage="reading_metadata")
     key = cache_key(
         reference.model_id,
         revision,
@@ -75,18 +92,34 @@ def execute_job(service: JobService, job_id: str, owner: str, client, reconstruc
     result = service.cached_result(key)
     if result is not None:
         service.finish(job_id, owner, result, key, cached=True)
+        log_event(
+            logger,
+            "analysis_finished",
+            **context,
+            cached=True,
+            duration_ms=(time.monotonic() - started) * 1000,
+        )
         return
+
+    def progress(stage):
+        service.stage(job_id, owner, stage)
+        log_event(logger, "analysis_progress", **context, stage=stage, level=logging.DEBUG)
+
     ir = reconstruct(
         job.model_input,
         client=client,
         revision=revision,
-        on_progress=lambda stage: service.stage(job_id, owner, stage),
+        on_progress=progress,
     )
     service.stage(job_id, owner, "storing_metadata")
     service.finish(job_id, owner, ir.to_json().encode(), key, cached=False)
+    log_event(
+        logger, "analysis_finished", **context, cached=False, duration_ms=(time.monotonic() - started) * 1000
+    )
 
 
 def child_main(settings: Settings, job_id: str, owner: str) -> None:
+    configure_logging(settings.log_level)
     service = JobService(settings)
     try:
         guard_parent()
@@ -107,6 +140,31 @@ def child_main(settings: Settings, job_id: str, owner: str) -> None:
             execute_job(service, job_id, owner, MetadataClient(session), reconstruct, parse_reference)
     except Exception as exc:  # noqa: BLE001 - record unexpected child failures without leaking secrets
         code, message, status, transient = classify_failure(exc)
+        job = None
+        try:
+            with service.db.read() as session:
+                job = session.get(Job, job_id)
+        except Exception as context_error:  # noqa: BLE001 - preserve the original failure
+            log_event(
+                logger,
+                "analysis_context_unavailable",
+                analysis_id=job_id,
+                exception=context_error,
+                level=logging.DEBUG,
+            )
+        log_event(
+            logger,
+            "analysis_failed",
+            analysis_id=job_id,
+            engine_version=settings.engine_version,
+            model_id=job.model_id if job else None,
+            revision=job.revision if job else None,
+            stage=job.stage if job else None,
+            status=status,
+            code=code,
+            exception=exc,
+            level=logging.ERROR,
+        )
         try:
             service.fail(job_id, owner, code, message, status=status, transient=transient)
         except ServiceError:
@@ -229,6 +287,14 @@ class Worker:
                     return
                 if time.monotonic() - started >= self.settings.job_timeout_seconds:
                     stop_process(process)
+                    log_event(
+                        logger,
+                        "analysis_timeout",
+                        analysis_id=job_id,
+                        engine_version=self.settings.engine_version,
+                        code="timeout",
+                        level=logging.ERROR,
+                    )
                     self.service.fail(
                         job_id,
                         self.owner,
@@ -241,7 +307,32 @@ class Worker:
             with self.service.db.read() as session:
                 job = session.get(Job, job_id)
                 unfinished = bool(job and job.status == "running" and job.lease_owner == self.owner)
+            if job and not unfinished:
+                log_event(
+                    logger,
+                    "analysis_outcome",
+                    analysis_id=job_id,
+                    model_id=job.model_id,
+                    revision=job.revision,
+                    engine_version=job.engine_version,
+                    stage=job.stage,
+                    status=job.status,
+                    code=(job.error or {}).get("code")
+                    or ((job.summary or {}).get("inspection") or {}).get("reason_code"),
+                    architecture=(job.summary or {}).get("architecture"),
+                    warning_count=len((job.summary or {}).get("warnings", [])),
+                    duration_ms=(time.monotonic() - started) * 1000,
+                )
             if unfinished:
+                log_event(
+                    logger,
+                    "analysis_child_exit",
+                    analysis_id=job_id,
+                    engine_version=self.settings.engine_version,
+                    stage=job.stage,
+                    code="timeout" if deadline.is_set() else "worker_crashed",
+                    level=logging.ERROR,
+                )
                 self.service.fail(
                     job_id,
                     self.owner,
@@ -278,7 +369,12 @@ class Worker:
                     # Reclaim its expired lease without ever overlapping a live child.
                     if exc.code != "lease_lost" or not self.service.acquire_worker(self.owner):
                         raise
-                    logger.warning("idle worker lease recovered")
+                    log_event(
+                        logger,
+                        "worker_lease_recovered",
+                        engine_version=self.settings.engine_version,
+                        level=logging.WARNING,
+                    )
                 self.service.cleanup()
                 job_id = self.service.claim(self.owner)
                 if job_id:
@@ -296,10 +392,23 @@ class Worker:
 
 
 def main() -> None:
-    worker = Worker(Settings())
+    settings = Settings()
+    configure_logging(settings.log_level)
+    log_event(logger, "worker_started", engine_version=settings.engine_version)
+    worker = Worker(settings)
     signal.signal(signal.SIGINT, worker.request_stop)
     signal.signal(signal.SIGTERM, worker.request_stop)
-    worker.run()
+    try:
+        worker.run()
+    except Exception as exc:  # noqa: BLE001 - retain safe locations, not dependency credential strings
+        log_event(
+            logger,
+            "worker_failed",
+            engine_version=settings.engine_version,
+            exception=exc,
+            level=logging.ERROR,
+        )
+        raise SystemExit(1) from None
 
 
 if __name__ == "__main__":

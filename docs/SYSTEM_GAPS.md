@@ -1,7 +1,7 @@
 # System Gaps and Acceptance Gates
 
 This is an implementation audit, not a support promise. Status describes evidence
-in this repository as of 2026-10-12. "Tested" means there is a pinned real-model
+in this repository as of 2026-10-13. "Tested" means there is a pinned real-model
 engine or live HTTP acceptance path; a generic code path or fixture is not proof
 that a model family works end to end.
 
@@ -21,6 +21,7 @@ verification sections below describe historical test runs, not current features.
 | Google ViT image classification (~86.57M) | **Tested canonical static architecture; completed report** | `google/vit-base-patch16-224` at `10064cc17b69d623a025c9e90e11230cc8ba6967`: 86,567,656 parameters, 200 tensors, `[B,3,224,224]` pixels, 196 patches, CLS/position addition to `[B,197,768]`, encoder output projections/residuals, CLS selection `[B,768]` and classifier `[B,1000]`. Engine `2026.10.12.2` retains known Q/K/V named-output shapes; all scoped edges have shapes, all native modules are classified and all checkpoint parameters map. No extraction warnings or payload reads. Fresh HTTP-worker and real desktop/mobile tests require completed status. Shapes describe fixed-resolution, unmasked inputs without interpolation, not runtime observations. Preprocessing and other vision architectures remain unverified. |
 | Additional image architectures | **Pinned partial Swin report** | 233 tensors, full native parameter mapping and staged heads; API serialization is fixed. Shifted windows, padding, shapes and classification still need semantic acceptance. |
 | Image-text / multimodal | **Pinned partial SigLIP report** | 408 tensors and full native parameter mapping. Composite pixel layout and cross-modality semantics remain unknown; this does not prove image-text generation or arbitrary modality bridges. |
+| EmbeddingGemma2 text/image/audio/video embedding | **Pinned native partial architecture** | Transformers 5.19.0 supports native `EmbeddingGemma2Model` at `914f7f89142e33e77833254d9c9b90c3cef7303b`: 1,376 tensors, 744,371,488 native unique parameters, full checkpoint parameter mapping, preserved text/vision/audio towers, no forward or weight payload reads. Wrapped projections retain source/containment graphs. Functional operations, modality mixing and some dimensions remain unresolved; this is not complete multimodal semantics. See [NATIVE_RUNTIME_ACCEPTANCE.md](NATIVE_RUNTIME_ACCEPTANCE.md). |
 | Audio | **Pinned partial Whisper report** | 167 tensors and full native parameter mapping. Augmentation/control flow and some connection shapes remain unresolved. |
 | Video | **Pinned partial VideoMAE report** | 186 tensors and full native parameter mapping. Native source/config establishes canonical `[B,16,3,224,224]`; pooling/position semantics and classifications remain incomplete. Other video layouts remain unverified and explicitly unknown. |
 | Diffusion pipelines | **Manifest/component artifact inspection** | Stable Diffusion v1.5 is pinned and its selected UNet Safetensors headers are verified against sibling config. Native Diffusers graphs and pipeline execution edges are not implemented. |

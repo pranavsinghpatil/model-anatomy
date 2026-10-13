@@ -272,3 +272,31 @@ VideoMAE temporal input order from native source; leave other unverified layouts
 unknown. Add pinned cross-category and diffusion component checks. Partial reports
 record remaining semantic work, not full modality support. See
 `DYNAMIC_ROUTING_ACCEPTANCE.md`.
+
+## D-028 - Upgrade native support without inventing modality semantics
+**2026-10-13 - compatibility increment**
+
+The user's EmbeddingGemma2 job used an older engine and Transformers 4.57.6,
+which has no native mapping for `embedding_gemma2`. Pin the official stable
+Transformers 5.19.0 release and regenerate the dependency lock. Verify it in an
+isolated environment before switching the local API/worker; preserve UI ownership
+and saved analyses. Increment the engine cache identity to `2026.10.13.1`.
+
+Native EmbeddingGemma2 constructs on meta with no weight payload or forward pass.
+Its Gemma4 wrapped projections cannot be treated as ordinary Linear modules:
+retain source/containment graphs instead of bypassing clipping operations. Reject
+invalid scalar projection/head dimensions from structural refinement. Recognize
+the upstream combined tracing guard by callable identity and source hash under
+the documented static profile, never by function name or executing the guard.
+
+Whisper's input-feature axis order is not a generic audio contract. Other audio
+and composite layouts remain unknown until source establishes their dimensions.
+The native runtime's new ViT layout is tested for both real residual connections
+and projection shapes, not obsolete internal class names. Native construction and
+full checkpoint mapping do not establish complete semantics or all-model support.
+
+The user additionally requested diagnostics for failed models. Emit correlated
+JSON API/worker lifecycle events, with configurable DEBUG progress/timing and
+safe exception type/frame locations. Do not log exception messages, source lines,
+locals, raw request/model URLs, cookies, questions or credentials. Keep logs
+backend-only; no public debug endpoint or visitor-isolation bypass is added.

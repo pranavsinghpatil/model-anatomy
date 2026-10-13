@@ -34,6 +34,47 @@ quota records are preserved and continue to count until their normal windows
 expire. The regular settings defaults remain 2/20 jobs and 10/100 AI questions.
 Launcher logs are written to `.local/app-v1/local-testing/`.
 
+## Debugging a Failed Analysis
+
+Start the local profile with `-LogLevel DEBUG` to include progress and HTTP timing.
+For manually started services, set `MODEL_ANATOMY_LOG_LEVEL=DEBUG` in **both**
+API and worker environments before startup. INFO is the regular default; DEBUG
+does not enable remote model code, weight loading or extra public endpoints.
+
+Application events are JSON lines on stderr. The launcher saves them in
+`api-error.log` and `worker-error.log` beneath its log directory. The October 13
+isolated-runtime activation uses `.local/app-v1/native-runtime/` instead.
+
+Copy the analysis ID from the result URL and filter both logs in PowerShell:
+
+```powershell
+$analysisId = 'paste-analysis-id-here'
+Get-Content .local/app-v1/native-runtime/api-error.log, .local/app-v1/native-runtime/worker-error.log |
+  Select-String -SimpleMatch $analysisId
+```
+
+Follow the live worker log with:
+
+```powershell
+Get-Content .local/app-v1/native-runtime/worker-error.log -Tail 40 -Wait
+```
+
+`analysis_submitted` links the API request ID to the analysis ID. The worker logs
+`analysis_started`, `analysis_resolved`, DEBUG `analysis_progress`,
+`analysis_finished` (including cache reuse), and `analysis_outcome`. Failed jobs
+have `analysis_failed` with stage, code, exception type and bounded stack-frame
+locations; parent-enforced timeout/crash events identify interrupted children.
+Graph-free outcomes retain their inspection reason code, not an invented graph.
+Use these events to distinguish repository access, metadata parsing, native
+construction, reconstruction, storage, resource limits and unresolved support.
+
+No request bodies, question text, cookies, credentials, raw model URLs, exception
+messages, source lines or local variables are serialized by these events. Keep
+logs private: model IDs and activity timestamps still describe user activity.
+Third-party server/library notices can also appear in stderr; they are not this
+JSON event schema. Hosted retention/collection and alerting remain deployment
+work, not a new public logs API.
+
 ## Expected Facts
 
 These counts are verified at the pinned revisions in the committed engine tests.
