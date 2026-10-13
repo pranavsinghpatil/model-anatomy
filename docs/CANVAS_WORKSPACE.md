@@ -40,3 +40,10 @@ claimed as fresh runtime evidence. No fixture is served by the application.
 
 The browser preview is port 5173, proxying the existing API on 8001. Port 5187 was
 an obsolete isolated preview and should not be used for this increment.
+
+The subsequent Anatomy increment completed a full deterministic run with 128
+passing cases and 28 opt-in live cases disabled, plus two passing short-height
+reflow checks. A separate fresh SmolLM2-135M run passed on desktop and mobile,
+including lazy nested graphs, actual tensor/evidence inspection and JSON export.
+See [ANATOMY_ILLUSTRATION.md](ANATOMY_ILLUSTRATION.md) for precise source boundaries
+and validation scope. This supersedes the baseline's narrower verification record.

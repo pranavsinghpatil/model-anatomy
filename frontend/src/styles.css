@@ -922,6 +922,10 @@ summary::marker {
   flex-shrink: 0;
 }
 .panel-tabs > [role="tab"] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
   flex: 1;
   padding: 12px 8px;
   border: 0;
@@ -930,6 +934,14 @@ summary::marker {
   background: transparent;
   font-size: 11px;
   cursor: pointer;
+}
+.panel-tabs > [role="tab"] > span {
+  min-width: 18px;
+  padding: 1px 4px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--muted) 10%, transparent);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
 }
 .panel-tabs > [role="tab"][data-state="active"] {
   color: var(--accent);
@@ -940,16 +952,16 @@ summary::marker {
   flex: 1;
   min-height: 0;
 }
-.inspector > .panel-tabs {
+.inspector > .component-detail-tabs {
   display: block;
   padding: 0;
   border: 0;
 }
-.inspector > .panel-tabs > [role="tablist"] {
+.inspector > .component-detail-tabs > [role="tablist"] {
   margin: 0;
   padding: 0 12px;
 }
-.inspector > .panel-tabs > .error-notice {
+.inspector > .component-detail-tabs > .error-notice {
   margin: 12px;
 }
 .inspector-heading {

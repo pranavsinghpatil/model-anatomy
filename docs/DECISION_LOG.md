@@ -284,3 +284,25 @@ primitives, resizable panels and local fonts. Learn definitions are authored
 general guidance, never model-specific inferred facts. Artifact-only results
 retain graph-free behavior and supported exports. API and IR schemas do not
 change. See `UI_REDESIGN.md` for responsive layouts and domain boundaries.
+
+## D-030 - Make the inspection canvas primary and add a bounded explanatory assembly
+**2026-10-14 - usability revision**
+
+User feedback supersedes the separate landing/start direction in D-028. Both
+entry routes now accept a model immediately. Both modes open the same architecture;
+artifact-only reports still open Artifacts. Compact technical nodes, visible fit
+and readable controls, scoped search and separate disconnected inventory keep the
+graph navigable without supplying missing relationships.
+
+Offer a separate Anatomy presentation of the current shallow graph. Use original
+isometric SVG geometry, with mechanism choice based only on recorded component
+kind. Preserve selection, inspector tabs, child-graph loading and per-graph view
+state across presentations. Bound illustrated nodes and repetition samples;
+unknown kinds stay sealed. Separation illustrates construction, never inference.
+Reported dataflow alone supplies assembly links. Mechanical dimensions, fixed
+inserts and materials are explanatory artwork rather than model facts.
+
+Keep exact shapes, provenance and other relationship types in the technical graph
+and shared inspector. No backend/schema changes, new paid dependencies, third-party
+drawing service or model data upload are introduced. See
+`CANVAS_WORKSPACE.md` and `ANATOMY_ILLUSTRATION.md` for validation evidence.

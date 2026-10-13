@@ -4,7 +4,7 @@ export function nodeTitle(node: GraphNode) {
   // Reported paths distinguish repeated native class labels without inventing
   // semantic classification or dataflow from their names.
   return node.module_path &&
-    (node.label === node.module_type || node.kind === "module")
+    ["module", "unknown", "unclassified"].includes(node.kind)
     ? (node.module_path.split(".").filter(Boolean).at(-1) ?? node.label)
     : node.label;
 }

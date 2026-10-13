@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import type { Viewport } from "@xyflow/react";
+import type { AnatomyView } from "../anatomy/model";
 export type Crumb = { id: string; label: string };
 export type GraphLayoutPreference = {
   direction: "DOWN" | "RIGHT";
@@ -11,6 +12,8 @@ export type WorkspaceSession = {
   selected: Record<string, string | null>;
   viewports: Record<string, Viewport>;
   graphLayouts: Record<string, GraphLayoutPreference>;
+  scene: "graph" | "anatomy";
+  anatomyViews: Record<string, AnatomyView>;
   inspectorTab: "module" | "tensors" | "evidence";
   inspectorOpen: boolean;
   questions: boolean;
@@ -26,6 +29,8 @@ export function useWorkspaceSession(id: string) {
         selected: {},
         viewports: {},
         graphLayouts: {},
+        scene: "graph",
+        anatomyViews: {},
         inspectorTab: "module",
         inspectorOpen: false,
         questions: false,

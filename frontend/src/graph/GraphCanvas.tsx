@@ -171,7 +171,7 @@ function Canvas({
     const frame = requestAnimationFrame(() => {
       if (!layout.nodes.length) return;
       void flow.fitView({
-        padding: 0.18,
+        padding: 0.12,
         minZoom: 0.08,
         maxZoom: 1,
         duration: 0,
@@ -413,20 +413,27 @@ function Canvas({
             </div>
           )}
         </div>
-        <IconButton
-          label="Fit graph"
+        <button
+          className="layout-direction"
+          type="button"
+          aria-label="Fit graph"
+          title="Fit the entire current graph"
           onClick={() =>
             void flow.fitView({
-              padding: 0.2,
+              padding: 0.12,
               maxZoom: 1,
               duration: reduceMotion ? 0 : 200,
             })
           }
         >
           <Maximize size={16} />
-        </IconButton>
-        <IconButton
-          label="Readable view"
+          <span>Fit</span>
+        </button>
+        <button
+          className="layout-direction"
+          type="button"
+          aria-label="Readable view"
+          title="Focus the selected component at a readable scale"
           onClick={() =>
             void flow.fitView({
               nodes: [readableAnchor(layout.nodes, selectedNode)],
@@ -438,7 +445,8 @@ function Canvas({
           }
         >
           <ScanEye size={16} />
-        </IconButton>
+          <span>Readable</span>
+        </button>
         <button
           className="layout-direction"
           type="button"

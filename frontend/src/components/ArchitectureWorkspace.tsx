@@ -1,4 +1,12 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  lazy,
+  Suspense,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
+import { useSearchParams } from "react-router-dom";
 import * as Tabs from "@radix-ui/react-tabs";
 import { Group, Panel, Separator } from "react-resizable-panels";
 import {
@@ -10,6 +18,8 @@ import {
   PanelLeftClose,
   PanelRightClose,
   PanelRightOpen,
+  Network,
+  Box,
 } from "lucide-react";
 import type {
   ArchitectureGraph,
@@ -32,6 +42,15 @@ import {
 } from "../state/workspace";
 import type { Dispatch, SetStateAction } from "react";
 import "./architecture.css";
+import "../anatomy/anatomy.css";
+import { defaultAnatomyView } from "../anatomy/model";
+import { SceneBoundary } from "../anatomy/SceneBoundary";
+import { Loading } from "./Common";
+const AnatomyScene = lazy(() =>
+  import("../anatomy/AnatomyScene").then((module) => ({
+    default: module.AnatomyScene,
+  })),
+);
 type Props = {
   analysis: AnalysisDetail;
   graph: ArchitectureGraph;
@@ -56,6 +75,25 @@ export function ArchitectureWorkspace({
   const docked = useMedia("(min-width: 1024px)");
   const [drawer, setDrawer] = useState(false);
   const [edge, setEdge] = useState<GraphEdge | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const requestedScene = searchParams.get("scene");
+  const scene =
+    requestedScene === "anatomy" || requestedScene === "graph"
+      ? requestedScene
+      : state.scene;
+  useEffect(() => {
+    if (requestedScene === "anatomy" || requestedScene === "graph")
+      setState((s) =>
+        s.scene === requestedScene ? s : { ...s, scene: requestedScene },
+      );
+  }, [requestedScene, setState]);
+  const changeScene = (value: "graph" | "anatomy") => {
+    setState((s) => ({ ...s, scene: value }));
+    const next = new URLSearchParams(searchParams);
+    if (value === "graph") next.delete("scene");
+    else next.set("scene", value);
+    setSearchParams(next, { replace: true });
+  };
   useEffect(() => setEdge(null), [graph.id]);
   useEffect(() => {
     if (citation) setEdge(null);
@@ -84,6 +122,18 @@ export function ArchitectureWorkspace({
         requestAnimationFrame(() =>
           panelRef.current?.querySelector<HTMLElement>("button")?.focus(),
         );
+    },
+    [graph.id, setState, onClearCitation],
+  );
+  const focusPart = useCallback(
+    (node: GraphNode) => {
+      setEdge(null);
+      onClearCitation();
+      setState((s) => ({
+        ...s,
+        selected: { ...s.selected, [graph.id]: node.id },
+        questions: false,
+      }));
     },
     [graph.id, setState, onClearCitation],
   );
@@ -246,6 +296,24 @@ export function ArchitectureWorkspace({
             </span>
           ))}
         </nav>
+        <div
+          className="scene-switcher"
+          role="group"
+          aria-label="Architecture presentation"
+        >
+          <button
+            aria-pressed={scene === "graph"}
+            onClick={() => changeScene("graph")}
+          >
+            <Network size={13} /> Graph
+          </button>
+          <button
+            aria-pressed={scene === "anatomy"}
+            onClick={() => changeScene("anatomy")}
+          >
+            <Box size={13} /> Anatomy
+          </button>
+        </div>
         <div className="graph-panel-actions">
           <Button
             variant="ghost"
@@ -274,48 +342,83 @@ export function ArchitectureWorkspace({
           </Button>
         </div>
       </div>
-      <GraphCanvas
-        key={`${analysis.id}:${graph.id}`}
-        graph={graph}
-        selectedNode={selected?.id ?? null}
-        selectedEdge={edge}
-        select={select}
-        open={open}
-        viewport={state.viewports[graph.id]}
-        onViewportChange={viewport}
-        layoutPreference={
-          state.graphLayouts[graph.id] ?? {
-            direction: "DOWN",
-            density: "compact",
+      {scene === "anatomy" ? (
+        <SceneBoundary key={graph.id} technical={() => changeScene("graph")}>
+          <Suspense
+            fallback={
+              <div className="canvas-state">
+                <Loading text="Opening model assembly" />
+              </div>
+            }
+          >
+            <AnatomyScene
+              analysis={analysis}
+              graph={graph}
+              selected={selected}
+              view={state.anatomyViews?.[graph.id] ?? defaultAnatomyView}
+              onView={(view) =>
+                setState((s) => ({
+                  ...s,
+                  anatomyViews: { ...s.anatomyViews, [graph.id]: view },
+                }))
+              }
+              select={select}
+              focus={focusPart}
+              open={open}
+              evidence={(node) => {
+                select(node);
+                setState((s) => ({ ...s, inspectorTab: "evidence" }));
+              }}
+              technical={() => changeScene("graph")}
+            />
+          </Suspense>
+        </SceneBoundary>
+      ) : (
+        <GraphCanvas
+          key={`${analysis.id}:${graph.id}`}
+          graph={graph}
+          selectedNode={selected?.id ?? null}
+          selectedEdge={edge}
+          select={select}
+          open={open}
+          viewport={state.viewports[graph.id]}
+          onViewportChange={viewport}
+          layoutPreference={
+            state.graphLayouts[graph.id] ?? {
+              direction: "DOWN",
+              density: "compact",
+            }
           }
-        }
-        onLayoutPreferenceChange={(preference: GraphLayoutPreference) =>
-          setState((s) => ({
-            ...s,
-            graphLayouts: { ...s.graphLayouts, [graph.id]: preference },
-          }))
-        }
-        selectEdge={(value) => {
-          onClearCitation();
-          setEdge(value);
-          if (!value) return;
-          setState((s) => ({ ...s, inspectorOpen: true, questions: false }));
-          focusPanel();
-        }}
-      />
-      <footer className="graph-footer">
-        <span>
-          <i />
-          Dataflow
-        </span>
-        <span>
-          <i className="structural" />
-          Structural relation
-        </span>
-        <span title={graph.id}>
-          Select a component to inspect · arrow opens nested graph
-        </span>
-      </footer>
+          onLayoutPreferenceChange={(preference: GraphLayoutPreference) =>
+            setState((s) => ({
+              ...s,
+              graphLayouts: { ...s.graphLayouts, [graph.id]: preference },
+            }))
+          }
+          selectEdge={(value) => {
+            onClearCitation();
+            setEdge(value);
+            if (!value) return;
+            setState((s) => ({ ...s, inspectorOpen: true, questions: false }));
+            focusPanel();
+          }}
+        />
+      )}
+      {scene === "graph" && (
+        <footer className="graph-footer">
+          <span>
+            <i />
+            Dataflow
+          </span>
+          <span>
+            <i className="structural" />
+            Structural relation
+          </span>
+          <span title={graph.id}>
+            Select a component to inspect · arrow opens nested graph
+          </span>
+        </footer>
+      )}
     </div>
   );
   const inspector = (

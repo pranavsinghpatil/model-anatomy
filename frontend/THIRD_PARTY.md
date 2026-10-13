@@ -33,3 +33,9 @@ installed packages and copied into `public/licenses/` for distribution.
 Other runtime dependencies retain their upstream package licenses. No Pro
 component or paid service is required by this interface. Inspiration references
 are recorded in `docs/UI_REDESIGN.md`; no third-party visual assets are copied.
+
+The optional isometric Anatomy presentation is an original implementation inspired
+by the object-first, bounded figure guidance in Ryan's Anatomy illustration skill:
+https://github.com/wheresryan22/anatomy/blob/main/SKILL.md
+No illustration-kit code, generated kit asset, downloaded runtime, gallery API or
+external drawing service is included in the application.

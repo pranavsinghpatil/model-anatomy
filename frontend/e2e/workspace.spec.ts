@@ -17,6 +17,36 @@ import {
   rootGraph,
 } from "./service";
 
+test("component detail tabs keep separate readable targets", async ({
+  page,
+}) => {
+  await mockService(page);
+  await openAnalysis(page);
+  await graphNode(page, embedding.label);
+  const tabs = page.getByRole("tablist", { name: "Component detail views" });
+  await expect(tabs).toBeVisible();
+  const bounds = await tabs.getByRole("tab").evaluateAll((elements) =>
+    elements.map((element) => {
+      const box = element.getBoundingClientRect();
+      return {
+        x: box.x,
+        right: box.right,
+        width: box.width,
+        height: box.height,
+      };
+    }),
+  );
+  expect(bounds).toHaveLength(3);
+  expect(bounds.every((box) => box.width >= 60 && box.height >= 38)).toBe(true);
+  expect(bounds[0].right).toBeLessThanOrEqual(bounds[1].x + 1);
+  expect(bounds[1].right).toBeLessThanOrEqual(bounds[2].x + 1);
+  await tabs.getByRole("tab", { name: /^Tensors/ }).click();
+  await expect(tabs.getByRole("tab", { name: /^Tensors/ })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
+});
+
 async function clickVisibleEdge(page: Page, edge: Locator) {
   const point = await edge.evaluate((edgeElement) => {
     const edgeId = edgeElement.getAttribute("data-id");

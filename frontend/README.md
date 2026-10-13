@@ -41,6 +41,16 @@ Native class inventories use their recorded module paths to distinguish repeated
 class names. Components without returned edges appear in a separate inventory
 area; no missing dataflow is supplied by the UI. See [CANVAS_WORKSPACE.md](../docs/CANVAS_WORKSPACE.md).
 
+Architecture also offers an optional **Anatomy** presentation (`&scene=anatomy`).
+This is an original SVG isometric illustration built from the current fetched
+graph. Its mechanisms explain recorded component kinds; their geometry is not
+model hardware, neuron counts, weights, activations or measured execution.
+Selection, nested navigation, tensors and evidence use the same inspector as
+Graph. Separate/reassemble, camera controls and per-graph pose are local UI state.
+Only returned dataflow links are drawn; unknown kinds remain closed housings.
+See [ANATOMY_ILLUSTRATION.md](../docs/ANATOMY_ILLUSTRATION.md) for the part mapping,
+bounded rendering and verification boundaries.
+
 Light and dark semantic tokens, local Inter/JetBrains Mono fonts, Radix controls,
 and reduced-motion support form the shared design system. See
 [UI_REDESIGN.md](../docs/UI_REDESIGN.md) and [THIRD_PARTY.md](THIRD_PARTY.md).

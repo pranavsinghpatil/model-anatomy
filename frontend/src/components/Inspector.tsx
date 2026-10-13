@@ -256,20 +256,20 @@ export function Inspector({
         </details>
       </div>
       <Tabs.Root
-        className="panel-tabs"
+        className="component-detail-tabs"
         value={selectedTab}
         onValueChange={changeTab}
       >
-        <Tabs.List aria-label="Component detail views">
+        <Tabs.List className="panel-tabs" aria-label="Component detail views">
           <Tabs.Trigger value="module">Component</Tabs.Trigger>
           <Tabs.Trigger value="tensors">
-            Tensors
+            Tensors{" "}
             {detail.data && (
               <span>{count(detail.data.tensor_count, true)}</span>
             )}
           </Tabs.Trigger>
           <Tabs.Trigger value="evidence">
-            Evidence<span>{evidence.length}</span>
+            Evidence <span>{evidence.length}</span>
           </Tabs.Trigger>
         </Tabs.List>
         {detail.isPending && <Loading text="Loading component evidence" />}
