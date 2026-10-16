@@ -317,3 +317,25 @@ field writes are ignored, and audio/video input profiles are incomplete. Record
 these in `GRAPH_EXTRACTION_GAPS.md` with source-backed regression gates before
 changing the engine or cache identity. The UI chat received verified findings
 with explicit user authorization; preserve its concurrent frontend work.
+
+## D-033 - Retain Immutable Reports Independently of Visitor History
+**2026-10-16 - user-directed database/cache increment**
+
+The user does not want repeated reconstruction of unchanged Hugging Face models.
+Supersede the original seven-day default cache retention in D-015: retain exact
+revision/engine/schema/artifact reports without automatic expiry, while keeping
+visitor jobs and identity retention unchanged. `CACHE_TTL_SECONDS=0` (prefixed)
+means persistent reuse; a positive value is an explicit operator opt-in to
+time-based eviction. Preserve existing cache records where cleanup has not
+already removed them; no schema or report rewrite is needed.
+
+Resolve mutable references before every lookup, never treat a network outage as
+an unchanged revision, and keep retries pinned to their original commit. A cache
+hit attaches the verified object to a new owned job without engine execution or
+another storage upload. Preserve honest partial/inspected results and all
+warnings; extraction fixes require an engine-version increment. Invalid stored
+reports fail explicitly, not by silently spending resources to reconstruct them.
+Keep backend-only cache hit/miss events correlated with job and revision.
+
+Supabase setup, private-storage access and a hosted restart/backup/restore check
+remain deployment gates, not completed claims. See `DATABASE_SETUP.md`.

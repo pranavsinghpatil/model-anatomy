@@ -84,12 +84,27 @@ Override with `MODEL_ANATOMY_QUEUE_CAPACITY`, `MODEL_ANATOMY_GUEST_JOBS_PER_HOUR
 Visitor jobs expire after 24 hours and are deleted by worker cleanup. Hash-only
 tombstones retain owner-only 410 responses for at most another 24 hours, then
 disappear; other visitors receive 404. Inactive unused guests and old quota
-buckets are removed. Cache entries expire seven days after extraction; hits do
-not extend retention. Blob deletion runs outside database transactions and uses
+buckets are removed. Immutable revision reports are retained without automatic
+expiry by default (`MODEL_ANATOMY_CACHE_TTL_SECONDS=0`). This also preserves
+existing seven-day cache entries that cleanup has not already deleted. Set a
+positive number of seconds to explicitly opt into bounded retention; cache hits
+do not extend that deadline. Switching from permanent to bounded retention can
+retire older reports immediately. Blob deletion runs outside database transactions
+and uses
 a durable deletion marker to fence new references. Upload reservations collect
 objects left behind by interrupted completion. No reports are seeded at startup.
 
 Cache identity includes canonical model ID, immutable 40-character revision,
 engine version (from `src.version`), IR schema, artifact filename, and explicit
 artifact selection. A resolved revision is reused on retry. Cache hits prevent
-engine imports/extraction in the worker child.
+engine imports/extraction in the worker child and do not upload the report again.
+Every new submission still resolves the requested Hugging Face reference before
+cache lookup; a new upstream commit, engine version, schema or artifact identity
+gets a separate entry. A provider outage is not evidence of an unchanged commit.
+Missing/corrupt stored objects fail explicitly instead of silently repeating
+extraction. Restore damaged objects from backup before retrying.
+
+This policy retains public model reports, not visitor identities or history.
+Monitor database/object growth and back up both together. A different database
+or storage bucket does not automatically inherit the local cache. See
+[`docs/DATABASE_SETUP.md`](../../../docs/DATABASE_SETUP.md) before switching.

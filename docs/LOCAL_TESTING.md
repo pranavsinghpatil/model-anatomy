@@ -19,8 +19,9 @@ visitor cookie owns the report. Another browser cannot open that job's URL.
 
 The default allowance is two submissions per visitor per hour, twenty globally
 per day. Cached submissions also consume an admission. Visitor jobs expire after
-24 hours; reusable cache entries last seven days. An expired link is not a broken
-engine and must not display another visitor's or a replacement report.
+24 hours; real cached reports are retained by default and reused when their
+immutable model/engine/schema/artifact identity is unchanged. An expired link is
+not a broken engine and must not display another visitor's or a replacement report.
 
 For manual exploration beyond those defaults, stop the existing API, worker and frontend
 and run `powershell -ExecutionPolicy Bypass -File scripts/start-local.ps1` from

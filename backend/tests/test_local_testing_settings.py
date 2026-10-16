@@ -1,5 +1,8 @@
 from pathlib import Path
 
+import pytest
+from pydantic import ValidationError
+
 from model_anatomy.api.settings import Settings
 
 
@@ -40,6 +43,13 @@ def test_public_quota_defaults_remain_unchanged():
     assert settings.global_jobs_per_day == 20
     assert settings.guest_questions_per_hour == 10
     assert settings.global_questions_per_day == 100
+    assert settings.cache_ttl_seconds == 0
+
+
+def test_cache_retention_is_an_explicit_operator_choice():
+    assert Settings(cache_ttl_seconds=30 * 86400).cache_ttl_seconds == 30 * 86400
+    with pytest.raises(ValidationError):
+        Settings(cache_ttl_seconds=-1)
 
 
 def test_production_keeps_public_quota_defaults():

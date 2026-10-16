@@ -90,6 +90,13 @@ def execute_job(service: JobService, job_id: str, owner: str, client, reconstruc
         reference.explicit_filename,
     )
     result = service.cached_result(key)
+    log_event(
+        logger,
+        "analysis_cache_hit" if result is not None else "analysis_cache_miss",
+        **context,
+        cached=result is not None,
+        stage="checking_cache",
+    )
     if result is not None:
         service.finish(job_id, owner, result, key, cached=True)
         log_event(
@@ -181,7 +188,7 @@ def classify_failure(exc: BaseException) -> tuple[str, str, str, bool]:
             exc.code,
             exc.message,
             "failed",
-            exc.code in {"storage_unavailable", "artifact_unavailable", "storage_busy"},
+            exc.code in {"storage_unavailable", "artifact_unavailable", "storage_busy", "cache_changed"},
         )
     # This runs only in the child; importing requests does not import model libraries.
     import requests

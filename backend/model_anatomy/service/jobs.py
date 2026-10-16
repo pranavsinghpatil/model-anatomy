@@ -432,7 +432,7 @@ class JobService:
     def cached_result(self, key: str) -> bytes | None:
         with self.db.read() as session:
             entry = session.get(CacheEntry, key)
-            if not entry or entry.expires_at <= self.clock():
+            if not entry or (self.settings.cache_ttl_seconds and entry.expires_at <= self.clock()):
                 return None
             digest = entry.blob_digest
         return self.storage.get(digest)
@@ -455,17 +455,28 @@ class JobService:
                 raise ServiceError(503, "storage_busy", "Metadata object is being retired; retry later")
             if blob is None:
                 session.add(Blob(digest=digest, created_at=self.clock(), deleting=False))
-        self.storage.put(data)
+            if cached:
+                entry = session.get(CacheEntry, key)
+                if entry is None or entry.blob_digest != digest:
+                    raise ServiceError(503, "cache_changed", "Cached report changed; retry the analysis")
+        # Cache reads already verified the immutable object; never upload it again.
+        if not cached:
+            self.storage.put(data)
         with self.db.write() as session:
             job = self._owned(session, job_id, owner)
             if job.cancel_requested or job.expires_at <= self.clock():
                 job.status = job.stage = "cancelled"
                 return
+            blob = session.get(Blob, digest)
+            if blob is None or blob.deleting:
+                raise ServiceError(503, "storage_busy", "Metadata object was retired; retry the analysis")
             entry = session.get(CacheEntry, key)
             if entry is None:
                 session.add(
                     CacheEntry(
-                        key=key, blob_digest=digest, expires_at=self.clock() + self.settings.cache_ttl_seconds
+                        key=key,
+                        blob_digest=digest,
+                        expires_at=self.clock() + self.settings.cache_ttl_seconds,
                     )
                 )
             elif not cached:
@@ -507,7 +518,8 @@ class JobService:
                     session.add(Tombstone(id=job.id, guest_id=job.guest_id, expires_at=until))
                 session.delete(job)
             session.execute(delete(Tombstone).where(Tombstone.expires_at <= now))
-            session.execute(delete(CacheEntry).where(CacheEntry.expires_at <= now))
+            if self.settings.cache_ttl_seconds:
+                session.execute(delete(CacheEntry).where(CacheEntry.expires_at <= now))
             session.execute(
                 delete(RateBucket).where(
                     RateBucket.key.like("global:%:day"), RateBucket.window < int(now // 86400)

@@ -40,7 +40,8 @@ class Settings(BaseSettings):
     engine_version: str = ENGINE_VERSION
     schema_version: Literal["1.1"] = "1.1"
     job_ttl_seconds: int = Field(default=86400, ge=60, le=86400)
-    cache_ttl_seconds: int = Field(default=604800, ge=60, le=604800)
+    # Zero retains immutable revision reports; visitor history has its own TTL.
+    cache_ttl_seconds: int = Field(default=0, ge=0)
     job_timeout_seconds: int = Field(default=120, ge=1, le=120)
     job_memory_bytes: int = Field(default=4 * 1024**3, ge=64 * 1024**2, le=4 * 1024**3)
     lease_seconds: int = Field(default=30, ge=5, le=300)

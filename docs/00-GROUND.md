@@ -40,6 +40,8 @@ The [hackathon release](https://nebiusglobalaihackathon.devpost.com/) must run o
 The application serves only visitor-owned, submitted analyses. There is no
 prepared-example API, seeded graph, static report shortcut or demo fallback.
 Exact-revision caching reuses real inspected reports; it is not mock data.
+Reusable reports are retained independently of expiring visitor history; fresh
+submissions still resolve the upstream commit before reuse. See `DATABASE_SETUP.md`.
 Historical CLI outputs may be retained as extraction evidence and test inputs,
 but are never served as application analyses.
 

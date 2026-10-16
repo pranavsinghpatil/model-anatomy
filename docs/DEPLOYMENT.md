@@ -92,6 +92,11 @@ using [automatic HTTPS](https://caddyserver.com/docs/automatic-https).
 
 ## Private Services
 
+Follow [Database Setup](DATABASE_SETUP.md) for the backend-only Supabase setup,
+cache lifecycle and acceptance checks. Visitor history expiry does not require
+reinspection: the default cache policy retains immutable reports until an
+explicit operator retention change, deletion or identity change.
+
 Create a Supabase project and a **private** `model-anatomy-private` bucket in the
 console. Obtain the server-only service-role key, project HTTPS URL, and direct
 or session-pooler PostgreSQL connection URL. Use the session pooler when the VM

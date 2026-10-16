@@ -220,6 +220,7 @@ def test_cancel_queued_running_and_completed(service):
 
 
 def test_expiry_is_410_for_owner_404_for_other_and_retention_is_seven_days(service):
+    service.settings = service.settings.model_copy(update={"cache_ttl_seconds": 604800})
     guest = visitor(service)
     job_id = service.create(guest, "gpt2")["id"]
     service.claim("worker-a")
@@ -242,6 +243,90 @@ def test_expiry_is_410_for_owner_404_for_other_and_retention_is_seven_days(servi
     assert not service.storage.path(digest).exists()
     with service.db.read() as session:
         assert list(session.scalars(select(Blob))) == []
+        assert list(session.scalars(select(CacheEntry))) == []
+
+
+def test_default_cache_survives_history_expiry_restart_and_legacy_deadline(service, monkeypatch):
+    guest = visitor(service)
+    first = service.create(guest, "gpt2")["id"]
+    service.claim("worker-a")
+    key = finish(service, first)
+    digest = service.get(first, guest).blob_digest
+    # Existing seven-day entries must remain reusable after upgrading the policy.
+    with service.db.write() as session:
+        session.get(CacheEntry, key).expires_at = service.clock() + 604800
+    service.test_now[0] += 90 * 86400
+    reopened = JobService(service.settings, clock=service.clock)
+    try:
+        reopened.initialize()
+        reopened.cleanup()
+        assert reopened.cached_result(key) == service.storage.get(digest)
+        with reopened.db.read() as session:
+            assert session.get(Job, first) is None
+            assert session.get(CacheEntry, key).blob_digest == digest
+            assert session.get(Blob, digest).deleting is False
+        reopened.acquire_worker("worker-a")
+        new_guest = visitor(reopened)
+        second = reopened.create(new_guest, "gpt2")["id"]
+        reopened.claim("worker-a")
+        data = document()
+        reopened.resolved(second, "worker-a", data["model_id"], data["metadata"]["revision"])
+
+        def unexpected_upload(_):
+            pytest.fail("A cache hit must not upload or rewrite the stored report")
+
+        monkeypatch.setattr(reopened.storage, "put", unexpected_upload)
+        reopened.finish(second, "worker-a", reopened.cached_result(key), key, cached=True)
+        assert reopened.get(second, new_guest).cached is True
+        assert reopened.get(second, new_guest).blob_digest == digest
+        with pytest.raises(ServiceError) as exc:
+            reopened.get(second, guest)
+        assert exc.value.status == 404
+    finally:
+        reopened.db.engine.dispose()
+
+
+def test_cache_hit_requires_matching_persisted_object(service):
+    guest = visitor(service)
+    first = service.create(guest, "gpt2")["id"]
+    service.claim("worker-a")
+    key = finish(service, first)
+    data = service.cached_result(key)
+    second = service.create(guest, "gpt2")["id"]
+    service.claim("worker-a")
+    report = document()
+    service.resolved(second, "worker-a", report["model_id"], report["metadata"]["revision"])
+    with service.db.write() as session:
+        session.delete(session.get(CacheEntry, key))
+    with pytest.raises(ServiceError) as exc:
+        service.finish(second, "worker-a", data, key, cached=True)
+    assert exc.value.code == "cache_changed"
+    assert service.get(second, guest).blob_digest is None
+
+
+@pytest.mark.parametrize("retirement", ["deleted", "deleting"])
+def test_completion_cannot_publish_a_blob_retired_during_upload(service, monkeypatch, retirement):
+    guest = visitor(service)
+    job_id = service.create(guest, "gpt2")["id"]
+    service.claim("worker-a")
+    put = service.storage.put
+
+    def retire_during_upload(data):
+        digest = put(data)
+        with service.db.write() as session:
+            blob = session.get(Blob, digest)
+            if retirement == "deleted":
+                session.delete(blob)
+            else:
+                blob.deleting = True
+        return digest
+
+    monkeypatch.setattr(service.storage, "put", retire_during_upload)
+    with pytest.raises(ServiceError) as exc:
+        finish(service, job_id)
+    assert exc.value.code == "storage_busy"
+    assert service.get(job_id, guest).blob_digest is None
+    with service.db.read() as session:
         assert list(session.scalars(select(CacheEntry))) == []
 
 
