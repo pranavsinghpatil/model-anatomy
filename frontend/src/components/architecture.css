@@ -11,6 +11,7 @@
 }
 
 .architecture-canvas-region {
+  container-type: inline-size;
   min-width: 0;
   min-height: 0;
   overflow: visible;

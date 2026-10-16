@@ -369,6 +369,34 @@ test("nested anatomy loads reported components lazily and restores the parent po
   );
 });
 
+test("narrow anatomy keeps a long parent breadcrumb clickable", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  const job = {
+    ...analysisFor("job-test"),
+    model_id: "HuggingFaceTB/SmolLM2-135M",
+  };
+  await mockService(page, { job });
+  await openAnalysis(page);
+  await openAnatomy(page);
+  await page
+    .getByRole("button", { name: "Explore inside", exact: true })
+    .click();
+  const path = page.getByRole("navigation", { name: "Graph path" });
+  await expect(
+    path.getByRole("button", { name: block.label, exact: true }),
+  ).toBeVisible();
+  await path.getByRole("button", { name: "SmolLM2-135M", exact: true }).click();
+  await expect(path.getByRole("button")).toHaveCount(1);
+  await expect(
+    drawing(page)
+      .locator(`.assembly-face[data-part-id="${embedding.id}"]`)
+      .first(),
+  ).toBeVisible();
+});
+
 test("partial shape facts stay unknown and reported repeats have bounded geometry", async ({
   page,
   isMobile,

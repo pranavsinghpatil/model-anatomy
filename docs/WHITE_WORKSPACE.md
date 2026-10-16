@@ -143,3 +143,16 @@ Real submissions on temporary production-preview port 5175 were rejected with
 HTTP 403 because it is not an allowed submission origin in the existing local
 profile. Live acceptance uses the configured application port 5173; no origin
 or backend security settings were changed to accommodate the test server.
+
+The first allowed-origin mobile journey exposed a clipped parent breadcrumb in
+the separate Anatomy toolbar. Its controls now respond to the canvas container
+and use two rows on narrow canvases. A long-model-name regression verifies an
+actual click back from the nested graph. After this correction all 8 real
+desktop/mobile journeys pass on port 5173, including nested return navigation,
+tensor/evidence inspection and export. Pinned cached report evidence and the
+cold-analysis limitation above still apply.
+
+The post-fix production group passes all 24 Anatomy, graph and density checks.
+Together with the 38-case run this verifies 52 distinct focused cases (10 cases
+overlap), followed by the clean 8-case live run. This is focused verification;
+the full browser suite remains a separate CI check on the final PR head.
