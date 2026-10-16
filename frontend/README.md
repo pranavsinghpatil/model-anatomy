@@ -111,8 +111,11 @@ cover header collisions, graph framing and inspector/artifact/report layouts.
 Verification covers 134 distinct deterministic cases: 132 passes in the broad
 run, followed by both long-identifier matrix cases passing after their overflow
 fix. Formatting, typecheck, and the production build also pass.
-Fresh live acceptance for this revision remains blocked by the stopped local API;
-historical live results above are not a fresh run of the revised interface.
+After explicit user approval resumed the existing services, eight distinct live
+desktop/mobile cases were verified across an initial run (6 passes, 2 failures)
+and a targeted rerun (2 passes). The initial 360M metadata timeout remains a
+backend reliability limitation; the rerun used completed real cached reports.
+See the art-direction record for pinned model evidence and these limits.
 
 ## Contract Integration
 

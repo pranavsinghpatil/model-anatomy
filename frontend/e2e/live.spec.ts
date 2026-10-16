@@ -16,7 +16,7 @@ test("live entry opens directly and only continues a recent analysis when select
   await page.goto("/");
   await expect(
     page.getByRole("heading", {
-      name: "Open a model. Understand its structure.",
+      name: "See how a model is built.",
     }),
   ).toBeVisible();
   await expect(
@@ -26,7 +26,7 @@ test("live entry opens directly and only continues a recent analysis when select
   await page.goto("/app");
   await expect(
     page.getByRole("heading", {
-      name: "Open a model. Understand its structure.",
+      name: "See how a model is built.",
     }),
   ).toBeVisible();
   await expect(

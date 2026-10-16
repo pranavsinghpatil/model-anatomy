@@ -144,8 +144,8 @@ Remaining constraints and fixes:
    container; constrain the inner text width and rerun the full width matrix.
 2. Fit mode necessarily reduces text on a large graph; Readable and selection
    provide complete details without shrinking the entire interface.
-3. The real API is stopped; live report acceptance remains blocked separately
-   from the isolated browser checks.
+3. The real API was initially stopped. After user approval, live review resumed;
+   the initial 360M metadata timeout remains a backend reliability limitation.
 
 Final entry source lint: **0 FAIL, 0 WARN**. The explicit lint exceptions document
 the boundary of a real history table and a visually hidden accessible name.
@@ -168,13 +168,30 @@ broad run and targeted rerun**, including axe accessibility, reduced motion,
 200%-equivalent reflow, graph navigation, panel resizing, clipboard/export failure,
 stale requests and tensor pagination. No unresolved deterministic failure remains.
 
-The 28 opt-in live cases were skipped, not counted as passes. Workspace fixtures
+The 28 opt-in live cases in that broad run were skipped, not counted as passes. Workspace fixtures
 are confined to Playwright routing and project an existing engine artifact into
 the HTTP contract; they are never a production fallback. New screenshots cover
 desktop/tablet/phone graph states and inspector, artifact and report layouts.
 
-Fresh live model acceptance is currently blocked: automatic approval review
-rejected resuming the stopped API and worker because of an earlier restriction
-on backend restarts. The frontend preview is running independently and displays
-the actual unavailable-service state. No process kill, database reset or alternative
-backend was used to bypass that decision.
+Automatic approval review initially rejected resuming the stopped API and worker
+because of an earlier restriction on backend restarts. The user subsequently
+explicitly approved “Resume existing local services.” The existing API and worker
+were resumed with their unchanged data/profile, without process kills, database
+resets, ownership changes or a replacement backend. Database, storage and worker
+health checks pass. Optional AI is unavailable and remains explicitly presented.
+
+The live entry, both-mode submission/inspection/export journeys, and SmolLM2-135M
+graph/anatomy/lazy-child/tensor/evidence/export checks were run on desktop/mobile.
+The initial run produced **6 passes and 2 desktop 360M failures** during backend
+metadata/queue waiting. The first 360M job timed out; subsequent jobs completed and
+used the real revision cache. Both affected desktop journeys passed on one
+targeted rerun (**2/2**). Eight distinct live cases are therefore verified across
+the run and rerun, but **cold 360M inspection reliability is not established** and
+the initial timeout is not claimed fixed by this frontend change.
+
+The actual browser's old analysis URL returned `not_found`; ownership was not
+bypassed to recover it. A new visitor-owned 135M analysis
+`5728d646456f418399287a766b0256d2` completed at revision
+`93efa2f097d58c2a74874c7e644dbc9b0cee75a2`, reporting 134,515,008 parameters and
+30 decoder blocks. It uses the exact-revision report cache, not a fixture. The
+live review selected its decoder block and displayed recorded input/output shapes.
