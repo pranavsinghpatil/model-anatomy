@@ -32,16 +32,18 @@ Keyboard-operable separators resize the panels while preserving graph state.
 At 1024–1279px a Radix dialog contains the navigator while the inspector remains
 docked. Below 1024px selection opens a separate inspector view with Back to graph.
 Panel scroll areas contain long details. Graph controls reserve their own space.
-The full submission form appears only on Start.
+The full submission form appears on the unified entry screen. The October 16
+[art-direction revision](FRONTEND_ART_DIRECTION.md) moves workspace views into
+horizontal navigation and improves typography throughout the inspection screens.
 
 ## Design tokens and component states
 
 | Role | Light | Dark |
 | --- | --- | --- |
-| Background | #F5F7F8 | #101619 |
-| Surface | #FFFFFF | #172025 |
-| Text | #172126 | #E8EFF2 |
-| Secondary text | #52616B | #A3B2BA |
+| Background | #F3F5F2 | #111613 |
+| Surface | #FFFFFF | #1A211C |
+| Text | #18211C | #EDF4EE |
+| Secondary text | #536159 | #ADBBB0 |
 | Accent | #0F766E | #5ED2C0 |
 | Text on accent | #FFFFFF | #082B25 |
 

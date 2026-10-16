@@ -306,3 +306,15 @@ Keep exact shapes, provenance and other relationship types in the technical grap
 and shared inspector. No backend/schema changes, new paid dependencies, third-party
 drawing service or model data upload are introduced. See
 `CANVAS_WORKSPACE.md` and `ANATOMY_ILLUSTRATION.md` for validation evidence.
+
+## D-031 - Use the working product to carry the frontend design
+**2026-10-16 - frontend usability revision**
+
+Apply the user's Backdoor, Fanout and ClickUp references to information hierarchy:
+a strong introduction beside the actual model form, horizontal named workspace
+views, reserved graph controls and readable technical details. Preserve direct
+entry, the same inspected reports, graph state and explicit unavailable outcomes.
+Avoid marketing proof without evidence and effects that compete with inspection.
+Retain existing fonts, Radix controls and the teal accent; add no UI dependencies.
+See `FRONTEND_ART_DIRECTION.md` for the skill direction, adaptations, critique and
+validation limits. This decision changes no backend, ownership or IR contract.

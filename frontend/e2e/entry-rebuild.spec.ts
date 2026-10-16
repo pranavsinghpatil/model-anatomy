@@ -10,9 +10,21 @@ test("root and app routes open the same immediately usable entry", async ({
     await page.goto(path);
     await expect(
       page.getByRole("heading", {
-        name: "Open a model. Understand its structure.",
+        name: "See how a model is built.",
       }),
     ).toBeVisible();
+    const intro = page.locator(".entry-primary");
+    const formStage = page.locator(".entry-submit");
+    const introBox = await intro.boundingBox();
+    const formBox = await formStage.boundingBox();
+    expect(introBox).not.toBeNull();
+    expect(formBox).not.toBeNull();
+    if (page.viewportSize()!.width > 1020) {
+      expect(introBox!.x + introBox!.width).toBeLessThanOrEqual(formBox!.x);
+      expect(formBox!.y).toBeLessThan(page.viewportSize()!.height);
+    } else {
+      expect(introBox!.y + introBox!.height).toBeLessThanOrEqual(formBox!.y);
+    }
     await expect(
       page.getByLabel("Hugging Face model", { exact: true }),
     ).toBeVisible();
@@ -22,6 +34,16 @@ test("root and app routes open the same immediately usable entry", async ({
     await expect(
       page.getByRole("button", { name: "Inspect model", exact: true }),
     ).toBeEnabled();
+    await expect(
+      page.getByRole("button", { name: "Inspect model", exact: true }),
+    ).toBeInViewport();
+    await expect(
+      page.getByRole("link", { name: "Your analyses" }),
+    ).toBeVisible();
+    await expect(page.locator(".entry-header .entry-brand-name")).toHaveCSS(
+      "white-space",
+      "nowrap",
+    );
     await expect(page.getByTestId("graph-canvas")).toHaveCount(0);
   }
 });

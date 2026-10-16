@@ -33,13 +33,15 @@
 
 .summary-heading h1 {
   margin-top: 7px;
+  font-size: clamp(28px, 3vw, 40px);
+  line-height: 1.15;
   overflow-wrap: anywhere;
 }
 
 .summary-heading p {
   margin-top: 7px;
   color: var(--muted);
-  font-size: 12px;
+  font-size: 14px;
   overflow-wrap: anywhere;
 }
 
@@ -48,15 +50,14 @@
   align-items: center;
   justify-content: space-between;
   gap: 20px;
-  padding: 18px 20px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
+  padding: 24px;
+  border-radius: 4px;
   background: var(--surface);
 }
 
 .summary-identity h2 {
   margin-top: 5px;
-  font-size: 17px;
+  font-size: 22px;
   overflow-wrap: anywhere;
 }
 
@@ -67,7 +68,7 @@
   flex-wrap: wrap;
   max-width: 48%;
   color: var(--muted);
-  font-size: 11px;
+  font-size: 13px;
 }
 
 .summary-revision code {
@@ -80,8 +81,7 @@
   grid-template-columns: auto minmax(0, 1fr);
   gap: 16px;
   padding: clamp(18px, 2.7vw, 28px);
-  border: 1px solid var(--border);
-  border-radius: 9px;
+  border-radius: 4px;
   background: var(--surface);
 }
 
@@ -117,7 +117,7 @@
   border-radius: 4px;
   background: var(--soft);
   color: var(--muted);
-  font-size: 10px;
+  font-size: 12px;
   overflow-wrap: anywhere;
 }
 
@@ -131,20 +131,19 @@
 
 .summary-artifact-facts > div {
   min-width: 0;
-  padding: 11px 12px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
+  padding: 16px;
+  background: var(--soft);
+  border-radius: 4px;
 }
 
 .summary-artifact-facts dt {
   color: var(--muted);
-  font-size: 10px;
+  font-size: 13px;
 }
 
 .summary-artifact-facts dd {
   margin: 5px 0 0;
-  font-family: "JetBrains Mono Variable", monospace;
-  font-size: 17px;
+  font-size: 24px;
   overflow-wrap: anywhere;
 }
 
@@ -176,7 +175,7 @@
 .summary-next .section-title > p {
   max-width: 54ch;
   color: var(--muted);
-  font-size: 11px;
+  font-size: 13px;
   text-align: right;
 }
 
@@ -210,18 +209,20 @@
 .report-page .report-section {
   min-width: 0;
   margin: 0;
-  padding: 19px 20px;
+  padding: 24px;
+  border: 0;
+  border-radius: 4px;
 }
 
 .report-page .report-section h2 {
   margin: 5px 0 12px;
-  font-size: 16px;
+  font-size: 20px;
 }
 
 .report-page .report-section p,
 .report-page .report-section li {
-  font-size: 12px;
-  line-height: 1.55;
+  font-size: 14px;
+  line-height: 1.65;
   overflow-wrap: anywhere;
 }
 
@@ -247,8 +248,8 @@
 .report-page .report-checks > div {
   grid-template-columns: minmax(0, 1fr) minmax(90px, 0.5fr);
   gap: 14px;
-  padding: 9px 0;
-  font-size: 12px;
+  padding: 12px 0;
+  font-size: 13px;
 }
 
 .report-page .report-checks dd {
@@ -283,9 +284,9 @@
 }
 
 .report-identity-details summary {
-  padding: 15px 19px;
+  padding: 20px 24px;
   cursor: pointer;
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 600;
 }
 

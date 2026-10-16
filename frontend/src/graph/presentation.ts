@@ -31,14 +31,14 @@ export function nodeSize(node: GraphNode, density: "compact" | "detailed") {
     width: boundary ? 224 : 264,
     height: boundary
       ? density === "compact"
-        ? 56
-        : 92
+        ? 60
+        : 96
       : density === "detailed"
         ? node.child_graph_id
-          ? 196
-          : 160
+          ? 212
+          : 176
         : node.child_graph_id
-          ? 112
-          : 76,
+          ? 120
+          : 84,
   };
 }

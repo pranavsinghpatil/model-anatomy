@@ -103,6 +103,17 @@ from 320 to 1920px, long identifiers and a 200% CSS zoom regression. Twelve axe
 scans reported no violations. See the [verification record](../docs/UI_REDESIGN.md#verification-record)
 for model evidence and the limits of local Chromium validation.
 
+The October 16 [art-direction revision](../docs/FRONTEND_ART_DIRECTION.md)
+strengthens the direct-entry composition, moves named workspace views into the
+header, reserves graph-control space, and increases technical typography. It
+introduces no component dependencies or API changes. New visual regression checks
+cover header collisions, graph framing and inspector/artifact/report layouts.
+Verification covers 134 distinct deterministic cases: 132 passes in the broad
+run, followed by both long-identifier matrix cases passing after their overflow
+fix. Formatting, typecheck, and the production build also pass.
+Fresh live acceptance for this revision remains blocked by the stopped local API;
+historical live results above are not a fresh run of the revised interface.
+
 ## Contract Integration
 
 `src/api/generated.ts` is generated from the actual service's `/openapi.json` using

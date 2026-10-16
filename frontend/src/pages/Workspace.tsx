@@ -247,6 +247,31 @@ function Workspace({ id }: { id: string }) {
           </Menu>
         </div>
         {detail && <Status status={detail.status} />}
+        <nav className="primary-views" aria-label="Workspace views">
+          {views.map((item) => {
+            const Icon = viewIcons[item];
+            return (
+              <Link
+                key={item}
+                to={`?view=${item}`}
+                aria-current={view === item ? "page" : undefined}
+                aria-disabled={!ready && !artifact ? true : undefined}
+                tabIndex={!ready && !artifact ? -1 : undefined}
+                onClick={(event) => {
+                  if (!ready && !artifact) event.preventDefault();
+                }}
+                title={
+                  item === "architecture" && artifact
+                    ? "No architecture was reconstructed; see available artifacts"
+                    : undefined
+                }
+              >
+                <Icon size={16} strokeWidth={1.8} />
+                <span>{item[0].toUpperCase() + item.slice(1)}</span>
+              </Link>
+            );
+          })}
+        </nav>
         <div className="workspace-header-actions">
           <ModeControl />
           <ThemeControl />
@@ -284,31 +309,6 @@ function Workspace({ id }: { id: string }) {
         </div>
       </header>
       <div className="workbench-body">
-        <nav className="primary-views" aria-label="Workspace views">
-          {views.map((item) => {
-            const Icon = viewIcons[item];
-            return (
-              <Link
-                key={item}
-                to={`?view=${item}`}
-                aria-current={view === item ? "page" : undefined}
-                aria-disabled={!ready && !artifact ? true : undefined}
-                tabIndex={!ready && !artifact ? -1 : undefined}
-                onClick={(event) => {
-                  if (!ready && !artifact) event.preventDefault();
-                }}
-                title={
-                  item === "architecture" && artifact
-                    ? "No architecture was reconstructed; see available artifacts"
-                    : undefined
-                }
-              >
-                <Icon size={20} strokeWidth={1.7} />
-                <span>{item[0].toUpperCase() + item.slice(1)}</span>
-              </Link>
-            );
-          })}
-        </nav>
         <div className="workbench-main">
           {exportError && <ErrorNotice error={exportError} />}{" "}
           {cancel.error && <ErrorNotice error={cancel.error} />}{" "}
