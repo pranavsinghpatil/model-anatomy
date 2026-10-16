@@ -117,6 +117,18 @@ and a targeted rerun (2 passes). The initial 360M metadata timeout remains a
 backend reliability limitation; the rerun used completed real cached reports.
 See the art-direction record for pinned model evidence and these limits.
 
+The subsequent [white workspace revision](../docs/WHITE_WORKSPACE.md) makes the
+canvas primary: two compact global rows, one local graph header, a reserved
+control dock, and opt-in model facts/component navigation. Entry uses one model
+input/action group and concise example choices. Shared controls use consistent
+focus, press and hover feedback; the existing Radix primitives provide menus,
+tabs and dialogs. Light is the default; explicit Dark/System preferences persist.
+No decorative animation or new component dependency is required.
+Verification covers 142 distinct deterministic cases across a broad run and
+targeted reruns, plus all eight selected real desktop/mobile journeys. See the
+white-workspace record for the initial failures, their resolution, pinned reports
+and remaining cold-analysis limitation.
+
 ## Contract Integration
 
 `src/api/generated.ts` is generated from the actual service's `/openapi.json` using

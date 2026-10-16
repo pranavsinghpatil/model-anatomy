@@ -13,18 +13,19 @@ test("root and app routes open the same immediately usable entry", async ({
         name: "See how a model is built.",
       }),
     ).toBeVisible();
-    const intro = page.locator(".entry-primary");
+    const intro = page.locator(".entry-heading");
     const formStage = page.locator(".entry-submit");
     const introBox = await intro.boundingBox();
     const formBox = await formStage.boundingBox();
     expect(introBox).not.toBeNull();
     expect(formBox).not.toBeNull();
-    if (page.viewportSize()!.width > 1020) {
-      expect(introBox!.x + introBox!.width).toBeLessThanOrEqual(formBox!.x);
-      expect(formBox!.y).toBeLessThan(page.viewportSize()!.height);
-    } else {
-      expect(introBox!.y + introBox!.height).toBeLessThanOrEqual(formBox!.y);
-    }
+    expect(introBox!.y + introBox!.height).toBeLessThanOrEqual(formBox!.y);
+    expect(formBox!.y).toBeLessThan(page.viewportSize()!.height);
+    expect(
+      await page
+        .locator(".entry-main")
+        .evaluate((element) => element.clientWidth),
+    ).toBeLessThanOrEqual(800);
     await expect(
       page.getByLabel("Hugging Face model", { exact: true }),
     ).toBeVisible();

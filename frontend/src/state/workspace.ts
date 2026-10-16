@@ -34,7 +34,7 @@ export function useWorkspaceSession(id: string) {
         inspectorTab: "module",
         inspectorOpen: false,
         questions: false,
-        navigationOpen: true,
+        navigationOpen: false,
         layout: undefined,
       },
   );

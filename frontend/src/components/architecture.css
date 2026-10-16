@@ -4,19 +4,32 @@
   max-height: none;
   overflow: visible;
   border: 1px solid var(--border);
-  border-radius: 5px;
+  border-radius: 8px;
   background: var(--surface);
   color: var(--text);
   font-size: 11px;
 }
 
-/* Keep the component outline easy to scan beside the graph. */
+.architecture-canvas-region {
+  min-width: 0;
+  min-height: 0;
+  overflow: visible;
+  background: var(--surface);
+}
+
+.component-navigator,
+.workspace-inspector {
+  background: var(--surface);
+}
+
 .component-navigator .panel-heading {
   min-height: 56px;
   padding: 8px 14px;
+  border-bottom-color: var(--border);
 }
 
 .component-navigator .panel-heading h2 {
+  color: var(--text);
   font-size: 14px;
 }
 
@@ -41,7 +54,11 @@
   min-height: 44px;
   gap: 10px;
   padding: 7px 9px;
-  border-radius: 4px;
+  border-radius: 8px;
+  transition:
+    background-color 180ms ease,
+    box-shadow 180ms ease,
+    color 180ms ease;
 }
 
 .component-select strong {
@@ -60,6 +77,108 @@
   width: 8px;
   height: 8px;
   border-radius: 2px;
+}
+
+.component-select.selected {
+  border-color: transparent;
+  background: color-mix(in srgb, var(--accent) 7%, var(--surface));
+  box-shadow: inset 2px 0 var(--accent);
+}
+
+.component-select:hover {
+  background: var(--soft);
+}
+
+.inspector-header {
+  display: flex;
+  min-height: 48px;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 8px;
+  padding: 0 10px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.inspector-header > .panel-tabs {
+  width: auto;
+  min-width: 0;
+  flex: 1 1 auto;
+  gap: 12px;
+  padding: 0;
+  border: 0;
+}
+
+.inspector-header > .panel-tabs > [role="tab"] {
+  min-height: 46px;
+  flex: 0 0 auto;
+  padding: 0 7px;
+  color: var(--muted);
+  font-size: 12px;
+  transition:
+    color 180ms ease,
+    border-color 180ms ease;
+}
+
+.inspector-header > .panel-tabs > [role="tab"][data-state="active"] {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.inspector-header > .button,
+.inspector-header > .inspector-back {
+  min-height: 34px;
+  flex: 0 0 auto;
+  padding: 0 8px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: var(--soft);
+  color: var(--muted);
+  font-size: 11px;
+  transition:
+    background-color 180ms ease,
+    color 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.inspector-header > .button:hover,
+.inspector-header > .inspector-back:hover {
+  background: color-mix(in srgb, var(--accent) 7%, var(--surface));
+  color: var(--text);
+}
+
+.inspector-header > .inspector-back {
+  padding-inline: 7px;
+}
+
+.workspace-inspector .inspector-panel-tabs {
+  min-width: 0;
+}
+
+.workspace-inspector .inspector-scroll,
+.workspace-inspector .question-container {
+  min-height: 0;
+  overflow: auto;
+}
+
+@media (max-width: 640px) {
+  .inspector-header {
+    gap: 5px;
+    padding-inline: 7px;
+  }
+
+  .inspector-header > .panel-tabs {
+    gap: 5px;
+  }
+
+  .inspector-header > .panel-tabs > [role="tab"] {
+    padding-inline: 5px;
+    font-size: 12px;
+  }
+
+  .inspector-header > .inspector-back {
+    font-size: 10px;
+  }
 }
 
 .learn-guide > summary {
@@ -116,15 +235,32 @@
 .learn-guide-steps button {
   flex: 0 0 auto;
   padding: 5px 8px;
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  background: var(--surface);
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: var(--soft);
   color: var(--muted);
   font: inherit;
   font-size: 10px;
 }
 
 .learn-guide-steps button[aria-pressed="true"] {
-  border-color: var(--accent);
   color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface));
+}
+
+.component-select:focus-visible,
+.inspector-header :is(.button, .inspector-back, [role="tab"]):focus-visible,
+.learn-guide > summary:focus-visible,
+.learn-guide-steps button:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent) 70%, white);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .component-select,
+  .inspector-header > .button,
+  .inspector-header > .inspector-back,
+  .inspector-header > .panel-tabs > [role="tab"] {
+    transition: none;
+  }
 }

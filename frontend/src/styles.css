@@ -15,14 +15,14 @@
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
-  --background: #f3f5f2;
+  --background: #fff;
   --surface: #fff;
-  --text: #18211c;
-  --muted: #536159;
-  --accent: #0f766e;
+  --text: #17191c;
+  --muted: #5c626b;
+  --accent: #222b35;
   --accent-foreground: #fff;
-  --border: #d9e0da;
-  --soft: #eaf0eb;
+  --border: #e7e9ed;
+  --soft: #f6f7f8;
   --warning: #865119;
   --warning-bg: #fff4df;
   --danger: #b0333c;
@@ -34,14 +34,14 @@
   --violet: var(--accent);
 }
 :root[data-theme="dark"] {
-  --background: #111613;
-  --surface: #1a211c;
-  --text: #edf4ee;
-  --muted: #adbbb0;
-  --accent: #5ed2c0;
-  --accent-foreground: #082b25;
-  --border: #36453b;
-  --soft: #252f28;
+  --background: #141518;
+  --surface: #1b1d21;
+  --text: #f1f2f4;
+  --muted: #aeb3bc;
+  --accent: #dce4f0;
+  --accent-foreground: #17191c;
+  --border: #35383f;
+  --soft: #24272d;
   --warning: #edc28a;
   --warning-bg: #382b1c;
   --danger: #ffacaf;
@@ -74,9 +74,11 @@ textarea {
 button,
 a {
   transition:
-    background-color 0.15s,
-    color 0.15s,
-    border-color 0.15s;
+    background-color 180ms ease,
+    color 180ms ease,
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    transform 180ms ease;
 }
 button {
   cursor: pointer;
@@ -143,11 +145,18 @@ svg {
   flex-shrink: 0;
 }
 input,
-textarea {
+textarea,
+select {
+  min-height: 44px;
+  padding: 10px 12px;
   color: var(--text);
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: 8px;
+  transition:
+    background-color 180ms ease,
+    border-color 180ms ease,
+    box-shadow 180ms ease;
 }
 input::placeholder,
 textarea::placeholder {
@@ -158,6 +167,7 @@ button:focus-visible,
 a:focus-visible,
 input:focus-visible,
 textarea:focus-visible,
+select:focus-visible,
 summary:focus-visible,
 [tabindex="0"]:focus-visible {
   outline: 2px solid var(--accent);
@@ -231,9 +241,9 @@ summary::marker {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  min-height: 40px;
+  min-height: 44px;
   border: 1px solid transparent;
-  border-radius: 4px;
+  border-radius: 8px;
   padding: 8px 12px;
   font-size: 13px;
   font-weight: 550;
@@ -246,7 +256,8 @@ summary::marker {
   border-color: var(--accent);
 }
 .button-primary:hover {
-  filter: brightness(0.95);
+  box-shadow: 0 2px 5px #17212618;
+  filter: brightness(0.97);
 }
 .button-secondary {
   background: var(--surface);
@@ -257,21 +268,37 @@ summary::marker {
 .button-ghost:hover {
   background: var(--soft);
 }
+.button-secondary:hover {
+  border-color: color-mix(in srgb, var(--accent), var(--border) 68%);
+  box-shadow: 0 1px 3px #1721260a;
+}
 .button-ghost {
   color: var(--muted);
   background: transparent;
+}
+.button:active,
+.icon-button:active,
+.mode-control button:active,
+.menu-item:active {
+  transform: translateY(1px);
 }
 .icon-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
-  padding: 8px;
+  width: 44px;
+  height: 44px;
+  padding: 10px;
   background: transparent;
   color: var(--muted);
   border: 1px solid transparent;
-  border-radius: 6px;
+  border-radius: 8px;
+  transition:
+    background-color 180ms ease,
+    color 180ms ease,
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    transform 180ms ease;
 }
 .icon-button:hover {
   background: var(--soft);
@@ -299,14 +326,17 @@ summary::marker {
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 4px;
-  box-shadow: var(--shadow);
+  box-shadow:
+    0 12px 32px #17212614,
+    0 2px 6px #1721260a;
 }
 .menu-item {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 10px 12px;
-  border-radius: 4px;
+  min-height: 44px;
+  padding: 9px 12px;
+  border-radius: 8px;
   font-size: 13px;
   cursor: pointer;
   outline: none;
@@ -326,18 +356,18 @@ summary::marker {
 .mode-control {
   display: flex;
   align-items: center;
-  gap: 2px;
-  padding: 3px;
-  border: 0;
-  border-radius: 4px;
+  gap: 3px;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
   background: var(--soft);
   flex-shrink: 0;
 }
 .mode-control button {
   border: 0;
-  border-radius: 4px;
+  border-radius: 6px;
   padding: 6px 10px;
-  min-height: 32px;
+  min-height: 44px;
   background: transparent;
   color: var(--muted);
   font-size: 13px;
@@ -346,6 +376,7 @@ summary::marker {
 .mode-control button[aria-pressed="true"] {
   color: var(--text);
   background: var(--surface);
+  box-shadow: 0 1px 3px #17212612;
 }
 .status {
   display: inline-flex;
@@ -974,16 +1005,32 @@ summary::marker {
   font-size: 12px;
 }
 .inspector-definition {
-  margin-top: 16px;
-}
-.definition-label {
+  margin-top: 12px;
   color: var(--muted);
-  font-size: 12px;
+  font-size: 13px;
+}
+.inspector-definition > summary {
+  cursor: pointer;
+  min-height: 32px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.inspector-definition > summary::before {
+  content: "+";
+  width: 10px;
+}
+.inspector-definition > summary::-webkit-details-marker {
+  display: none;
+}
+.inspector-definition[open] > summary::before {
+  content: "−";
 }
 .inspector-purpose {
-  margin-top: 4px;
+  margin-top: 8px;
   font-size: 14px;
   line-height: 1.6;
+  color: var(--text);
 }
 .inspector-long-path {
   display: block;
@@ -1036,11 +1083,17 @@ summary::marker {
   margin: 20px 0;
 }
 .port {
-  padding: 14px 16px;
-  background: var(--soft);
-  border-radius: 4px;
-  margin-top: 8px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 6px 16px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--border);
+  margin-top: 0;
   font-size: 13px;
+}
+.port > span {
+  grid-column: 1 / -1;
+  color: var(--muted);
 }
 .port > span,
 .port > code {
@@ -1048,9 +1101,9 @@ summary::marker {
   overflow-wrap: anywhere;
 }
 .port code {
-  margin: 6px 0;
-  font-size: 14px;
-  color: var(--accent);
+  margin: 0;
+  font-size: 15px;
+  color: var(--text);
 }
 .port small {
   font-size: 12px;
@@ -1101,11 +1154,10 @@ summary::marker {
   font-size: 12px;
 }
 .evidence-item {
-  border: 1px solid transparent;
-  border-radius: 4px;
-  padding: 16px;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  padding: 16px 0;
   margin: 12px 0;
-  background: var(--soft);
   font-size: 13px;
 }
 .evidence-item summary {
@@ -1479,16 +1531,6 @@ summary::marker {
   .graph-search input {
     font-size: 16px !important;
   }
-  .canvas-tools > .icon-button {
-    width: 40px !important;
-    min-height: 40px !important;
-  }
-  .graph-canvas > .react-flow {
-    inset: 64px 8px 48px;
-  }
-  .canvas-caption {
-    font-size: 9px;
-  }
   .artifacts-page {
     padding: 16px 12px;
   }
@@ -1528,6 +1570,24 @@ summary::marker {
     min-width: 28px;
   }
 }
+@media (pointer: coarse) {
+  .workspace-shell .button,
+  .entry-page .button,
+  .workspace-view-options .mode-control button,
+  .entry-submit .mode-control button,
+  .panel-tabs > [role="tab"],
+  .model-facts > summary,
+  .inspector-definition > summary,
+  .menu-item {
+    min-height: 44px;
+  }
+  .workspace-header-actions [aria-label="Theme"],
+  .workspace-header-actions .button,
+  .graph-panel-actions .button,
+  .icon-button {
+    min-width: 44px;
+  }
+}
 @media (prefers-reduced-motion: reduce) {
   *,
   *:before,
@@ -1535,6 +1595,13 @@ summary::marker {
     animation: none !important;
     transition: none !important;
     scroll-behavior: auto !important;
+  }
+  .button:active,
+  .icon-button:active,
+  .mode-control button:active,
+  .menu-item:active,
+  .summary-next .next-actions > a:hover {
+    transform: none;
   }
   .progress-track:after {
     transform: translateX(100%);

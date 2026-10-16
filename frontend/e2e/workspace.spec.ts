@@ -97,6 +97,9 @@ test("whole architecture opens framed with a readable inspection view and revers
     ).toBeVisible();
     await page.keyboard.press("Escape");
   } else {
+    await page
+      .getByRole("button", { name: "Open components", exact: true })
+      .click();
     await expect(
       page.getByRole("complementary", { name: /component/i }),
     ).toBeVisible();
@@ -208,14 +211,22 @@ test("click and keyboard edge selection expose the original relationship", async
 test("opening a nested graph clears a previously selected connection", async ({
   page,
 }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
   await mockService(page);
   await openAnalysis(page);
   await expect(page.getByTestId("graph-canvas")).toBeVisible();
+  await expectGraphFramed(page);
   await clickVisibleEdge(page, page.locator(".react-flow__edge").first());
   const inspector = page.getByRole("complementary", { name: "Inspector" });
   await expect(
-    inspector.getByRole("heading", { name: "Connection" }),
+    inspector.getByRole("heading", {
+      name:
+        rootGraph.edges[0].label ??
+        rootGraph.edges[0].relation.replaceAll("_", " "),
+      exact: true,
+    }),
   ).toBeVisible();
+  await expect(inspector).toContainText("Source component");
 
   const back = page.getByRole("button", { name: "Back to graph", exact: true });
   if (await back.isVisible()) await back.click();
@@ -243,7 +254,7 @@ test("opening a nested graph clears a previously selected connection", async ({
   const nestedNode = graphs.get(block.child_graph_id!)!.nodes[0];
   await graphNode(page, nestedNode.label);
   await expect(
-    inspector.getByRole("heading", { name: "Inspector" }),
+    inspector.getByRole("tablist", { name: "Analysis panels" }),
   ).toBeVisible();
   await expect(inspector).not.toContainText("Source component");
 });

@@ -10,9 +10,9 @@ import { useRecent, useService } from "../state/queries";
 import "./entry.css";
 
 const examples = [
-  "HuggingFaceTB/SmolLM2-135M",
-  "google-bert/bert-base-uncased",
-  "distilbert/distilbert-base-uncased",
+  { id: "HuggingFaceTB/SmolLM2-135M", label: "SmolLM2 · 135M" },
+  { id: "google-bert/bert-base-uncased", label: "BERT base" },
+  { id: "distilbert/distilbert-base-uncased", label: "DistilBERT" },
 ];
 
 function Brand() {
@@ -153,8 +153,8 @@ export function Start() {
                 </Button>
               </div>
               <p className="entry-field-help">
-                Public repositories and pinned checkpoint file URLs are
-                accepted. Static inspection; model weights are not downloaded.
+                Public repositories and pinned checkpoint file URLs. Model
+                weights are not downloaded.
               </p>
             </form>
 
@@ -169,11 +169,13 @@ export function Start() {
                   <button
                     className="entry-example-chip"
                     type="button"
-                    key={example}
-                    onClick={() => setModel(example)}
-                    aria-label={`Fill model field with ${example}`}
+                    key={example.id}
+                    title={example.id}
+                    onClick={() => setModel(example.id)}
+                    aria-label={`Fill model field with ${example.id}`}
                   >
-                    {example}
+                    {example.label}
+                    <ArrowRight size={13} aria-hidden="true" />
                   </button>
                 ))}
               </div>
@@ -204,8 +206,8 @@ export function Start() {
               <p>
                 <strong>{mode === "learn" ? "Learn" : "Research"}</strong>
                 {mode === "learn"
-                  ? " adds a reading guide beside the architecture so you can explore each idea in context."
-                  : " opens the technical architecture workspace with components and evidence ready to inspect."}
+                  ? " adds reading guidance beside the architecture."
+                  : " opens the architecture and evidence workspace."}
               </p>
             </div>
           </section>
@@ -227,16 +229,11 @@ export function Start() {
             <p>
               Inspection does not execute publisher code or download model
               weights. It reports known facts, derivations, and unresolved
-              details separately; support varies by model family and artifact
-              layout.
+              details separately. Results stay tied to a pinned revision and its
+              source artifacts; support varies by model family and layout.
             </p>
           </div>
         </details>
-
-        <p className="entry-evidence-note">
-          Each result is tied to a pinned repository revision. Known facts link
-          back to model artifacts; unsupported details remain explicit.
-        </p>
 
         <section
           className="entry-recent"
@@ -254,8 +251,7 @@ export function Start() {
             </span>
           </div>
           <p className="entry-recent-copy">
-            Analyses submitted from this visitor session. Select one to continue
-            where you left off.
+            Your submitted analyses. Select one to continue.
           </p>
           {recent.isPending && <Loading text="Loading your analyses" />}
           {recent.error && (

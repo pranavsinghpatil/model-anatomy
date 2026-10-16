@@ -1,5 +1,8 @@
 # Frontend art direction — October 16
 
+This records the earlier iteration and its verification. The current white
+layout and interaction hierarchy supersede it; see [White workspace](WHITE_WORKSPACE.md).
+
 ## Intended use
 
 Model Anatomy is a tool for inspecting actual model artifacts. The first screen

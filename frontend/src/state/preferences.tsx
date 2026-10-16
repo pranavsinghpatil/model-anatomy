@@ -27,7 +27,9 @@ export function Preferences({ children }: { children: ReactNode }) {
   );
   const [theme, setTheme] = useState<Theme>(() => {
     const saved = read("theme");
-    return saved === "light" || saved === "dark" ? saved : "system";
+    return saved === "light" || saved === "dark" || saved === "system"
+      ? saved
+      : "light";
   });
   useEffect(() => {
     try {

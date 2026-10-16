@@ -27,7 +27,8 @@ The original [desktop and mobile wireframes](design/workspace-wireframes.svg) re
 the first design. The implemented tool-first revision is described in
 [CANVAS_WORKSPACE.md](CANVAS_WORKSPACE.md); it removes the marketing/start split.
 
-At 1280px the component navigator starts at 240px; the inspector opens at 360px.
+At 1280px the component navigator can open at 240px; it starts collapsed for new
+analyses. The inspector opens at 360px.
 Keyboard-operable separators resize the panels while preserving graph state.
 At 1024–1279px a Radix dialog contains the navigator while the inspector remains
 docked. Below 1024px selection opens a separate inspector view with Back to graph.
@@ -35,21 +36,23 @@ Panel scroll areas contain long details. Graph controls reserve their own space.
 The full submission form appears on the unified entry screen. The October 16
 [art-direction revision](FRONTEND_ART_DIRECTION.md) moves workspace views into
 horizontal navigation and improves typography throughout the inspection screens.
+The subsequent [white workspace revision](WHITE_WORKSPACE.md) replaces the stacked
+toolbars with a single local graph bar and bottom dock.
 
 ## Design tokens and component states
 
 | Role | Light | Dark |
 | --- | --- | --- |
-| Background | #F3F5F2 | #111613 |
-| Surface | #FFFFFF | #1A211C |
-| Text | #18211C | #EDF4EE |
-| Secondary text | #536159 | #ADBBB0 |
-| Accent | #0F766E | #5ED2C0 |
-| Text on accent | #FFFFFF | #082B25 |
+| Background | #FFFFFF | #141518 |
+| Surface | #FFFFFF | #1B1D21 |
+| Text | #17191C | #F1F2F4 |
+| Secondary text | #5C626B | #AEB3BC |
+| Accent | #222B35 | #DCE4F0 |
+| Text on accent | #FFFFFF | #17191C |
 
 Inter Variable and JetBrains Mono Variable are bundled locally through Fontsource.
 Spacing follows a 4px scale. Surfaces use thin borders and restrained radii.
-System appearance is the default. Light/Dark override it and are remembered.
+Light appearance is the default. Explicit Light/Dark/System choices are remembered.
 Focus rings, selected labels, status text and dashed structural connections
 supplement color. Reduced motion disables CSS animation and animated graph moves.
 

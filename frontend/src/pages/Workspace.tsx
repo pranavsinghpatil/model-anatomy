@@ -11,9 +11,6 @@ import {
   Download,
   Plus,
   Network,
-  LayoutDashboard,
-  Files,
-  FileCheck2,
   ChevronRight,
 } from "lucide-react";
 import { api, graphReady, pending } from "../api/client";
@@ -32,12 +29,6 @@ import { useWorkspaceSession, type Crumb } from "../state/workspace";
 import { count, dimensionCount } from "../format";
 import "./workspace.css";
 const views = ["architecture", "overview", "artifacts", "report"] as const;
-const viewIcons = {
-  architecture: Network,
-  overview: LayoutDashboard,
-  artifacts: Files,
-  report: FileCheck2,
-};
 const formats: { format: ExportFormat; label: string }[] = [
   { format: "json", label: "Report JSON" },
   { format: "zip", label: "Complete ZIP" },
@@ -211,17 +202,15 @@ function Workspace({ id }: { id: string }) {
           aria-label="Back to start"
           title="Model Anatomy · All analyses"
         >
-          <Network size={23} />
+          <Network size={18} aria-hidden="true" />
+          <span>Model Anatomy</span>
         </Link>
         <div className="model-switcher">
-          <span className="workspace-product">
-            Model Anatomy <ChevronRight size={12} /> <span>Inspection</span>
-          </span>
           <Menu
             label="Switch model"
             trigger={
               <>
-                <span className="model-name">
+                <span className="model-name" title={detail?.model_id}>
                   {detail?.model_id ?? "Loading analysis"}
                 </span>
                 <ChevronDown size={14} />
@@ -247,33 +236,7 @@ function Workspace({ id }: { id: string }) {
           </Menu>
         </div>
         {detail && <Status status={detail.status} />}
-        <nav className="primary-views" aria-label="Workspace views">
-          {views.map((item) => {
-            const Icon = viewIcons[item];
-            return (
-              <Link
-                key={item}
-                to={`?view=${item}`}
-                aria-current={view === item ? "page" : undefined}
-                aria-disabled={!ready && !artifact ? true : undefined}
-                tabIndex={!ready && !artifact ? -1 : undefined}
-                onClick={(event) => {
-                  if (!ready && !artifact) event.preventDefault();
-                }}
-                title={
-                  item === "architecture" && artifact
-                    ? "No architecture was reconstructed; see available artifacts"
-                    : undefined
-                }
-              >
-                <Icon size={16} strokeWidth={1.8} />
-                <span>{item[0].toUpperCase() + item.slice(1)}</span>
-              </Link>
-            );
-          })}
-        </nav>
         <div className="workspace-header-actions">
-          <ModeControl />
           <ThemeControl />
           <Link
             className="button button-secondary"
@@ -308,6 +271,81 @@ function Workspace({ id }: { id: string }) {
           </Menu>
         </div>
       </header>
+      <div className="workspace-viewbar">
+        <nav className="primary-views" aria-label="Workspace views">
+          {views.map((item) => (
+            <Link
+              key={item}
+              to={`?view=${item}`}
+              aria-current={view === item ? "page" : undefined}
+              aria-disabled={!ready && !artifact ? true : undefined}
+              tabIndex={!ready && !artifact ? -1 : undefined}
+              onClick={(event) => {
+                if (!ready && !artifact) event.preventDefault();
+              }}
+              title={
+                item === "architecture" && artifact
+                  ? "No architecture was reconstructed; see available artifacts"
+                  : undefined
+              }
+            >
+              {item[0].toUpperCase() + item.slice(1)}
+            </Link>
+          ))}
+        </nav>
+        <div className="workspace-view-options">
+          {detail && ready && !artifact && (
+            <details
+              key={view}
+              className="model-facts"
+              onKeyDown={(event) => {
+                if (event.key === "Escape") {
+                  event.currentTarget.open = false;
+                  event.currentTarget.querySelector("summary")?.focus();
+                }
+              }}
+            >
+              <summary>
+                Model details <ChevronDown size={13} aria-hidden="true" />
+              </summary>
+              <div
+                className="model-context"
+                role="region"
+                aria-label="Model context"
+              >
+                <strong className="context-architecture">
+                  {detail.architecture ?? "Architecture unknown"}
+                </strong>
+                <dl>
+                  <div>
+                    <dt>Parameters</dt>
+                    <dd>{count(detail.parameter_count, true)}</dd>
+                  </div>
+                  {detail.dimensions.layers != null && (
+                    <div>
+                      <dt>Layers</dt>
+                      <dd>{dimensionCount(detail.dimensions.layers)}</dd>
+                    </div>
+                  )}
+                  {detail.dimensions.hidden != null && (
+                    <div>
+                      <dt>Hidden size</dt>
+                      <dd>{dimensionCount(detail.dimensions.hidden)}</dd>
+                    </div>
+                  )}
+                </dl>
+                <Link to="?view=report" className="context-report">
+                  {detail.status === "partial"
+                    ? "Partial reconstruction · view findings"
+                    : "Inspection findings"}
+                  <ChevronRight size={13} aria-hidden="true" />
+                </Link>
+              </div>
+            </details>
+          )}
+          <ModeControl />
+        </div>
+      </div>
       <div className="workbench-body">
         <div className="workbench-main">
           {exportError && <ErrorNotice error={exportError} />}{" "}
@@ -337,45 +375,6 @@ function Workspace({ id }: { id: string }) {
             <Recovery detail={detail} />
           ) : (
             <div className={`workspace-content view-${view}`}>
-              {view === "architecture" && !artifact && (
-                <div
-                  className="model-context"
-                  role="region"
-                  aria-label="Model context"
-                  tabIndex={0}
-                >
-                  <span className="context-architecture">
-                    <Network size={14} />{" "}
-                    {detail.architecture ?? "Architecture"}
-                  </span>
-                  <span>
-                    <strong>{count(detail.parameter_count, true)}</strong>{" "}
-                    parameters
-                  </span>
-                  {detail.dimensions.layers != null && (
-                    <span>
-                      <strong>
-                        {dimensionCount(detail.dimensions.layers)}
-                      </strong>{" "}
-                      layers
-                    </span>
-                  )}
-                  {detail.dimensions.hidden != null && (
-                    <span>
-                      <strong>
-                        {dimensionCount(detail.dimensions.hidden)}
-                      </strong>{" "}
-                      hidden size
-                    </span>
-                  )}
-                  <Link to="?view=report" className="context-report">
-                    {detail.status === "partial"
-                      ? "Partial reconstruction · view findings"
-                      : "Inspection findings"}
-                    <ChevronRight size={13} />
-                  </Link>
-                </div>
-              )}
               {view === "architecture" && (
                 <h1 className="sr-only">{detail.model_id} architecture</h1>
               )}

@@ -26,6 +26,7 @@ import {
 } from "../format";
 import { ErrorNotice, IconButton, Loading, Warnings } from "./Common";
 import { componentPurpose } from "./LearnGuide";
+import { usePreferences } from "../state/preferences";
 import "./inspection.css";
 import { nodeTitle } from "../graph/presentation";
 
@@ -128,6 +129,12 @@ export function Inspector({
   tab?: InspectorTab;
   onTabChange?: (tab: InspectorTab) => void;
 }) {
+  const { mode } = usePreferences();
+  const [guideOpen, setGuideOpen] = useState(mode === "learn");
+  useEffect(
+    () => setGuideOpen(mode === "learn"),
+    [mode, analysisId, graphId, node?.id],
+  );
   const [internalTab, setInternalTab] = useState<InspectorTab>("module");
   const selectedTab = tab ?? internalTab;
   const changeTab = (value: string) => {
@@ -230,8 +237,11 @@ export function Inspector({
     return (
       <div className="panel-empty">
         <FileSearch size={28} />
-        <strong>Component details</strong>
-        <p>No component selected</p>
+        <strong>Choose a component</strong>
+        <p>
+          Select a component in the graph or component list to inspect its
+          shapes, tensors and evidence.
+        </p>
       </div>
     );
   const resolved = detail.data?.node ?? node;
@@ -244,15 +254,13 @@ export function Inspector({
         {nodeTitle(resolved) !== resolved.label && (
           <code className="inspector-native-type">{resolved.label}</code>
         )}
-        <div className="inspector-definition">
-          <span className="definition-label">Component kind guide</span>
+        <details
+          className="inspector-definition"
+          open={guideOpen}
+          onToggle={(event) => setGuideOpen(event.currentTarget.open)}
+        >
+          <summary>About this component type</summary>
           <p className="inspector-purpose">{componentPurpose(resolved)}</p>
-        </div>
-        <details className="metadata">
-          <summary>Module path</summary>
-          <code className="inspector-long-path">
-            {resolved.module_path ?? "Unknown module path"}
-          </code>
         </details>
       </div>
       <Tabs.Root
@@ -340,6 +348,12 @@ export function Inspector({
                   <p className="empty-copy">Unknown</p>
                 )}
               </section>
+              <details className="metadata">
+                <summary>Module path</summary>
+                <code className="inspector-long-path">
+                  {resolved.module_path ?? "Unknown module path"}
+                </code>
+              </details>
               <details className="metadata">
                 <summary>Component metadata</summary>
                 <dl className="properties">

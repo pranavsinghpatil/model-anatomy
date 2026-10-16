@@ -318,3 +318,15 @@ Avoid marketing proof without evidence and effects that compete with inspection.
 Retain existing fonts, Radix controls and the teal accent; add no UI dependencies.
 See `FRONTEND_ART_DIRECTION.md` for the skill direction, adaptations, critique and
 validation limits. This decision changes no backend, ownership or IR contract.
+
+## D-032 - Make the white canvas and contextual detail primary
+**2026-10-16 - user-directed layout replacement**
+
+Supersede the tinted split entry and stacked workspace bands in D-031. Use white
+as the default appearance, retaining explicit theme preferences. Place the actual
+entry form in one centered column. Separate global identity/view navigation from
+one local graph bar and a reserved bottom dock. Move dimensions and advanced
+graph settings behind explicit disclosures, and start the component navigator
+closed for new analyses. Retain its accessible list and all graph/inspection
+state. Research collapses type guidance; Learn expands it. These are information
+hierarchy changes, not backend or evidence changes. See `WHITE_WORKSPACE.md`.

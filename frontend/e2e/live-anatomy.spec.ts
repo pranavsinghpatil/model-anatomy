@@ -68,6 +68,7 @@ test("live SmolLM2-135M supports graph, anatomy, lazy children, evidence, and ex
       response.request().method() === "POST" &&
       response.url().endsWith("/api/v1/analyses"),
   );
+  await page.screenshot({ path: testInfo.outputPath("live-entry.png") });
   await inspect.click();
   const created = (await (await createdResponse).json()) as AnalysisDetail;
   await expect(page).toHaveURL(new RegExp(`/app/analyses/${created.id}`));
@@ -128,6 +129,10 @@ test("live SmolLM2-135M supports graph, anatomy, lazy children, evidence, and ex
     .click();
   await expect(page).toHaveURL(new RegExp(`/app/analyses/${created.id}`));
 
+  await expect(page.locator(".model-node").first()).toBeVisible();
+  await page.screenshot({
+    path: testInfo.outputPath("live-technical-workspace.png"),
+  });
   const presentation = page.getByRole("group", {
     name: "Architecture presentation",
   });

@@ -94,6 +94,11 @@ test("responsive workspace stays in bounds and accessible across themes and mode
       ).toBeVisible();
       await page.keyboard.press("Escape");
     } else {
+      const openComponents = page.getByRole("button", {
+        name: "Open components",
+        exact: true,
+      });
+      if (await openComponents.isVisible()) await openComponents.click();
       await expect(
         page.getByRole("complementary", { name: "Component navigator" }),
       ).toBeVisible();
@@ -193,6 +198,9 @@ test("mode, view changes and keyboard panel resizing preserve inspection context
   await page.emulateMedia({ reducedMotion: "reduce" });
   await mockService(page);
   await openAnalysis(page);
+  await page
+    .getByRole("button", { name: "Open components", exact: true })
+    .click();
   await graphNode(page, embedding.label);
   const inspector = page.getByTestId("inspector");
   await inspector.getByRole("tab", { name: /^Tensors/ }).click();

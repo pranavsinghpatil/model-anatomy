@@ -41,7 +41,7 @@
 .artifact-inspection-title p {
   margin-top: 4px;
   color: var(--artifact-muted);
-  font-size: 11px;
+  font-size: 13px;
 }
 
 .artifact-inspection-identity {
@@ -49,7 +49,7 @@
   max-width: min(52%, 450px);
   padding: 0;
   color: var(--artifact-muted);
-  font-size: 10px;
+  font-size: 12px;
 }
 
 .artifact-inspection-identity summary {
@@ -58,6 +58,7 @@
   justify-content: flex-end;
   flex-wrap: wrap;
   gap: 8px;
+  min-height: 44px;
   cursor: pointer;
   text-align: right;
 }
@@ -99,8 +100,12 @@
   gap: 28px;
   padding: clamp(18px, 2.6vw, 28px);
   border: 1px solid var(--artifact-border);
-  border-radius: 10px;
-  background: var(--artifact-surface);
+  border-radius: 8px;
+  background: color-mix(
+    in srgb,
+    var(--artifact-surface),
+    var(--artifact-muted) 3%
+  );
 }
 
 .artifact-selection-action > div {
@@ -112,10 +117,8 @@
   display: block;
   margin-bottom: 8px;
   color: var(--artifact-accent);
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
 }
 
 .artifact-selection-action h3 {
@@ -129,7 +132,7 @@
   max-width: 68ch;
   margin: 9px 0 0;
   color: var(--artifact-muted);
-  font-size: 13px;
+  font-size: 15px;
   line-height: 1.6;
 }
 
@@ -152,7 +155,7 @@
 
 .artifact-inspection-stats dt {
   color: var(--artifact-muted);
-  font-size: 10px;
+  font-size: 12px;
   line-height: 1.4;
 }
 
@@ -176,7 +179,7 @@
     var(--artifact-muted) 4%
   );
   color: var(--artifact-muted);
-  font-size: 11px;
+  font-size: 13px;
   line-height: 1.5;
 }
 
@@ -190,7 +193,7 @@
 }
 
 .artifact-reason details {
-  font-size: 10px;
+  font-size: 12px;
 }
 
 .artifact-reason details code {
@@ -201,11 +204,13 @@
 
 .artifact-scope-disclosure {
   color: var(--artifact-muted);
-  font-size: 11px;
+  font-size: 13px;
 }
 
 .artifact-scope-disclosure summary {
   display: inline-block;
+  min-height: 44px;
+  padding-block: 10px;
   cursor: pointer;
   font-weight: 600;
 }
@@ -221,7 +226,7 @@
   border-color: color-mix(
     in srgb,
     var(--artifact-accent),
-    var(--artifact-border) 55%
+    var(--artifact-border) 78%
   );
   background: color-mix(
     in srgb,
@@ -237,10 +242,10 @@
   justify-content: center;
   gap: 8px;
   flex: 0 0 auto;
-  min-height: 40px;
-  padding: 9px 13px;
+  min-height: 44px;
+  padding: 10px 14px;
   border: 1px solid var(--artifact-accent);
-  border-radius: 6px;
+  border-radius: 8px;
   background: var(--artifact-accent);
   color: var(--accent-foreground, #fff);
   font: inherit;
@@ -251,7 +256,8 @@
 
 .artifact-primary-action:hover,
 .artifact-model-profile button:hover {
-  filter: brightness(0.94);
+  filter: brightness(0.97);
+  box-shadow: 0 2px 5px #17212618;
 }
 
 .artifact-tabs {
@@ -270,7 +276,8 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 12px 14px;
+  min-height: 44px;
+  padding: 10px 14px;
   border: 0;
   border-bottom: 2px solid transparent;
   background: transparent;
@@ -278,6 +285,10 @@
   font: inherit;
   font-size: 13px;
   cursor: pointer;
+  transition:
+    color 180ms ease,
+    border-color 180ms ease,
+    background-color 180ms ease;
 }
 
 .artifact-tab-list button[data-state="active"] {
@@ -288,7 +299,7 @@
 
 .artifact-tab-list span {
   color: var(--artifact-muted);
-  font-size: 11px;
+  font-size: 13px;
 }
 
 .artifact-section {
@@ -317,13 +328,13 @@
 .artifact-section-heading p {
   margin: 5px 0 0;
   color: var(--artifact-muted);
-  font-size: 11px;
+  font-size: 13px;
 }
 
 .artifact-section-heading > span {
   flex: 0 0 auto;
   color: var(--artifact-muted);
-  font-size: 11px;
+  font-size: 13px;
 }
 
 .artifact-file-search {
@@ -331,11 +342,11 @@
   align-items: center;
   gap: 8px;
   max-width: 440px;
-  min-height: 38px;
+  min-height: 44px;
   margin-bottom: 10px;
   padding: 0 10px;
   border: 1px solid var(--artifact-border);
-  border-radius: 6px;
+  border-radius: 8px;
   color: var(--artifact-muted);
 }
 
@@ -361,7 +372,7 @@
   padding: 0;
   margin: 0;
   border: 1px solid var(--artifact-border);
-  border-radius: 7px;
+  border-radius: 8px;
   overflow: hidden;
 }
 
@@ -371,6 +382,7 @@
   justify-content: space-between;
   gap: 12px;
   min-width: 0;
+  min-height: 52px;
   padding: 11px 13px;
   border-bottom: 1px solid var(--artifact-border);
   margin: 0;
@@ -408,18 +420,19 @@
   width: auto;
   min-width: 82px;
   height: auto;
-  min-height: 34px;
-  padding: 6px 9px;
+  min-height: 44px;
+  padding: 8px 11px;
   border-color: var(--artifact-border);
+  border-radius: 8px;
   color: var(--artifact-accent);
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 600;
   white-space: nowrap;
 }
 
 .artifact-file-name small {
   color: var(--artifact-muted);
-  font-size: 10px;
+  font-size: 12px;
 }
 
 .artifact-table-wrap {
@@ -427,7 +440,7 @@
   max-width: 100%;
   overflow: auto;
   border: 1px solid var(--artifact-border);
-  border-radius: 7px;
+  border-radius: 8px;
 }
 
 .artifact-tensor-table {
@@ -435,7 +448,7 @@
   min-width: 760px;
   border-collapse: collapse;
   text-align: left;
-  font-size: 11px;
+  font-size: 13px;
 }
 
 .artifact-tensor-table th,
@@ -452,9 +465,17 @@
   top: 0;
   background: var(--soft, #f3f6f6);
   color: var(--artifact-muted);
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 650;
   white-space: nowrap;
+}
+
+.artifact-tensor-table tbody tr:hover {
+  background: color-mix(
+    in srgb,
+    var(--artifact-surface),
+    var(--artifact-accent) 3%
+  );
 }
 
 .artifact-tensor-table tbody th {
@@ -478,7 +499,7 @@
   display: block;
   margin-top: 4px;
   color: var(--artifact-muted);
-  font-size: 10px;
+  font-size: 12px;
 }
 
 .artifact-empty {
@@ -494,7 +515,7 @@
   gap: 16px;
   margin-top: 12px;
   color: var(--artifact-muted);
-  font-size: 11px;
+  font-size: 13px;
 }
 
 .artifact-pagination > div {
@@ -503,10 +524,10 @@
 }
 
 .artifact-pagination button {
-  min-height: 36px;
-  padding: 7px 11px;
+  min-height: 44px;
+  padding: 8px 12px;
   border: 1px solid var(--artifact-border);
-  border-radius: 5px;
+  border-radius: 8px;
   background: var(--artifact-surface);
   color: var(--artifact-text);
 }
@@ -539,7 +560,7 @@
   margin-top: 12px;
   padding: 13px;
   border: 1px solid var(--artifact-border);
-  border-radius: 6px;
+  border-radius: 8px;
   background: color-mix(
     in srgb,
     var(--artifact-surface),
@@ -607,7 +628,7 @@
   display: block;
   margin-top: 3px;
   color: var(--artifact-muted);
-  font-size: 11px;
+  font-size: 13px;
 }
 
 .artifact-model-profile li > ul {
@@ -623,9 +644,9 @@
 }
 
 .artifact-model-profile button {
-  min-height: 32px;
-  padding: 6px 9px;
-  font-size: 10px;
+  min-height: 44px;
+  padding: 8px 11px;
+  font-size: 12px;
 }
 
 .artifact-inspection .error-notice {

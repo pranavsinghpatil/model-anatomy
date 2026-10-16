@@ -40,6 +40,9 @@ test("fits the full graph, relayouts direction, and focuses only real neighbors"
   await mockService(page);
   await openAnalysis(page);
   await expect(page.locator(".model-node")).toHaveCount(rootGraph.nodes.length);
+  // Short workspaces start at a readable component; Fit explicitly requests
+  // the overview whose complete bounds this test verifies.
+  await page.getByRole("button", { name: "Fit graph", exact: true }).click();
 
   await expect
     .poll(() =>
@@ -64,6 +67,7 @@ test("fits the full graph, relayouts direction, and focuses only real neighbors"
   expect(averageEdgeTravel(verticalCenters, "y")).toBeGreaterThan(
     averageEdgeTravel(verticalCenters, "x"),
   );
+  await page.getByText("Options", { exact: true }).click();
   await page
     .getByRole("button", { name: "Switch to horizontal layout" })
     .click();
@@ -74,26 +78,33 @@ test("fits the full graph, relayouts direction, and focuses only real neighbors"
   expect(averageEdgeTravel(horizontalCenters, "x")).toBeGreaterThan(
     averageEdgeTravel(horizontalCenters, "y"),
   );
+  await page.getByText("Options", { exact: true }).click();
 
+  await page.getByText("Options", { exact: true }).click();
   await page.getByRole("button", { name: "Show detailed node cards" }).click();
+  await page.getByText("Options", { exact: true }).click();
   await page.getByRole("link", { name: "Overview", exact: true }).click();
   await page.getByRole("link", { name: "Architecture", exact: true }).click();
+  await page.getByText("Options", { exact: true }).click();
   await expect(
     page.getByRole("button", { name: "Switch to vertical layout" }),
   ).toBeVisible();
   await expect(
     page.getByRole("button", { name: "Show compact node cards" }),
   ).toBeVisible();
+  await page.getByText("Options", { exact: true }).click();
 
   await page.getByRole("button", { name: "Fit graph", exact: true }).click();
   await graphNode(page, embedding.label);
   if (isMobile)
     await page.getByRole("button", { name: "Back to graph" }).click();
+  await page.getByText("Options", { exact: true }).click();
   await page
     .getByRole("button", {
       name: "Focus selected component and connected neighbors",
     })
     .click();
+  await page.getByText("Options", { exact: true }).click();
 
   const expected = new Set([embedding.id]);
   for (const edge of rootGraph.edges) {
@@ -259,7 +270,9 @@ test("distinguishes graph boundaries, repeats, module paths, and isolated invent
     page.locator(`.react-flow__edge[data-id*="${isolated.id}"]`),
   ).toHaveCount(0);
 
+  await page.getByText("Options", { exact: true }).click();
   await page.getByRole("button", { name: "Show detailed node cards" }).click();
+  await page.getByText("Options", { exact: true }).click();
   const detailedInput = page.locator(
     `.model-node[data-node-id="${input.id}"] .boundary-shape`,
   );
