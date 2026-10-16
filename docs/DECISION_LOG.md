@@ -330,3 +330,15 @@ graph settings behind explicit disclosures, and start the component navigator
 closed for new analyses. Retain its accessible list and all graph/inspection
 state. Research collapses type guidance; Learn expands it. These are information
 hierarchy changes, not backend or evidence changes. See `WHITE_WORKSPACE.md`.
+
+## D-033 - Use compact controls and purposeful state motion
+**2026-10-17 - user-directed density refinement**
+
+Reduce desktop entry typography, control heights and section gaps at normal
+browser zoom. Keep touch targets at 44px and preserve technical values. Respond
+to canvas container width so graph controls remain usable beside resized panels;
+share phone toolbar rows instead of reducing touch targets. Align inspector port
+facts in rows. Use transform/opacity feedback for mode selection, copy/theme
+icons, menus and panels, honoring reduced motion. Fanout and Smooth UI inform
+the presentation; reconstruction and API contracts remain unchanged. See the
+compact-scale section of `WHITE_WORKSPACE.md` for evidence and limitations.

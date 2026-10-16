@@ -43,7 +43,7 @@ toolbars with a single local graph bar and bottom dock.
 
 | Role | Light | Dark |
 | --- | --- | --- |
-| Background | #FFFFFF | #141518 |
+| Background | #F8F9FB | #141518 |
 | Surface | #FFFFFF | #1B1D21 |
 | Text | #17191C | #F1F2F4 |
 | Secondary text | #5C626B | #AEB3BC |

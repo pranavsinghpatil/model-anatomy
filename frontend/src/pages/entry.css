@@ -5,7 +5,7 @@
 }
 
 .entry-header {
-  min-height: 72px;
+  min-height: 52px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -16,7 +16,7 @@
 .entry-brand-name,
 .entry-footer-brand {
   color: var(--text);
-  font-size: 18px;
+  font-size: 15px;
   font-weight: 650;
   letter-spacing: -0.035em;
 }
@@ -47,7 +47,7 @@
 
 .entry-main {
   width: min(100%, 800px);
-  padding: 56px 0 76px;
+  padding: 28px 0 36px;
   margin-inline: auto;
   outline: none;
 }
@@ -61,26 +61,26 @@
 }
 
 .entry-heading h1 {
-  max-width: 18ch;
-  font-size: clamp(44px, 4.2vw, 60px);
-  font-weight: 670;
-  line-height: 1.02;
-  letter-spacing: -0.055em;
+  max-width: 30ch;
+  font-size: clamp(28px, 3vw, 36px);
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: -0.04em;
   text-wrap: balance;
 }
 
 .entry-lede {
-  max-width: 56ch;
-  margin-top: 16px;
-  color: var(--text);
-  font-size: 17px;
+  max-width: 100%;
+  margin-top: 10px;
+  color: var(--muted);
+  font-size: 14px;
   line-height: 1.55;
 }
 
 .entry-submit {
   min-width: 0;
   padding: 0;
-  margin-top: 38px;
+  margin-top: 24px;
   background: transparent;
 }
 
@@ -89,11 +89,11 @@
   align-items: center;
   justify-content: space-between;
   gap: 20px;
-  margin-bottom: 20px;
+  margin-bottom: 12px;
 }
 
 .entry-submit-heading h2 {
-  font-size: 17px;
+  font-size: 14px;
   font-weight: 630;
   letter-spacing: -0.025em;
 }
@@ -108,29 +108,27 @@
 }
 
 .entry-submit .mode-control button {
-  min-height: 40px;
-  padding: 6px 14px;
+  min-height: 28px;
+  padding: 4px 12px;
   border: 0;
   border-radius: 7px;
   background: transparent;
   color: var(--muted);
-  font-size: 14px;
+  font-size: 12px;
 }
 
 .entry-submit .mode-control button[aria-pressed="true"] {
-  background: var(--surface);
   color: var(--text);
-  box-shadow: 0 1px 3px color-mix(in srgb, var(--text) 10%, transparent);
 }
 
 .entry-live-service {
-  min-height: 24px;
-  margin: 0 0 18px;
+  min-height: 20px;
+  margin: 0 0 10px;
   display: flex;
   align-items: center;
   gap: 8px;
   color: var(--muted);
-  font-size: 14px;
+  font-size: 12px;
 }
 
 .entry-live-dot {
@@ -157,7 +155,7 @@
 .entry-field-label {
   display: block;
   margin-bottom: 8px;
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 620;
 }
 
@@ -166,9 +164,9 @@
   align-items: stretch;
   gap: 6px;
   min-width: 0;
-  padding: 5px;
+  padding: 4px;
   border: 1px solid var(--border);
-  border-radius: 13px;
+  border-radius: 10px;
   background: var(--surface);
   box-shadow: 0 2px 5px color-mix(in srgb, var(--text) 4%, transparent);
   transition:
@@ -184,19 +182,19 @@
 .entry-input-row input {
   width: 100%;
   min-width: 0;
-  min-height: 48px;
-  padding: 12px 14px;
+  min-height: 36px;
+  padding: 8px 10px;
   border: 0;
   border-radius: 8px;
   outline: none;
   background: var(--surface);
   color: var(--text);
-  font-size: 16px;
+  font-size: 14px;
 }
 
 .entry-input-row input::placeholder {
   color: var(--muted);
-  font-size: 14px;
+  font-size: 13px;
 }
 
 .entry-input-row input:focus-visible {
@@ -204,16 +202,16 @@
 }
 
 .entry-input-row > .button {
-  min-height: 48px;
-  min-width: 148px;
-  padding-inline: 18px;
+  min-height: 36px;
+  min-width: 128px;
+  padding-inline: 14px;
   flex: 0 0 auto;
   gap: 9px;
   border-color: #17191c;
   border-radius: 8px;
   background: #17191c;
   color: #fff;
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 620;
   white-space: nowrap;
 }
@@ -221,6 +219,12 @@
 .entry-input-row > .button:hover {
   border-color: #30343a;
   background: #30343a;
+}
+.entry-input-row > .button:not(:disabled):hover svg {
+  transform: translateX(3px);
+}
+.entry-input-row > .button svg {
+  transition: transform 240ms var(--ease-out);
 }
 
 :root[data-theme="dark"] .entry-input-row > .button {
@@ -230,22 +234,22 @@
 }
 
 .entry-field-help {
-  max-width: 62ch;
-  margin-top: 10px;
+  max-width: 100%;
+  margin-top: 8px;
   color: var(--muted);
-  font-size: 14px;
+  font-size: 12px;
   line-height: 1.55;
 }
 
 .entry-examples {
-  margin-top: 22px;
+  margin-top: 14px;
 }
 
 .entry-examples > span {
   display: block;
   margin-bottom: 6px;
   color: var(--muted);
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 550;
 }
 
@@ -259,11 +263,11 @@
   display: inline-flex;
   align-items: center;
   gap: 12px;
-  min-height: 36px;
-  padding: 6px 11px;
+  min-height: 28px;
+  padding: 4px 9px;
   border: 1px solid var(--border);
   border-radius: 8px;
-  background: transparent;
+  background: var(--surface);
   color: var(--text);
   font-size: 13px;
   overflow-wrap: anywhere;
@@ -314,13 +318,13 @@
 }
 
 .entry-mode-note {
-  margin-top: 16px;
+  margin-top: 10px;
 }
 
 .entry-mode-note p {
   max-width: 60ch;
   color: var(--muted);
-  font-size: 14px;
+  font-size: 12px;
   line-height: 1.55;
 }
 
@@ -330,11 +334,11 @@
 }
 
 .entry-boundaries {
-  margin-top: 32px;
+  margin-top: 16px;
 }
 
 .entry-boundaries summary {
-  min-height: 44px;
+  min-height: 32px;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -384,8 +388,9 @@
 }
 
 .entry-recent {
-  padding-top: 54px;
-  margin-top: 48px;
+  padding-top: 20px;
+  margin-top: 16px;
+  border-top: 1px solid var(--border);
   scroll-margin-top: 24px;
 }
 
@@ -397,7 +402,7 @@
 }
 
 .entry-section-heading h2 {
-  font-size: 25px;
+  font-size: 19px;
   letter-spacing: -0.04em;
 }
 
@@ -410,12 +415,12 @@
   max-width: 60ch;
   margin-top: 7px;
   color: var(--muted);
-  font-size: 14px;
+  font-size: 13px;
 }
 
 .entry-table-wrap {
   width: 100%;
-  margin-top: 18px;
+  margin-top: 12px;
   overflow-x: auto;
   border: 1px solid var(--border); /* taste-skill-ignore: boundary of the actual history table */
   background: var(--surface);
@@ -531,7 +536,7 @@
 
 .entry-footer {
   width: min(100%, 1040px);
-  min-height: 64px;
+  min-height: 40px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -554,6 +559,15 @@
   outline-offset: 3px;
 }
 
+@media (pointer: coarse) {
+  .entry-input-row input,
+  .entry-input-row > .button,
+  .entry-example-chip,
+  .entry-boundaries summary {
+    min-height: 44px;
+  }
+}
+
 @media (max-width: 1020px) {
   .entry-page {
     width: min(calc(100% - 48px), 800px);
@@ -561,11 +575,11 @@
 
   .entry-main {
     width: 100%;
-    padding: 44px 0 60px;
+    padding: 24px 0 32px;
   }
 
   .entry-submit {
-    margin-top: 32px;
+    margin-top: 20px;
   }
 
   .entry-table-wrap {
@@ -669,12 +683,12 @@
   }
 
   .entry-header {
-    min-height: 64px;
+    min-height: 52px;
   }
 
   .entry-brand,
   .entry-brand-name {
-    font-size: 18px;
+    font-size: 15px;
   }
 
   .entry-header-actions {
@@ -699,27 +713,27 @@
   }
 
   .entry-main {
-    padding: 36px 0 48px;
+    padding: 20px 0 28px;
   }
 
   .entry-heading h1 {
-    max-width: 16ch;
-    font-size: clamp(40px, 11vw, 48px);
-    line-height: 1.02;
+    max-width: 24ch;
+    font-size: 28px;
+    line-height: 1.15;
   }
 
   .entry-lede {
-    margin-top: 14px;
+    margin-top: 10px;
     font-size: 16px;
   }
 
   .entry-submit {
-    margin-top: 28px;
+    margin-top: 20px;
   }
 
   .entry-submit-heading {
     gap: 12px;
-    margin-bottom: 14px;
+    margin-bottom: 10px;
   }
 
   .entry-submit-heading h2 {
@@ -727,7 +741,7 @@
   }
 
   .entry-submit .mode-control {
-    gap: 4px;
+    gap: 2px;
   }
 
   .entry-submit .mode-control button {
@@ -754,7 +768,7 @@
   }
 
   .entry-input-row input {
-    min-height: 56px;
+    min-height: 44px;
     font-size: 16px;
     border: 1px solid var(--border);
   }
@@ -766,7 +780,7 @@
 
   .entry-input-row > .button {
     width: 100%;
-    min-height: 54px;
+    min-height: 44px;
     justify-content: center;
   }
 
@@ -790,7 +804,7 @@
   }
 
   .entry-boundaries {
-    margin-top: 26px;
+    margin-top: 14px;
   }
 
   .entry-boundary-hint {
@@ -802,8 +816,8 @@
   }
 
   .entry-recent {
-    padding-top: 40px;
-    margin-top: 36px;
+    padding-top: 20px;
+    margin-top: 16px;
   }
 
   .entry-section-heading {
@@ -811,7 +825,7 @@
   }
 
   .entry-section-heading h2 {
-    font-size: 23px;
+    font-size: 19px;
   }
 
   .entry-recent-count {
@@ -821,7 +835,7 @@
   }
 
   .entry-footer {
-    min-height: 60px;
+    min-height: 44px;
     flex-wrap: wrap;
     padding: 12px 0;
     gap: 7px 14px;

@@ -178,6 +178,11 @@ test("technical graph keeps a clear drawing area and controls across responsive 
     await page.getByRole("button", { name: "Graph", exact: true }).click();
 
     if (width >= 1024) {
+      // Scene switching restores the focused viewport. Request the overview
+      // before opening a different component farther down the graph.
+      await page
+        .getByRole("button", { name: "Fit graph", exact: true })
+        .click();
       await page
         .getByRole("button", { name: `Open ${block.label}`, exact: true })
         .click();

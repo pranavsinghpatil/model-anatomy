@@ -82,7 +82,11 @@ export function ThemeControl() {
       label="Theme"
       trigger={
         <>
-          <Sun size={16} />
+          <span className="theme-glyph" aria-hidden="true" data-theme={theme}>
+            <Sun size={15} className="theme-light" />
+            <Moon size={15} className="theme-dark" />
+            <Monitor size={15} className="theme-system" />
+          </span>
           <span className="wide-label">Theme</span>
         </>
       }
@@ -113,7 +117,13 @@ export function ThemeControl() {
 export function ModeControl() {
   const { mode, setMode } = usePreferences();
   return (
-    <div className="mode-control" role="group" aria-label="Experience mode">
+    <div
+      className="mode-control"
+      role="group"
+      aria-label="Experience mode"
+      data-active={mode}
+    >
+      <span className="mode-indicator" aria-hidden="true" />
       {(["learn", "research"] as const).map((value) => (
         <button
           key={value}
@@ -176,7 +186,7 @@ export function CopyButton({
 }) {
   const [state, setState] = useState<"idle" | "copied" | "failed">("idle");
   return (
-    <span className="copy-control">
+    <span className="copy-control" data-state={state}>
       <Button
         variant="ghost"
         aria-label={label}
@@ -187,7 +197,10 @@ export function CopyButton({
             .catch(() => setState("failed"));
         }}
       >
-        {state === "copied" ? <Check size={14} /> : <Copy size={14} />}
+        <span className="copy-glyph" aria-hidden="true">
+          <Copy size={14} className="copy-idle" />
+          <Check size={14} className="copy-success" />
+        </span>
       </Button>
       <span role="status">
         {state === "copied"

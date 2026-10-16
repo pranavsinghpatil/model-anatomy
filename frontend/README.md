@@ -129,6 +129,13 @@ targeted reruns, plus all eight selected real desktop/mobile journeys. See the
 white-workspace record for the initial failures, their resolution, pinned reports
 and remaining cold-analysis limitation.
 
+The compact-scale follow-up reduces desktop controls to 32px, the entry heading
+to 36px maximum, and the workspace header/views to 48/40px. Touch controls retain
+44px targets. Mode selection, copy/theme icons, menus and drawers have purposeful
+motion with reduced-motion support. Graph controls respond to the actual canvas
+width, and inspector ports align name, shape and dtype on one row. See the same
+record for the production-build verification and local development-server limits.
+
 ## Contract Integration
 
 `src/api/generated.ts` is generated from the actual service's `/openapi.json` using

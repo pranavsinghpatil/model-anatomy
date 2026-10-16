@@ -23,14 +23,14 @@
 }
 
 .component-navigator .panel-heading {
-  min-height: 56px;
-  padding: 8px 14px;
+  min-height: 48px;
+  padding: 6px 12px;
   border-bottom-color: var(--border);
 }
 
 .component-navigator .panel-heading h2 {
   color: var(--text);
-  font-size: 14px;
+  font-size: 13px;
 }
 
 .component-outline {
@@ -38,27 +38,27 @@
 }
 
 .outline-scope {
-  padding: 14px 14px 8px;
+  padding: 10px 12px 6px;
   font-size: 12px;
 }
 
 .component-outline ul {
-  padding: 0 10px 14px;
+  padding: 0 8px 10px;
 }
 
 .component-outline li {
-  margin: 3px 0;
+  margin: 2px 0;
 }
 
 .component-select {
-  min-height: 44px;
-  gap: 10px;
-  padding: 7px 9px;
+  min-height: 40px;
+  gap: 8px;
+  padding: 6px 8px;
   border-radius: 8px;
   transition:
-    background-color 180ms ease,
-    box-shadow 180ms ease,
-    color 180ms ease;
+    background-color 160ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 160ms cubic-bezier(0.22, 1, 0.36, 1),
+    color 160ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .component-select strong {
@@ -85,16 +85,16 @@
   box-shadow: inset 2px 0 var(--accent);
 }
 
-.component-select:hover {
+.component-select:hover:not(.selected) {
   background: var(--soft);
 }
 
 .inspector-header {
   display: flex;
-  min-height: 48px;
+  min-height: 40px;
   flex: 0 0 auto;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   padding: 0 10px;
   border-bottom: 1px solid var(--border);
   background: var(--surface);
@@ -104,20 +104,20 @@
   width: auto;
   min-width: 0;
   flex: 1 1 auto;
-  gap: 12px;
+  gap: 8px;
   padding: 0;
   border: 0;
 }
 
 .inspector-header > .panel-tabs > [role="tab"] {
-  min-height: 46px;
+  min-height: 38px;
   flex: 0 0 auto;
   padding: 0 7px;
   color: var(--muted);
   font-size: 12px;
   transition:
-    color 180ms ease,
-    border-color 180ms ease;
+    color 160ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 160ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .inspector-header > .panel-tabs > [role="tab"][data-state="active"] {
@@ -127,18 +127,18 @@
 
 .inspector-header > .button,
 .inspector-header > .inspector-back {
-  min-height: 34px;
+  min-height: 30px;
   flex: 0 0 auto;
   padding: 0 8px;
   border: 1px solid transparent;
   border-radius: 8px;
   background: var(--soft);
   color: var(--muted);
-  font-size: 11px;
+  font-size: 12px;
   transition:
-    background-color 180ms ease,
-    color 180ms ease,
-    box-shadow 180ms ease;
+    background-color 160ms cubic-bezier(0.22, 1, 0.36, 1),
+    color 160ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 160ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .inspector-header > .button:hover,
@@ -254,6 +254,40 @@
 .learn-guide-steps button:focus-visible {
   outline: 2px solid color-mix(in srgb, var(--accent) 70%, white);
   outline-offset: 2px;
+}
+
+@media (pointer: fine) {
+  .component-select {
+    min-height: 34px;
+    padding-block: 4px;
+  }
+
+  .component-select strong {
+    font-size: 12px;
+    line-height: 1.25;
+  }
+
+  .component-select small {
+    margin-top: 2px;
+    font-size: 11px;
+    line-height: 1.2;
+  }
+}
+
+@media (pointer: coarse) {
+  .component-navigator .panel-heading,
+  .inspector-header {
+    min-height: 48px;
+  }
+
+  .component-select,
+  .inspector-header > .button,
+  .inspector-header > .inspector-back,
+  .inspector-header > .panel-tabs > [role="tab"],
+  .learn-guide > summary,
+  .learn-guide-steps button {
+    min-height: 44px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -7,11 +7,11 @@
   background: var(--surface);
   color: var(--text);
   text-align: left;
-  box-shadow: 0 1px 3px color-mix(in srgb, var(--text) 8%, transparent);
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--text) 5%, transparent);
   transition:
-    border-color 180ms ease,
-    box-shadow 180ms ease,
-    opacity 180ms ease;
+    border-color 160ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 160ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 160ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 .anatomy-node-body {
   display: flex;
@@ -201,8 +201,8 @@
 .model-node.is-selected {
   border-color: var(--accent);
   box-shadow:
-    0 0 0 2px color-mix(in srgb, var(--accent) 12%, transparent),
-    0 2px 8px color-mix(in srgb, var(--text) 9%, transparent);
+    0 0 0 2px color-mix(in srgb, var(--accent) 10%, transparent),
+    0 1px 4px color-mix(in srgb, var(--text) 5%, transparent);
 }
 .model-node.is-dimmed {
   opacity: 0.24;
