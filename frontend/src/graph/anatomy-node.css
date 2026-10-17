@@ -1,10 +1,10 @@
 .model-node {
-  --node-tone: var(--accent);
+  --node-tone: var(--muted);
   position: relative;
   padding: 0;
   border: 1px solid var(--border);
   border-radius: 8px;
-  background: var(--surface);
+  background: color-mix(in srgb, var(--node-tone) 3%, var(--surface));
   color: var(--text);
   text-align: left;
   box-shadow: 0 1px 2px color-mix(in srgb, var(--text) 5%, transparent);
@@ -12,6 +12,35 @@
     border-color 160ms cubic-bezier(0.22, 1, 0.36, 1),
     box-shadow 160ms cubic-bezier(0.22, 1, 0.36, 1),
     opacity 160ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.model-node::before {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  border-radius: 7px 0 0 7px;
+  background: var(--node-tone);
+  content: "";
+  opacity: 0.72;
+  pointer-events: none;
+}
+.model-node:is(
+  .category-attention,
+  .category-position,
+  .category-normalization,
+  .category-projection,
+  .category-structure,
+  .category-embedding
+) {
+  --node-tone: var(--category-transform, var(--accent));
+}
+.model-node.category-boundary[data-kind="input"] {
+  --node-tone: var(--category-input, var(--accent));
+}
+.model-node.category-boundary[data-kind="output"] {
+  --node-tone: var(--category-output, var(--accent));
+}
+.model-node.is-repeated {
+  --node-tone: var(--category-repeat, var(--category-transform, var(--accent)));
 }
 .anatomy-node-body {
   display: flex;
@@ -27,7 +56,9 @@
   height: 24px;
   flex: 0 0 20px;
   place-items: center;
-  color: var(--accent);
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--node-tone) 10%, transparent);
+  color: var(--node-tone);
 }
 .anatomy-node-heading {
   min-width: 0;
@@ -37,7 +68,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  color: var(--muted);
+  color: color-mix(in srgb, var(--node-tone) 78%, var(--muted));
   font-size: 11px;
   line-height: 1.35;
   text-transform: none;
@@ -69,10 +100,10 @@
   flex-shrink: 0;
   margin-left: auto;
   padding: 1px 5px;
-  border: 1px solid var(--border);
+  border: 1px solid color-mix(in srgb, var(--node-tone) 28%, var(--border));
   border-radius: 6px;
-  background: var(--soft);
-  color: var(--text);
+  background: color-mix(in srgb, var(--node-tone) 10%, var(--surface));
+  color: var(--node-tone);
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0;
@@ -82,17 +113,24 @@
   position: absolute;
   z-index: -1;
   inset: -5px 4px 5px;
-  border: 1px solid var(--border);
+  border: 1px solid color-mix(in srgb, var(--node-tone) 22%, var(--border));
   border-radius: 8px;
-  background: var(--surface);
+  background: color-mix(in srgb, var(--node-tone) 3%, var(--surface));
   content: "";
+  pointer-events: none;
 }
 .model-node.is-repeated::after {
   z-index: -2;
   inset: -9px 8px 9px;
 }
 .model-node.is-repeated {
-  border-top: 2px solid var(--accent);
+  border-top: 2px solid var(--node-tone);
+  background:
+    linear-gradient(90deg, var(--node-tone) 0 3px, transparent 3px),
+    color-mix(in srgb, var(--node-tone) 3%, var(--surface));
+  box-shadow:
+    0 3px 0 color-mix(in srgb, var(--node-tone) 15%, transparent),
+    0 1px 3px color-mix(in srgb, var(--text) 6%, transparent);
 }
 .model-node .node-open {
   display: flex;
@@ -133,6 +171,10 @@
 }
 .node-ports > div {
   min-width: 0;
+  padding: 3px 6px;
+  border: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--surface) 78%, var(--node-tone));
 }
 .node-ports > div > span {
   display: block;
@@ -144,6 +186,7 @@
   display: block;
   margin-top: 2px;
   overflow: hidden;
+  color: var(--text);
   font-size: 12px;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -170,10 +213,19 @@
   white-space: nowrap;
 }
 .model-node.category-boundary {
+  --node-tone: var(--category-input, var(--accent));
   border-radius: 8px;
   border-style: dashed;
-  background: color-mix(in srgb, var(--soft) 55%, var(--surface));
+  background: color-mix(in srgb, var(--node-tone) 4%, var(--surface));
   box-shadow: none;
+}
+.model-node.category-boundary[data-kind="output"] {
+  --node-tone: var(--category-output, var(--accent));
+}
+.model-node.category-boundary::before {
+  inset-block: 7px;
+  width: 2px;
+  border-radius: 2px;
 }
 .category-boundary .anatomy-node-body {
   height: 58px;
@@ -199,9 +251,9 @@
   line-height: 18px;
 }
 .model-node.is-selected {
-  border-color: var(--accent);
+  border-color: var(--node-tone);
   box-shadow:
-    0 0 0 2px color-mix(in srgb, var(--accent) 10%, transparent),
+    0 0 0 2px color-mix(in srgb, var(--node-tone) 14%, transparent),
     0 1px 4px color-mix(in srgb, var(--text) 5%, transparent);
 }
 .model-node.is-dimmed {
@@ -217,7 +269,7 @@
   background: var(--muted);
 }
 .model-node.is-selected .react-flow__handle {
-  background: var(--accent);
+  background: var(--node-tone);
 }
 .graph-canvas.is-overview .model-node .anatomy-node-facts {
   visibility: hidden;

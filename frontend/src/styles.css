@@ -31,6 +31,12 @@
   --success-bg: #edf8f1;
   --shadow: 0 8px 28px #1721260b;
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --category-input: #316779;
+  --category-transform: #535a8b;
+  --category-repeat: #8b602a;
+  --category-output: #236d57;
+  --pattern-ink: #91a5af;
+  --surface-raised: 0 1px 2px #17212606, 0 8px 28px #17212606;
   --teal: var(--accent);
   --violet: var(--accent);
 }
@@ -50,6 +56,12 @@
   --success: #8bdab1;
   --success-bg: #1e3229;
   --shadow: 0 8px 28px #0003;
+  --category-input: #9accd9;
+  --category-transform: #c1bce8;
+  --category-repeat: #e3bf87;
+  --category-output: #91d2b3;
+  --pattern-ink: #586971;
+  --surface-raised: 0 1px 2px #0002, 0 8px 28px #0002;
 }
 * {
   box-sizing: border-box;
@@ -339,7 +351,9 @@ summary::marker {
   animation: menu-enter 180ms var(--ease-out);
 }
 .menu-content[data-state="closed"] {
-  animation: menu-leave 120ms ease-in;
+  /* Release Radix's closing focus scope before another export opens the menu. */
+  animation: none;
+  pointer-events: none;
 }
 @keyframes menu-enter {
   from {
@@ -349,12 +363,6 @@ summary::marker {
   to {
     opacity: 1;
     transform: translateY(0) scale(1);
-  }
-}
-@keyframes menu-leave {
-  to {
-    opacity: 0;
-    transform: translateY(-2px) scale(0.98);
   }
 }
 @keyframes content-enter {
@@ -449,8 +457,7 @@ summary::marker {
   flex: 0 0 16px;
   place-items: center;
 }
-.theme-glyph svg,
-.copy-glyph svg {
+.theme-glyph svg {
   position: absolute;
   opacity: 0;
   transform: scale(0.65) rotate(-30deg);
@@ -460,9 +467,7 @@ summary::marker {
 }
 .theme-glyph[data-theme="light"] .theme-light,
 .theme-glyph[data-theme="dark"] .theme-dark,
-.theme-glyph[data-theme="system"] .theme-system,
-.copy-control:not([data-state="copied"]) .copy-idle,
-.copy-control[data-state="copied"] .copy-success {
+.theme-glyph[data-theme="system"] .theme-system {
   opacity: 1;
   transform: scale(1) rotate(0);
 }
@@ -1241,10 +1246,11 @@ summary::marker {
   font-size: 12px;
 }
 .evidence-item {
-  border: 0;
-  border-bottom: 1px solid var(--border);
-  padding: 16px 0;
-  margin: 12px 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px;
+  margin: 8px 0;
+  background: var(--surface);
   font-size: 13px;
 }
 .evidence-item summary {
@@ -1252,6 +1258,8 @@ summary::marker {
   align-items: center;
   gap: 8px;
   overflow-wrap: anywhere;
+  min-height: 24px;
+  cursor: pointer;
 }
 .evidence-kind {
   font-size: 11px;
@@ -1262,7 +1270,8 @@ summary::marker {
   border-radius: 3px;
 }
 .evidence-direct {
-  color: var(--accent);
+  color: var(--category-output);
+  background: color-mix(in srgb, var(--category-output) 8%, var(--surface));
 }
 .evidence-unknown {
   color: var(--warning);
@@ -1691,6 +1700,7 @@ summary::marker {
   .panel-tabs > [role="tab"],
   .model-facts > summary,
   .inspector-definition > summary,
+  .evidence-item > summary,
   .menu-item {
     min-height: 44px;
   }

@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { retryQuery } from "./api/client";
 import { App } from "./App";
+import { LazyMotion } from "motion/react";
 import "@xyflow/react/dist/style.css";
 import "@fontsource-variable/inter";
 import "@fontsource-variable/jetbrains-mono";
@@ -18,10 +19,16 @@ const client = new QueryClient({
     mutations: { retry: false },
   },
 });
+const loadMotionFeatures = () =>
+  import("./components/vendor/motion-features").then(
+    (module) => module.default,
+  );
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <QueryClientProvider client={client}>
-      <App />
+      <LazyMotion features={loadMotionFeatures} strict>
+        <App />
+      </LazyMotion>
     </QueryClientProvider>
   </StrictMode>,
 );

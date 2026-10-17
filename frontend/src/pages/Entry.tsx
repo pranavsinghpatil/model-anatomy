@@ -7,6 +7,7 @@ import { ErrorNotice, Loading, Status } from "../components/Common";
 import { Button, ModeControl, ThemeControl } from "../components/ui";
 import { usePreferences } from "../state/preferences";
 import { useRecent, useService } from "../state/queries";
+import { DotPattern } from "../components/vendor/dot-pattern";
 import "./entry.css";
 
 const examples = [
@@ -86,6 +87,9 @@ export function Start() {
 
   return (
     <div className="entry-page">
+      <div className="entry-backdrop" aria-hidden="true">
+        <DotPattern width={22} height={22} cr={0.8} />
+      </div>
       <EntryHeader />
       <main id="main" tabIndex={-1} className="entry-main">
         <section className="entry-launch" aria-labelledby="entry-title">
@@ -106,19 +110,24 @@ export function Start() {
               </div>
               <ModeControl />
             </div>
-            <div
-              className={`entry-live-service ${health.isPending ? "is-checking" : available ? "is-ready" : "is-unavailable"}`}
-              role="status"
-              aria-live="polite"
-            >
-              <span className="entry-live-dot" aria-hidden="true" />
-              <span>
-                {health.isPending
-                  ? "Checking service availability"
-                  : available
-                    ? "Inspection service ready"
-                    : "Inspection service unavailable"}
-              </span>
+            <div className="entry-field-heading">
+              <label className="entry-field-label" htmlFor="model-input">
+                Hugging Face model
+              </label>
+              <div
+                className={`entry-live-service ${health.isPending ? "is-checking" : available ? "is-ready" : "is-unavailable"}`}
+                role="status"
+                aria-live="polite"
+              >
+                <span className="entry-live-dot" aria-hidden="true" />
+                <span>
+                  {health.isPending
+                    ? "Checking service availability"
+                    : available
+                      ? "Inspection service ready"
+                      : "Inspection service unavailable"}
+                </span>
+              </div>
             </div>
             <form
               onSubmit={(event) => {
@@ -127,9 +136,6 @@ export function Start() {
                   create.mutate(model.trim());
               }}
             >
-              <label className="entry-field-label" htmlFor="model-input">
-                Hugging Face model
-              </label>
               <div className="entry-input-row">
                 <input
                   id="model-input"
@@ -168,6 +174,7 @@ export function Start() {
                 {examples.map((example) => (
                   <button
                     className="entry-example-chip"
+                    aria-pressed={model === example.id}
                     type="button"
                     key={example.id}
                     title={example.id}

@@ -342,3 +342,16 @@ facts in rows. Use transform/opacity feedback for mode selection, copy/theme
 icons, menus and panels, honoring reduced motion. Fanout and Smooth UI inform
 the presentation; reconstruction and API contracts remain unchanged. See the
 compact-scale section of `WHITE_WORKSPACE.md` for evidence and limitations.
+
+## D-034 - Use sourced free components and restrained material separation
+**2026-10-17 - user-directed component refinement**
+
+Adapt Magic UI DotPattern and SmoothUI Button Copy / Fluid Hover Highlight from
+pinned MIT sources. Keep the compact workspace, normal browser zoom, solid reading
+surfaces and explicit evidence. Use a static pattern outside technical content,
+subtle panel depth, labeled graph category cues and honest clipboard feedback.
+Load Motion's DOM features separately and honor reduced motion. No Pro components,
+decorative model facts, backend changes or new routes are introduced. The live
+browser audit resumed after a connection-error/security blocker cleared; six
+captured steps and deterministic regression checks are separate evidence.
+See `INTERFACE_COMPONENTS.md`.

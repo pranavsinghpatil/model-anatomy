@@ -27,6 +27,11 @@ import { useRecent, useService } from "../state/queries";
 import { usePreferences } from "../state/preferences";
 import { useWorkspaceSession, type Crumb } from "../state/workspace";
 import { count, dimensionCount } from "../format";
+import { DotPattern } from "../components/vendor/dot-pattern";
+import {
+  FluidHoverHighlight,
+  type HighlightRect,
+} from "../components/vendor/fluid-hover-highlight";
 import "./workspace.css";
 const views = ["architecture", "overview", "artifacts", "report"] as const;
 const formats: { format: ExportFormat; label: string }[] = [
@@ -52,6 +57,18 @@ function Workspace({ id }: { id: string }) {
   const [citation, setCitation] = useState<Citation | null>(null);
   const [exporting, setExporting] = useState<ExportFormat | null>(null);
   const [exportError, setExportError] = useState<Error | null>(null);
+  const viewNav = useRef<HTMLElement>(null);
+  const [highlight, setHighlight] = useState<HighlightRect | null>(null);
+  function highlightView(target: HTMLElement) {
+    const item = target.getBoundingClientRect();
+    const nav = viewNav.current!.getBoundingClientRect();
+    setHighlight({
+      left: item.left - nav.left - 6,
+      top: 4,
+      width: item.width + 12,
+      height: nav.height - 8,
+    });
+  }
   const active = useRef(true);
   const submissionPath = useRef(window.location.pathname);
   useEffect(() => {
@@ -272,10 +289,22 @@ function Workspace({ id }: { id: string }) {
         </div>
       </header>
       <div className="workspace-viewbar">
-        <nav className="primary-views" aria-label="Workspace views">
+        <nav
+          className="primary-views"
+          aria-label="Workspace views"
+          ref={viewNav}
+          onPointerLeave={() => setHighlight(null)}
+          onBlur={(event) => {
+            if (!event.currentTarget.contains(event.relatedTarget))
+              setHighlight(null);
+          }}
+        >
+          <FluidHoverHighlight rect={highlight} />
           {views.map((item) => (
             <Link
               key={item}
+              onPointerEnter={(event) => highlightView(event.currentTarget)}
+              onFocus={(event) => highlightView(event.currentTarget)}
               to={`?view=${item}`}
               aria-current={view === item ? "page" : undefined}
               aria-disabled={!ready && !artifact ? true : undefined}
@@ -347,6 +376,9 @@ function Workspace({ id }: { id: string }) {
         </div>
       </div>
       <div className="workbench-body">
+        <div className="workbench-pattern" aria-hidden="true">
+          <DotPattern width={22} height={22} cr={0.8} />
+        </div>
         <div className="workbench-main">
           {exportError && <ErrorNotice error={exportError} />}{" "}
           {cancel.error && <ErrorNotice error={cancel.error} />}{" "}

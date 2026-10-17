@@ -168,6 +168,35 @@ test("copy failure gives a manual fallback", async ({ page }) => {
   );
 });
 
+test("copy feedback resets and keyboard navigation remains usable with reduced motion", async ({
+  page,
+}) => {
+  await mockService(page);
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText: () => Promise.resolve() },
+    });
+  });
+  await openAnalysis(page, "job-test", "overview");
+  await page.getByRole("button", { name: "Copy revision" }).focus();
+  await page.getByRole("button", { name: "Copy revision" }).press("Enter");
+  await expect(page.locator(".copy-control [role='status']")).toHaveText(
+    "Copied",
+  );
+  await expect(
+    page.getByRole("button", { name: "Copy revision" }),
+  ).toBeEnabled();
+  const architecture = page
+    .getByRole("navigation", { name: "Workspace views" })
+    .getByRole("link", { name: "Architecture", exact: true });
+  await architecture.focus();
+  await architecture.press("Enter");
+  await expect(page).toHaveURL(/view=architecture/);
+  await expect(page.getByTestId("graph-canvas")).toBeVisible();
+});
+
 test("failed report export leaves an actionable error", async ({ page }) => {
   await mockService(page);
   await page.route("**/api/v1/analyses/job-test/exports/json", (route) =>

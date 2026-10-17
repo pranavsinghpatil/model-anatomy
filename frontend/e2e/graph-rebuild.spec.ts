@@ -83,6 +83,26 @@ test("fits the full graph, relayouts direction, and focuses only real neighbors"
   await page.getByText("Options", { exact: true }).click();
   await page.getByRole("button", { name: "Show detailed node cards" }).click();
   await page.getByText("Options", { exact: true }).click();
+  await expect(
+    page.locator(".model-node.density-detailed").first(),
+  ).toBeVisible();
+  await expect
+    .poll(() =>
+      page.locator(".model-node.density-detailed").evaluateAll((nodes) =>
+        nodes
+          .filter((node) => {
+            const card = node.getBoundingClientRect();
+            const last =
+              node.querySelector(".node-open") ??
+              node.querySelector(".node-footer");
+            return (
+              last && last.getBoundingClientRect().bottom > card.bottom + 1
+            );
+          })
+          .map((node) => node.getAttribute("data-node-id")),
+      ),
+    )
+    .toEqual([]);
   await page.getByRole("link", { name: "Overview", exact: true }).click();
   await page.getByRole("link", { name: "Architecture", exact: true }).click();
   await page.getByText("Options", { exact: true }).click();

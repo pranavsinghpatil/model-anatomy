@@ -4,8 +4,9 @@ import * as Dialog from "@radix-ui/react-dialog";
 import { cva, type VariantProps } from "class-variance-authority";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
-import { Check, Copy, Monitor, Moon, Sun, X } from "lucide-react";
-import { useState, type ButtonHTMLAttributes, type ReactNode } from "react";
+import { Check, Monitor, Moon, Sun, X } from "lucide-react";
+import { type ButtonHTMLAttributes, type ReactNode } from "react";
+import { ButtonCopy } from "./vendor/button-copy";
 import { usePreferences } from "../state/preferences";
 export const cn = (...inputs: ClassValue[]) => twMerge(clsx(inputs));
 const variants = cva("button", {
@@ -184,31 +185,5 @@ export function CopyButton({
   value: string;
   label?: string;
 }) {
-  const [state, setState] = useState<"idle" | "copied" | "failed">("idle");
-  return (
-    <span className="copy-control" data-state={state}>
-      <Button
-        variant="ghost"
-        aria-label={label}
-        onClick={() => {
-          Promise.resolve()
-            .then(() => navigator.clipboard.writeText(value))
-            .then(() => setState("copied"))
-            .catch(() => setState("failed"));
-        }}
-      >
-        <span className="copy-glyph" aria-hidden="true">
-          <Copy size={14} className="copy-idle" />
-          <Check size={14} className="copy-success" />
-        </span>
-      </Button>
-      <span role="status">
-        {state === "copied"
-          ? "Copied"
-          : state === "failed"
-            ? "Copy failed. Select and copy the text."
-            : ""}
-      </span>
-    </span>
-  );
+  return <ButtonCopy key={value} value={value} label={label} />;
 }

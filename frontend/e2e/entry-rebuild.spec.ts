@@ -3,7 +3,7 @@ import { analysisFor, mockService } from "./service";
 
 test("root and app routes open the same immediately usable entry", async ({
   page,
-}) => {
+}, testInfo) => {
   await mockService(page);
 
   for (const path of ["/", "/app"]) {
@@ -47,6 +47,10 @@ test("root and app routes open the same immediately usable entry", async ({
     );
     await expect(page.getByTestId("graph-canvas")).toHaveCount(0);
   }
+  await page.screenshot({
+    path: testInfo.outputPath("entry-fixture-preview.png"),
+    animations: "disabled",
+  });
 });
 
 test("model examples fill the input without submitting", async ({ page }) => {
@@ -62,6 +66,19 @@ test("model examples fill the input without submitting", async ({ page }) => {
   await expect(
     page.getByLabel("Hugging Face model", { exact: true }),
   ).toHaveValue("HuggingFaceTB/SmolLM2-135M");
+  await expect(
+    page.getByRole("button", {
+      name: "Fill model field with HuggingFaceTB/SmolLM2-135M",
+    }),
+  ).toHaveAttribute("aria-pressed", "true");
+  await page
+    .getByLabel("Hugging Face model", { exact: true })
+    .fill("org/another-model");
+  await expect(
+    page.getByRole("button", {
+      name: "Fill model field with HuggingFaceTB/SmolLM2-135M",
+    }),
+  ).toHaveAttribute("aria-pressed", "false");
   await expect(page.getByTestId("graph-canvas")).toHaveCount(0);
   expect(
     requests.some(
