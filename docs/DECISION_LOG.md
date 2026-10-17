@@ -404,3 +404,19 @@ Overhaul the light theme from a washed-out, flat white-on-white presentation int
 - **Deep Obsidian Ink Typography**: Elevate light theme text to deep obsidian ink (`#090d16`) and secondary labels to slate blue (`#5b677a`), ensuring razor-sharp contrast across all surfaces.
 - **Preserved Contracts**: Dark theme remains untouched; all Playwright tests, accessibility labels, and backend/IR contracts remain 100% intact.
 
+## D-039 - Default-on workspace sidebars, inspector executive overview, and enriched light theme studio aesthetics
+**2026-10-17 - explicit user request**
+
+Resolve UX disconnect and elevate the light theme into a modern, tactile research engineering studio:
+- **Default-On Workspace Sidebars**: Update `useWorkspaceSession` and `ArchitectureWorkspace` breakpoint so both the Component Navigator (left) and Inspector (right) default to **open** on desktop and laptop screens (`>= 1024px`), eliminating the empty floating void and presenting an immediate, dense, professional IDE experience.
+- **Inspector Executive Model Architecture Overview**: Replace the bare empty state in `Inspector` with a rich overview card displaying the Model ID, Architecture pill, Parameter Count, Status badge, Tensor count, Revision hash, and an interactive component selection guide.
+- **Luminous Node & Canvas Aesthetics**:
+  - Add multi-stage specular drop shadows and subtle tone-aware ambient illumination to `.model-node`.
+  - Refine `.anatomy-node-icon` with jewel-toned container badges and crisp drop shadows.
+  - Upgrade `.model-node.is-repeated` into an architectural 3D card stack with warm amber borders (`#f59e0b`), golden amber top border accent, and metallic gold repetition pill.
+  - Laser-contour input and output boundary nodes with cyan and emerald dashed framing.
+  - Introduce Segmented Control pill tabs in the Inspector and header dock.
+  - Add frosted glass acrylic styling with hairline borders and top specular bevels.
+- **Landing Page Polish**: Add an announcement studio badge (`Tensor & Architecture Inspection Studio`), refine submission card elevation, and sharpen typography.
+- **Full Verification**: 100% passing Playwright test suite (10/10) across desktop and mobile suites.
+

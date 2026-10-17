@@ -93,6 +93,10 @@ export function Start() {
         <section className="entry-launch" aria-labelledby="entry-title">
           <div className="entry-primary">
             <div className="entry-heading">
+              <div className="entry-announcement-badge">
+                <span className="entry-badge-dot" />
+                <span>Tensor &amp; Architecture Inspection Studio</span>
+              </div>
               <h1 id="entry-title">See how a model is built.</h1>
               <p className="entry-lede">
                 Inspect architecture, tensors and evidence from an open-weight

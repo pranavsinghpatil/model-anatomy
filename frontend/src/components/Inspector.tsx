@@ -230,13 +230,57 @@ export function Inspector({
     );
   if (!node)
     return (
-      <div className="panel-empty">
-        <FileSearch size={28} />
-        <strong>Choose a component</strong>
-        <p>
-          Select a component in the graph or component list to inspect its
-          shapes, tensors and evidence.
-        </p>
+      <div className="panel-empty model-overview-panel" data-testid="inspector">
+        <div className="overview-header-badge">
+          <Layers size={14} />
+          <span>Model Architecture Overview</span>
+        </div>
+        <h3 className="overview-model-title">{analysis.model_id}</h3>
+        {analysis.architecture && (
+          <p className="overview-model-arch">
+            <code>{analysis.architecture}</code>
+          </p>
+        )}
+        <div className="overview-metrics-grid">
+          {analysis.parameter_count !== null &&
+          analysis.parameter_count !== undefined ? (
+            <div className="overview-metric-card">
+              <span className="overview-metric-label">Parameters</span>
+              <strong className="overview-metric-value">
+                {count(analysis.parameter_count)}
+              </strong>
+            </div>
+          ) : null}
+          {analysis.status ? (
+            <div className="overview-metric-card">
+              <span className="overview-metric-label">Status</span>
+              <strong className="overview-metric-value">{analysis.status}</strong>
+            </div>
+          ) : null}
+          {analysis.inspection?.tensor_count ? (
+            <div className="overview-metric-card">
+              <span className="overview-metric-label">Tensors</span>
+              <strong className="overview-metric-value">
+                {analysis.inspection.tensor_count}
+              </strong>
+            </div>
+          ) : null}
+          {analysis.revision ? (
+            <div className="overview-metric-card">
+              <span className="overview-metric-label">Revision</span>
+              <strong className="overview-metric-value">
+                {analysis.revision.slice(0, 8)}
+              </strong>
+            </div>
+          ) : null}
+        </div>
+        <div className="overview-hint-box">
+          <FileSearch size={15} />
+          <span>
+            Select any component in the graph or component tree to inspect its
+            shapes, weights, and tensor byte offsets.
+          </span>
+        </div>
       </div>
     );
   const resolved = detail.data?.node ?? node;

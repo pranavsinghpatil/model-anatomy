@@ -746,3 +746,113 @@
     min-height: 44px;
   }
 }
+
+.model-overview-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 20px 18px;
+  text-align: left;
+  align-items: stretch;
+}
+.overview-header-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: fit-content;
+  padding: 3px 9px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 25%, transparent);
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+:root[data-theme="light"] .overview-header-badge {
+  background: #eef2ff;
+  border-color: #c7d2fe;
+  color: #4338ca;
+}
+.overview-model-title {
+  font-size: 17px;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  color: var(--text);
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.overview-model-arch {
+  margin: 0;
+}
+.overview-model-arch code {
+  font-size: 12px;
+  padding: 3px 7px;
+  border-radius: 5px;
+  background: var(--soft);
+  border: 1px solid var(--border);
+  color: var(--muted);
+}
+:root[data-theme="light"] .overview-model-arch code {
+  background: #f1f5f9;
+  border-color: #e2e8f0;
+  color: #334155;
+}
+.overview-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 4px;
+}
+.overview-metric-card {
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--soft);
+  border: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+:root[data-theme="light"] .overview-metric-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+}
+.overview-metric-label {
+  font-size: 10.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+.overview-metric-value {
+  font-size: 15px;
+  font-weight: 700;
+  font-family: var(--font-mono, monospace);
+  color: var(--text);
+  letter-spacing: -0.02em;
+}
+.overview-hint-box {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--accent) 20%, transparent);
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+  margin-top: 8px;
+}
+:root[data-theme="light"] .overview-hint-box {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  color: #475569;
+}
+.overview-hint-box svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: var(--accent);
+}

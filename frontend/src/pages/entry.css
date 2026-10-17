@@ -90,6 +90,39 @@
   min-width: 0;
 }
 
+.entry-announcement-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 12px;
+  border-radius: 9999px;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  margin-bottom: 12px;
+  border: 1px solid rgba(99, 102, 241, 0.25);
+  background: rgba(99, 102, 241, 0.08);
+  color: var(--accent);
+  box-shadow: 0 0 12px rgba(99, 102, 241, 0.12);
+}
+:root[data-theme="light"] .entry-announcement-badge {
+  background: linear-gradient(180deg, #ffffff 0%, #eef2ff 100%);
+  border: 1px solid #c7d2fe;
+  color: #4338ca;
+  box-shadow: 0 2px 6px rgba(67, 56, 202, 0.1), inset 0 1px 0 #ffffff;
+}
+.entry-badge-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #6366f1;
+  box-shadow: 0 0 6px #6366f1;
+}
+:root[data-theme="light"] .entry-badge-dot {
+  background: #4f46e5;
+  box-shadow: 0 0 6px #6366f1;
+}
+
 .entry-heading h1 {
   max-width: 30ch;
   font-size: clamp(28px, 3vw, 36px);
@@ -121,11 +154,12 @@
 }
 :root[data-theme="light"] .entry-submit {
   background: #ffffff;
-  border: 1px solid #d1d9e6;
+  border: 1px solid rgba(203, 213, 225, 0.9);
   box-shadow:
-    inset 0 1px 0 #ffffff,
-    0 1px 3px rgba(15, 23, 42, 0.04),
-    0 16px 36px -4px rgba(15, 23, 42, 0.08);
+    0 1px 2px rgba(15, 23, 42, 0.04),
+    0 20px 48px -8px rgba(15, 23, 42, 0.09),
+    0 0 0 1px rgba(15, 23, 42, 0.04),
+    inset 0 1.5px 0 #ffffff;
 }
 
 .entry-submit-heading {
@@ -425,25 +459,27 @@
   transform: translateY(-1px);
 }
 :root[data-theme="light"] .entry-bento-card {
-  background: #ffffff;
-  border: 1px solid #d1d9e6;
+  background: linear-gradient(180deg, #ffffff 0%, #fafbfc 100%);
+  border: 1px solid #cbd5e1;
   box-shadow:
-    inset 0 1px 0 #ffffff,
     0 1px 3px rgba(15, 23, 42, 0.04),
-    0 4px 14px -2px rgba(15, 23, 42, 0.06);
+    0 8px 20px -4px rgba(15, 23, 42, 0.07),
+    inset 0 1.5px 0 #ffffff;
 }
 :root[data-theme="light"] .entry-bento-card:hover {
+  background: #ffffff;
   border-color: #818cf8;
   box-shadow:
-    inset 0 1px 0 #ffffff,
     0 1px 3px rgba(15, 23, 42, 0.04),
-    0 10px 24px -4px rgba(79, 70, 229, 0.15);
+    0 14px 28px -4px rgba(79, 70, 229, 0.16),
+    inset 0 1.5px 0 #ffffff;
+  transform: translateY(-2px);
 }
 :root[data-theme="light"] .entry-bento-icon {
-  background: #eef2ff;
+  background: linear-gradient(180deg, #eef2ff 0%, #e0e7ff 100%);
   border: 1px solid #c7d2fe;
   color: #4338ca;
-  box-shadow: 0 1px 3px rgba(67, 56, 202, 0.1);
+  box-shadow: 0 2px 6px rgba(67, 56, 202, 0.12), inset 0 1px 0 #ffffff;
 }
 .entry-bento-header {
   display: flex;
