@@ -21,13 +21,15 @@
     var(--surface);
 }
 :root[data-theme="light"] .graph-canvas {
-  --graph-grid: rgba(148, 163, 184, 0.24);
-  --graph-grid-major: transparent;
-  --graph-edge: #cbd5e1;
+  --graph-grid: rgba(99, 102, 241, 0.12);
+  --graph-grid-major: rgba(15, 23, 42, 0.035);
+  --graph-edge: #94a3b8;
   --graph-semantic-edge: #4f46e5;
-  --graph-mask: rgba(255, 255, 255, 0.95);
+  --graph-mask: rgba(255, 255, 255, 0.94);
   background:
-    radial-gradient(ellipse 70% 50% at 50% 15%, rgba(99, 102, 241, 0.04) 0%, transparent 65%),
+    radial-gradient(ellipse 85% 55% at 50% -8%, rgba(99, 102, 241, 0.1) 0%, rgba(56, 189, 248, 0.04) 40%, transparent 75%),
+    radial-gradient(circle at 90% 85%, rgba(168, 85, 247, 0.03) 0%, transparent 45%),
+    radial-gradient(circle at 10% 90%, rgba(16, 185, 129, 0.03) 0%, transparent 45%),
     #fafbfc;
 }
 .graph-header {

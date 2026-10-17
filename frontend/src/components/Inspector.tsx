@@ -2,11 +2,14 @@ import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import * as Tabs from "@radix-ui/react-tabs";
 import {
+  Activity,
   ArrowLeft,
   ArrowRight,
   Boxes,
   ChevronRight,
+  Cpu,
   FileSearch,
+  GitCommit,
   Layers,
 } from "lucide-react";
 import { api } from "../api/client";
@@ -244,30 +247,45 @@ export function Inspector({
         <div className="overview-metrics-grid">
           {analysis.parameter_count !== null &&
           analysis.parameter_count !== undefined ? (
-            <div className="overview-metric-card">
-              <span className="overview-metric-label">Parameters</span>
+            <div className="overview-metric-card" data-metric="parameters">
+              <div className="metric-header-row">
+                <span className="overview-metric-label">Parameters</span>
+                <Cpu size={14} className="metric-icon" />
+              </div>
               <strong className="overview-metric-value">
                 {count(analysis.parameter_count)}
               </strong>
             </div>
           ) : null}
           {analysis.status ? (
-            <div className="overview-metric-card">
-              <span className="overview-metric-label">Status</span>
-              <strong className="overview-metric-value">{analysis.status}</strong>
+            <div className="overview-metric-card" data-metric="status">
+              <div className="metric-header-row">
+                <span className="overview-metric-label">Status</span>
+                <Activity size={14} className="metric-icon" />
+              </div>
+              <strong className="overview-metric-value status-value">
+                <span className="status-indicator-dot" />
+                {analysis.status}
+              </strong>
             </div>
           ) : null}
           {analysis.inspection?.tensor_count ? (
-            <div className="overview-metric-card">
-              <span className="overview-metric-label">Tensors</span>
+            <div className="overview-metric-card" data-metric="tensors">
+              <div className="metric-header-row">
+                <span className="overview-metric-label">Tensors</span>
+                <Layers size={14} className="metric-icon" />
+              </div>
               <strong className="overview-metric-value">
                 {analysis.inspection.tensor_count}
               </strong>
             </div>
           ) : null}
           {analysis.revision ? (
-            <div className="overview-metric-card">
-              <span className="overview-metric-label">Revision</span>
+            <div className="overview-metric-card" data-metric="revision">
+              <div className="metric-header-row">
+                <span className="overview-metric-label">Revision</span>
+                <GitCommit size={14} className="metric-icon" />
+              </div>
               <strong className="overview-metric-value">
                 {analysis.revision.slice(0, 8)}
               </strong>

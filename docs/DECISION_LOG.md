@@ -436,3 +436,28 @@ Eliminate dated, cluttered graph paper visual patterns and transition to an ultr
 - **Bento Overview Card**: Enriched the executive scorecard with stat cards, hover elevation, and interactive discovery banner.
 - **Verification**: 10/10 Playwright tests passing cleanly across desktop and mobile suites.
 
+## D-041 - Aceternity spotlight backdrop, Bento scorecard with pulsing status, and specular porcelain component architecture
+**2026-10-17 - explicit user request**
+
+Incorporate design inspirations from the user-provided design repository (Aceternity UI, BentoGrids, 21st.dev) to completely transform the light theme into a smooth, modern, rich, and minimal research engineering studio:
+- **Aceternity Spotlight Canvas & Backdrop**:
+  - Replaced flat white with a warm porcelain slate canvas (`#f8fafc`) illuminated by an Aceternity-inspired ambient spotlight beam (`radial-gradient(ellipse 85% 55% at 50% -8%, rgba(99, 102, 241, 0.1) 0%, rgba(56, 189, 248, 0.04) 40%, transparent 75%)`).
+  - Layered ultra-fine architectural grid lines (88px spacing at `rgba(15, 23, 42, 0.035)`) with precision micro-dots (22px spacing at `rgba(99, 102, 241, 0.12)`) for depth without visual noise.
+- **Specular Porcelain Node Cards**:
+  - Eliminated dated vertical left strips in favor of top specular accent indicators (`border-top: 2.5px solid var(--node-tone)`), mirroring the clean, modern component design of Linear and Raycast.
+  - Re-styled category headers (`.node-kind`) as crisp uppercase pill micro-badges with jewel icon backgrounds.
+  - Enhanced repeated decoder blocks (`.is-repeated`) with an isometric 3D stacked-card depth, warm golden amber borders (`#f59e0b`/`#d97706`), and a metallic gold repeat counter pill.
+  - Replaced wireframe dashed outlines on Input and Output boundary nodes with solid, polished pill borders (`#7dd3fc` and `#6ee7b7`) and delicate gradient tints.
+  - Refined SVG connection handles with interactive scale (`1.15`) and radiant indigo hover glow.
+- **BentoGrids Executive Scorecard with Pulsing Status**:
+  - Transformed the Model Architecture Overview in `Inspector.tsx` into a modern Bento grid scorecard featuring dedicated micro-icons (`Cpu`, `Activity`, `Layers`, `GitCommit`).
+  - Added a live pulsing emerald status indicator dot (`.status-indicator-dot` with `@keyframes pulse-dot`).
+  - Added an interactive discovery card with subtle gradient background and search icon.
+- **Component Navigator Smooth Micro-Interactions**:
+  - Added smooth horizontal drift (`transform: translateX(2.5px)`) on item hover and an active indicator gradient for selected components.
+- **Verification**:
+  - Full Vite production build succeeded with zero errors (2,332 modules).
+  - 100% of the Playwright e2e test suite passed (10/10 tests across desktop and mobile).
+  - High-resolution visual screenshots captured in light mode verifying studio canvas, selected node tensor details, and the landing page.
+
+
