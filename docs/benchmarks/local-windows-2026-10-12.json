@@ -1,0 +1,826 @@
+{
+  "timestamp_utc": "2026-10-12T08:53:05Z",
+  "platform": "win32",
+  "python": "3.11.4",
+  "conditions": {
+    "http_admissions_are_opt_in": true,
+    "http_admissions_expected": 12,
+    "visitor_sessions_are_independent": true,
+    "runtime_or_report_mocks": false
+  },
+  "engine": [
+    {
+      "model_id": "openai-community/gpt2",
+      "revision": "607a30d783dfa663caf39e06633721c8d4cfcd7e",
+      "seconds": 8.537055499968119,
+      "peak_process_tree_rss_bytes": 329768960,
+      "weight_payload_bytes": 0,
+      "tensor_count": 160,
+      "engine_version": "2026.10.12.2",
+      "coverage": {
+        "semantic_coverage": 1.0,
+        "module_semantic_coverage": 1.0,
+        "checkpoint_parameter_coverage": 1.0,
+        "tensor_shape_coverage": 1.0
+      },
+      "warnings": [],
+      "conditions": "Fresh Python process; provider/OS caches not flushed; sampled RSS every 25 ms"
+    },
+    {
+      "model_id": "HuggingFaceTB/SmolLM2-135M",
+      "revision": "93efa2f097d58c2a74874c7e644dbc9b0cee75a2",
+      "seconds": 10.442506200051866,
+      "peak_process_tree_rss_bytes": 331464704,
+      "weight_payload_bytes": 0,
+      "tensor_count": 272,
+      "engine_version": "2026.10.12.2",
+      "coverage": {
+        "semantic_coverage": 1.0,
+        "module_semantic_coverage": 1.0,
+        "checkpoint_parameter_coverage": 1.0,
+        "tensor_shape_coverage": 1.0
+      },
+      "warnings": [],
+      "conditions": "Fresh Python process; provider/OS caches not flushed; sampled RSS every 25 ms"
+    }
+  ],
+  "http_benchmark": {
+    "admissions": [
+      {
+        "visitor": 0,
+        "purpose": "primary",
+        "id": "1a16d448c9b3443db1900e4fec26c849",
+        "model_id": "HuggingFaceTB/SmolLM2-135M",
+        "revision": "93efa2f097d58c2a74874c7e644dbc9b0cee75a2",
+        "status": "completed",
+        "cached": false,
+        "root_graph_id": "overview",
+        "seconds": 8.658580199931748,
+        "engine_version": "2026.10.12.2",
+        "coverage": {
+          "semantic_coverage": 1.0,
+          "module_semantic_coverage": 1.0,
+          "checkpoint_parameter_coverage": 1.0,
+          "tensor_shape_coverage": 1.0
+        },
+        "quality": {
+          "semantic_coverage": 1.0,
+          "module_semantic_coverage": 1.0,
+          "checkpoint_parameter_coverage": 1.0,
+          "tensor_shape_coverage": 1.0,
+          "unknown_nodes": 0,
+          "unmapped_checkpoint_tensors": 0,
+          "forward_executed": false,
+          "runtime_trace_available": false,
+          "mode": "static"
+        },
+        "warnings": []
+      },
+      {
+        "visitor": 0,
+        "purpose": "primary_cache_check",
+        "id": "541d7d9dd9ed4efc8c3d88096e85071f",
+        "model_id": "HuggingFaceTB/SmolLM2-135M",
+        "revision": "93efa2f097d58c2a74874c7e644dbc9b0cee75a2",
+        "status": "completed",
+        "cached": true,
+        "root_graph_id": "overview",
+        "seconds": 1.8963974999496713,
+        "engine_version": "2026.10.12.2",
+        "coverage": {
+          "semantic_coverage": 1.0,
+          "module_semantic_coverage": 1.0,
+          "checkpoint_parameter_coverage": 1.0,
+          "tensor_shape_coverage": 1.0
+        },
+        "quality": {
+          "semantic_coverage": 1.0,
+          "module_semantic_coverage": 1.0,
+          "checkpoint_parameter_coverage": 1.0,
+          "tensor_shape_coverage": 1.0,
+          "unknown_nodes": 0,
+          "unmapped_checkpoint_tensors": 0,
+          "forward_executed": false,
+          "runtime_trace_available": false,
+          "mode": "static"
+        },
+        "warnings": []
+      },
+      {
+        "visitor": 1,
+        "purpose": "primary",
+        "id": "d99fa6de19c8439eaa2c5b7a7a935c43",
+        "model_id": "HuggingFaceTB/SmolLM2-135M",
+        "revision": "93efa2f097d58c2a74874c7e644dbc9b0cee75a2",
+        "status": "completed",
+        "cached": true,
+        "root_graph_id": "overview",
+        "seconds": 2.152632199926302,
+        "engine_version": "2026.10.12.2",
+        "coverage": {
+          "semantic_coverage": 1.0,
+          "module_semantic_coverage": 1.0,
+          "checkpoint_parameter_coverage": 1.0,
+          "tensor_shape_coverage": 1.0
+        },
+        "quality": {
+          "semantic_coverage": 1.0,
+          "module_semantic_coverage": 1.0,
+          "checkpoint_parameter_coverage": 1.0,
+          "tensor_shape_coverage": 1.0,
+          "unknown_nodes": 0,
+          "unmapped_checkpoint_tensors": 0,
+          "forward_executed": false,
+          "runtime_trace_available": false,
+          "mode": "static"
+        },
+        "warnings": []
+      },
+      {
+        "visitor": 2,
+        "purpose": "primary",
+        "id": "586d66920dd6455293e2d50b4bcb6ae9",
+        "model_id": "HuggingFaceTB/SmolLM2-135M",
+        "revision": "93efa2f097d58c2a74874c7e644dbc9b0cee75a2",
+        "status": "completed",
+        "cached": true,
+        "root_graph_id": "overview",
+        "seconds": 2.13060829997994,
+        "engine_version": "2026.10.12.2",
+        "coverage": {
+          "semantic_coverage": 1.0,
+          "module_semantic_coverage": 1.0,
+          "checkpoint_parameter_coverage": 1.0,
+          "tensor_shape_coverage": 1.0
+        },
+        "quality": {
+          "semantic_coverage": 1.0,
+          "module_semantic_coverage": 1.0,
+          "checkpoint_parameter_coverage": 1.0,
+          "tensor_shape_coverage": 1.0,
+          "unknown_nodes": 0,
+          "unmapped_checkpoint_tensors": 0,
+          "forward_executed": false,
+          "runtime_trace_available": false,
+          "mode": "static"
+        },
+        "warnings": []
+      },
+      {
+        "visitor": 3,
+        "purpose": "primary",
+        "id": "19bedd95fbdc42e0af80a167bd49ebec",
+        "model_id": "HuggingFaceTB/SmolLM2-135M",
+        "revision": "93efa2f097d58c2a74874c7e644dbc9b0cee75a2",
+        "status": "completed",
+        "cached": true,
+        "root_graph_id": "overview",
+        "seconds": 1.2716701999306679,
+        "engine_version": "2026.10.12.2",
+        "coverage": {
+          "semantic_coverage": 1.0,
+          "module_semantic_coverage": 1.0,
+          "checkpoint_parameter_coverage": 1.0,
+          "tensor_shape_coverage": 1.0
+        },
+        "quality": {
+          "semantic_coverage": 1.0,
+          "module_semantic_coverage": 1.0,
+          "checkpoint_parameter_coverage": 1.0,
+          "tensor_shape_coverage": 1.0,
+          "unknown_nodes": 0,
+          "unmapped_checkpoint_tensors": 0,
+          "forward_executed": false,
+          "runtime_trace_available": false,
+          "mode": "static"
+        },
+        "warnings": []
+      },
+      {
+        "visitor": 4,
+        "purpose": "primary",
+        "id": "f42b99c833074a919627720ca9616e9b",
+        "model_id": "HuggingFaceTB/SmolLM2-135M",
+        "revision": "93efa2f097d58c2a74874c7e644dbc9b0cee75a2",
+        "status": "completed",
+        "cached": true,
+        "root_graph_id": "overview",
+        "seconds": 2.1428995999740437,
+        "engine_version": "2026.10.12.2",
+        "coverage": {
+          "semantic_coverage": 1.0,
+          "module_semantic_coverage": 1.0,
+          "checkpoint_parameter_coverage": 1.0,
+          "tensor_shape_coverage": 1.0
+        },
+        "quality": {
+          "semantic_coverage": 1.0,
+          "module_semantic_coverage": 1.0,
+          "checkpoint_parameter_coverage": 1.0,
+          "tensor_shape_coverage": 1.0,
+          "unknown_nodes": 0,
+          "unmapped_checkpoint_tensors": 0,
+          "forward_executed": false,
+          "runtime_trace_available": false,
+          "mode": "static"
+        },
+        "warnings": []
+      },
+      {
+        "visitor": 5,
+        "purpose": "primary",
+        "id": "7de76a2ac8144d2290c6634a17ad393d",
+        "model_id": "HuggingFaceTB/SmolLM2-135M",
+        "revision": "93efa2f097d58c2a74874c7e644dbc9b0cee75a2",
+        "status": "completed",
+        "cached": true,
+        "root_graph_id": "overview",
+        "seconds": 2.1225930999498814,
+        "engine_version": "2026.10.12.2",
+        "coverage": {
+          "semantic_coverage": 1.0,
+          "module_semantic_coverage": 1.0,
+          "checkpoint_parameter_coverage": 1.0,
+          "tensor_shape_coverage": 1.0
+        },
+        "quality": {
+          "semantic_coverage": 1.0,
+          "module_semantic_coverage": 1.0,
+          "checkpoint_parameter_coverage": 1.0,
+          "tensor_shape_coverage": 1.0,
+          "unknown_nodes": 0,
+          "unmapped_checkpoint_tensors": 0,
+          "forward_executed": false,
+          "runtime_trace_available": false,
+          "mode": "static"
+        },
+        "warnings": []
+      },
+      {
+        "visitor": 6,
+        "purpose": "primary",
+        "id": "96adf7491bf14a939d838fd6ac1dc7e7",
+        "model_id": "HuggingFaceTB/SmolLM2-135M",
+        "revision": "93efa2f097d58c2a74874c7e644dbc9b0cee75a2",
+        "status": "completed",
+        "cached": true,
+        "root_graph_id": "overview",
+        "seconds": 1.2894331999123096,
+        "engine_version": "2026.10.12.2",
+        "coverage": {
+          "semantic_coverage": 1.0,
+          "module_semantic_coverage": 1.0,
+          "checkpoint_parameter_coverage": 1.0,
+          "tensor_shape_coverage": 1.0
+        },
+        "quality": {
+          "semantic_coverage": 1.0,
+          "module_semantic_coverage": 1.0,
+          "checkpoint_parameter_coverage": 1.0,
+          "tensor_shape_coverage": 1.0,
+          "unknown_nodes": 0,
+          "unmapped_checkpoint_tensors": 0,
+          "forward_executed": false,
+          "runtime_trace_available": false,
+          "mode": "static"
+        },
+        "warnings": []
+      },
+      {
+        "visitor": 7,
+        "purpose": "primary",
+        "id": "155371c5cc9e4027ab46ed2993abdf54",
+        "model_id": "HuggingFaceTB/SmolLM2-135M",
+        "revision": "93efa2f097d58c2a74874c7e644dbc9b0cee75a2",
+        "status": "completed",
+        "cached": true,
+        "root_graph_id": "overview",
+        "seconds": 2.1400479999138042,
+        "engine_version": "2026.10.12.2",
+        "coverage": {
+          "semantic_coverage": 1.0,
+          "module_semantic_coverage": 1.0,
+          "checkpoint_parameter_coverage": 1.0,
+          "tensor_shape_coverage": 1.0
+        },
+        "quality": {
+          "semantic_coverage": 1.0,
+          "module_semantic_coverage": 1.0,
+          "checkpoint_parameter_coverage": 1.0,
+          "tensor_shape_coverage": 1.0,
+          "unknown_nodes": 0,
+          "unmapped_checkpoint_tensors": 0,
+          "forward_executed": false,
+          "runtime_trace_available": false,
+          "mode": "static"
+        },
+        "warnings": []
+      },
+      {
+        "visitor": 8,
+        "purpose": "primary",
+        "id": "28ccc1576a9a4cf38e491285efa0a174",
+        "model_id": "HuggingFaceTB/SmolLM2-135M",
+        "revision": "93efa2f097d58c2a74874c7e644dbc9b0cee75a2",
+        "status": "completed",
+        "cached": true,
+        "root_graph_id": "overview",
+        "seconds": 2.1424635000294074,
+        "engine_version": "2026.10.12.2",
+        "coverage": {
+          "semantic_coverage": 1.0,
+          "module_semantic_coverage": 1.0,
+          "checkpoint_parameter_coverage": 1.0,
+          "tensor_shape_coverage": 1.0
+        },
+        "quality": {
+          "semantic_coverage": 1.0,
+          "module_semantic_coverage": 1.0,
+          "checkpoint_parameter_coverage": 1.0,
+          "tensor_shape_coverage": 1.0,
+          "unknown_nodes": 0,
+          "unmapped_checkpoint_tensors": 0,
+          "forward_executed": false,
+          "runtime_trace_available": false,
+          "mode": "static"
+        },
+        "warnings": []
+      },
+      {
+        "visitor": 9,
+        "purpose": "primary",
+        "id": "4fb588116b754fef97b780a27a2095ef",
+        "model_id": "HuggingFaceTB/SmolLM2-135M",
+        "revision": "93efa2f097d58c2a74874c7e644dbc9b0cee75a2",
+        "status": "completed",
+        "cached": true,
+        "root_graph_id": "overview",
+        "seconds": 1.3014777000062168,
+        "engine_version": "2026.10.12.2",
+        "coverage": {
+          "semantic_coverage": 1.0,
+          "module_semantic_coverage": 1.0,
+          "checkpoint_parameter_coverage": 1.0,
+          "tensor_shape_coverage": 1.0
+        },
+        "quality": {
+          "semantic_coverage": 1.0,
+          "module_semantic_coverage": 1.0,
+          "checkpoint_parameter_coverage": 1.0,
+          "tensor_shape_coverage": 1.0,
+          "unknown_nodes": 0,
+          "unmapped_checkpoint_tensors": 0,
+          "forward_executed": false,
+          "runtime_trace_available": false,
+          "mode": "static"
+        },
+        "warnings": []
+      },
+      {
+        "visitor": "separate-gpt2-visitor",
+        "purpose": "fresh_gpt2",
+        "engine_version": "2026.10.12.2",
+        "coverage": {
+          "semantic_coverage": 1.0,
+          "module_semantic_coverage": 1.0,
+          "checkpoint_parameter_coverage": 1.0,
+          "tensor_shape_coverage": 1.0
+        },
+        "quality": {
+          "semantic_coverage": 1.0,
+          "module_semantic_coverage": 1.0,
+          "checkpoint_parameter_coverage": 1.0,
+          "tensor_shape_coverage": 1.0,
+          "unknown_nodes": 0,
+          "unmapped_checkpoint_tensors": 0,
+          "forward_executed": false,
+          "runtime_trace_available": false,
+          "mode": "static"
+        },
+        "warnings": [],
+        "model_id": "openai-community/gpt2",
+        "revision": "607a30d783dfa663caf39e06633721c8d4cfcd7e",
+        "status": "completed",
+        "cached": false
+      }
+    ],
+    "admission_count": 12,
+    "primary_cache_reuse": {
+      "verified": true,
+      "revision": "93efa2f097d58c2a74874c7e644dbc9b0cee75a2",
+      "first_admission_cached": false,
+      "second_admission_cached": true
+    },
+    "fresh_gpt2": {
+      "model_id": "openai-community/gpt2",
+      "revision": "607a30d783dfa663caf39e06633721c8d4cfcd7e",
+      "cached": false,
+      "status": "completed"
+    },
+    "http": {
+      "visitors": 10,
+      "requests_attempted": 200,
+      "requests_wholly_inside_observed_running_polls": 200,
+      "visitors_wholly_inside_observed_running_polls": 10,
+      "endpoints_wholly_inside_observed_running_polls": [
+        "analysis",
+        "component",
+        "health",
+        "root_graph"
+      ],
+      "p50_seconds": 0.08913959993515164,
+      "p95_seconds": 0.3356493000173941,
+      "max_seconds": 1.5720314000500366,
+      "p95_under_one_second": true,
+      "observed_running_window_s": {
+        "start_first_running_poll": 0.6626848999876529,
+        "end_last_running_poll": 11.625634100055322
+      },
+      "status_poll_uncertainty_s": {
+        "start_transition_bracket": 0.10891569999512285,
+        "end_transition_bracket": 0.10765939997509122,
+        "meaning": "State transitions occurred between polls; only requests wholly within running polls count"
+      },
+      "conditions": "Independent visitor cookie sessions; all visitors and all four routes required",
+      "status_observations": [
+        {
+          "status": "queued",
+          "observed_at_s": 0.55376919999253
+        },
+        {
+          "status": "running",
+          "observed_at_s": 0.6626848999876529
+        },
+        {
+          "status": "running",
+          "observed_at_s": 0.6992339000571519
+        },
+        {
+          "status": "running",
+          "observed_at_s": 0.8069338999921456
+        },
+        {
+          "status": "running",
+          "observed_at_s": 1.0187466000206769
+        },
+        {
+          "status": "running",
+          "observed_at_s": 1.2210810000542551
+        },
+        {
+          "status": "running",
+          "observed_at_s": 1.4477855000877753
+        },
+        {
+          "status": "running",
+          "observed_at_s": 1.6349040000932291
+        },
+        {
+          "status": "running",
+          "observed_at_s": 1.759344800026156
+        },
+        {
+          "status": "running",
+          "observed_at_s": 2.0306383999995887
+        },
+        {
+          "status": "running",
+          "observed_at_s": 2.192342600086704
+        },
+        {
+          "status": "running",
+          "observed_at_s": 2.3556949000339955
+        },
+        {
+          "status": "running",
+          "observed_at_s": 2.529317800072022
+        },
+        {
+          "status": "running",
+          "observed_at_s": 2.7788034999975935
+        },
+        {
+          "status": "running",
+          "observed_at_s": 3.014196400064975
+        },
+        {
+          "status": "running",
+          "observed_at_s": 3.135853399988264
+        },
+        {
+          "status": "running",
+          "observed_at_s": 3.3243354000151157
+        },
+        {
+          "status": "running",
+          "observed_at_s": 3.546299000037834
+        },
+        {
+          "status": "running",
+          "observed_at_s": 3.745214599999599
+        },
+        {
+          "status": "running",
+          "observed_at_s": 3.9784659000579268
+        },
+        {
+          "status": "running",
+          "observed_at_s": 4.186859200010076
+        },
+        {
+          "status": "running",
+          "observed_at_s": 4.382079300004989
+        },
+        {
+          "status": "running",
+          "observed_at_s": 4.586342100054026
+        },
+        {
+          "status": "running",
+          "observed_at_s": 4.70131879998371
+        },
+        {
+          "status": "running",
+          "observed_at_s": 4.813179500051774
+        },
+        {
+          "status": "running",
+          "observed_at_s": 4.921993600088172
+        },
+        {
+          "status": "running",
+          "observed_at_s": 5.040095700067468
+        },
+        {
+          "status": "running",
+          "observed_at_s": 5.148265000083484
+        },
+        {
+          "status": "running",
+          "observed_at_s": 5.258705500047654
+        },
+        {
+          "status": "running",
+          "observed_at_s": 5.367028500069864
+        },
+        {
+          "status": "running",
+          "observed_at_s": 5.4732663000468165
+        },
+        {
+          "status": "running",
+          "observed_at_s": 5.58218410005793
+        },
+        {
+          "status": "running",
+          "observed_at_s": 5.689083900069818
+        },
+        {
+          "status": "running",
+          "observed_at_s": 5.797845800057985
+        },
+        {
+          "status": "running",
+          "observed_at_s": 5.907035100040957
+        },
+        {
+          "status": "running",
+          "observed_at_s": 6.0152876999927685
+        },
+        {
+          "status": "running",
+          "observed_at_s": 6.123279900057241
+        },
+        {
+          "status": "running",
+          "observed_at_s": 6.231616700068116
+        },
+        {
+          "status": "running",
+          "observed_at_s": 6.341100500081666
+        },
+        {
+          "status": "running",
+          "observed_at_s": 6.451219500042498
+        },
+        {
+          "status": "running",
+          "observed_at_s": 6.559056900092401
+        },
+        {
+          "status": "running",
+          "observed_at_s": 6.667260300018825
+        },
+        {
+          "status": "running",
+          "observed_at_s": 6.7758719000266865
+        },
+        {
+          "status": "running",
+          "observed_at_s": 6.8857368000317365
+        },
+        {
+          "status": "running",
+          "observed_at_s": 6.993997500045225
+        },
+        {
+          "status": "running",
+          "observed_at_s": 7.10414780001156
+        },
+        {
+          "status": "running",
+          "observed_at_s": 7.212764400057495
+        },
+        {
+          "status": "running",
+          "observed_at_s": 7.32259100000374
+        },
+        {
+          "status": "running",
+          "observed_at_s": 7.43252220004797
+        },
+        {
+          "status": "running",
+          "observed_at_s": 7.53969920007512
+        },
+        {
+          "status": "running",
+          "observed_at_s": 7.648738700081594
+        },
+        {
+          "status": "running",
+          "observed_at_s": 7.756601899978705
+        },
+        {
+          "status": "running",
+          "observed_at_s": 7.865290499990806
+        },
+        {
+          "status": "running",
+          "observed_at_s": 7.974601500085555
+        },
+        {
+          "status": "running",
+          "observed_at_s": 8.083424600074068
+        },
+        {
+          "status": "running",
+          "observed_at_s": 8.193249200005084
+        },
+        {
+          "status": "running",
+          "observed_at_s": 8.300551100051962
+        },
+        {
+          "status": "running",
+          "observed_at_s": 8.408737300080247
+        },
+        {
+          "status": "running",
+          "observed_at_s": 8.516688500065356
+        },
+        {
+          "status": "running",
+          "observed_at_s": 8.626446400070563
+        },
+        {
+          "status": "running",
+          "observed_at_s": 8.73532650002744
+        },
+        {
+          "status": "running",
+          "observed_at_s": 8.844013000023551
+        },
+        {
+          "status": "running",
+          "observed_at_s": 8.952831799979322
+        },
+        {
+          "status": "running",
+          "observed_at_s": 9.059126900043339
+        },
+        {
+          "status": "running",
+          "observed_at_s": 9.167795000015758
+        },
+        {
+          "status": "running",
+          "observed_at_s": 9.280018600053154
+        },
+        {
+          "status": "running",
+          "observed_at_s": 9.393280900083482
+        },
+        {
+          "status": "running",
+          "observed_at_s": 9.504499400034547
+        },
+        {
+          "status": "running",
+          "observed_at_s": 9.615138199995272
+        },
+        {
+          "status": "running",
+          "observed_at_s": 9.7256342000328
+        },
+        {
+          "status": "running",
+          "observed_at_s": 9.837014100048691
+        },
+        {
+          "status": "running",
+          "observed_at_s": 9.948443700093776
+        },
+        {
+          "status": "running",
+          "observed_at_s": 10.061539300018921
+        },
+        {
+          "status": "running",
+          "observed_at_s": 10.170924100093544
+        },
+        {
+          "status": "running",
+          "observed_at_s": 10.283091800054535
+        },
+        {
+          "status": "running",
+          "observed_at_s": 10.396109600085765
+        },
+        {
+          "status": "running",
+          "observed_at_s": 10.508278000052087
+        },
+        {
+          "status": "running",
+          "observed_at_s": 10.618331799982116
+        },
+        {
+          "status": "running",
+          "observed_at_s": 10.731482699979097
+        },
+        {
+          "status": "running",
+          "observed_at_s": 10.843960300087929
+        },
+        {
+          "status": "running",
+          "observed_at_s": 10.955850400030613
+        },
+        {
+          "status": "running",
+          "observed_at_s": 11.066859600017779
+        },
+        {
+          "status": "running",
+          "observed_at_s": 11.178633200004697
+        },
+        {
+          "status": "running",
+          "observed_at_s": 11.28502270008903
+        },
+        {
+          "status": "running",
+          "observed_at_s": 11.392905400018208
+        },
+        {
+          "status": "running",
+          "observed_at_s": 11.50202110002283
+        },
+        {
+          "status": "running",
+          "observed_at_s": 11.625634100055322
+        },
+        {
+          "status": "completed",
+          "observed_at_s": 11.733293500030413
+        }
+      ],
+      "fresh_gpt2": {
+        "engine_version": "2026.10.12.2",
+        "coverage": {
+          "semantic_coverage": 1.0,
+          "module_semantic_coverage": 1.0,
+          "checkpoint_parameter_coverage": 1.0,
+          "tensor_shape_coverage": 1.0
+        },
+        "quality": {
+          "semantic_coverage": 1.0,
+          "module_semantic_coverage": 1.0,
+          "checkpoint_parameter_coverage": 1.0,
+          "tensor_shape_coverage": 1.0,
+          "unknown_nodes": 0,
+          "unmapped_checkpoint_tensors": 0,
+          "forward_executed": false,
+          "runtime_trace_available": false,
+          "mode": "static"
+        },
+        "warnings": [],
+        "model_id": "openai-community/gpt2",
+        "revision": "607a30d783dfa663caf39e06633721c8d4cfcd7e",
+        "status": "completed",
+        "cached": false
+      }
+    }
+  }
+}

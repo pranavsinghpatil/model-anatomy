@@ -1,10 +1,33 @@
 # Roadmap and release train
 
-**Last updated:** 2026-10-05 · **External deadline:** [2026-10-30 10:00 PDT](https://nebiusglobalaihackathon.devpost.com/) (22:30 IST)
+**Last updated:** 2026-10-13 · **External deadline:** [2026-10-30 10:00 PDT](https://nebiusglobalaihackathon.devpost.com/rules) (22:30 IST)
 
 ## Current truth
 
-The Python package is a scaffold: resolver and reconstructor methods deliberately raise `NotImplementedError`, and the sole test is an IR smoke test. No reconstruction milestone is complete. The primary target is [`HuggingFaceTB/SmolLM2-135M`](https://huggingface.co/HuggingFaceTB/SmolLM2-135M); pin its commit revision before implementation begins.
+The real static engine is integrated from `feat/vv`, with committed regression
+tests and fresh pinned-model acceptance for GPT-2, SmolLM2-135M, Qwen3-4B and ViT. Resolver,
+module inspection, checkpoint metadata, and hierarchical semantic reports work
+through the CLI. Static warnings and unknown shapes remain explicit; this is not
+a runtime trace. See [engine acceptance](ENGINE_ACCEPTANCE.md).
+
+Durable jobs, anonymous ownership and budgets, private-storage integration,
+the public graph inspector and evidence-bound Nemotron integration are implemented
+in reviewable PR increments. Local verification does not complete a hosted release
+gate. Supabase setup, usable Nebius credits, live NVIDIA inference, container/HTTPS
+deployment and the public video remain release requirements. No cloud credentials
+are configured yet. Runtime examples have been removed: the application serves
+only real submitted analyses. See [local testing](LOCAL_TESTING.md) and
+[current acceptance gaps](SYSTEM_GAPS.md) before adding features or claiming a
+completed hosted release.
+
+The UI redesign is implemented on the GGUF increment: routed landing/submission,
+Learn and Research workspaces, resizable inspection panels, artifacts and report
+views. Local verification passes 92 deterministic browser tests and 14 separate
+live cases across the primary text, existing ViT, artifact-only and selected GGUF
+paths. Both themes and responsive layouts are checked. See
+[the redesign verification record](UI_REDESIGN.md#verification-record). This UI
+work is delivered as dependent PR increments targeting `b-mvp`; it does not close
+the hosted or live AI release requirements above.
 
 ## Milestones
 
