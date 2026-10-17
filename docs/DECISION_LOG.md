@@ -420,3 +420,19 @@ Resolve UX disconnect and elevate the light theme into a modern, tactile researc
 - **Landing Page Polish**: Add an announcement studio badge (`Tensor & Architecture Inspection Studio`), refine submission card elevation, and sharpen typography.
 - **Full Verification**: 100% passing Playwright test suite (10/10) across desktop and mobile suites.
 
+## D-040 - Smooth, modern, rich, minimal, and professional light theme overhaul
+**2026-10-17 - explicit user request**
+
+Eliminate dated, cluttered graph paper visual patterns and transition to an ultra-clean, minimal, and rich porcelain studio design:
+- **Clean Porcelain Canvas**: Removed noisy math-notebook grid lines (`--graph-grid-major: transparent`) in light theme. Retained ultra-fine, quiet micro-dots (`--graph-grid: rgba(148, 163, 184, 0.24)`) on a warm porcelain surface (`#fafbfc`) with a soft top radial spotlight.
+- **Node Card Redesign**:
+  - Eliminated the dated vertical left bar strip on `.model-node`.
+  - Upgraded cards with modern `14px` border-radius, clean slate borders (`rgba(226, 232, 240, 0.95)`), and silky multi-stage drop shadows.
+  - Re-styled category labels (`.node-kind`) as crisp, uppercase pill micro-badges with tinted jewel icon containers.
+  - Deep obsidian slate typography (`#0f172a`) with tight letter-spacing.
+- **Solid Modern Boundary Cards**: Replaced wireframe dashed borders on input and output nodes with sleek solid pill borders and subtle ice-blue (`#bfdbfe`) and mint (`#bbf7d0`) gradients.
+- **3D Layered Repeat Deck**: Polished repeated decoder blocks with an isometric card stack appearance, warm amber accents, and an integrated `× 30 layers` pill badge.
+- **Fluid Edges & Framed Mini-Map**: Refined SVG connector paths with smooth hover feedback and glowing selection; framed the mini-map in an elevated porcelain card.
+- **Bento Overview Card**: Enriched the executive scorecard with stat cards, hover elevation, and interactive discovery banner.
+- **Verification**: 10/10 Playwright tests passing cleanly across desktop and mobile suites.
+

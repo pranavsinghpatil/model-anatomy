@@ -7,7 +7,7 @@
 }
 
 :root[data-theme="light"] .architecture-canvas-region {
-  background: #eef2f8;
+  background: #fafbfc;
 }
 
 .component-navigator,
@@ -29,7 +29,7 @@
 
 :root[data-theme="light"] .component-navigator .panel-heading {
   background: #ffffff;
-  border-bottom: 1px solid #d1d9e6;
+  border-bottom: 1px solid #e2e8f0;
 }
 
 .component-navigator .panel-heading h2 {

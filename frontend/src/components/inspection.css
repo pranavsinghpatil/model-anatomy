@@ -771,14 +771,16 @@
   text-transform: uppercase;
 }
 :root[data-theme="light"] .overview-header-badge {
-  background: #eef2ff;
+  background: #eff6ff;
   border-color: #c7d2fe;
   color: #4338ca;
+  font-weight: 700;
+  box-shadow: 0 1px 2px rgba(99, 102, 241, 0.08);
 }
 .overview-model-title {
   font-size: 17px;
-  font-weight: 650;
-  letter-spacing: -0.02em;
+  font-weight: 700;
+  letter-spacing: -0.025em;
   color: var(--text);
   margin: 0;
   overflow-wrap: anywhere;
@@ -788,8 +790,8 @@
 }
 .overview-model-arch code {
   font-size: 12px;
-  padding: 3px 7px;
-  border-radius: 5px;
+  padding: 3px 8px;
+  border-radius: 6px;
   background: var(--soft);
   border: 1px solid var(--border);
   color: var(--muted);
@@ -798,6 +800,7 @@
   background: #f1f5f9;
   border-color: #e2e8f0;
   color: #334155;
+  font-weight: 600;
 }
 .overview-metrics-grid {
   display: grid;
@@ -813,11 +816,19 @@
   display: flex;
   flex-direction: column;
   gap: 3px;
+  transition: transform 140ms ease, box-shadow 140ms ease;
 }
 :root[data-theme="light"] .overview-metric-card {
-  background: #ffffff;
+  background: linear-gradient(180deg, #ffffff 0%, #f9fafb 100%);
   border: 1px solid #e2e8f0;
-  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+  border-radius: 10px;
+  padding: 12px 14px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.03);
+}
+:root[data-theme="light"] .overview-metric-card:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
+  transform: translateY(-1px);
 }
 .overview-metric-label {
   font-size: 10.5px;
@@ -826,12 +837,23 @@
   letter-spacing: 0.04em;
   color: var(--muted);
 }
+:root[data-theme="light"] .overview-metric-label {
+  color: #64748b;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
 .overview-metric-value {
   font-size: 15px;
   font-weight: 700;
   font-family: var(--font-mono, monospace);
   color: var(--text);
   letter-spacing: -0.02em;
+}
+:root[data-theme="light"] .overview-metric-value {
+  color: #0f172a;
+  font-size: 15.5px;
+  font-weight: 700;
 }
 .overview-hint-box {
   display: flex;
@@ -847,9 +869,13 @@
   margin-top: 8px;
 }
 :root[data-theme="light"] .overview-hint-box {
-  background: #f8fafc;
-  border-color: #cbd5e1;
-  color: #475569;
+  background: linear-gradient(135deg, #eff6ff 0%, #f5f3ff 100%);
+  border: 1px solid #c7d2fe;
+  border-radius: 10px;
+  padding: 14px;
+  color: #334155;
+  font-size: 12.5px;
+  box-shadow: 0 1px 3px rgba(99, 102, 241, 0.05);
 }
 .overview-hint-box svg {
   flex-shrink: 0;
