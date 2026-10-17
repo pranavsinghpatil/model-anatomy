@@ -23,11 +23,17 @@ reports use `/app/analyses/:id?view=overview|architecture|artifacts|report`.
 Legacy `/?analysis=:id` links redirect to the report. Recent analyses require an
 explicit Continue action; a new visitor sees an empty history.
 
-Research and Learn both open Architecture; Learn offers a contextual authored
-guide beside the same report data. Theme (System by default) and mode (Research
-by default) are remembered locally. Graph selection, breadcrumbs, viewports,
-inspector tab and panel sizes are retained per analysis during the browser session.
-Switching mode keeps this context. No model report is stored in localStorage.
+There is one inspection flow; Learn/Research modes and their saved preference
+have been removed. General component definitions remain available in the inspector's
+About this component type disclosure. Theme (Light by default) is remembered
+locally. Graph selection, breadcrumbs, viewports, inspector tab and panel sizes
+are retained per analysis during the browser session. No model report is stored
+in localStorage.
+
+The interface uses a 75% page scale at the browser's normal zoom. The workspace
+height compensates for that scale to fill the visible viewport. Graph zoom remains
+an independent control for the inspected diagram. Earlier validation records below
+describe the interface at the time of those runs, including the former modes.
 
 The canvas starts with the complete graph framed using compact components.
 Readable view focuses the selected component at an inspection scale. Direction,

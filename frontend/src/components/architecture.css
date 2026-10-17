@@ -1,15 +1,3 @@
-.view-architecture > .learn-guide,
-.artifacts-page > .learn-guide {
-  flex: 0 0 auto;
-  max-height: none;
-  overflow: visible;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--surface);
-  color: var(--text);
-  font-size: 11px;
-}
-
 .architecture-canvas-region {
   container-type: inline-size;
   min-width: 0;
@@ -18,20 +6,38 @@
   background: var(--surface);
 }
 
+:root[data-theme="light"] .architecture-canvas-region {
+  background: #eef2f8;
+}
+
 .component-navigator,
 .workspace-inspector {
   background: var(--surface);
 }
 
+:root[data-theme="light"] .component-navigator,
+:root[data-theme="light"] .workspace-inspector {
+  background: #ffffff;
+}
+
 .component-navigator .panel-heading {
-  min-height: 48px;
+  min-height: 44px;
   padding: 6px 12px;
-  border-bottom-color: var(--border);
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+
+:root[data-theme="light"] .component-navigator .panel-heading {
+  background: #ffffff;
+  border-bottom: 1px solid #d1d9e6;
 }
 
 .component-navigator .panel-heading h2 {
-  color: var(--text);
-  font-size: 13px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .component-outline {
@@ -47,6 +53,13 @@
   padding: 0 8px 10px;
 }
 
+.component-outline ul ul {
+  position: relative;
+  padding-left: 12px;
+  margin-left: 8px;
+  border-left: 1px solid color-mix(in srgb, var(--border) 65%, transparent);
+}
+
 .component-outline li {
   margin: 2px 0;
 }
@@ -54,8 +67,8 @@
 .component-select {
   min-height: 40px;
   gap: 8px;
-  padding: 6px 8px;
-  border-radius: 8px;
+  padding: 6px 10px;
+  border-radius: 6px;
   transition:
     background-color 160ms cubic-bezier(0.22, 1, 0.36, 1),
     box-shadow 160ms cubic-bezier(0.22, 1, 0.36, 1),
@@ -70,24 +83,34 @@
 
 .component-select small {
   margin-top: 3px;
-  font-size: 12px;
+  font-size: 11px;
   line-height: 1.3;
 }
 
 .outline-mark {
-  width: 8px;
-  height: 8px;
-  border-radius: 2px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex: 0 0 7px;
 }
 
 .component-select.selected {
   border-color: transparent;
-  background: color-mix(in srgb, var(--accent) 7%, var(--surface));
-  box-shadow: inset 2px 0 var(--accent);
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface));
+  box-shadow: inset 2.5px 0 var(--accent);
+}
+
+:root[data-theme="light"] .component-select.selected {
+  background: #eef2ff;
+  box-shadow: inset 3px 0 #4338ca;
 }
 
 .component-select:hover:not(.selected) {
   background: var(--soft);
+}
+
+:root[data-theme="light"] .component-select:hover:not(.selected) {
+  background: #f8fafc;
 }
 
 .inspector-header {
@@ -101,6 +124,11 @@
   background: var(--surface);
 }
 
+:root[data-theme="light"] .inspector-header {
+  background: #ffffff;
+  border-bottom: 1px solid #d1d9e6;
+}
+
 .inspector-header > .panel-tabs {
   width: auto;
   min-width: 0;
@@ -111,9 +139,10 @@
 }
 
 .inspector-header > .panel-tabs > [role="tab"] {
-  min-height: 38px;
+  min-height: 52px;
+  min-width: 80px;
   flex: 0 0 auto;
-  padding: 0 7px;
+  padding: 0 8px;
   color: var(--muted);
   font-size: 12px;
   transition:
@@ -182,77 +211,8 @@
   }
 }
 
-.learn-guide > summary {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-height: 36px;
-  padding: 7px 12px;
-  cursor: pointer;
-  list-style-position: inside;
-}
-
-.learn-guide > summary > span {
-  flex: 0 0 auto;
-  font-weight: 550;
-}
-
-.learn-guide > summary > small {
-  min-width: 0;
-  overflow: hidden;
-  color: var(--muted);
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.learn-guide-content {
-  max-height: 170px;
-  overflow: auto;
-  padding: 0 12px 10px;
-  border-top: 1px solid var(--border);
-}
-
-.learn-guide-content header {
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-  padding-top: 8px;
-}
-
-.learn-guide-content header p,
-.learn-guide-copy {
-  margin: 5px 0;
-  color: var(--muted);
-  line-height: 1.45;
-}
-
-.learn-guide-steps {
-  display: flex;
-  gap: 4px;
-  overflow-x: auto;
-  margin: 7px 0;
-}
-
-.learn-guide-steps button {
-  flex: 0 0 auto;
-  padding: 5px 8px;
-  border: 1px solid transparent;
-  border-radius: 8px;
-  background: var(--soft);
-  color: var(--muted);
-  font: inherit;
-  font-size: 10px;
-}
-
-.learn-guide-steps button[aria-pressed="true"] {
-  color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 8%, var(--surface));
-}
-
 .component-select:focus-visible,
-.inspector-header :is(.button, .inspector-back, [role="tab"]):focus-visible,
-.learn-guide > summary:focus-visible,
-.learn-guide-steps button:focus-visible {
+.inspector-header :is(.button, .inspector-back, [role="tab"]):focus-visible {
   outline: 2px solid color-mix(in srgb, var(--accent) 70%, white);
   outline-offset: 2px;
 }
@@ -283,11 +243,12 @@
 
   .component-select,
   .inspector-header > .button,
-  .inspector-header > .inspector-back,
-  .inspector-header > .panel-tabs > [role="tab"],
-  .learn-guide > summary,
-  .learn-guide-steps button {
+  .inspector-header > .inspector-back {
     min-height: 44px;
+  }
+
+  .inspector-header > .panel-tabs > [role="tab"] {
+    min-height: 52px;
   }
 }
 

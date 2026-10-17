@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import type { ArtifactInspectionResponse } from "../src/api/contract";
 import { analysisFor, mockService } from "./service";
-import { openAnalysis } from "./helpers";
+import { hasNoHorizontalOverflow, openAnalysis } from "./helpers";
 
 const revision = "0123456789abcdef0123456789abcdef01234567";
 const longTensorName =
@@ -357,14 +357,7 @@ test("inspected artifacts stay graph-free and paginate verified metadata", async
       await expect(tensorLink).toHaveAttribute("href", longArtifactUrl);
       await expect
         .poll(
-          () =>
-            browser.evaluate(
-              () =>
-                Math.max(
-                  document.body.scrollWidth,
-                  document.documentElement.scrollWidth,
-                ) <= innerWidth,
-            ),
+          () => browser.evaluate(hasNoHorizontalOverflow),
           `${width}px ${theme} long tensor`,
         )
         .toBe(true);

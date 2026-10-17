@@ -16,15 +16,13 @@ import {
 import { api, graphReady, pending } from "../api/client";
 import type { Citation, ExportFormat } from "../api/contract";
 import { ErrorNotice, Loading, Status } from "../components/Common";
-import { Menu, MenuItem, ModeControl, ThemeControl } from "../components/ui";
+import { Menu, MenuItem, ThemeControl } from "../components/ui";
 import { Overview, Report } from "../components/AnalysisSummary";
 import { ArtifactInspection } from "../components/ArtifactInspection";
 import { ArchitectureWorkspace } from "../components/ArchitectureWorkspace";
 import { Progress, Recovery } from "../components/Progress";
-import { LearnGuide } from "../components/LearnGuide";
 import { matchesCitation } from "../components/Inspector";
 import { useRecent, useService } from "../state/queries";
-import { usePreferences } from "../state/preferences";
 import { useWorkspaceSession, type Crumb } from "../state/workspace";
 import { count, dimensionCount } from "../format";
 import { DotPattern } from "../components/vendor/dot-pattern";
@@ -50,7 +48,6 @@ function Workspace({ id }: { id: string }) {
   const [search, setSearch] = useSearchParams();
   const navigate = useNavigate();
   const client = useQueryClient();
-  const { mode } = usePreferences();
   const { service, available } = useService();
   const recent = useRecent();
   const [state, setState] = useWorkspaceSession(id);
@@ -62,11 +59,14 @@ function Workspace({ id }: { id: string }) {
   function highlightView(target: HTMLElement) {
     const item = target.getBoundingClientRect();
     const nav = viewNav.current!.getBoundingClientRect();
+    const scale =
+      Number.parseFloat(getComputedStyle(document.documentElement).zoom) || 1;
+    const left = Math.max(0, (item.left - nav.left) / scale);
     setHighlight({
-      left: item.left - nav.left - 6,
+      left,
       top: 4,
-      width: item.width + 12,
-      height: nav.height - 8,
+      width: Math.min(item.width / scale, viewNav.current!.clientWidth - left),
+      height: viewNav.current!.clientHeight - 8,
     });
   }
   const active = useRef(true);
@@ -372,7 +372,6 @@ function Workspace({ id }: { id: string }) {
               </div>
             </details>
           )}
-          <ModeControl />
         </div>
       </div>
       <div className="workbench-body">
@@ -424,9 +423,6 @@ function Workspace({ id }: { id: string }) {
                     onInspectFile={(url) => create.mutate(url)}
                     inspectionDisabled={!available || create.isPending}
                   />
-                  {mode === "learn" && (
-                    <LearnGuide analysis={detail} node={null} />
-                  )}
                 </div>
               )}
               {view === "architecture" &&
@@ -467,42 +463,6 @@ function Workspace({ id }: { id: string }) {
                       onCitation={jump}
                       ai={service?.ai_available === true}
                     />
-                    {mode === "learn" && (
-                      <LearnGuide
-                        analysis={detail}
-                        node={
-                          graph.data.nodes.find(
-                            (n) => n.id === state.selected[graph.data.id],
-                          ) ?? null
-                        }
-                        onStep={(step) => {
-                          if (step !== "orient")
-                            setState((s) => ({
-                              ...s,
-                              selected: {
-                                ...s.selected,
-                                [graph.data.id]:
-                                  s.selected[graph.data.id] ??
-                                  graph.data.nodes.find(
-                                    (node) =>
-                                      node.kind !== "input" &&
-                                      node.kind !== "output",
-                                  )?.id ??
-                                  graph.data.nodes[0]?.id ??
-                                  null,
-                              },
-                              inspectorOpen: true,
-                              questions: false,
-                              inspectorTab:
-                                step === "tensors"
-                                  ? "tensors"
-                                  : step === "evidence"
-                                    ? "evidence"
-                                    : "module",
-                            }));
-                        }}
-                      />
-                    )}
                   </>
                 ) : graphId ? (
                   <div className="page-state">

@@ -88,16 +88,12 @@ test("model examples fill the input without submitting", async ({ page }) => {
   ).toBe(false);
 });
 
-test("a new Learn inspection opens Architecture with its reading guide", async ({
+test("a new inspection opens Architecture in the unified workspace", async ({
   page,
 }) => {
   await mockService(page, { job: analysisFor() });
   await page.goto("/app");
 
-  await page
-    .getByRole("group", { name: "Experience mode" })
-    .getByRole("button", { name: "Learn", exact: true })
-    .click();
   await page
     .getByLabel("Hugging Face model", { exact: true })
     .fill("org/model");
@@ -110,5 +106,7 @@ test("a new Learn inspection opens Architecture with its reading guide", async (
     page.getByRole("link", { name: "Architecture", exact: true }),
   ).toHaveAttribute("aria-current", "page");
   await expect(page.getByTestId("graph-canvas")).toBeVisible();
-  await expect(page.locator("details.learn-guide")).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Export analysis" }),
+  ).toBeVisible();
 });

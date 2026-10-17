@@ -381,9 +381,17 @@ function Canvas({
         }}
       >
         <Background
+          id="graph-grid-lines"
+          variant={BackgroundVariant.Lines}
+          gap={88}
+          color="var(--graph-grid-major)"
+          lineWidth={0.75}
+        />
+        <Background
+          id="graph-grid-dots"
           variant={BackgroundVariant.Dots}
           gap={22}
-          size={1}
+          size={1.5}
           color="var(--graph-grid)"
         />
         {nodes.some((node) => node.data.isolated) && (

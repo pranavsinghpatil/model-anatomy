@@ -1,8 +1,8 @@
 import { expect, test } from "@playwright/test";
 import { block, mockService } from "./service";
-import { graphNode, openAnalysis } from "./helpers";
+import { graphNode, openAnalysis, UI_SCALE } from "./helpers";
 
-test("entry exposes the form and recent analysis together at normal zoom", async ({
+test("entry exposes the form and recent analysis together at 75 percent zoom", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1280, height: 800 });
@@ -27,7 +27,7 @@ test("entry exposes the form and recent analysis together at normal zoom", async
   });
   expect(geometry.inputBottom).toBeLessThan(400);
   expect(geometry.historyBottom).toBeLessThan(760);
-  expect(geometry.zoom).toBe("1");
+  expect(geometry.zoom).toBe("0.75");
   expect(geometry.overflow).toBe(false);
 });
 
@@ -61,34 +61,55 @@ test("docked inspection keeps graph actions clear of search at laptop width", as
   expect(geometry.header.bottom).toBeLessThanOrEqual(geometry.canvas.top + 1);
 });
 
-test("mode indicator follows keyboard selection and honors reduced motion", async ({
+test("workspace scale is 75 percent and graph controls honor reduced motion", async ({
   page,
 }) => {
   await mockService(page);
-  await page.goto("/app");
-  const modes = page.getByRole("group", { name: "Experience mode" });
-  const indicator = modes.locator(".mode-indicator");
-  for (const name of ["Learn", "Research"]) {
-    const choice = modes.getByRole("button", { name, exact: true });
-    await choice.focus();
-    await choice.press("Space");
-    await expect(choice).toHaveAttribute("aria-pressed", "true");
-    await expect
-      .poll(async () => {
-        const [pill, button] = await Promise.all([
-          indicator.boundingBox(),
-          choice.boundingBox(),
-        ]);
-        return Math.abs(
-          pill!.x + pill!.width / 2 - button!.x - button!.width / 2,
-        );
-      })
-      .toBeLessThan(3);
-  }
-  await page.emulateMedia({ reducedMotion: "reduce" });
-  await expect(indicator).toHaveCSS("transition-duration", "0s");
-  await modes.getByRole("button", { name: "Learn", exact: true }).click();
+  await page.setViewportSize({ width: 1440, height: 960 });
+  await openAnalysis(page);
+  await expect(page.locator("html")).toHaveCSS("zoom", "0.75");
+  const workspaceScale = await page
+    .locator(".workspace-shell")
+    .evaluate((element) => {
+      const bounds = element.getBoundingClientRect();
+      return bounds.height / (element as HTMLElement).offsetHeight;
+    });
+  expect(workspaceScale).toBeCloseTo(UI_SCALE, 2);
   await expect(
-    modes.getByRole("button", { name: "Learn", exact: true }),
-  ).toHaveAttribute("aria-pressed", "true");
+    page.getByRole("button", { name: "Zoom in", exact: true }),
+  ).toBeVisible();
+  const themeButton = page.getByRole("button", { name: "Theme", exact: true });
+  await themeButton.focus();
+  await themeButton.press("Enter");
+  const darkTheme = page.getByRole("menuitemradio", {
+    name: "Dark",
+    exact: true,
+  });
+  await expect(darkTheme).toBeVisible();
+  await darkTheme.focus();
+  await darkTheme.press("Enter");
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  const transitionSeconds = await page
+    .locator(".react-flow__viewport")
+    .evaluate((element) =>
+      getComputedStyle(element)
+        .transitionDuration.split(",")
+        .map((duration) => {
+          const value = Number.parseFloat(duration);
+          return duration.trim().endsWith("ms") ? value / 1000 : value;
+        }),
+    );
+  expect(transitionSeconds.every((duration) => duration <= 0.00001)).toBe(true);
+  const before = await page
+    .locator(".react-flow__viewport")
+    .getAttribute("style");
+  await page.getByRole("button", { name: "Zoom in", exact: true }).focus();
+  await page
+    .getByRole("button", { name: "Zoom in", exact: true })
+    .press("Enter");
+  await expect(page.locator(".react-flow__viewport")).not.toHaveAttribute(
+    "style",
+    before!,
+  );
 });

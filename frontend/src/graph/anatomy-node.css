@@ -2,25 +2,55 @@
   --node-tone: var(--muted);
   position: relative;
   padding: 0;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--node-tone) 3%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--node-tone) 28%, rgba(255, 255, 255, 0.08));
+  border-radius: 9px;
+  background: linear-gradient(180deg, rgba(22, 28, 44, 0.94) 0%, rgba(13, 17, 27, 0.98) 100%);
+  backdrop-filter: blur(12px);
   color: var(--text);
   text-align: left;
-  box-shadow: 0 1px 2px color-mix(in srgb, var(--text) 5%, transparent);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.15),
+    0 4px 18px rgba(0, 0, 0, 0.42),
+    0 1px 3px rgba(0, 0, 0, 0.28);
   transition:
     border-color 160ms cubic-bezier(0.22, 1, 0.36, 1),
     box-shadow 160ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 160ms cubic-bezier(0.22, 1, 0.36, 1),
     opacity 160ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+:root[data-theme="light"] .model-node {
+  background: linear-gradient(180deg, #ffffff 0%, #fbfcfd 100%);
+  border: 1px solid color-mix(in srgb, var(--node-tone) 35%, #d1d9e6);
+  box-shadow:
+    inset 0 1px 0 #ffffff,
+    0 1px 3px rgba(15, 23, 42, 0.05),
+    0 4px 16px -2px rgba(15, 23, 42, 0.07);
+}
+.model-node:hover:not(.is-selected) {
+  border-color: color-mix(in srgb, var(--node-tone) 55%, rgba(255, 255, 255, 0.18));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    0 8px 24px -4px rgba(0, 0, 0, 0.5),
+    0 0 16px color-mix(in srgb, var(--node-tone) 24%, transparent);
+  transform: translateY(-1px);
+}
+:root[data-theme="light"] .model-node:hover:not(.is-selected) {
+  border-color: color-mix(in srgb, var(--node-tone) 65%, #94a3b8);
+  box-shadow:
+    inset 0 1px 0 #ffffff,
+    0 8px 24px -4px rgba(15, 23, 42, 0.12),
+    0 0 16px color-mix(in srgb, var(--node-tone) 20%, transparent);
+  transform: translateY(-2px);
 }
 .model-node::before {
   position: absolute;
   inset: 0 auto 0 0;
-  width: 3px;
-  border-radius: 7px 0 0 7px;
+  width: 3.5px;
+  border-radius: 8px 0 0 8px;
   background: var(--node-tone);
+  box-shadow: 0 0 10px var(--node-tone);
   content: "";
-  opacity: 0.72;
+  opacity: 0.95;
   pointer-events: none;
 }
 .model-node:is(
@@ -52,13 +82,15 @@
 }
 .anatomy-node-icon {
   display: grid;
-  width: 20px;
-  height: 24px;
-  flex: 0 0 20px;
+  width: 22px;
+  height: 26px;
+  flex: 0 0 22px;
   place-items: center;
-  border-radius: 5px;
-  background: color-mix(in srgb, var(--node-tone) 10%, transparent);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--node-tone) 16%, transparent);
+  border: 1px solid color-mix(in srgb, var(--node-tone) 28%, transparent);
   color: var(--node-tone);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--node-tone) 18%, transparent);
 }
 .anatomy-node-heading {
   min-width: 0;
@@ -68,11 +100,12 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  color: color-mix(in srgb, var(--node-tone) 78%, var(--muted));
+  color: var(--node-tone);
   font-size: 11px;
+  font-weight: 600;
   line-height: 1.35;
-  text-transform: none;
-  letter-spacing: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
 }
 .model-node .node-kind > span:first-child {
   min-width: 0;
@@ -99,38 +132,60 @@
   display: inline-flex;
   flex-shrink: 0;
   margin-left: auto;
-  padding: 1px 5px;
-  border: 1px solid color-mix(in srgb, var(--node-tone) 28%, var(--border));
+  padding: 2px 7px;
+  border: 1px solid rgba(251, 191, 36, 0.45);
   border-radius: 6px;
-  background: color-mix(in srgb, var(--node-tone) 10%, var(--surface));
-  color: var(--node-tone);
+  background: linear-gradient(180deg, rgba(251, 191, 36, 0.2) 0%, rgba(251, 191, 36, 0.08) 100%);
+  color: #fbbf24;
   font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  box-shadow: 0 0 10px rgba(251, 191, 36, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+:root[data-theme="light"] .model-node .repeat {
+  background: linear-gradient(180deg, #fef3c7 0%, #fde68a 100%);
+  border: 1px solid #f59e0b;
+  color: #92400e;
+  box-shadow: 0 1px 3px rgba(217, 119, 6, 0.2), inset 0 1px 0 #ffffff;
 }
 .model-node.is-repeated::before,
 .model-node.is-repeated::after {
   position: absolute;
   z-index: -1;
   inset: -5px 4px 5px;
-  border: 1px solid color-mix(in srgb, var(--node-tone) 22%, var(--border));
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--node-tone) 3%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--node-tone) 35%, rgba(255, 255, 255, 0.08));
+  border-radius: 9px;
+  background: linear-gradient(180deg, rgba(22, 28, 44, 0.8) 0%, rgba(13, 17, 27, 0.9) 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
   content: "";
   pointer-events: none;
 }
 .model-node.is-repeated::after {
   z-index: -2;
   inset: -9px 8px 9px;
+  opacity: 0.7;
 }
 .model-node.is-repeated {
   border-top: 2px solid var(--node-tone);
-  background:
-    linear-gradient(90deg, var(--node-tone) 0 3px, transparent 3px),
-    color-mix(in srgb, var(--node-tone) 3%, var(--surface));
   box-shadow:
-    0 3px 0 color-mix(in srgb, var(--node-tone) 15%, transparent),
-    0 1px 3px color-mix(in srgb, var(--text) 6%, transparent);
+    inset 0 1px 0 rgba(255, 255, 255, 0.15),
+    0 4px 18px rgba(0, 0, 0, 0.42),
+    0 0 12px color-mix(in srgb, var(--node-tone) 15%, transparent);
+}
+:root[data-theme="light"] .model-node.is-repeated {
+  background: linear-gradient(180deg, #ffffff 0%, #fffef8 100%);
+  border: 1px solid color-mix(in srgb, var(--node-tone) 45%, #cbd5e1);
+  border-top: 2px solid var(--node-tone);
+  box-shadow:
+    inset 0 1px 0 #ffffff,
+    0 1px 3px rgba(15, 23, 42, 0.05),
+    0 6px 18px -2px rgba(15, 23, 42, 0.08);
+}
+:root[data-theme="light"] .model-node.is-repeated::before,
+:root[data-theme="light"] .model-node.is-repeated::after {
+  background: linear-gradient(180deg, #ffffff 0%, #f4f7fc 100%);
+  border: 1px solid color-mix(in srgb, var(--node-tone) 35%, #cbd5e1);
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.05);
 }
 .model-node .node-open {
   display: flex;
@@ -148,9 +203,25 @@
   font-size: 12px;
   font-weight: 550;
   cursor: pointer;
+  transition: background-color 150ms ease, color 150ms ease;
+}
+:root[data-theme="light"] .model-node .node-open {
+  border-top: 1px solid #eef2f6;
+  background: #fafbfd;
+  color: var(--accent);
+}
+:root[data-theme="light"] .model-node .node-open:hover {
+  background: #f1f5f9;
+  color: #3730a3;
+}
+.model-node .node-open svg {
+  transition: transform 160ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 .model-node .node-open:hover {
-  background: var(--soft);
+  background: color-mix(in srgb, var(--accent) 6%, var(--surface));
+}
+.model-node .node-open:hover svg {
+  transform: translateX(2px);
 }
 .model-node .node-open:focus-visible {
   outline: 2px solid color-mix(in srgb, var(--accent) 70%, white);
@@ -187,7 +258,8 @@
   margin-top: 2px;
   overflow: hidden;
   color: var(--text);
-  font-size: 12px;
+  font-family: var(--font-mono, "JetBrains Mono Variable", monospace);
+  font-size: 11px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -214,18 +286,21 @@
 }
 .model-node.category-boundary {
   --node-tone: var(--category-input, var(--accent));
-  border-radius: 8px;
+  border-radius: 9px;
   border-style: dashed;
-  background: color-mix(in srgb, var(--node-tone) 4%, var(--surface));
-  box-shadow: none;
+  border-width: 1.5px;
+  background: linear-gradient(180deg, rgba(56, 189, 248, 0.08) 0%, rgba(56, 189, 248, 0.02) 100%), var(--surface);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 .model-node.category-boundary[data-kind="output"] {
   --node-tone: var(--category-output, var(--accent));
+  background: linear-gradient(180deg, rgba(52, 211, 153, 0.08) 0%, rgba(52, 211, 153, 0.02) 100%), var(--surface);
 }
 .model-node.category-boundary::before {
   inset-block: 7px;
-  width: 2px;
+  width: 2.5px;
   border-radius: 2px;
+  box-shadow: 0 0 6px var(--node-tone);
 }
 .category-boundary .anatomy-node-body {
   height: 58px;
@@ -253,23 +328,67 @@
 .model-node.is-selected {
   border-color: var(--node-tone);
   box-shadow:
-    0 0 0 2px color-mix(in srgb, var(--node-tone) 14%, transparent),
-    0 1px 4px color-mix(in srgb, var(--text) 5%, transparent);
+    inset 0 1px 0 rgba(255, 255, 255, 0.25),
+    0 0 0 2px var(--node-tone),
+    0 0 24px color-mix(in srgb, var(--node-tone) 50%, transparent),
+    0 8px 32px rgba(0, 0, 0, 0.65);
+}
+:root[data-theme="light"] .model-node.is-selected {
+  border-color: var(--node-tone);
+  box-shadow:
+    inset 0 1px 0 #ffffff,
+    0 0 0 2px var(--node-tone),
+    0 0 20px color-mix(in srgb, var(--node-tone) 35%, transparent),
+    0 8px 28px -4px rgba(15, 23, 42, 0.16);
+}
+:root[data-theme="light"] .model-node.category-boundary {
+  background: linear-gradient(180deg, rgba(2, 132, 199, 0.05) 0%, rgba(2, 132, 199, 0.01) 100%), #ffffff;
+  border: 1.5px dashed color-mix(in srgb, var(--category-input) 60%, #94a3b8);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
+}
+:root[data-theme="light"] .model-node.category-boundary[data-kind="output"] {
+  background: linear-gradient(180deg, rgba(5, 150, 105, 0.05) 0%, rgba(5, 150, 105, 0.01) 100%), #ffffff;
+  border-color: color-mix(in srgb, var(--category-output) 60%, #94a3b8);
+}
+:root[data-theme="light"] .node-ports > div {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+}
+:root[data-theme="light"] .node-ports code {
+  color: #090d16;
+}
+:root[data-theme="light"] .node-footer strong {
+  color: #090d16;
 }
 .model-node.is-dimmed {
-  opacity: 0.24;
+  opacity: 0.22;
+  filter: grayscale(40%);
 }
 .model-node .react-flow__handle {
-  width: 7px;
-  height: 7px;
-  min-width: 7px;
-  min-height: 7px;
+  width: 8px;
+  height: 8px;
+  min-width: 8px;
+  min-height: 8px;
   opacity: 1;
-  border: 1px solid var(--surface);
+  border: 1.5px solid var(--surface);
+  border-radius: 50%;
   background: var(--muted);
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.5);
+  transition: transform 140ms ease, background-color 140ms ease, box-shadow 140ms ease;
+}
+:root[data-theme="light"] .model-node .react-flow__handle {
+  border-color: #ffffff;
+  background: #94a3b8;
+  box-shadow: 0 0 3px rgba(15, 23, 42, 0.25);
 }
 .model-node.is-selected .react-flow__handle {
   background: var(--node-tone);
+  box-shadow: 0 0 8px var(--node-tone);
+  transform: scale(1.15);
+}
+:root[data-theme="light"] .model-node.is-selected .react-flow__handle {
+  background: var(--node-tone);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--node-tone) 60%, transparent);
 }
 .graph-canvas.is-overview .model-node .anatomy-node-facts {
   visibility: hidden;

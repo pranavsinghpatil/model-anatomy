@@ -1,10 +1,11 @@
 .graph-canvas {
-  --graph-grid: color-mix(in srgb, var(--border) 42%, var(--surface));
-  --graph-edge: var(--muted);
-  --graph-semantic-edge: var(--accent);
+  --graph-grid: rgba(255, 255, 255, 0.08);
+  --graph-grid-major: rgba(99, 102, 241, 0.09);
+  --graph-edge: rgba(148, 163, 184, 0.45);
+  --graph-semantic-edge: #6366f1;
   --graph-node: var(--surface);
   --graph-child: var(--soft);
-  --graph-mask: color-mix(in srgb, var(--background) 72%, transparent);
+  --graph-mask: rgba(8, 9, 13, 0.75);
   position: relative;
   display: flex;
   width: 100%;
@@ -15,18 +16,38 @@
   overflow: visible;
   color: var(--text);
   container-type: inline-size;
+  background:
+    radial-gradient(ellipse 70% 55% at 50% 28%, rgba(99, 102, 241, 0.14) 0%, rgba(56, 189, 248, 0.05) 45%, transparent 75%),
+    var(--surface);
+}
+:root[data-theme="light"] .graph-canvas {
+  --graph-grid: rgba(15, 23, 42, 0.09);
+  --graph-grid-major: rgba(79, 70, 229, 0.08);
+  --graph-edge: rgba(71, 85, 105, 0.55);
+  --graph-semantic-edge: #4338ca;
+  --graph-mask: rgba(241, 244, 249, 0.88);
+  background:
+    radial-gradient(ellipse 75% 60% at 50% 25%, rgba(99, 102, 241, 0.08) 0%, rgba(14, 165, 233, 0.04) 45%, transparent 75%),
+    #eef2f8;
 }
 .graph-header {
   position: relative;
   z-index: 10;
   display: flex;
   min-width: 0;
-  min-height: 40px;
+  min-height: 44px;
   align-items: center;
-  gap: 8px;
-  padding: 4px 10px;
+  gap: 10px;
+  padding: 6px 12px;
   border-bottom: 1px solid var(--border);
-  background: var(--surface);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.03) 0%, rgba(255, 255, 255, 0.005) 100%), var(--surface);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(12px);
+}
+:root[data-theme="light"] .graph-header {
+  background: rgba(255, 255, 255, 0.94);
+  border-bottom: 1px solid #d1d9e6;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
 }
 .graph-header-context {
   display: flex;
@@ -41,13 +62,20 @@
   align-items: center;
   gap: 6px;
   min-height: 30px;
-  padding: 0 8px;
-  border: 1px solid transparent;
-  border-radius: 8px;
-  background: var(--soft);
+  padding: 0 9px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
   color: var(--text);
   font-size: 12px;
+  font-weight: 500;
   white-space: nowrap;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+  transition: all 160ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.graph-header .components-trigger:hover {
+  background: var(--soft);
+  border-color: color-mix(in srgb, var(--accent) 30%, var(--border));
 }
 .graph-header .breadcrumbs {
   display: flex;
@@ -69,24 +97,32 @@
 .breadcrumbs button {
   max-width: 190px;
   overflow: hidden;
-  padding: 4px 2px;
+  padding: 3px 6px;
   border: 0;
+  border-radius: 4px;
   background: transparent;
   color: var(--muted);
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-size: 12px;
+  font-weight: 500;
+  transition: color 150ms ease, background-color 150ms ease;
+}
+.breadcrumbs button:hover {
+  color: var(--text);
+  background: var(--soft);
 }
 .breadcrumbs button[aria-current="page"] {
   color: var(--text);
-  font-weight: 550;
+  font-weight: 600;
 }
 .scene-switcher {
   display: flex;
   flex: 0 0 auto;
   align-items: center;
-  gap: 1px;
+  gap: 2px;
   padding: 2px;
-  border: 1px solid transparent;
+  border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--soft);
 }
@@ -95,21 +131,27 @@
   min-height: 28px;
   align-items: center;
   justify-content: center;
-  gap: 5px;
-  padding: 0 8px;
+  gap: 6px;
+  padding: 0 10px;
   border: 0;
   border-radius: 6px;
   background: transparent;
   color: var(--muted);
   font: inherit;
   font-size: 12px;
+  font-weight: 500;
   white-space: nowrap;
   cursor: pointer;
+  transition: all 160ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.scene-switcher button:hover:not([aria-pressed="true"]) {
+  color: var(--text);
 }
 .scene-switcher button[aria-pressed="true"] {
   background: var(--surface);
   color: var(--text);
-  box-shadow: 0 1px 2px color-mix(in srgb, var(--text) 10%, transparent);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  font-weight: 600;
 }
 .graph-panel-actions {
   display: flex;
@@ -122,13 +164,18 @@
   min-height: 28px;
   align-items: center;
   gap: 5px;
-  padding: 0 7px;
-  border: 1px solid transparent;
-  border-radius: 8px;
-  background: transparent;
+  padding: 0 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
   color: var(--muted);
   font-size: 12px;
   white-space: nowrap;
+  transition: all 160ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.graph-panel-actions .button:hover {
+  color: var(--text);
+  background: var(--soft);
 }
 .graph-search {
   position: relative;
@@ -136,18 +183,21 @@
   display: flex;
   width: clamp(160px, 22vw, 280px);
   min-width: 130px;
-  height: 30px;
+  height: 32px;
   flex: 0 1 260px;
   align-items: center;
   gap: 7px;
-  padding: 0 8px;
+  padding: 0 10px;
   border: 1px solid var(--border);
   border-radius: 8px;
-  background: var(--surface);
+  background: var(--soft);
   color: var(--muted);
+  transition: border-color 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
 }
 .graph-search:focus-within {
   border-color: var(--accent);
+  background: var(--surface);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 12%, transparent);
 }
 .graph-search input {
   width: 100%;
@@ -202,7 +252,7 @@
   height: 0 !important;
   min-height: 0;
   flex: 1 1 0;
-  background: var(--surface);
+  background: transparent;
 }
 .graph-canvas .react-flow__edge-path {
   stroke: var(--graph-edge);
@@ -240,20 +290,29 @@
   position: relative;
   z-index: 9;
   display: flex;
-  min-height: 38px;
+  min-height: 44px;
   flex: 0 0 auto;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
-  padding: 4px 10px;
+  gap: 10px;
+  padding: 6px 14px;
   border-top: 1px solid var(--border);
-  background: var(--surface);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.03) 0%, rgba(255, 255, 255, 0.005) 100%), var(--surface);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(12px);
+}
+:root[data-theme="light"] .graph-dock {
+  background: rgba(255, 255, 255, 0.94);
+  border-top: 1px solid #d1d9e6;
+  box-shadow:
+    inset 0 1px 0 #ffffff,
+    0 -2px 10px rgba(15, 23, 42, 0.04);
 }
 .graph-dock-main {
   display: flex;
   min-width: 0;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
 }
 .layout-direction {
   display: inline-flex;
@@ -261,55 +320,100 @@
   flex: 0 0 auto;
   align-items: center;
   justify-content: center;
-  gap: 5px;
-  padding: 0 8px;
-  border: 1px solid transparent;
-  border-radius: 8px;
-  background: var(--soft);
+  gap: 6px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0.01) 100%), var(--surface);
   color: var(--text);
   font: inherit;
   font-size: 12px;
+  font-weight: 500;
   cursor: pointer;
   white-space: nowrap;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), var(--shadow-sm);
+  transition: all 160ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+:root[data-theme="light"] .layout-direction {
+  background: linear-gradient(180deg, #ffffff 0%, #f9fafb 100%);
+  border: 1px solid #d1d9e6;
+  color: #090d16;
+  box-shadow:
+    inset 0 1px 0 #ffffff,
+    0 1px 2px rgba(15, 23, 42, 0.05);
 }
 .layout-direction:disabled {
   opacity: 0.45;
   cursor: not-allowed;
+  box-shadow: none;
 }
-.layout-direction:hover:not(:disabled),
+.layout-direction:hover:not(:disabled) {
+  background: var(--soft);
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16), 0 2px 8px rgba(0, 0, 0, 0.25);
+  transform: translateY(-1px);
+}
+:root[data-theme="light"] .layout-direction:hover:not(:disabled) {
+  background: #ffffff;
+  border-color: #6366f1;
+  color: #4338ca;
+  box-shadow:
+    inset 0 1px 0 #ffffff,
+    0 2px 8px rgba(99, 102, 241, 0.15);
+  transform: translateY(-1px);
+}
+.layout-direction:active:not(:disabled) {
+  transform: scale(0.97);
+}
 .layout-direction.active {
-  color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 8%, var(--surface));
+  color: #ffffff;
+  background: color-mix(in srgb, var(--accent) 18%, var(--surface));
+  border-color: var(--accent);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.15), 0 0 12px color-mix(in srgb, var(--accent) 30%, transparent);
+}
+:root[data-theme="light"] .layout-direction.active {
+  background: #eef2ff;
+  border-color: #4f46e5;
+  color: #4338ca;
+  box-shadow: inset 0 1px 0 #ffffff, 0 0 10px rgba(99, 102, 241, 0.18);
 }
 .zoom-readout {
   min-width: 46px;
-  padding: 0 5px;
+  padding: 0 6px;
   color: var(--muted);
-  font-size: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  font-family: var(--font-mono, "JetBrains Mono Variable", monospace);
   text-align: center;
   font-variant-numeric: tabular-nums;
 }
 .graph-zoom {
   display: inline-flex;
   align-items: center;
-  gap: 2px;
+  gap: 1px;
   padding: 2px;
-  border: 1px solid transparent;
-  border-radius: 8px;
-  background: var(--soft);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
 }
 .graph-zoom .icon-button,
 .graph-options-panel > .icon-button {
-  width: 30px;
-  height: 30px;
+  width: 28px;
+  height: 28px;
   border: 1px solid transparent;
-  border-radius: 6px;
+  border-radius: 4px;
   background: transparent;
   color: var(--text);
+  transition: background-color 150ms ease, color 150ms ease;
 }
 .graph-zoom .icon-button:hover,
 .graph-options-panel > .icon-button:hover {
-  background: var(--surface);
+  background: var(--soft);
+}
+.graph-zoom .icon-button:active,
+.graph-options-panel > .icon-button:active {
+  transform: scale(0.96);
 }
 .graph-options {
   position: static;
@@ -319,22 +423,29 @@
   display: inline-flex;
   min-height: 30px;
   align-items: center;
-  gap: 4px;
-  padding: 0 8px;
-  border: 1px solid transparent;
-  border-radius: 8px;
-  background: var(--soft);
+  gap: 5px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
   color: var(--text);
   font-size: 12px;
+  font-weight: 500;
   cursor: pointer;
   list-style: none;
   user-select: none;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+  transition: all 160ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.graph-options > summary:hover {
+  background: var(--soft);
 }
 .graph-options > summary::-webkit-details-marker {
   display: none;
 }
 .graph-options[open] > summary {
   color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 35%, var(--border));
   background: color-mix(in srgb, var(--accent) 8%, var(--surface));
 }
 .graph-options[open] > summary svg {
@@ -351,13 +462,14 @@
   min-width: 0;
   max-width: calc(100% - 24px);
   align-items: center;
-  gap: 5px;
+  gap: 6px;
   flex-wrap: wrap;
-  padding: 6px;
+  padding: 8px;
   border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--surface);
-  box-shadow: 0 2px 8px color-mix(in srgb, var(--text) 7%, transparent);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--surface) 96%, transparent);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.14);
 }
 .graph-dock-meta {
   display: flex;

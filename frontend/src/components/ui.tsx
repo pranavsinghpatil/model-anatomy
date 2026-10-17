@@ -115,29 +115,6 @@ export function ThemeControl() {
     </Menu>
   );
 }
-export function ModeControl() {
-  const { mode, setMode } = usePreferences();
-  return (
-    <div
-      className="mode-control"
-      role="group"
-      aria-label="Experience mode"
-      data-active={mode}
-    >
-      <span className="mode-indicator" aria-hidden="true" />
-      {(["learn", "research"] as const).map((value) => (
-        <button
-          key={value}
-          type="button"
-          aria-pressed={mode === value}
-          onClick={() => setMode(value)}
-        >
-          {value === "learn" ? "Learn" : "Research"}
-        </button>
-      ))}
-    </div>
-  );
-}
 export function Drawer({
   open,
   onOpenChange,

@@ -52,10 +52,6 @@ test("live SmolLM2-135M supports graph, anatomy, lazy children, evidence, and ex
 
   await page.goto("/app");
   await page
-    .getByRole("group", { name: "Experience mode" })
-    .getByRole("button", { name: "Research", exact: true })
-    .click();
-  await page
     .getByLabel("Hugging Face model", { exact: true })
     .fill("HuggingFaceTB/SmolLM2-135M");
   const inspect = page.getByRole("button", {
@@ -120,14 +116,6 @@ test("live SmolLM2-135M supports graph, anatomy, lazy children, evidence, and ex
       node.parameter_count > 0,
   );
   expect(evidenceNode).toBeTruthy();
-
-  const experience = page.getByRole("group", { name: "Experience mode" });
-  await experience.getByRole("button", { name: "Learn", exact: true }).click();
-  await expect(page).toHaveURL(new RegExp(`/app/analyses/${created.id}`));
-  await experience
-    .getByRole("button", { name: "Research", exact: true })
-    .click();
-  await expect(page).toHaveURL(new RegExp(`/app/analyses/${created.id}`));
 
   await expect(page.locator(".model-node").first()).toBeVisible();
   await page.screenshot({

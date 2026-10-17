@@ -1,6 +1,10 @@
 import { expect, test } from "@playwright/test";
 import { block, embedding, mockService } from "./service";
-import { graphNode, openAnalysis } from "./helpers";
+import {
+  graphNode,
+  MIN_READABLE_NODE_FONT_SIZE,
+  openAnalysis,
+} from "./helpers";
 
 test("short initial workspaces open on a readable representative component", async ({
   page,
@@ -41,7 +45,7 @@ test("short initial workspaces open on a readable representative component", asy
         );
       }),
     )
-    .toBeGreaterThanOrEqual(11.8);
+    .toBeGreaterThanOrEqual(MIN_READABLE_NODE_FONT_SIZE);
   await page.screenshot({
     path: testInfo.outputPath("short-window-readable-graph.png"),
     animations: "disabled",

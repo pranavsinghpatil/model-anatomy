@@ -732,55 +732,6 @@
   }
 }
 
-.learn-guide {
-  color: var(--text, #243036);
-  padding: 12px;
-  border: 1px solid var(--border, #cbd4d8);
-  border-radius: 0.65rem;
-  background: var(--surface, #fff);
-}
-
-.learn-guide header p,
-.learn-guide li p {
-  margin-top: 0.4rem;
-  color: var(--muted, #717980);
-  line-height: 1.5;
-}
-
-.learn-guide-steps {
-  display: flex;
-  gap: 0.3rem;
-  margin-top: 0.65rem;
-  overflow-x: auto;
-}
-
-.learn-guide-steps button {
-  flex: 0 0 auto;
-  min-height: 36px;
-  padding: 0.35rem 0.55rem;
-  border: 1px solid var(--border, #cbd4d8);
-  border-radius: 999px;
-  background: var(--surface, #fff);
-  color: var(--text, #243036);
-}
-
-.learn-guide-steps button[aria-pressed="true"] {
-  border-color: var(--accent, #408f85);
-  background: var(--soft, #e9f2f0);
-  color: var(--accent, #408f85);
-}
-
-.learn-guide-copy {
-  margin-top: 0.6rem;
-  color: var(--muted, #717980);
-  line-height: 1.5;
-}
-
-.learn-guide button:focus-visible {
-  outline: 2px solid var(--accent, #408f85);
-  outline-offset: 2px;
-}
-
 @media (pointer: coarse) {
   .artifact-inspection-identity summary,
   .artifact-scope-disclosure summary,
@@ -791,8 +742,7 @@
   .artifact-file-search input,
   .artifact-file-list .icon-button,
   .artifact-pagination button,
-  .artifact-inspection details > summary,
-  .learn-guide-steps button {
+  .artifact-inspection details > summary {
     min-height: 44px;
   }
 }

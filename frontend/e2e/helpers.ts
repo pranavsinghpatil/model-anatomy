@@ -1,6 +1,18 @@
 import type { Page } from "@playwright/test";
 import { expect } from "@playwright/test";
 
+export const UI_SCALE = 0.75;
+export const MIN_READABLE_NODE_FONT_SIZE = 11.8 * UI_SCALE;
+
+export function hasNoHorizontalOverflow() {
+  const root = document.documentElement;
+  const zoom = Number.parseFloat(getComputedStyle(root).zoom) || 1;
+  return (
+    root.scrollWidth <= window.innerWidth &&
+    document.body.scrollWidth * zoom <= window.innerWidth + 1
+  );
+}
+
 export async function expectReadableGraph(page: Page) {
   await expect
     .poll(() =>
@@ -15,7 +27,7 @@ export async function expectReadableGraph(page: Page) {
           return Number.parseFloat(getComputedStyle(title).fontSize) * scale;
         }),
     )
-    .toBeGreaterThanOrEqual(11.8);
+    .toBeGreaterThanOrEqual(MIN_READABLE_NODE_FONT_SIZE);
   await expect
     .poll(() =>
       page.getByTestId("graph-canvas").evaluate((canvas) => {

@@ -40,7 +40,7 @@ test("new visitors get white appearance and a canvas without an open navigator",
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
 });
 
-test("model facts and type guidance disclose without losing inspection context", async ({
+test("model facts and component type disclose without losing inspection context", async ({
   page,
 }) => {
   await mockService(page);
@@ -58,14 +58,16 @@ test("model facts and type guidance disclose without losing inspection context",
   await graphNode(page, embedding.label);
   const guide = page.getByTestId("inspector").locator(".inspector-definition");
   await expect(guide).not.toHaveAttribute("open");
-  const mode = page.getByRole("group", { name: "Experience mode" });
-  await mode.getByRole("button", { name: "Learn", exact: true }).click();
+  await expect(guide.locator("summary")).toContainText(
+    "About this component type",
+  );
+  await guide.locator("summary").click();
   await expect(guide).toHaveAttribute("open");
   await expect(
     page
       .getByTestId("inspector")
       .getByRole("heading", { name: embedding.label, exact: true }),
   ).toBeVisible();
-  await mode.getByRole("button", { name: "Research", exact: true }).click();
+  await guide.locator("summary").click();
   await expect(guide).not.toHaveAttribute("open");
 });

@@ -3,6 +3,7 @@ import {
   expectGraphFramed,
   expectReadableGraph,
   graphNode,
+  hasNoHorizontalOverflow,
   openAnalysis,
   openNestedGraph,
   showDetails,
@@ -312,17 +313,7 @@ test("nested navigation preserves each graph viewport through resize and reduced
   await page.getByRole("button", { name: "Fit graph" }).click();
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.addStyleTag({ content: "html { zoom: 2; }" });
-  await expect
-    .poll(() =>
-      page.evaluate(
-        () =>
-          Math.max(
-            document.documentElement.scrollWidth,
-            document.body.scrollWidth,
-          ) <= window.innerWidth,
-      ),
-    )
-    .toBe(true);
+  await expect.poll(() => page.evaluate(hasNoHorizontalOverflow)).toBe(true);
 });
 
 test("503 health disables new analysis without hiding recent reports", async ({

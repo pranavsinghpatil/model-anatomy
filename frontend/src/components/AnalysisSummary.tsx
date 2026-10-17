@@ -10,11 +10,9 @@ import type { AnalysisDetail } from "../api/contract";
 import { count, dimensionCount, reportDimensionKeys } from "../format";
 import { CopyButton } from "./ui";
 import { Status } from "./Common";
-import { usePreferences } from "../state/preferences";
 import "./analysis-summary.css";
 
 export function Overview({ detail }: { detail: AnalysisDetail }) {
-  const { mode } = usePreferences();
   const artifact = detail.status === "inspected";
   const inspection = detail.inspection;
   const modelName = detail.model_id.split("/").at(-1) ?? detail.model_id;
@@ -126,11 +124,7 @@ export function Overview({ detail }: { detail: AnalysisDetail }) {
         <div className="section-title">
           <div>
             <BookOpen size={18} aria-hidden="true" />
-            <h2>
-              {mode === "learn"
-                ? "Where to go next"
-                : "Continue this inspection"}
-            </h2>
+            <h2>Continue this inspection</h2>
           </div>
           <p>
             {artifact

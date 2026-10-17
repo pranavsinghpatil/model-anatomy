@@ -1,11 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { ArrowRight, History } from "lucide-react";
+import { ArrowRight, History, Layers, Network, ShieldCheck } from "lucide-react";
 import { api } from "../api/client";
 import { ErrorNotice, Loading, Status } from "../components/Common";
-import { Button, ModeControl, ThemeControl } from "../components/ui";
-import { usePreferences } from "../state/preferences";
+import { Button, ThemeControl } from "../components/ui";
 import { useRecent, useService } from "../state/queries";
 import { DotPattern } from "../components/vendor/dot-pattern";
 import "./entry.css";
@@ -62,7 +61,6 @@ export function Start() {
   );
   const navigate = useNavigate();
   const client = useQueryClient();
-  const { mode } = usePreferences();
   const { health, service, available } = useService();
   const recent = useRecent();
   const jobs = [...(recent.data?.analyses ?? [])].sort(
@@ -108,7 +106,6 @@ export function Start() {
               <div>
                 <h2 id="submit-title">Inspect a model</h2>
               </div>
-              <ModeControl />
             </div>
             <div className="entry-field-heading">
               <label className="entry-field-label" htmlFor="model-input">
@@ -208,16 +205,50 @@ export function Start() {
               </div>
             )}
             {create.error && <ErrorNotice error={create.error} />}
+          </section>
 
-            <div className="entry-mode-note">
-              <p>
-                <strong>{mode === "learn" ? "Learn" : "Research"}</strong>
-                {mode === "learn"
-                  ? " adds reading guidance beside the architecture."
-                  : " opens the architecture and evidence workspace."}
+          <div
+            className="entry-bento-grid"
+            role="region"
+            aria-label="Capabilities"
+          >
+            <div className="entry-bento-card">
+              <div className="entry-bento-header">
+                <span className="entry-bento-icon" aria-hidden="true">
+                  <Network size={14} />
+                </span>
+                <span>Semantic Graph</span>
+              </div>
+              <p className="entry-bento-desc">
+                Instantiated modules, attention blocks, and residual streams
+                mapped from genuine code.
               </p>
             </div>
-          </section>
+            <div className="entry-bento-card">
+              <div className="entry-bento-header">
+                <span className="entry-bento-icon" aria-hidden="true">
+                  <Layers size={14} />
+                </span>
+                <span>Tensor & Weight Shapes</span>
+              </div>
+              <p className="entry-bento-desc">
+                Verified SafeTensors headers, dimensions, parameter ownership,
+                and byte offsets.
+              </p>
+            </div>
+            <div className="entry-bento-card">
+              <div className="entry-bento-header">
+                <span className="entry-bento-icon" aria-hidden="true">
+                  <ShieldCheck size={14} />
+                </span>
+                <span>Evidence-Backed</span>
+              </div>
+              <p className="entry-bento-desc">
+                No LLM guesswork. Every component and tensor trace links to
+                verified repository artifacts.
+              </p>
+            </div>
+          </div>
         </section>
 
         <details className="entry-boundaries">

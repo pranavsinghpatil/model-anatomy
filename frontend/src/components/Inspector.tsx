@@ -25,8 +25,7 @@ import {
   valueText,
 } from "../format";
 import { ErrorNotice, IconButton, Loading, Warnings } from "./Common";
-import { componentPurpose } from "./LearnGuide";
-import { usePreferences } from "../state/preferences";
+import { componentPurpose } from "./component-purpose";
 import "./inspection.css";
 import { nodeTitle } from "../graph/presentation";
 
@@ -129,12 +128,8 @@ export function Inspector({
   tab?: InspectorTab;
   onTabChange?: (tab: InspectorTab) => void;
 }) {
-  const { mode } = usePreferences();
-  const [guideOpen, setGuideOpen] = useState(mode === "learn");
-  useEffect(
-    () => setGuideOpen(mode === "learn"),
-    [mode, analysisId, graphId, node?.id],
-  );
+  const [guideOpen, setGuideOpen] = useState(false);
+  useEffect(() => setGuideOpen(false), [analysisId, graphId, node?.id]);
   const [internalTab, setInternalTab] = useState<InspectorTab>("module");
   const selectedTab = tab ?? internalTab;
   const changeTab = (value: string) => {

@@ -1,5 +1,9 @@
 # Sourced components and richer workspace surfaces
 
+Subsequent user direction on October 17 removes Learn/Research and applies a 75%
+page scale. See D-035 and the frontend README. The audit and validation below
+record the preceding component-refinement increment, when both modes existed.
+
 ## Scope
 
 The October 17 refinement keeps direct model submission and the compact graph

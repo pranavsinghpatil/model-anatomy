@@ -15,7 +15,13 @@ import {
   mockService,
   rootGraph,
 } from "./service";
-import { expectGraphFramed, graphNode, openAnalysis } from "./helpers";
+import {
+  expectGraphFramed,
+  graphNode,
+  hasNoHorizontalOverflow,
+  openAnalysis,
+  UI_SCALE,
+} from "./helpers";
 
 const drawing = (page: import("@playwright/test").Page) =>
   page.getByTestId("anatomy-drawing");
@@ -288,10 +294,10 @@ test("anatomy controls, facets, keyboard inspection, and reduced motion work", a
   const drawingElement = drawing(page);
   const originalStyle = await drawingElement.getAttribute("style");
   await page.getByRole("button", { name: "Separate parts" }).click();
-  await drawingElement.evaluate((element) => {
+  await drawingElement.evaluate((element, scale) => {
     (element as HTMLElement).style.position = "fixed";
-    (element as HTMLElement).style.top = "120vh";
-  });
+    (element as HTMLElement).style.top = `calc(120vh / ${scale})`;
+  }, UI_SCALE);
   await expect(drawing(page)).toHaveAttribute("data-motion", "paused");
   const offscreenPose = await drawing(page).getAttribute("data-pose");
   await page.waitForTimeout(200);
@@ -520,14 +526,7 @@ test("anatomy stays usable across viewport widths and themes", async ({
       await setTheme(page, theme);
       await expect
         .poll(
-          () =>
-            page.evaluate(
-              () =>
-                Math.max(
-                  document.body.scrollWidth,
-                  document.documentElement.scrollWidth,
-                ) <= innerWidth,
-            ),
+          () => page.evaluate(hasNoHorizontalOverflow),
           `${width}px ${theme} anatomy width`,
         )
         .toBe(true);

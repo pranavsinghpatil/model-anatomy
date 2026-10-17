@@ -11,10 +11,12 @@ visitor's analyses. Recent analyses require an explicit continuation action.
 `/app/analyses/:id?view=overview|architecture|artifacts|report` identifies the
 selected analysis and primary view; old `/?analysis=...` links redirect.
 
-Research and Learn both default to Architecture. Once a workspace
-view is selected, changing mode preserves the view, graph path, selection,
-inspector tab and viewport. Session memory is keyed by analysis and graph; theme
-and mode alone persist in local storage. No reports are placed in local storage.
+There is one inspection flow. Learn/Research controls, conditional guide footer
+and the mode preference were removed at the user's request on October 17.
+Component explanations remain available on demand in the inspector. Session
+memory is keyed by analysis and graph; only theme persists in local storage.
+No reports are placed in local storage. The whole interface uses 75% page scale;
+graph zoom remains independent. Historical validation below predates this change.
 
 Overview presents identity, applicable dimensions and next actions. Architecture
 provides an accessible component list, current-graph search, graph, connections
@@ -75,10 +77,10 @@ estimates. Nested graphs load on demand. Artifact and component tensor pages sta
 bounded at 50 records. Graph connections preserve relation types and evidence;
 repeated blocks open only their reported representative graph.
 
-Learn guidance is authored general information for established component kinds.
+On-demand component definitions are authored general information for established component kinds.
 Model-specific labels, shapes and evidence come from the API. Unknown kinds retain
 an explicit unknown-purpose statement. Shape symbols are guidance, not inferred
-numeric dimensions. Artifact-only guidance contains no architecture learning steps.
+numeric dimensions. The former global reading guide and Learn/Research modes are removed.
 
 ## Reference and dependency choices
 

@@ -355,3 +355,52 @@ decorative model facts, backend changes or new routes are introduced. The live
 browser audit resumed after a connection-error/security blocker cleared; six
 captured steps and deterministic regression checks are separate evidence.
 See `INTERFACE_COMPONENTS.md`.
+
+## D-035 - Use one inspection flow at 75% interface scale
+**2026-10-17 - explicit user request**
+
+Remove Learn/Research controls, mode persistence, conditional copy and the global
+learning footer. Retain authored component definitions behind the inspector's
+existing disclosure. Apply a persistent 0.75 root page scale and compensate the
+workspace height so it fills the viewport. Keep graph zoom independent of page
+scale and retain theme, graph path, selection, tabs and panel state. This supersedes
+the former two-mode presentation and normal-scale density preference; no backend
+or report contract changes are required.
+
+## D-036 - Elevated professional engineering dashboard aesthetic
+**2026-10-17 - explicit user request**
+
+Refine the UI/UX across the landing page, unified workspace, graph canvas dock,
+component navigator, and inspector to achieve a calm, restrained, high-density
+engineering dashboard aesthetic inspired by TextBackdoor, Fanout, and ClickUp.
+Avoid generic AI aesthetic cliches (neon glows, gradient borders, rainbow badges).
+Implement a 3-pillar engineering Bento Grid on the landing page, clean radial
+ambient lighting, tree guide lines in the component navigator, tactile button
+micro-interactions, tabular monospace typography for tensor dimensions and counts,
+and acrylic floating control bars. Retain all existing contracts, accessibility hooks,
+and Playwright test bounds. Development conducted on topic branch `pranav/frontend-revamp`.
+
+## D-037 - Cosmic obsidian & electric indigo research studio theme with illuminated dual-grid canvas and shiny components
+**2026-10-17 - explicit user request**
+
+Replace the muted slate palette with a modern, rich, shiny research engineering palette:
+deep cosmic obsidian canvas (`#08090d`), midnight research plates (`#0e121d`), electric indigo
+primary core (`#6366f1` / `#818cf8`), and luminous category semantics (sky cyan `#38bdf8`,
+violet `#818cf8`, golden amber `#fbbf24`, mint emerald `#34d399`).
+Add an atmospheric radial ambient aura and a dual-layer technical grid (major grid lines +
+subtle dots) to the architecture graph canvas and landing page backdrop. Upgrade buttons,
+omnibox, bento cards, and graph nodes with specular top highlights (`inset 0 1px 0 rgba(255,255,255,0.15-0.35)`),
+rich subtle gradients, glowing category indicator stripes, metallic repeat badges, and
+radiant selected states. Retain all existing contracts, test bounds, and accessibility attributes.
+
+## D-038 - Architectural blueprint & porcelain light theme optimization
+**2026-10-17 - explicit user request**
+
+Overhaul the light theme from a washed-out, flat white-on-white presentation into a crisp, authoritative research engineering aesthetic:
+- **Architectural Paper Backdrop & Blueprint Canvas**: Shift the global background to a clean architectural paper tone (`#f1f4f9`) and the graph canvas to an architectural blueprint tone (`#eef2f8`) with dual-layer grid lines (`--graph-grid`: `rgba(15,23,42,0.09)`, `--graph-grid-major`: `rgba(79,70,229,0.08)`) and ambient radial focal lighting.
+- **Porcelain White Surfaces with Specular Depth**: Render cards, workbench containers, inspector panels, and graph nodes in brilliant porcelain white (`#ffffff`) with subtle top highlights (`inset 0 1px 0 #ffffff`), tactile drop shadows (`0 1px 3px rgba(15,23,42,0.04)`, `0 16px 36px -4px rgba(15,23,42,0.08)`), and sharp borders (`#d1d9e6` / `#cbd5e1`).
+- **Eliminate Repeated Node Dark Mud Bug**: Replace the hardcoded dark mode gradient on `.model-node.is-repeated::before/after` with stacked porcelain white cards (`linear-gradient(180deg, #ffffff 0%, #f4f7fc 100%)`), amber border accents, and a warm gold repeat badge (`#fef3c7` / `#92400e`), completely eliminating the dark muddy patch on `Decoder Block`.
+- **Specular Action Controls**: Style light mode primary buttons with royal electric indigo gradients (`#4f46e5` to `#4338ca`), top bevel highlights, and authoritative hover elevations. Secondary buttons use porcelain bevels with crisp indigo hover borders.
+- **Deep Obsidian Ink Typography**: Elevate light theme text to deep obsidian ink (`#090d16`) and secondary labels to slate blue (`#5b677a`), ensuring razor-sharp contrast across all surfaces.
+- **Preserved Contracts**: Dark theme remains untouched; all Playwright tests, accessibility labels, and backend/IR contracts remain 100% intact.
+

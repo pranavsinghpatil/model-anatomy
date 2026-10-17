@@ -19,7 +19,7 @@ import type {
 } from "../api/contract";
 import { count, shape } from "../format";
 import { nodeTitle } from "../graph/presentation";
-import { componentMeaning } from "../components/LearnGuide";
+import { componentMeaning } from "../components/component-purpose";
 import { IconButton } from "../components/Common";
 import { Button } from "../components/ui";
 import { AssemblyDrawing } from "./AssemblyDrawing";
