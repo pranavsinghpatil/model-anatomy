@@ -691,3 +691,23 @@ Replace the broad rotating radial gradient blob with a crisp rotating borderline
   - 10/10 Playwright E2E tests passed cleanly across desktop and mobile in 46.8s.
   - Live visual inspection confirmed a razor-sharp 1.5px rotating perimeter line with zero interior color bleeding or text wash.
 
+## D-052 - Redesign top navbar: full-width sticky glass architecture, unified pill controls, and ergonomic alignment
+**2026-10-19 - explicit user request**
+
+Modernize and fix the top navigation bar layout, proportions, and styling:
+- **Full-Width Edge-to-Edge Sticky Glass Header**:
+  - Liberated `<header className="entry-header">` from being confined to a floating 1180px box by setting `.entry-page` to `width: 100%`.
+  - The navbar now spans the browser edge-to-edge (`width: 100%`) with `position: sticky; top: 0; z-index: 50`.
+  - Added continuous subtle glass border (`border-bottom: 1px solid rgba(255, 255, 255, 0.08)`) and high-performance backdrop blur (`backdrop-filter: blur(16px); background: rgba(4, 6, 20, 0.82)`).
+  - Encapsulated navigation items in a centered `.entry-header-inner` container (`max-width: 1200px; height: 60px; padding: 0 24px`) for balanced alignment with page content.
+- **Harmonized Action Cluster (Right Side)**:
+  - Aligned all three action controls (`Your analyses`, `Start inspection`, `Theme`) to an exact uniform height of `34px`, pill radius (`9999px`), and shared vertical baseline.
+  - Eliminated the jarring, blinding white pill glow on `Start inspection`, replacing it with an elegant starlight-tinted glassmorphic button with subtle electric cyan border.
+  - Upgraded `Your analyses` to a sleek secondary glass pill button.
+- **Polished Navigation Links**:
+  - Refined section links (`Blueprint`, `Metrics`, `Capabilities`, `Catalog`) with clean `6px 12px` rounded hover backgrounds (`rgba(255, 255, 255, 0.06)`), removing awkward jumping dot indicators.
+- **Verification**:
+  - `npm run typecheck` passed with 0 TypeScript errors.
+  - 10/10 Playwright E2E tests (`entry-rebuild.spec.ts` & `graph-rebuild.spec.ts`) passing cleanly in 31.3s across desktop and mobile.
+  - Visual verification confirmed via high-resolution Playwright screenshot artifact.
+

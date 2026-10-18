@@ -319,39 +319,37 @@ function FooterBrand() {
 function EntryHeader() {
   return (
     <header className="entry-header">
-      <div className="entry-header-left">
-        <Brand />
-        <span className="entry-header-divider" aria-hidden="true" />
-        <nav className="entry-nav-links" aria-label="Sections">
-          <a href="#blueprint" className="entry-nav-link">
-            <span>Blueprint</span>
-            <span className="nav-link-dot" aria-hidden="true" />
+      <div className="entry-header-inner">
+        <div className="entry-header-left">
+          <Brand />
+          <span className="entry-header-divider" aria-hidden="true" />
+          <nav className="entry-nav-links" aria-label="Sections">
+            <a href="#blueprint" className="entry-nav-link">
+              <span>Blueprint</span>
+            </a>
+            <a href="#metrics" className="entry-nav-link">
+              <span>Metrics</span>
+            </a>
+            <a href="#capabilities" className="entry-nav-link">
+              <span>Capabilities</span>
+            </a>
+            <a href="#catalog" className="entry-nav-link">
+              <span>Catalog</span>
+            </a>
+          </nav>
+        </div>
+        <nav className="entry-header-actions" aria-label="Page controls">
+          <a className="entry-history-link" href="#recent">
+            <History size={14} />
+            <span>Your analyses</span>
           </a>
-          <a href="#metrics" className="entry-nav-link">
-            <span>Metrics</span>
-            <span className="nav-link-dot" aria-hidden="true" />
+          <a className="entry-header-cta" href="#submit-title">
+            <span>Start inspection</span>
+            <ArrowRight size={13} />
           </a>
-          <a href="#capabilities" className="entry-nav-link">
-            <span>Capabilities</span>
-            <span className="nav-link-dot" aria-hidden="true" />
-          </a>
-          <a href="#catalog" className="entry-nav-link">
-            <span>Catalog</span>
-            <span className="nav-link-dot" aria-hidden="true" />
-          </a>
+          <ThemeControl />
         </nav>
       </div>
-      <nav className="entry-header-actions" aria-label="Page controls">
-        <a className="entry-history-link" href="#recent">
-          <History size={15} />
-          <span>Your analyses</span>
-        </a>
-        <a className="entry-header-cta" href="#submit-title">
-          <span>Start inspection</span>
-          <ArrowRight size={13} />
-        </a>
-        <ThemeControl />
-      </nav>
     </header>
   );
 }
