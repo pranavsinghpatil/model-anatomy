@@ -46,8 +46,6 @@ explicit = true
 [tool.uv.sources]
 torch = [{ index = "pytorch-cpu", marker = "sys_platform != 'darwin'" }]
 
-[project.scripts]
-model-anatomy = "model_anatomy.src.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["backend"]
