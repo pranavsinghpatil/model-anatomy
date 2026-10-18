@@ -38,7 +38,6 @@ markers = ["integration: real Hugging Face metadata inspection (network required
 target-version = "py311"
 src = ["backend"]
 line-length = 110
-cache-dir = ".tmp/ruff_cache"
 
 [[tool.uv.index]]
 name = "pytorch-cpu"

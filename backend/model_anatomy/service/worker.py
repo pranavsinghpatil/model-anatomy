@@ -15,6 +15,7 @@ import time
 from dataclasses import replace
 from uuid import uuid4
 
+from model_anatomy.dependencies import require_dependencies
 from model_anatomy.api.settings import Settings
 from model_anatomy.src.errors import AnatomyError, ArtifactError, UnsupportedModelError
 
@@ -296,6 +297,7 @@ class Worker:
 
 
 def main() -> None:
+    require_dependencies("api", "engine", component="Worker")
     worker = Worker(Settings())
     signal.signal(signal.SIGINT, worker.request_stop)
     signal.signal(signal.SIGTERM, worker.request_stop)

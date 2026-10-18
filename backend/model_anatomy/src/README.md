@@ -4,13 +4,21 @@ Run all commands from the project root, where `pyproject.toml` is located. Pytho
 
 ## Set up the environment
 
-For a new checkout, install the project and its dependencies:
+For CLI inspection, install the engine extra from the locked dependencies:
 
 ```bash
-uv sync
+uv sync --frozen --extra engine
 ```
 
-If the environment is already installed and up to date, skip this step. The `--no-sync` option below uses the existing environment without updating dependencies. You can omit it to let `uv run` synchronize the environment automatically.
+If the environment is already installed and up to date, skip this step. The `--no-sync` option below uses the existing environment without updating dependencies. A plain `uv sync` does not select the engine extra. When synchronizing this environment again, keep the extras required by the components you use.
+
+| Component | Required extras | Installation |
+| --- | --- | --- |
+| CLI only | `engine` | `uv sync --frozen --extra engine` |
+| API only | `api` | `uv sync --frozen --extra api` |
+| Worker, or API and worker sharing one environment | `api`, `engine` | `uv sync --frozen --extra api --extra engine` |
+
+API startup does not import Torch or Transformers. Dependency checks never install packages automatically. The optional `dev` extra is only needed for development tools; it is not required to run the CLI or application.
 
 ## Inspect GPT-2
 

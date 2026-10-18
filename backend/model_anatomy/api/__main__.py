@@ -2,13 +2,16 @@
 
 import logging
 
-import uvicorn
-
-from .app import create_app
-from .settings import Settings
+from model_anatomy.dependencies import require_dependencies
 
 
 def main() -> None:
+    require_dependencies("api", component="API")
+    import uvicorn
+
+    from .app import create_app
+    from .settings import Settings
+
     settings = Settings()
     logging.basicConfig(level=logging.INFO)
     uvicorn.run(
