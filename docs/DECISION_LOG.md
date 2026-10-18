@@ -660,3 +660,18 @@ Eliminate floating mock cursors that were hovering over content, hindering under
   - 10/10 Playwright E2E tests passing (`e2e/entry-rebuild.spec.ts` & `e2e/graph-rebuild.spec.ts`) in 46.0s across desktop and mobile.
   - Live browser inspection confirmed 100% unobstructed readability and clean visual hierarchy.
 
+## D-050 - Total removal of mock auditor personas (Matteo, Daniel, Sofie) and chips
+**2026-10-19 - explicit user request**
+
+Completely remove mock auditor persona attributions (Matteo, Daniel, Sofie) and associated chips from the landing page:
+- **Total Elimination of Mock Personas**:
+  - Removed "Verified by Matteo · HF Shard Index" chip from `.entry-submit-heading`, restoring a clean, distraction-free section heading.
+  - Removed "Audited by Daniel · PyTorch AST" chip and the `.teaser-eyebrow-row` flex wrapper from the blueprint preview showcase, restoring the clean `.teaser-eyebrow` text.
+  - Removed "by Sofie" from `.verified-pill` in `.teaser-inspector-head`, keeping only the clean technical indicator "SafeTensors Verified".
+- **Purged Unused CSS**:
+  - Removed all dead styles for `.entry-auditor-chip`, `.auditor-dot`, `.dot-purple`, `.dot-orange`, `.dot-emerald`, `.chip-purple`, `.chip-orange`, and `.teaser-eyebrow-row` from `frontend/src/pages/entry.css`.
+- **Verification**:
+  - `npm run typecheck` passed with 0 TypeScript errors.
+  - All 10/10 Playwright E2E tests (`e2e/entry-rebuild.spec.ts` & `e2e/graph-rebuild.spec.ts`) passing cleanly across desktop and mobile in 32.9s.
+  - Browser inspection confirmed a completely clean, serious, and uncluttered engineering UI.
+

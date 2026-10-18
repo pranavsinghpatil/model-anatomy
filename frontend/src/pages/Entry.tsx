@@ -430,14 +430,7 @@ export function Start() {
             <div className="border-beam" aria-hidden="true" />
 
             <div className="entry-submit-heading">
-              <div>
-                <h2 id="submit-title">Inspect a model</h2>
-              </div>
-              {/* Integrated non-overlapping verification badge */}
-              <div className="entry-auditor-chip chip-purple" title="Repository architecture config & shard index verified by Matteo">
-                <span className="auditor-dot dot-purple" />
-                <span className="auditor-text">Verified by <strong>Matteo</strong> · HF Shard Index</span>
-              </div>
+              <h2 id="submit-title">Inspect a model</h2>
             </div>
 
             <div className="entry-field-heading">
@@ -572,14 +565,7 @@ export function Start() {
           >
             <div className="teaser-header">
               <div>
-                <div className="teaser-eyebrow-row">
-                  <span className="teaser-eyebrow">Interactive Blueprint Preview</span>
-                  {/* Integrated non-overlapping verification badge */}
-                  <div className="entry-auditor-chip chip-orange" title="Layer hierarchy and attention topologies audited by Daniel">
-                    <span className="auditor-dot dot-orange" />
-                    <span className="auditor-text">Audited by <strong>Daniel</strong> · PyTorch AST</span>
-                  </div>
-                </div>
+                <span className="teaser-eyebrow">Interactive Blueprint Preview</span>
                 <h2 id="teaser-heading">
                   One model, <span className="hero-highlight-amber">four inspection views</span>.
                 </h2>
@@ -664,9 +650,8 @@ export function Start() {
                 <div className="teaser-inspector-head">
                   <div className="inspector-chip-row">
                     <span className="eyebrow">{activeTeaserNode.kind}</span>
-                    {/* Integrated non-overlapping verification badge */}
                     <span className="verified-pill">
-                      <CheckCircle2 size={12} /> SafeTensors Verified by <strong>Sofie</strong>
+                      <CheckCircle2 size={12} /> SafeTensors Verified
                     </span>
                   </div>
                   <h3>{activeTeaserNode.label}</h3>
