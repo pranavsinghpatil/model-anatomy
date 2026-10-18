@@ -9,7 +9,7 @@
   --font-mono: "JetBrains Mono Variable", monospace;
 }
 :root {
-  --ui-scale: 1;
+  --ui-scale: 0.9;
   zoom: var(--ui-scale);
   font-family: "Inter Variable", Inter, sans-serif;
   color: var(--text);

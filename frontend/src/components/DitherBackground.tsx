@@ -36,7 +36,7 @@ interface AntigravityParticle {
   vx: number;
   vy: number;
   baseVy: number;
-  colorType: "cyan" | "white" | "indigo";
+  colorType: "starlight" | "specular" | "cobalt";
   size: number;
   twinklePhase: number;
 }
@@ -44,18 +44,18 @@ interface AntigravityParticle {
 /**
  * DitherBackground Component with Antigravity Interactive Disturbance
  *
- * Replicates the signature electric royal ultramarine Bayer dither aesthetic
+ * Harmonized cosmic obsidian & midnight royal sapphire Bayer dither aesthetic
  * enriched with real-time Antigravity interactive physics:
  * - Anti-gravity coordinate space repulsion bubble warping the dither mesh
  * - Aerodynamic comet wake trailing the cursor velocity
  * - Expanding high-contrast shockwave ripples on clicks and rapid strokes
  * - Constellation of 220 upward-floating zero-gravity quantum stipples (scattering on approach)
- * - Multi-tier Bayer luminance quantization (deep void, ultramarine, indigo, cyan, specular white)
+ * - Multi-tier smoothstep Bayer luminance quantization (deep obsidian, midnight navy, sapphire, cobalt, starlight, specular)
  * - 60fps native performance with direct Uint32Array memory blits
  */
 export function DitherBackground({
   className = "",
-  pixelSize = 4,
+  pixelSize = 3,
 }: DitherBackgroundProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const pointerRef = useRef({
@@ -99,12 +99,19 @@ export function DitherBackground({
     const packABGR = (r: number, g: number, b: number, a: number = 255) =>
       (((a & 0xff) << 24) | ((b & 0xff) << 16) | ((g & 0xff) << 8) | (r & 0xff)) >>> 0;
 
-    const colBase = packABGR(22, 0, 140, 255);    // #16008c royal ultramarine
-    const colDeep = packABGR(8, 0, 68, 255);      // #080044 deep void
-    const colT1 = packABGR(67, 56, 202, 255);     // #4338ca royal indigo
-    const colT2 = packABGR(59, 130, 246, 255);    // #3b82f6 electric blue
-    const colT3 = packABGR(56, 189, 248, 255);    // #38bdf8 vibrant cyan stipple
-    const colT4 = packABGR(255, 255, 255, 255);   // #ffffff specular white
+    // Helper: smoothstep for silky continuous luminance and dither interpolation
+    const smoothstep = (min: number, max: number, value: number) => {
+      const x = Math.max(0, Math.min(1, (value - min) / (max - min)));
+      return x * x * (3 - 2 * x);
+    };
+
+    // Harmonized cosmic obsidian & midnight royal sapphire palette
+    const colVoid = packABGR(4, 6, 20, 255);          // #040614 deep obsidian void ground
+    const colMid = packABGR(9, 14, 40, 255);          // #090e28 midnight navy
+    const colSapphire = packABGR(18, 26, 72, 255);    // #121a48 dark royal sapphire
+    const colCobalt = packABGR(37, 53, 117, 255);     // #253575 luminous celestial cobalt
+    const colStarlight = packABGR(74, 114, 212, 255); // #4a72d4 soft celestial starlight blue
+    const colSpecular = packABGR(165, 200, 255, 255); // #a5c8ff soft icy specular stardust
 
     // Initialize 220 floating zero-gravity quantum stipple motes
     const initParticles = () => {
@@ -118,7 +125,7 @@ export function DitherBackground({
           vx: (Math.random() - 0.5) * 0.0004,
           vy: -0.0004 - Math.random() * 0.001, // Negative gravity: continuous upward buoyancy!
           baseVy: -0.0004 - Math.random() * 0.001,
-          colorType: typeRoll > 0.55 ? "white" : typeRoll > 0.2 ? "cyan" : "indigo",
+          colorType: typeRoll > 0.6 ? "specular" : typeRoll > 0.25 ? "starlight" : "cobalt",
           size: Math.random() > 0.5 ? 2 : 1,
           twinklePhase: Math.random() * Math.PI * 2,
         });
@@ -370,52 +377,45 @@ export function DitherBackground({
           const dy4 = sny - orb4Y;
           const d4 = Math.sqrt(dx4 * dx4 + dy4 * dy4) / orb4R;
 
-          // Smooth luminance fields
-          const l1 = Math.max(0, 1 - d1);
-          const l2 = Math.max(0, 1 - d2);
-          const l4 = Math.max(0, 1 - d4) * 0.45;
+          // Smooth cubic falloff for radiant ambient orbs (velvety deep background)
+          const l1 = Math.pow(Math.max(0, 1 - d1), 1.6) * 0.4;
+          const l2 = Math.pow(Math.max(0, 1 - d2), 1.6) * 0.35;
+          const l4 = Math.pow(Math.max(0, 1 - d4), 1.6) * 0.2;
 
-          // Multi-octave wave harmonic field creating organic billows
-          const wave1 = Math.sin(snx * 5.2 + t * 0.7) * Math.cos(sny * 4.4 - t * 0.5) * 0.22;
-          const wave2 = Math.sin((snx + sny) * 8.0 - t * 0.9) * 0.14;
+          // Gentle, silky harmonic wave billows
+          const wave1 = Math.sin(snx * 4.2 + t * 0.5) * Math.cos(sny * 3.6 - t * 0.4) * 0.07;
+          const wave2 = Math.sin((snx + sny) * 6.2 - t * 0.6) * 0.04;
 
-          // Edge boost for HarnessHive margin stippling
+          // Gentle perimeter margin stippling
           const edgeDist = Math.min(snx, 1 - snx, sny, 1 - sny);
-          const edgeGlow = (1 - Math.min(1, edgeDist * 3.2)) * 0.35;
+          const edgeGlow = Math.pow(1 - Math.min(1, edgeDist * 2.8), 2.0) * 0.16;
 
           // Combined luminance with Antigravity interactive disturbance boost
-          const lum = Math.min(
-            1.0,
-            Math.max(
-              0,
-              l1 * 0.75 +
-                l2 * 0.7 +
-                l4 * 0.35 +
-                wave1 +
-                wave2 +
-                edgeGlow +
-                disturbanceGlow,
-            ),
+          const lum = Math.max(
+            0,
+            l1 + l2 + l4 + wave1 + wave2 + edgeGlow + disturbanceGlow,
           );
 
           // 8x8 Bayer matrix thresholding
           const bayerThreshold = BAYER_8X8[bayerRow | (x & 7)] * (1.0 / 64.0);
 
-          // 5-tier Bayer quantization with crisp high-contrast cyan & specular stipples
-          if (lum < 0.08) {
-            buf32[idx] = colDeep;
-          } else if (lum < 0.26) {
-            const factor = Math.min(1.0, (lum - 0.08) / 0.18);
-            buf32[idx] = factor > bayerThreshold ? colT1 : colBase;
-          } else if (lum < 0.48) {
-            const factor = Math.min(1.0, (lum - 0.26) / 0.22);
-            buf32[idx] = factor > bayerThreshold ? colT2 : colT1;
-          } else if (lum < 0.72) {
-            const factor = Math.min(1.0, (lum - 0.48) / 0.24);
-            buf32[idx] = factor > bayerThreshold ? colT3 : colT2;
+          // Continuous smoothstep Bayer dither quantization across 5 continuous tone ranges:
+          // colVoid -> colMid -> colSapphire -> colCobalt -> colStarlight -> colSpecular
+          if (lum < 0.18) {
+            const factor = smoothstep(0.01, 0.18, lum);
+            buf32[idx] = factor > bayerThreshold ? colMid : colVoid;
+          } else if (lum < 0.38) {
+            const factor = smoothstep(0.18, 0.38, lum);
+            buf32[idx] = factor > bayerThreshold ? colSapphire : colMid;
+          } else if (lum < 0.6) {
+            const factor = smoothstep(0.38, 0.6, lum);
+            buf32[idx] = factor > bayerThreshold ? colCobalt : colSapphire;
+          } else if (lum < 0.82) {
+            const factor = smoothstep(0.6, 0.82, lum);
+            buf32[idx] = factor > bayerThreshold ? colStarlight : colCobalt;
           } else {
-            const factor = Math.min(0.82, (lum - 0.72) / 0.28);
-            buf32[idx] = factor > bayerThreshold ? colT4 : colT3;
+            const factor = smoothstep(0.82, 1.05, lum);
+            buf32[idx] = factor > bayerThreshold ? colSpecular : colStarlight;
           }
 
           idx++;
@@ -468,16 +468,16 @@ export function DitherBackground({
         const py = Math.floor(p.y * rows);
 
         if (px >= 1 && px < cols - 1 && py >= 1 && py < rows - 1) {
-          const pCol = p.colorType === "white" ? colT4 : p.colorType === "cyan" ? colT3 : colT2;
+          const pCol = p.colorType === "specular" ? colSpecular : p.colorType === "starlight" ? colStarlight : colCobalt;
           const pIdx = py * cols + px;
           buf32[pIdx] = pCol;
 
           // Cross sparkle halo for visible quantum motes
           if (p.size === 2) {
-            buf32[pIdx + 1] = colT3;
-            buf32[pIdx - 1] = colT3;
-            buf32[pIdx + cols] = colT3;
-            buf32[pIdx - cols] = colT3;
+            buf32[pIdx + 1] = colCobalt;
+            buf32[pIdx - 1] = colCobalt;
+            buf32[pIdx + cols] = colCobalt;
+            buf32[pIdx - cols] = colCobalt;
           }
         }
       }

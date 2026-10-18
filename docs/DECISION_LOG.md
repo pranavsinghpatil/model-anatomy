@@ -571,6 +571,34 @@ Implement authentic Antigravity interactive background physics that dynamically 
   - 10/10 Playwright E2E tests passing cleanly across desktop and mobile.
   - Verified live rendering with 81,000/81,000 active pixels (`colT3: [56, 189, 248, 255]`) and captured high-resolution screenshot evidence.
 
+## D-046 - Harmonized cosmic obsidian & midnight sapphire ground palette, continuous smoothstep dither quantization, and page zoom out
+**2026-10-18 - explicit user request**
+
+Refine the landing page background ground and overall scale based on direct user feedback:
+- **Harmonized Ground Palette (Eliminating Color Clashing)**:
+  - Eliminated the chromatic clash of harsh neon cyan (`#38bdf8`), glaring magenta/ultramarine (`rgb(22, 0, 140)`), and stark white blocks.
+  - Replaced with a unified, luxurious cosmic obsidian & midnight royal sapphire palette:
+    - `colVoid`: `#040614` (`packABGR(4, 6, 20, 255)`)
+    - `colMid`: `#090e28` (`packABGR(9, 14, 40, 255)`)
+    - `colSapphire`: `#121a48` (`packABGR(18, 26, 72, 255)`)
+    - `colCobalt`: `#253575` (`packABGR(37, 53, 117, 255)`)
+    - `colStarlight`: `#4a72d4` (`packABGR(74, 114, 212, 255)`)
+    - `colSpecular`: `#a5c8ff` (`packABGR(165, 200, 255, 255)`)
+  - Updated container background to `#040614` and radial vignette to deep midnight falloff `rgba(4, 6, 22, 0.4)` -> `rgba(2, 4, 14, 0.82)`.
+- **Continuous Smoothstep Dither Quantization**:
+  - Replaced hard boundary step cutoffs with cubic `smoothstep` interpolation across 5 continuous tone ranges.
+  - Each range smoothly stipples into the next without any harsh contour lines or banding.
+  - Fine-tuned ambient orb amplitudes (`l1 * 0.40`, `l2 * 0.35`, `l4 * 0.20`) and smoothed wave harmonics to keep the background foundation tranquil, reserving higher starlight surges for interactive Antigravity disturbance wakes and clicks.
+  - Set default `pixelSize = 3` for silky, fine-grain stardust stippling.
+- **Page Zoom Out (90% UI Scale)**:
+  - Set `:root { --ui-scale: 0.9; zoom: var(--ui-scale); }` in `styles.css` for a global, airy 90% perspective.
+  - Adjusted `.entry-main` width to `min(100%, 780px)` with tighter vertical padding (`22px 0 32px`).
+  - Adjusted hero typography clamp to `clamp(32px, 4.2vw, 48px)` with line height `1.1` and lede font size `15px` for spacious breathing room.
+- **Verification**:
+  - `npm run typecheck` passed cleanly with 0 TypeScript errors.
+  - All 10/10 Playwright E2E tests (`entry-rebuild.spec.ts` & `graph-rebuild.spec.ts`) passing cleanly on desktop and mobile.
+  - Visual verification captured in `refined_ground_zoomed_out.png` and `refined_ground_disturbance.png`.
+
 
 
 
