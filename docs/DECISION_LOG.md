@@ -675,3 +675,19 @@ Completely remove mock auditor persona attributions (Matteo, Daniel, Sofie) and 
   - All 10/10 Playwright E2E tests (`e2e/entry-rebuild.spec.ts` & `e2e/graph-rebuild.spec.ts`) passing cleanly across desktop and mobile in 32.9s.
   - Browser inspection confirmed a completely clean, serious, and uncluttered engineering UI.
 
+## D-051 - Replace rotating gradient blob with crisp rotating borderline trace on model input container
+**2026-10-19 - explicit user request**
+
+Replace the broad rotating radial gradient blob with a crisp rotating borderline trace on the `.entry-submit` card:
+- **Removed Fancy Rotating Gradient Blob**:
+  - Eliminated the unmasked `200px x 200px` radial gradient blob that previously traversed the card and bled light across the interior text, inputs, and background.
+- **Implemented Masked Rotating Borderline Component**:
+  - Re-engineered `.border-beam` using dual-layer masking with `mask-composite: exclude` / `-webkit-mask-composite: xor`.
+  - The entire card interior (100% of the content box) is masked out to transparency; only a razor-sharp 1.5px border line receives pixels.
+  - Positioned a rotating conic gradient beam (`border-line-rotate` 5s linear infinite) with starlight cyan & ice hues (`#38bdf8` & `#a5c8ff`) that sweeps cleanly along the 20px rounded card perimeter.
+  - Inherits the container's `border-radius: inherit` for continuous, seamless corner curvature without clipping or light spill.
+- **Verification**:
+  - `npm run typecheck` passed cleanly with 0 errors.
+  - 10/10 Playwright E2E tests passed cleanly across desktop and mobile in 46.8s.
+  - Live visual inspection confirmed a razor-sharp 1.5px rotating perimeter line with zero interior color bleeding or text wash.
+
