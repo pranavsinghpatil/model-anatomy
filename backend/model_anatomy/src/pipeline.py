@@ -415,6 +415,7 @@ def reconstruct(
             else 0,
             "adapters_used": [],
             "source_completeness": completeness,
+            "diagnostics": [dict(item, module_path=path) for path, flow in builder.flow_reports.items() for item in flow.get("diagnostics", [])],
             "warnings": list(dict.fromkeys(warnings)),
         },
         "limitations": [

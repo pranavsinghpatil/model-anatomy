@@ -176,6 +176,9 @@ class HierarchyBuilder:
 
     def output_spec(self, node: Node, incoming: TensorSpec | None = None) -> TensorSpec:
         path, kind = node.module_path, node.kind
+        if kind == "source_operation" and node.metadata.get("source_proof"):
+            output = node.metadata["proven_output"]
+            return TensorSpec(output["shape"], output["dtype"], "source_result")
         if node.metadata.get("unsupported"):
             return TensorSpec(None, None, "unsupported_source_output")
         if kind == "selection" and "indexing" in node.metadata:
@@ -316,6 +319,11 @@ class HierarchyBuilder:
                 [self.evidence(graph.metadata.get("module_path", ""), "static_source_dependency")],
             )
         )
+        proof = target.metadata.get("source_proof") or source.metadata.get("source_proof")
+        if proof:
+            graph.edges[-1].evidence.append(Evidence("python_source", "derived", "bounded_python_source",
+                                                   {"sources": proof["sources"], "conditions": proof["conditions"],
+                                                    "tensor_execution": False}))
 
     def build(self, path: str = "") -> Graph:
         self.active.add(path)
@@ -426,6 +434,7 @@ class HierarchyBuilder:
                 "profile_assumptions": flow.profile_assumptions,
                 "input_profile": flow.input_profile,
                 "branch_conditions": flow.branch_conditions,
+                "diagnostics": flow.diagnostics,
                 **(
                     {
                         "shape_basis": "native ViT source and config; fixed resolution, unmasked, no interpolation"
@@ -447,6 +456,7 @@ class HierarchyBuilder:
             "source_call_sites": flow.source_call_sites,
             "resolved_operations": flow.resolved_operations,
             "unknown_inputs": sorted(flow.unknown_inputs),
+            "diagnostics": flow.diagnostics,
         }
         if not flow.events:
             graph.metadata["topology"] = "structural_only"
@@ -517,6 +527,8 @@ class HierarchyBuilder:
                     node = Node(unique(event.kind), event.label, event.kind)
                 node.evidence = [self.evidence(path, f"AST {event.kind} at line {event.line}")]
             node.metadata.update(source_line=event.line, **event.metadata)
+            if event.metadata.get("source_proof"):
+                node.evidence.append(Evidence("python_source", "derived", "bounded_python_source", event.metadata["source_proof"]))
             graph.nodes.append(node)
             for port, value in event.arguments.items():
                 for reference, source_port in value.refs:
@@ -541,7 +553,8 @@ class HierarchyBuilder:
                     source = nodes.get(reference)
                     if source:
                         role = event.metadata.get("argument_roles", {}).get(port, port)
-                        if source.metadata.get("unsupported"):
+                        source_operation = source.metadata.get("unsupported") or source.metadata.get("source_proof")
+                        if source_operation:
                             source.metadata["usage_roles"] = sorted(set(source.metadata.get("usage_roles", [])) | {role})
                         target_port = (
                             "skip"
@@ -554,7 +567,7 @@ class HierarchyBuilder:
                             node,
                             source_port=source_port,
                             target_port=target_port,
-                            label="skip" if target_port == "skip" else role if source.metadata.get("unsupported") else None,
+                            label="skip" if target_port == "skip" else role if source_operation else None,
                         )
             incoming = node.inputs[0] if node.inputs else None
             node.outputs = [self.output_spec(node, incoming)]

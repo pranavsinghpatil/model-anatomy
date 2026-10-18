@@ -123,14 +123,30 @@ def inspect_native_model(
         pass
     checkpoint_names: dict[str, str] = {}
     name_conversions = {}
+    legacy_normalizer = getattr(model, "_fix_state_dict_key_on_load", None)
+    normalizer_evidence = None
+    if inspect.isfunction(legacy_normalizer) and legacy_normalizer.__module__.startswith("transformers."):
+        normalizer_evidence = {
+            "qualified_name": f"{legacy_normalizer.__module__}.{legacy_normalizer.__qualname__}",
+            "source_sha256": hashlib.sha256(inspect.getsource(legacy_normalizer).encode()).hexdigest(),
+            "scope": "Native string-only checkpoint key normalization; no tensors loaded",
+        }
     for name in checkpoint.tensors:
         converted = name
+        steps = []
+        if normalizer_evidence is not None:
+            converted, _ = legacy_normalizer(converted)
+            if not isinstance(converted, str) or len(converted) > 4096:
+                raise ArtifactError("Native checkpoint key normalization returned an invalid name")
+            if converted != name:
+                steps.append(dict(normalizer_evidence, target=converted))
         for rule in renamings:
             converted, _ = rule.rename_source_key(converted)
         if converted != name:
             name_conversions[name] = {
                 "target": converted,
-                "source": "native Transformers checkpoint conversion mappings",
+                "source": "native Transformers checkpoint loading and conversion rules",
+                "steps": steps,
             }
         candidates = {converted, prefix + converted, converted.removeprefix(prefix)} & named.keys()
         # Shared embedding paths can legitimately provide more than one candidate.
