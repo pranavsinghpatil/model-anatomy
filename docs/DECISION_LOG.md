@@ -599,6 +599,25 @@ Refine the landing page background ground and overall scale based on direct user
   - All 10/10 Playwright E2E tests (`entry-rebuild.spec.ts` & `graph-rebuild.spec.ts`) passing cleanly on desktop and mobile.
   - Visual verification captured in `refined_ground_zoomed_out.png` and `refined_ground_disturbance.png`.
 
+## D-047 - Calming decent typography, celestial frost headline gradient, and widened component layout
+**2026-10-18 - explicit user request**
+
+Refine typography colors, headline accents, and component proportions for a calm, decent, and spacious aesthetic:
+- **Calming Decent Typography & Gradients**:
+  - Replaced the hot yellow/amber headline accent with a serene celestial frost/diamond-white gradient (`#ffffff` &rarr; `#dbeafe` &rarr; `#93c5fd` &rarr; `#60a5fa`) with soft starlight illumination.
+  - Removed muddy dark-purple text shadows from headings and lede paragraphs, replacing with subtle 1-2px contrast shadows (`rgba(0, 0, 0, 0.45)`).
+  - Upgraded body and lede typography to crisp, soothing Slate-300 (`#cbd5e1`) and Slate-400 (`#94a3b8`) for clean readability without harsh glare or muddy tones.
+  - Softened collaborative presence cursors into muted editorial glassmorphic pills (`#c084fc`, `#fb923c`, `#34d399`, `#60a5fa`).
+  - Purged remaining saturated purple card backgrounds in `.stat-card`, `.entry-interactive-teaser`, and `.catalog-card`, aligning all cards to deep obsidian/midnight slate gradients (`rgba(8, 12, 32, 0.8)` &rarr; `rgba(4, 7, 22, 0.92)`).
+- **Widened Component Proportions**:
+  - Increased `.entry-page` max container width from `1040px` to `1180px` (`min(calc(100% - 48px), 1180px)`), providing expansive horizontal presence under `--ui-scale: 0.9`.
+  - Maximized `.entry-main` to its exact contract ceiling of `min(100%, 800px)` with generous padding (`24px 0 36px`).
+  - Increased padding across hero submit card (`26px 28px`), stats cards (`16px 18px`), blueprint preview teaser (`28px 30px`), and model catalog cards (`18px 20px`).
+- **Verification**:
+  - `npm run typecheck` passed cleanly with 0 errors.
+  - 10/10 Playwright E2E tests passing cleanly on desktop and mobile in 42.8s.
+  - Visual verification captured in `calming_decent_hero_live.png` and `calming_blueprint_live.png`.
+
 
 
 
