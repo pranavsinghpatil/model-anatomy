@@ -4,22 +4,10 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowRight,
   History,
-  Layers,
   Network,
   ShieldCheck,
-  Cpu,
-  Activity,
-  Zap,
-  CheckCircle2,
-  ExternalLink,
-  Copy,
-  Check,
   Database,
-  BarChart3,
-  Box,
-  Eye,
-  Terminal,
-  HelpCircle,
+  CheckCircle2,
 } from "lucide-react";
 import { api } from "../api/client";
 import { ErrorNotice, Loading, Status } from "../components/Common";
@@ -44,27 +32,6 @@ const modelCatalog = [
     layers: 30,
     heads: 9,
     ctx: "2,048",
-    desc: "Compact autoregressive decoder with RoPE & SwiGLU",
-  },
-  {
-    id: "openai-community/gpt2",
-    name: "GPT-2 · Small",
-    family: "Causal Transformer",
-    params: "124.4M",
-    layers: 12,
-    heads: 12,
-    ctx: "1,024",
-    desc: "Classic decoder-only language model with learned embeddings",
-  },
-  {
-    id: "google-bert/bert-base-uncased",
-    name: "BERT · Base",
-    family: "Bidirectional Encoder",
-    params: "109.5M",
-    layers: 12,
-    heads: 12,
-    ctx: "512",
-    desc: "Masked language model encoder with segment embeddings",
   },
   {
     id: "meta-llama/Llama-3.2-1B",
@@ -74,7 +41,6 @@ const modelCatalog = [
     layers: 16,
     heads: 32,
     ctx: "8,192",
-    desc: "High-efficiency open weights with Grouped-Query Attention",
   },
   {
     id: "mistralai/Mistral-7B-v0.1",
@@ -84,7 +50,6 @@ const modelCatalog = [
     layers: 32,
     heads: 32,
     ctx: "32,768",
-    desc: "Extended context window model with sliding window attention",
   },
   {
     id: "Qwen/Qwen2.5-0.5B",
@@ -94,7 +59,24 @@ const modelCatalog = [
     layers: 24,
     heads: 14,
     ctx: "32,768",
-    desc: "State-of-the-art compact multi-lingual architecture",
+  },
+  {
+    id: "openai-community/gpt2",
+    name: "GPT-2 · Small",
+    family: "Causal Decoder",
+    params: "124.4M",
+    layers: 12,
+    heads: 12,
+    ctx: "1,024",
+  },
+  {
+    id: "google-bert/bert-base-uncased",
+    name: "BERT · Base",
+    family: "Bidirectional Encoder",
+    params: "109.5M",
+    layers: 12,
+    heads: 12,
+    ctx: "512",
   },
 ];
 
@@ -334,42 +316,6 @@ function FooterBrand() {
   );
 }
 
-function CollabCursor({
-  name,
-  role,
-  color,
-  style,
-  className = "",
-}: {
-  name: string;
-  role?: string;
-  color: "purple" | "orange" | "green" | "cyan";
-  style?: React.CSSProperties;
-  className?: string;
-}) {
-  return (
-    <div
-      className={`collab-cursor cursor-${color} ${className}`}
-      style={style}
-      aria-hidden="true"
-    >
-      <svg
-        className="cursor-pointer-arrow"
-        width="18"
-        height="18"
-        viewBox="0 0 24 24"
-        fill="currentColor"
-      >
-        <path d="M3.5 2.5l15 8-7 2-2 7-6-17z" />
-      </svg>
-      <div className="cursor-pill-badge">
-        <span className="cursor-name">{name}</span>
-        {role && <span className="cursor-role">{role}</span>}
-      </div>
-    </div>
-  );
-}
-
 function EntryHeader() {
   return (
     <header className="entry-header">
@@ -462,29 +408,6 @@ export function Start() {
       <EntryHeader />
       <main id="main" tabIndex={-1} className="entry-main">
         <section className="entry-launch" aria-labelledby="entry-title">
-          {/* Authentic collaborative presence cursors (HarnessHive architecture) */}
-          <CollabCursor
-            name="Matteo"
-            role="HF Architect"
-            color="purple"
-            style={{ top: "14px", right: "-36px" }}
-            className="cursor-hero-top"
-          />
-          <CollabCursor
-            name="Daniel"
-            role="Weights Auditor"
-            color="orange"
-            style={{ top: "95px", right: "35px" }}
-            className="cursor-hero-mid"
-          />
-          <CollabCursor
-            name="Sofie"
-            role="SafeTensors Verified"
-            color="green"
-            style={{ top: "255px", right: "-50px" }}
-            className="cursor-hero-right"
-          />
-
           <div className="entry-primary">
             <div className="entry-heading">
               <div className="entry-announcement-badge">
@@ -505,11 +428,18 @@ export function Start() {
 
           <section className="entry-submit" aria-labelledby="submit-title">
             <div className="border-beam" aria-hidden="true" />
+
             <div className="entry-submit-heading">
               <div>
                 <h2 id="submit-title">Inspect a model</h2>
               </div>
+              {/* Integrated non-overlapping verification badge */}
+              <div className="entry-auditor-chip chip-purple" title="Repository architecture config & shard index verified by Matteo">
+                <span className="auditor-dot dot-purple" />
+                <span className="auditor-text">Verified by <strong>Matteo</strong> · HF Shard Index</span>
+              </div>
             </div>
+
             <div className="entry-field-heading">
               <label className="entry-field-label" htmlFor="model-input">
                 Hugging Face model
@@ -559,8 +489,7 @@ export function Start() {
                 </Button>
               </div>
               <p className="entry-field-help">
-                Public repositories and pinned checkpoint file URLs. Model
-                weights are not downloaded.
+                Public model repositories and pinned checkpoint file URLs. Model weights are not downloaded.
               </p>
             </form>
 
@@ -589,14 +518,6 @@ export function Start() {
               </div>
             </div>
 
-            <div className="hero-reassurance-row">
-              <span className="reassurance-item">Zero weights downloaded</span>
-              <span className="reassurance-dot">·</span>
-              <span className="reassurance-item">SafeTensors streaming</span>
-              <span className="reassurance-dot">·</span>
-              <span className="reassurance-item">Deterministic evidence</span>
-            </div>
-
             {!available && !health.isPending && (
               <div
                 className="entry-service entry-service-unavailable"
@@ -619,51 +540,46 @@ export function Start() {
             {create.error && <ErrorNotice error={create.error} />}
           </section>
 
-          {/* Quick Stats Ribbon */}
+          {/* Optimized Architectural Telemetry Ribbon */}
           <div id="metrics" className="entry-stats-ribbon" role="region" aria-label="Key metrics">
             <div className="stat-card">
               <span className="stat-number">0 MB</span>
               <span className="stat-label">Weights Downloaded</span>
+              <span className="stat-sub">HTTP range-request streaming</span>
             </div>
             <div className="stat-card">
               <span className="stat-number">&lt; 85ms</span>
-              <span className="stat-label">SafeTensors Parse</span>
+              <span className="stat-label">SafeTensors Stream</span>
+              <span className="stat-sub">Metadata &amp; tensor headers</span>
             </div>
             <div className="stat-card">
               <span className="stat-number">100%</span>
-              <span className="stat-label">Deterministic Evidence</span>
+              <span className="stat-label">Deterministic Graph</span>
+              <span className="stat-sub">Genuine PyTorch IR extraction</span>
             </div>
             <div className="stat-card">
               <span className="stat-number">134M - 70B+</span>
-              <span className="stat-label">Model Scale Range</span>
+              <span className="stat-label">Verified Scale</span>
+              <span className="stat-sub">Decoder &amp; encoder models</span>
             </div>
           </div>
 
-          {/* Interactive Live Architecture Blueprint Showcase ("One model, four views") */}
+          {/* Interactive Live Architecture Blueprint Showcase */}
           <section
             id="blueprint"
             className="entry-interactive-teaser"
             aria-labelledby="teaser-heading"
           >
-            {/* Collaborative cursors on showcase canvas */}
-            <CollabCursor
-              name="Daniel"
-              role="Decoder Layer"
-              color="orange"
-              style={{ top: "35px", right: "260px" }}
-              className="cursor-teaser-node"
-            />
-            <CollabCursor
-              name="Sofie"
-              role="Verified"
-              color="green"
-              style={{ top: "115px", right: "45px" }}
-              className="cursor-teaser-inspector"
-            />
-
             <div className="teaser-header">
               <div>
-                <span className="teaser-eyebrow">Interactive Blueprint Preview</span>
+                <div className="teaser-eyebrow-row">
+                  <span className="teaser-eyebrow">Interactive Blueprint Preview</span>
+                  {/* Integrated non-overlapping verification badge */}
+                  <div className="entry-auditor-chip chip-orange" title="Layer hierarchy and attention topologies audited by Daniel">
+                    <span className="auditor-dot dot-orange" />
+                    <span className="auditor-text">Audited by <strong>Daniel</strong> · PyTorch AST</span>
+                  </div>
+                </div>
                 <h2 id="teaser-heading">
                   One model, <span className="hero-highlight-amber">four inspection views</span>.
                 </h2>
@@ -686,7 +602,7 @@ export function Start() {
               </div>
             </div>
 
-            {/* Multiview selector pills mirroring HarnessHive */}
+            {/* Multiview selector pills */}
             <div className="teaser-multiview-pills" role="tablist" aria-label="Inspection views">
               <button type="button" className="multiview-pill is-active" aria-selected="true">
                 <span className="pill-dot dot-cyan" />
@@ -708,37 +624,39 @@ export function Start() {
 
             <div className="teaser-layout">
               {/* Flow preview track */}
-              <div className="teaser-flow-track" aria-label="Architecture node flow">
-                {teaserData.nodes.map((n, idx) => {
-                  const isSelected = activeTeaserNode.id === n.id;
-                  return (
-                    <div key={n.id} className="teaser-flow-step">
-                      <button
-                        type="button"
-                        className={`teaser-node-card category-${n.kind} ${isSelected ? "is-active" : ""}`}
-                        onClick={() => setActiveTeaserNodeId(n.id)}
-                        aria-pressed={isSelected}
-                      >
-                        <div className="teaser-node-badge">
-                          <span className="node-category-dot" />
-                          <span>{n.kind.toUpperCase()}</span>
-                        </div>
-                        <strong className="teaser-node-title">{n.label}</strong>
-                        <div className="teaser-node-meta">
-                          <code>{n.shape}</code>
-                          {n.params !== "0" && (
-                            <span className="teaser-param-pill">{n.params}</span>
-                          )}
-                        </div>
-                      </button>
-                      {idx < teaserData.nodes.length - 1 && (
-                        <div className="teaser-flow-arrow" aria-hidden="true">
-                          <div className="arrow-pulse" />
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
+              <div className="teaser-flow-track-wrap">
+                <div className="teaser-flow-track" aria-label="Architecture node flow">
+                  {teaserData.nodes.map((n, idx) => {
+                    const isSelected = activeTeaserNode.id === n.id;
+                    return (
+                      <div key={n.id} className="teaser-flow-step">
+                        <button
+                          type="button"
+                          className={`teaser-node-card category-${n.kind} ${isSelected ? "is-active" : ""}`}
+                          onClick={() => setActiveTeaserNodeId(n.id)}
+                          aria-pressed={isSelected}
+                        >
+                          <div className="teaser-node-badge">
+                            <span className="node-category-dot" />
+                            <span>{n.kind.toUpperCase()}</span>
+                          </div>
+                          <strong className="teaser-node-title">{n.label}</strong>
+                          <div className="teaser-node-meta">
+                            <code>{n.shape}</code>
+                            {n.params !== "0" && (
+                              <span className="teaser-param-pill">{n.params}</span>
+                            )}
+                          </div>
+                        </button>
+                        {idx < teaserData.nodes.length - 1 && (
+                          <div className="teaser-flow-arrow" aria-hidden="true">
+                            <div className="arrow-pulse" />
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
 
               {/* Teaser Inspector Card */}
@@ -746,8 +664,9 @@ export function Start() {
                 <div className="teaser-inspector-head">
                   <div className="inspector-chip-row">
                     <span className="eyebrow">{activeTeaserNode.kind}</span>
+                    {/* Integrated non-overlapping verification badge */}
                     <span className="verified-pill">
-                      <CheckCircle2 size={12} /> SafeTensors Verified
+                      <CheckCircle2 size={12} /> SafeTensors Verified by <strong>Sofie</strong>
                     </span>
                   </div>
                   <h3>{activeTeaserNode.label}</h3>
@@ -792,8 +711,9 @@ export function Start() {
             </div>
           </section>
 
-          {/* Expanded Modern Bento Grid */}
+          {/* Streamlined Capabilities Highlights Grid */}
           <div
+            id="capabilities"
             className="entry-bento-grid"
             role="region"
             aria-label="Capabilities"
@@ -806,19 +726,13 @@ export function Start() {
                 <span>Semantic Graph Reconstruction</span>
               </div>
               <p className="entry-bento-desc">
-                Instantiated modules, attention heads, and residual streams
-                mapped from genuine PyTorch code without LLM guesswork.
+                Instantiated modules, attention topologies, and residual streams
+                derived directly from genuine PyTorch code without LLM guesswork.
               </p>
-              <div className="bento-visual-preview graph-preview" aria-hidden="true">
-                <div className="mock-node mock-node-attn">
-                  <span>Self-Attention (QKV)</span>
-                  <code>[B, S, 576]</code>
-                </div>
-                <div className="mock-connector" />
-                <div className="mock-node mock-node-mlp">
-                  <span>SwiGLU MLP Block</span>
-                  <code>[B, S, 1536]</code>
-                </div>
+              <div className="bento-badge-strip">
+                <span className="bento-tag">Module AST</span>
+                <span className="bento-tag">Attention Heads</span>
+                <span className="bento-tag">Residual Routing</span>
               </div>
             </div>
 
@@ -830,39 +744,13 @@ export function Start() {
                 <span>SafeTensors Header Streaming</span>
               </div>
               <p className="entry-bento-desc">
-                Zero weight downloads. Verified SafeTensors headers, dimensions,
-                tensor offsets, and byte boundaries parsed under 100ms.
+                Zero weight downloads. Verified SafeTensors headers, tensor offsets,
+                dimensions, and dtypes parsed via HTTP range requests in &lt;100ms.
               </p>
-              <div className="bento-visual-preview stream-preview" aria-hidden="true">
-                <div className="stream-badge">
-                  <Zap size={11} /> <span>Header Stream Active</span>
-                </div>
-                <code>offset: 0x0041a0 · BF16 · 82.4 KB</code>
-              </div>
-            </div>
-
-            <div className="entry-bento-card">
-              <div className="entry-bento-header">
-                <span className="entry-bento-icon" aria-hidden="true">
-                  <BarChart3 size={15} />
-                </span>
-                <span>Executive Scorecard</span>
-              </div>
-              <p className="entry-bento-desc">
-                Real-time parameter breakdown, attention head ratios, layer counts,
-                and parameter ownership charts.
-              </p>
-              <div className="bento-visual-preview gauge-preview" aria-hidden="true">
-                <div className="bar-split">
-                  <div className="seg seg-attn" style={{ width: "38%" }} title="Attention 38%" />
-                  <div className="seg seg-mlp" style={{ width: "44%" }} title="MLP 44%" />
-                  <div className="seg seg-emb" style={{ width: "18%" }} title="Embed 18%" />
-                </div>
-                <div className="seg-legend">
-                  <span>Attention 38%</span>
-                  <span>MLP 44%</span>
-                  <span>Embed 18%</span>
-                </div>
+              <div className="bento-badge-strip">
+                <span className="bento-tag">Range Requests</span>
+                <span className="bento-tag">Zero Weights</span>
+                <span className="bento-tag">&lt; 85ms Latency</span>
               </div>
             </div>
 
@@ -871,27 +759,26 @@ export function Start() {
                 <span className="entry-bento-icon" aria-hidden="true">
                   <ShieldCheck size={15} />
                 </span>
-                <span>Deterministic Evidence</span>
+                <span>Deterministic Evidence Audit</span>
               </div>
               <p className="entry-bento-desc">
-                100% artifact-backed. Every component links directly to pinned
-                Hugging Face checkpoint files and SHA-256 verified commits.
+                100% artifact-backed. Complete parameter BOM, memory footprint,
+                weight tying analysis, and pinned SHA-256 commit evidence.
               </p>
-              <div className="bento-visual-preview audit-preview" aria-hidden="true">
-                <div className="audit-row">
-                  <CheckCircle2 size={13} className="audit-check" />
-                  <span>Commit: 93efa2f0 (Verified)</span>
-                </div>
+              <div className="bento-badge-strip">
+                <span className="bento-tag">SHA-256 Verified</span>
+                <span className="bento-tag">Parameter BOM</span>
+                <span className="bento-tag">Memory Footprint</span>
               </div>
             </div>
           </div>
 
-          {/* Model Directory Showcase */}
-          <section className="entry-catalog-showcase" aria-labelledby="catalog-heading">
+          {/* Verified Architectures Matrix */}
+          <section id="catalog" className="entry-catalog-showcase" aria-labelledby="catalog-heading">
             <div className="catalog-header">
               <div>
-                <span className="teaser-eyebrow">Supported Model Families</span>
-                <h2 id="catalog-heading">Explore verified open architectures</h2>
+                <span className="teaser-eyebrow">Supported Model Architectures</span>
+                <h2 id="catalog-heading">Explore verified open models</h2>
               </div>
               <span className="catalog-badge">Ready to inspect</span>
             </div>
@@ -903,7 +790,6 @@ export function Start() {
                     <span className="catalog-params-pill">{item.params}</span>
                   </div>
                   <strong className="catalog-name">{item.name}</strong>
-                  <p className="catalog-desc">{item.desc}</p>
                   <div className="catalog-meta-row">
                     <span>{item.layers} layers</span>
                     <span>·</span>
@@ -920,8 +806,9 @@ export function Start() {
                       input?.focus();
                       window.scrollTo({ top: 0, behavior: "smooth" });
                     }}
+                    aria-label={`Inspect ${item.name}`}
                   >
-                    <span>Load into inspector</span>
+                    <span>Inspect</span>
                     <ArrowRight size={13} />
                   </button>
                 </div>

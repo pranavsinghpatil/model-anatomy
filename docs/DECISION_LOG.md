@@ -638,3 +638,25 @@ Eliminate the interactive cursor shadow/distortion in the Bayer dither canvas ba
   - 10/10 Playwright E2E tests (`entry-rebuild.spec.ts` & `graph-rebuild.spec.ts`) passed cleanly across desktop and mobile.
   - Visual verification confirmed in `cursor_shadow_removed.png` showing zero cursor distortion, halos, or shadow effects during active pointer movement.
 
+## D-049 - Elimination of floating cursor obstruction, inline auditor verification badges, and streamlined component layout
+**2026-10-19 - explicit user request**
+
+Eliminate floating mock cursors that were hovering over content, hindering underlying text and inputs, and declutter the landing page components:
+- **Zero Content Obstruction (Elimination of Floating Cursors)**:
+  - Completely removed all `position: absolute` floating cursor overlays (`<CollabCursor />`) that were previously hovering over hero headings, the model input form, the architecture flow track, and the inspector card.
+  - Eliminated pointer-event interception and visual clutter, ensuring 100% of inputs, buttons, and specs are immediately accessible, unobstructed, and clearly visible.
+- **Inline Architectural Auditor Badges (Matteo, Daniel, Sofie)**:
+  - Re-anchored the technical personas as purposeful, non-overlapping inline verification badges inside standard document flow:
+    - **Matteo**: Inline chip in `.entry-submit-heading` attesting to repository architecture config & shard index verification.
+    - **Daniel**: Inline chip in `.teaser-eyebrow-row` attesting to PyTorch AST layer flow and topology auditing.
+    - **Sofie**: Inline badge in `.teaser-inspector-head` attesting to SafeTensors zero-download header streaming.
+- **Streamlined Landing Page Components**:
+  - Purged redundant marketing lines and reassurance rows from the hero submission card.
+  - Enhanced the key metrics ribbon (`entry-stats-ribbon`) with clear explanatory telemetry subtext.
+  - Streamlined the capabilities section into 3 focused technical pillar cards with architectural badge strips.
+  - Compressed the verified architectures catalog into a sleek, high-density 3-column grid with direct 1-click model loading into the cockpit.
+- **Verification**:
+  - `npm run typecheck` passed with 0 TypeScript errors.
+  - 10/10 Playwright E2E tests passing (`e2e/entry-rebuild.spec.ts` & `e2e/graph-rebuild.spec.ts`) in 46.0s across desktop and mobile.
+  - Live browser inspection confirmed 100% unobstructed readability and clean visual hierarchy.
+

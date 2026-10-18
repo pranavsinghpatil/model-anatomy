@@ -66,96 +66,77 @@
 }
 
 /* =========================================================================
-   Collaborative Presence Cursors (HarnessHive live collaboration architecture)
+   Collaborative Presence Cursors (Meaningful Technical Inspection Callouts)
    ========================================================================= */
-.collab-cursor {
-  position: absolute;
-  z-index: 20;
-  display: inline-flex;
-  align-items: flex-start;
-  gap: 3px;
-  pointer-events: none;
-  user-select: none;
-  animation: collab-float-subtle 6.5s ease-in-out infinite alternate;
-  filter: none;
-}
-
-@keyframes collab-float-subtle {
-  0% { transform: translateY(0px) rotate(0deg); }
-  50% { transform: translateY(-7px) rotate(0.6deg); }
-  100% { transform: translateY(-1px) rotate(-0.6deg); }
-}
-
-.cursor-pointer-arrow {
-  flex: 0 0 auto;
-  transform: rotate(-10deg);
-}
-
-.cursor-pill-badge {
+/* =========================================================================
+   Integrated Verification & Auditor Badges (Matteo, Daniel, Sofie)
+   Clean, inline, non-overlapping architectural attributions
+   ========================================================================= */
+.entry-auditor-chip {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 3px 9px;
+  gap: 7px;
+  padding: 4px 10px;
   border-radius: 9999px;
   font-size: 11px;
-  font-weight: 650;
-  letter-spacing: -0.01em;
-  color: #ffffff;
-  white-space: nowrap;
-}
-
-.cursor-role {
-  opacity: 0.82;
   font-weight: 500;
-  font-size: 9.5px;
+  letter-spacing: -0.01em;
+  backdrop-filter: blur(8px);
+  user-select: none;
+  transition: all 150ms ease;
+}
+.entry-auditor-chip:hover {
+  transform: translateY(-1px);
 }
 
-.cursor-purple {
-  color: #c084fc;
+.auditor-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
 }
-.cursor-purple .cursor-pill-badge {
-  background: rgba(147, 51, 234, 0.75);
+.dot-purple {
+  background: #c084fc;
+  box-shadow: 0 0 6px rgba(192, 132, 252, 0.6);
+}
+.dot-orange {
+  background: #fb923c;
+  box-shadow: 0 0 6px rgba(251, 146, 60, 0.6);
+}
+.dot-emerald {
+  background: #34d399;
+  box-shadow: 0 0 6px rgba(52, 211, 153, 0.6);
+}
+
+.chip-purple {
+  background: rgba(147, 51, 234, 0.15);
   border: 1px solid rgba(192, 132, 252, 0.3);
-  backdrop-filter: blur(8px);
+  color: #d8b4fe;
+}
+.chip-purple strong {
+  color: #ffffff;
+  font-weight: 650;
 }
 
-.cursor-orange {
-  color: #fb923c;
-  animation-delay: -2s;
-  animation-duration: 7.5s;
-}
-.cursor-orange .cursor-pill-badge {
-  background: rgba(217, 119, 6, 0.75);
+.chip-orange {
+  background: rgba(217, 119, 6, 0.15);
   border: 1px solid rgba(251, 146, 60, 0.3);
-  backdrop-filter: blur(8px);
+  color: #fdba74;
+}
+.chip-orange strong {
+  color: #ffffff;
+  font-weight: 650;
 }
 
-.cursor-green {
-  color: #34d399;
-  animation-delay: -4s;
-  animation-duration: 8.5s;
+.teaser-eyebrow-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 6px;
+  flex-wrap: wrap;
 }
-.cursor-green .cursor-pill-badge {
-  background: rgba(16, 185, 129, 0.75);
-  border: 1px solid rgba(52, 211, 153, 0.3);
-  backdrop-filter: blur(8px);
-}
-
-.cursor-cyan {
-  color: #60a5fa;
-  animation-delay: -1s;
-  animation-duration: 9s;
-}
-.cursor-cyan .cursor-pill-badge {
-  background: rgba(37, 99, 235, 0.75);
-  border: 1px solid rgba(96, 165, 250, 0.3);
-  backdrop-filter: blur(8px);
-}
-
-@media (max-width: 960px) {
-  .collab-cursor {
-    display: none;
-  }
+.teaser-eyebrow-row .teaser-eyebrow {
+  margin-bottom: 0;
 }
 
 /* Decent, Calming Celestial Ice / Starlight Heading Accent */
@@ -1375,6 +1356,11 @@
   color: #94a3b8;
   line-height: 1.35;
 }
+.stat-sub {
+  font-size: 10.5px;
+  color: #64748b;
+  margin-top: 2px;
+}
 /* ==========================================================================
    Interactive Architecture Blueprint Preview Component
    ========================================================================== */
@@ -1722,110 +1708,29 @@
 }
 
 /* ==========================================================================
-   Bento Visual Previews
+   Bento Capability Badge Strips
    ========================================================================== */
-.bento-visual-preview {
+.bento-badge-strip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
   margin-top: 10px;
-  padding: 10px 12px;
-  border-radius: 8px;
-  background: rgba(0, 0, 0, 0.2);
-  border: 1px solid var(--border);
-  font-size: 11px;
 }
-.graph-preview {
-  display: flex;
+.bento-tag {
+  display: inline-flex;
   align-items: center;
-  gap: 8px;
-}
-.mock-node {
-  padding: 4px 8px;
+  padding: 3px 8px;
   border-radius: 6px;
-  border: 1px solid var(--border);
-  background: var(--surface);
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
   font-size: 10.5px;
-}
-.mock-node code {
-  color: var(--muted);
-  font-size: 9.5px;
-}
-.mock-connector {
-  width: 16px;
-  height: 1.5px;
-  background: #6366f1;
-  position: relative;
-}
-.mock-connector::after {
-  content: "";
-  position: absolute;
-  right: -2px;
-  top: -2.5px;
-  border-left: 4px solid #6366f1;
-  border-top: 3px solid transparent;
-  border-bottom: 3px solid transparent;
-}
-
-.stream-preview {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-.stream-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 10px;
-  font-weight: 700;
-  color: #10b981;
-}
-.stream-preview code {
-  font-size: 10.5px;
-  color: var(--muted);
-}
-
-.gauge-preview {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-.bar-split {
-  height: 8px;
-  border-radius: 4px;
-  display: flex;
-  overflow: hidden;
-  gap: 1.5px;
-  background: rgba(0, 0, 0, 0.2);
-}
-.seg-attn { background: #6366f1; }
-.seg-mlp { background: #f59e0b; }
-.seg-emb { background: #38bdf8; }
-.seg-legend {
-  display: flex;
-  justify-content: space-between;
-  font-size: 9.5px;
-  color: var(--muted);
-}
-
-.audit-preview {
-  display: flex;
-  align-items: center;
-}
-.audit-row {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 11px;
   font-weight: 600;
-  color: var(--text);
-}
-.audit-check {
-  color: #10b981;
+  color: #93c5fd;
+  background: rgba(96, 165, 250, 0.1);
+  border: 1px solid rgba(96, 165, 250, 0.22);
 }
 
 /* ==========================================================================
-   Model Directory Showcase
+   Verified Model Architecture Matrix
    ========================================================================== */
 .entry-catalog-showcase {
   margin-top: 32px;
@@ -1857,15 +1762,20 @@
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
 }
-@media (max-width: 720px) {
+@media (max-width: 768px) {
+  .catalog-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 520px) {
   .catalog-grid {
     grid-template-columns: 1fr;
   }
 }
 
 .catalog-card {
-  padding: 16px;
-  border-radius: 14px;
+  padding: 14px 16px;
+  border-radius: 12px;
   border: 1px solid rgba(255, 255, 255, 0.14);
   background: linear-gradient(180deg, rgba(8, 12, 30, 0.75) 0%, rgba(4, 7, 20, 0.88) 100%);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 4px 16px rgba(0, 0, 0, 0.35);
@@ -1900,25 +1810,18 @@
   border-radius: 4px;
 }
 .catalog-name {
-  font-size: 14px;
+  font-size: 13.5px;
   font-weight: 650;
   color: #f8fafc;
   letter-spacing: -0.02em;
-}
-.catalog-desc {
-  font-size: 12px;
-  line-height: 1.5;
-  color: #94a3b8;
-  margin: 0;
-  flex: 1;
 }
 .catalog-meta-row {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 11.5px;
+  font-size: 11px;
   color: #64748b;
-  padding: 6px 0;
+  padding: 4px 0;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 .catalog-btn {
@@ -1926,13 +1829,13 @@
   align-items: center;
   justify-content: space-between;
   width: 100%;
-  min-height: 38px;
-  padding: 8px 14px;
-  border-radius: 8px;
+  min-height: 32px;
+  padding: 6px 12px;
+  border-radius: 7px;
   border: 1px solid rgba(255, 255, 255, 0.14);
   background: rgba(255, 255, 255, 0.05);
   color: #e2e8f0;
-  font-size: 12.5px;
+  font-size: 12px;
   font-weight: 600;
   cursor: pointer;
   transition: all 150ms ease;
