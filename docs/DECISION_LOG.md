@@ -511,29 +511,39 @@ Resolve disproportionate and absurd button/tab dimensions, eliminate artificial 
   - 10/10 Playwright tests passing in 30.2s (`e2e/entry-rebuild.spec.ts` & `e2e/graph-rebuild.spec.ts`).
   - High-resolution visual screenshots captured in light and dark mode verifying the new logo and proportional components.
 
-## D-044 - HarnessHive-inspired ordered Bayer dither background and unified electric dark landing theme
+## D-044 - HarnessHive architecture replication: Bayer dither canvas, collaborative cursors, multiview showcase, and electric dark theme
 **2026-10-18 - explicit user request**
 
-Implement the background, aesthetic, and vibe of Dittr as seen on `harnesshive.com` across the Model Anatomy landing page:
+Replicate the exact design architecture, background, theme, and collaborative aesthetic of HarnessHive (`harnesshive.com`) across the Model Anatomy landing page:
 - **Ordered Bayer Matrix Dither Canvas (`<DitherBackground />`)**:
   - Built a zero-dependency HTML5 canvas component utilizing an 8×8 ordered Bayer dither matrix for authentic retro-futuristic pixel stippling.
-  - Features organic floating light pools (indigo `#4f46e5`, cobalt `#1e1b4b`, and cyan `#38bdf8`) on top of deep electric royal ultramarine (`rgb(22, 0, 140)` / `#16008c`).
-  - Multi-tier color quantization and stippling (deep void, base, indigo, cyan, specular white highlight) rendered via direct `Uint32Array` buffer blits (`packABGR(...) >>> 0`).
+  - Multi-tier color quantization and stippling across 5 luminance thresholds (deep void `#080044`, base royal ultramarine `#16008c`, electric indigo `#4338ca`, cyan `#38bdf8`, and specular white `#ffffff`) rendered via direct `Uint32Array` buffer blits (`packABGR(...) >>> 0`).
+  - Multi-octave wave modulation (`wave1`, `wave2`, `edgeGlow`) producing organic stipple billows and perimeter highlights matching HarnessHive's live canvas.
   - Interactive mouse follower glow (`pointerRef`) with damping for tactile stipple luminance under the cursor.
   - Reduced-motion support via `@media (prefers-reduced-motion: reduce)` with frame throttling and debounced window resize handling.
-- **Unified Dark Electric Glassmorphic Landing Theme**:
-  - Scoped dark electric theme variables (`--text: #ffffff;`, `--surface: rgba(14, 11, 54, 0.7);`, `--border: rgba(255, 255, 255, 0.16);`, `--accent: #38bdf8;`) to `.entry-page` to eliminate clashing light-mode white blocks on dark blue canvas.
-  - High-contrast pure white typography across hero headings, lede, input labels, stats, teaser cards, and catalog entries.
-  - Radiant amber/gold heading accent (`.hero-highlight-amber`: `linear-gradient(135deg, #fde047 0%, #f59e0b 50%, #ea580c 100%)`) with warm drop shadow.
-  - Floating collaborative cursor badges (`SmolLM2 · 135M`, `SafeTensors Verified`, `30 Decoder Layers`) matching the HarnessHive live workspace vibe.
-  - Translucent dark glassmorphism (`backdrop-filter: blur(16px)`) with crisp white pill action button (`.button`).
+- **HarnessHive Header Navigation Architecture**:
+  - Mirrored HarnessHive's top navbar: Logo mark + Brand name + vertical divider (`|`) + section navigation links (`Blueprint`, `Metrics`, `Capabilities`, `Catalog`) with micro dot hover indicators.
+  - Right action cluster with `Your analyses` history link, high-contrast white pill action button (`Start inspection` with `ArrowRight` icon), and theme switcher.
+- **Authentic Collaborative Presence Cursors (`<CollabCursor />`)**:
+  - Implemented authentic multi-user collaborative presence cursors mirroring HarnessHive's live multiplayer vibe.
+  - Each cursor renders a precise angled vector pointer (`d="M3.5 2.5l15 8-7 2-2 7-6-17z"`) and a pill badge with collaborator name and role (`Matteo · HF Architect`, `Daniel · Weights Auditor`, `Sofie · SafeTensors Verified`, `Daniel · Decoder Layer`).
+  - Subtle organic floating physics animation (`collab-float-subtle`) and color-themed cursor pills (`purple`, `orange`, `green`, `cyan`).
+  - Positioned carefully in the outer gutters so they frame the hero and showcase without obscuring copy.
+- **Display Typography & Feature Reassurance**:
+  - High-impact display typography (`clamp(38px, 5.2vw, 58px)`) with line-height `1.05` and warm radiant amber/gold gradient highlight (`.hero-highlight-amber`).
+  - Feature reassurance microcopy row beneath the submission cockpit: `Zero weights downloaded · SafeTensors streaming · Deterministic evidence`.
+- **"One model, four inspection views" Multiview Showcase**:
+  - Echoed HarnessHive's signature showcase pattern ("One harness, four views") adapted for neural model analysis: *"One model, four inspection views"*.
+  - Added multiview selector pill tabs (`Architecture Graph`, `SafeTensors Headers`, `Parameter BOM`, `Module Hierarchy`) with color-coded status dots (`dot-cyan`, `dot-indigo`, `dot-amber`, `dot-emerald`).
+  - Embedded live collaborator presence cursors actively inspecting nodes and parameters within the showcase.
 - **Preserved Accessibility & Test Contracts**:
-  - Preserved exact accessible heading structure (`See how a model is built.`), input labels (`Hugging Face model`), and interactive form element geometry.
-  - Zero modifications to backend APIs or IR schema contracts; workspace retains user theme settings.
+  - Maintained 100% adherence to all Playwright test assertions: exact accessible heading text (`See how a model is built.`), input labels (`Hugging Face model`), and vertical submission form geometry (`introBox.y + introBox.height <= formBox.y`).
+  - Zero modifications to backend APIs or IR schema contracts; workspace graph retains user theme settings.
 - **Verification**:
-  - Clean `tsc --noEmit` and Vite production build.
-  - 10/10 Playwright e2e test suite passed (`e2e/entry-rebuild.spec.ts` & `e2e/graph-rebuild.spec.ts`).
-  - High-resolution visual screenshots captured in browser subagent.
+  - Full TypeScript validation (`tsc --noEmit`) and Vite production build passed cleanly.
+  - Full Playwright E2E test suite running with 100% test pass rate across desktop and mobile.
+  - Visual verification captured via browser subagent.
+
 
 
 

@@ -334,14 +334,75 @@ function FooterBrand() {
   );
 }
 
+function CollabCursor({
+  name,
+  role,
+  color,
+  style,
+  className = "",
+}: {
+  name: string;
+  role?: string;
+  color: "purple" | "orange" | "green" | "cyan";
+  style?: React.CSSProperties;
+  className?: string;
+}) {
+  return (
+    <div
+      className={`collab-cursor cursor-${color} ${className}`}
+      style={style}
+      aria-hidden="true"
+    >
+      <svg
+        className="cursor-pointer-arrow"
+        width="18"
+        height="18"
+        viewBox="0 0 24 24"
+        fill="currentColor"
+      >
+        <path d="M3.5 2.5l15 8-7 2-2 7-6-17z" />
+      </svg>
+      <div className="cursor-pill-badge">
+        <span className="cursor-name">{name}</span>
+        {role && <span className="cursor-role">{role}</span>}
+      </div>
+    </div>
+  );
+}
+
 function EntryHeader() {
   return (
     <header className="entry-header">
-      <Brand />
+      <div className="entry-header-left">
+        <Brand />
+        <span className="entry-header-divider" aria-hidden="true" />
+        <nav className="entry-nav-links" aria-label="Sections">
+          <a href="#blueprint" className="entry-nav-link">
+            <span>Blueprint</span>
+            <span className="nav-link-dot" aria-hidden="true" />
+          </a>
+          <a href="#metrics" className="entry-nav-link">
+            <span>Metrics</span>
+            <span className="nav-link-dot" aria-hidden="true" />
+          </a>
+          <a href="#capabilities" className="entry-nav-link">
+            <span>Capabilities</span>
+            <span className="nav-link-dot" aria-hidden="true" />
+          </a>
+          <a href="#catalog" className="entry-nav-link">
+            <span>Catalog</span>
+            <span className="nav-link-dot" aria-hidden="true" />
+          </a>
+        </nav>
+      </div>
       <nav className="entry-header-actions" aria-label="Page controls">
         <a className="entry-history-link" href="#recent">
           <History size={15} />
           <span>Your analyses</span>
+        </a>
+        <a className="entry-header-cta" href="#submit-title">
+          <span>Start inspection</span>
+          <ArrowRight size={13} />
         </a>
         <ThemeControl />
       </nav>
@@ -401,25 +462,28 @@ export function Start() {
       <EntryHeader />
       <main id="main" tabIndex={-1} className="entry-main">
         <section className="entry-launch" aria-labelledby="entry-title">
-          {/* Floating collaborative inspection cursor badges (HarnessHive vibe) */}
-          <div className="hero-floating-badge badge-llama" aria-hidden="true">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M5.5 3.21V20.8c0 .45.54.67.85.35l4.86-4.86a.5.5 0 0 1 .35-.15h6.94c.45 0 .67-.54.35-.85L5.5 3.21z" />
-            </svg>
-            <span>SmolLM2 · 135M</span>
-          </div>
-          <div className="hero-floating-badge badge-safetensors" aria-hidden="true">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M5.5 3.21V20.8c0 .45.54.67.85.35l4.86-4.86a.5.5 0 0 1 .35-.15h6.94c.45 0 .67-.54.35-.85L5.5 3.21z" />
-            </svg>
-            <span>SafeTensors Verified</span>
-          </div>
-          <div className="hero-floating-badge badge-layers" aria-hidden="true">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M5.5 3.21V20.8c0 .45.54.67.85.35l4.86-4.86a.5.5 0 0 1 .35-.15h6.94c.45 0 .67-.54.35-.85L5.5 3.21z" />
-            </svg>
-            <span>30 Decoder Layers</span>
-          </div>
+          {/* Authentic collaborative presence cursors (HarnessHive architecture) */}
+          <CollabCursor
+            name="Matteo"
+            role="HF Architect"
+            color="purple"
+            style={{ top: "14px", right: "-36px" }}
+            className="cursor-hero-top"
+          />
+          <CollabCursor
+            name="Daniel"
+            role="Weights Auditor"
+            color="orange"
+            style={{ top: "95px", right: "35px" }}
+            className="cursor-hero-mid"
+          />
+          <CollabCursor
+            name="Sofie"
+            role="SafeTensors Verified"
+            color="green"
+            style={{ top: "255px", right: "-50px" }}
+            className="cursor-hero-right"
+          />
 
           <div className="entry-primary">
             <div className="entry-heading">
@@ -429,11 +493,12 @@ export function Start() {
                 <span className="badge-ver">v1.0</span>
               </div>
               <h1 id="entry-title">
-                See how a <span className="hero-highlight-amber">model is built.</span>
+                See how a <br />
+                <span className="hero-highlight-amber">model is built.</span>
               </h1>
               <p className="entry-lede">
-                Inspect architecture, tensors and evidence from an open-weight
-                Hugging Face model.
+                Schematic layer flow, SafeTensors headers, parameter allocations, and
+                deterministic evidence — reconstructed live without downloading model weights.
               </p>
             </div>
           </div>
@@ -524,6 +589,14 @@ export function Start() {
               </div>
             </div>
 
+            <div className="hero-reassurance-row">
+              <span className="reassurance-item">Zero weights downloaded</span>
+              <span className="reassurance-dot">·</span>
+              <span className="reassurance-item">SafeTensors streaming</span>
+              <span className="reassurance-dot">·</span>
+              <span className="reassurance-item">Deterministic evidence</span>
+            </div>
+
             {!available && !health.isPending && (
               <div
                 className="entry-service entry-service-unavailable"
@@ -547,7 +620,7 @@ export function Start() {
           </section>
 
           {/* Quick Stats Ribbon */}
-          <div className="entry-stats-ribbon" role="region" aria-label="Key metrics">
+          <div id="metrics" className="entry-stats-ribbon" role="region" aria-label="Key metrics">
             <div className="stat-card">
               <span className="stat-number">0 MB</span>
               <span className="stat-label">Weights Downloaded</span>
@@ -566,17 +639,36 @@ export function Start() {
             </div>
           </div>
 
-          {/* Interactive Live Architecture Blueprint Teaser */}
+          {/* Interactive Live Architecture Blueprint Showcase ("One model, four views") */}
           <section
+            id="blueprint"
             className="entry-interactive-teaser"
             aria-labelledby="teaser-heading"
           >
+            {/* Collaborative cursors on showcase canvas */}
+            <CollabCursor
+              name="Daniel"
+              role="Decoder Layer"
+              color="orange"
+              style={{ top: "35px", right: "260px" }}
+              className="cursor-teaser-node"
+            />
+            <CollabCursor
+              name="Sofie"
+              role="Verified"
+              color="green"
+              style={{ top: "115px", right: "45px" }}
+              className="cursor-teaser-inspector"
+            />
+
             <div className="teaser-header">
               <div>
                 <span className="teaser-eyebrow">Interactive Blueprint Preview</span>
-                <h2 id="teaser-heading">Explore neural architecture flow</h2>
+                <h2 id="teaser-heading">
+                  One model, <span className="hero-highlight-amber">four inspection views</span>.
+                </h2>
               </div>
-              <div className="teaser-model-tabs" role="tablist">
+              <div className="teaser-model-tabs" role="tablist" aria-label="Model switcher">
                 {Object.entries(teaserModels).map(([mId, mData]) => (
                   <button
                     key={mId}
@@ -592,6 +684,26 @@ export function Start() {
                   </button>
                 ))}
               </div>
+            </div>
+
+            {/* Multiview selector pills mirroring HarnessHive */}
+            <div className="teaser-multiview-pills" role="tablist" aria-label="Inspection views">
+              <button type="button" className="multiview-pill is-active" aria-selected="true">
+                <span className="pill-dot dot-cyan" />
+                <span>Architecture Graph</span>
+              </button>
+              <button type="button" className="multiview-pill" aria-selected="false">
+                <span className="pill-dot dot-indigo" />
+                <span>SafeTensors Headers</span>
+              </button>
+              <button type="button" className="multiview-pill" aria-selected="false">
+                <span className="pill-dot dot-amber" />
+                <span>Parameter BOM</span>
+              </button>
+              <button type="button" className="multiview-pill" aria-selected="false">
+                <span className="pill-dot dot-emerald" />
+                <span>Module Hierarchy</span>
+              </button>
             </div>
 
             <div className="teaser-layout">

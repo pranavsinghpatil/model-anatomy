@@ -34,7 +34,7 @@ interface DitherBackgroundProps {
  */
 export function DitherBackground({
   className = "",
-  pixelSize = 4,
+  pixelSize = 3,
 }: DitherBackgroundProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const pointerRef = useRef({ x: 0.5, y: 0.4, targetX: 0.5, targetY: 0.4, active: false });
@@ -149,15 +149,17 @@ export function DitherBackground({
 
       // Color Palette: HarnessHive signature electric royal ultramarine
       // Base: rgb(22, 0, 140) - #16008c
-      // Deep void: rgb(12, 0, 85)
-      // Tier 1: rgb(79, 70, 229) - electric indigo stipple
-      // Tier 2: rgb(56, 189, 248) - vibrant cyan bright pixels
-      // Tier 3: rgb(255, 255, 255) - radiant white specular highlights
+      // Deep void: rgb(8, 0, 68)
+      // Tier 1: rgb(67, 56, 202) - #4338ca royal indigo
+      // Tier 2: rgb(59, 130, 246) - #3b82f6 electric blue
+      // Tier 3: rgb(56, 189, 248) - #38bdf8 vibrant cyan bright stipple
+      // Tier 4: rgb(255, 255, 255) - radiant white specular highlights
       const colBase = packABGR(22, 0, 140, 255);
-      const colDeep = packABGR(12, 0, 85, 255);
-      const colT1 = packABGR(79, 70, 229, 255);
-      const colT2 = packABGR(56, 189, 248, 255);
-      const colT3 = packABGR(255, 255, 255, 255);
+      const colDeep = packABGR(8, 0, 68, 255);
+      const colT1 = packABGR(67, 56, 202, 255);
+      const colT2 = packABGR(59, 130, 246, 255);
+      const colT3 = packABGR(56, 189, 248, 255);
+      const colT4 = packABGR(255, 255, 255, 255);
 
       const invW = 1.0 / cols;
       const invH = 1.0 / rows;
@@ -190,31 +192,41 @@ export function DitherBackground({
           // Compute smooth luminance field [0, 1]
           const l1 = Math.max(0, 1 - d1);
           const l2 = Math.max(0, 1 - d2);
-          const l3 = Math.max(0, 1 - d3) * (ptr.active ? 1.2 : 0.8);
+          const l3 = Math.max(0, 1 - d3) * (ptr.active ? 1.3 : 0.85);
           const l4 = Math.max(0, 1 - d4) * 0.45;
 
-          // Non-linear glow response
-          const lum = Math.min(1.0, (l1 * 0.75 + l2 * 0.7 + l3 * 0.65 + l4 * 0.35));
+          // Multi-octave wave harmonic field creating organic pixel clouds on margins
+          const wave1 = Math.sin(nx * 5.2 + t * 0.7) * Math.cos(ny * 4.4 - t * 0.5) * 0.2;
+          const wave2 = Math.sin((nx + ny) * 8.0 - t * 0.9) * 0.12;
+
+          // Edge boost so dither stipples form perimeter clouds like HarnessHive
+          const edgeDist = Math.min(nx, 1 - nx, ny, 1 - ny);
+          const edgeGlow = (1 - Math.min(1, edgeDist * 3.2)) * 0.3;
+
+          // Combined non-linear glow response
+          const lum = Math.min(
+            1.0,
+            Math.max(0, l1 * 0.7 + l2 * 0.65 + l3 * 0.6 + l4 * 0.3 + wave1 + wave2 + edgeGlow),
+          );
 
           // Bayer matrix threshold [0, 1)
           const bayerThreshold = BAYER_8X8[bayerRow | (x & 7)] * (1.0 / 64.0);
 
-          // Multi-tier Bayer dithering
-          if (lum < 0.12) {
-            // Deep background void
+          // 5-tier Bayer quantization
+          if (lum < 0.1) {
             buf32[idx] = colDeep;
-          } else if (lum < 0.38) {
-            // Low intensity: stipple with Tier 1
-            const factor = (lum - 0.12) / 0.26;
+          } else if (lum < 0.32) {
+            const factor = (lum - 0.1) / 0.22;
             buf32[idx] = factor > bayerThreshold ? colT1 : colBase;
-          } else if (lum < 0.72) {
-            // Mid intensity: stipple with Tier 2 (cyan / electric blue)
-            const factor = (lum - 0.38) / 0.34;
+          } else if (lum < 0.58) {
+            const factor = (lum - 0.32) / 0.26;
             buf32[idx] = factor > bayerThreshold ? colT2 : colT1;
-          } else {
-            // Peak radiant core: stipple with Tier 3 (white specular highlights)
-            const factor = (lum - 0.72) / 0.28;
+          } else if (lum < 0.82) {
+            const factor = (lum - 0.58) / 0.24;
             buf32[idx] = factor > bayerThreshold ? colT3 : colT2;
+          } else {
+            const factor = (lum - 0.82) / 0.18;
+            buf32[idx] = factor > bayerThreshold ? colT4 : colT3;
           }
 
           idx++;
