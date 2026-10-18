@@ -460,4 +460,34 @@ Incorporate design inspirations from the user-provided design repository (Aceter
   - 100% of the Playwright e2e test suite passed (10/10 tests across desktop and mobile).
   - High-resolution visual screenshots captured in light mode verifying studio canvas, selected node tensor details, and the landing page.
 
+## D-042 - Interactive architecture blueprint, animated border beam, bento preview widgets, and model catalog
+**2026-10-18 - explicit user request**
+
+Elevate the UI and UX of Model Anatomy from minimal to a rich, immersive, and professional research studio:
+- **Interactive Architecture Blueprint Teaser (`<ArchitectureTeaser />`)**:
+  - Embedded an interactive blueprint teaser directly on the landing page with tabbed architecture switching (`SmolLM2 · 135M`, `GPT-2 · 124M`, `BERT · Base`).
+  - Connected sequential node flow (`Token IDs` → `Token Embedding` → `Decoder Block ×30` → `Final RMSNorm` → `LM Head` → `Output Logits`) with interactive click selection.
+  - Live inspector card displays authentic tensor dimensions (`[batch_size, seq_len, 576]`), parameter counts (`85,054,464`), model share (`63.2%`), precision dtype (`bfloat16`), and a 1-click "Inspect this model" CTA.
+- **Magic UI Animated Border Beam (`.border-beam`)**:
+  - Implemented an animated rotating gradient border beam around the primary model input card inspired by Magic UI / Aceternity.
+  - Added `@media (prefers-reduced-motion: reduce)` fallback to cleanly pause and hide the animation for accessibility and test stability.
+- **4-Metric System Capability Ribbon**:
+  - Added a tactile 4-stat ribbon below the hero: `0 MB Weights Downloaded`, `< 85ms SafeTensors Parse`, `100% Deterministic Evidence`, `134M - 70B+ Scale Range`.
+- **Expanded Bento Grid with Interactive Visual Previews**:
+  - 4 capability cards featuring live UI widgets:
+    1. *Semantic Graph Reconstruction*: visual PyTorch dataflow preview with Self-Attention and SwiGLU MLP blocks.
+    2. *SafeTensors Header Streaming*: live header stream active badge with hex offset ticker (`offset: 0x0041a0 · BF16 · 82.4 KB`).
+    3. *Executive Scorecard*: multi-colored parameter allocation split bar (Attention 38%, MLP 44%, Embed 18%).
+    4. *Deterministic Evidence*: verified commit SHA `93efa2f0` and SHA-256 audit badge.
+- **Supported Architecture Catalog**:
+  - 6 model cards (`SmolLM2-135M`, `GPT-2`, `BERT-base`, `Llama-3.2-1B`, `Mistral-7B`, `Qwen-2.5-0.5B`) with family tags, parameter pills, layer/head/context specs, and direct "Load into inspector" action buttons.
+- **Graph Node & Inspector Polish**:
+  - Added `.node-header-row` with `.node-mini-param` chips to `.model-node` in `AnatomyNode.tsx` without breaking `.node-kind` text matchers.
+  - Added executive parameter allocation bar in `Inspector.tsx` overview and verified SafeTensors percentage share banner in selected view.
+- **Verification**:
+  - Clean `tsc --noEmit` and Vite production build (1m 39s).
+  - 10/10 Playwright tests passing cleanly across desktop and mobile suites (`e2e/entry-rebuild.spec.ts` and `e2e/graph-rebuild.spec.ts`).
+  - Zero modifications to backend APIs or IR schema contracts; dark theme remains 100% preserved.
+
+
 

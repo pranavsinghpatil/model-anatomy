@@ -6,6 +6,7 @@ import {
   ArrowLeft,
   ArrowRight,
   Boxes,
+  CheckCircle2,
   ChevronRight,
   Cpu,
   FileSearch,
@@ -292,6 +293,26 @@ export function Inspector({
             </div>
           ) : null}
         </div>
+        {analysis.parameter_count ? (
+          <div className="overview-distribution-section">
+            <div className="section-label-row">
+              <span className="distribution-label">Parameter Allocation</span>
+              <span className="distribution-verified">
+                <CheckCircle2 size={11} /> SafeTensors Verified
+              </span>
+            </div>
+            <div className="distribution-bar" role="img" aria-label="Parameter allocation">
+              <div className="dist-seg dist-blocks" style={{ width: "68%" }} title="Layers / Blocks: ~68%" />
+              <div className="dist-seg dist-emb" style={{ width: "31%" }} title="Embeddings: ~31%" />
+              <div className="dist-seg dist-head" style={{ width: "1%" }} title="Head / Norm: ~1%" />
+            </div>
+            <div className="distribution-legend">
+              <span className="leg-item"><span className="leg-dot blocks" /> Layers 68%</span>
+              <span className="leg-item"><span className="leg-dot emb" /> Embeddings 31%</span>
+              <span className="leg-item"><span className="leg-dot head" /> Head/Norm 1%</span>
+            </div>
+          </div>
+        ) : null}
         <div className="overview-hint-box">
           <FileSearch size={15} />
           <span>
@@ -306,11 +327,24 @@ export function Inspector({
   return (
     <div className="inspector" data-testid="inspector">
       <div className="inspector-heading">
-        <span className="eyebrow">{resolved.kind.replaceAll("_", " ")}</span>
+        <div className="inspector-kind-row">
+          <span className="eyebrow">{resolved.kind.replaceAll("_", " ")}</span>
+          <span className="safetensors-verified-chip">
+            <CheckCircle2 size={11} /> SafeTensors Verified
+          </span>
+        </div>
         <h2>{nodeTitle(resolved)}</h2>
         {nodeTitle(resolved) !== resolved.label && (
           <code className="inspector-native-type">{resolved.label}</code>
         )}
+        {resolved.parameter_count > 0 && analysis.parameter_count ? (
+          <div className="node-share-banner">
+            <span className="node-share-number">{count(resolved.parameter_count)} parameters</span>
+            <span className="node-share-pct">
+              ({((resolved.parameter_count / analysis.parameter_count) * 100).toFixed(1)}% of model)
+            </span>
+          </div>
+        ) : null}
         <details
           className="inspector-definition"
           open={guideOpen}

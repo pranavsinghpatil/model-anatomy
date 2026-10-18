@@ -59,14 +59,29 @@ export function ModelNode({ data, selected }: NodeProps<NodeType>) {
           <Icon size={boundary ? 19 : 21} strokeWidth={1.7} />
         </div>
         <div className="anatomy-node-heading">
-          <div className="node-kind">
-            <span>{kind}</span>
-            {node.repeat > 1 && (
+          <div className="node-header-row">
+            <div className="node-kind">
+              <span>{kind}</span>
+              {node.repeat > 1 && (
+                <span
+                  className="repeat"
+                  title={`${count(node.repeat)} instances · ${node.repetition?.mode ?? "repetition mode unknown"}`}
+                >
+                  ×{count(node.repeat)}
+                </span>
+              )}
+            </div>
+            {node.parameter_count > 0 && (
               <span
-                className="repeat"
-                title={`${count(node.repeat)} instances · ${node.repetition?.mode ?? "repetition mode unknown"}`}
+                className="node-mini-param"
+                title={`${count(node.parameter_count)} parameters`}
               >
-                ×{count(node.repeat)}
+                {count(node.parameter_count, true)}
+              </span>
+            )}
+            {boundary && (
+              <span className="node-mini-shape">
+                {shape((node.kind === "input" ? output : input)?.shape ?? null)}
               </span>
             )}
           </div>

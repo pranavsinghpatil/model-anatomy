@@ -143,6 +143,30 @@
   letter-spacing: 0.02em;
   box-shadow: 0 0 10px rgba(251, 191, 36, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
+.model-node .node-mini-param,
+.model-node .node-mini-shape {
+  margin-left: auto;
+  padding: 1.5px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  background: color-mix(in srgb, var(--node-tone) 16%, transparent);
+  border: 1px solid color-mix(in srgb, var(--node-tone) 30%, transparent);
+  color: var(--node-tone);
+  flex-shrink: 0;
+}
+:root[data-theme="light"] .model-node .node-mini-param {
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  color: #334155;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
+}
+:root[data-theme="light"] .model-node .node-mini-shape {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  color: #475569;
+}
 :root[data-theme="light"] .anatomy-node-icon {
   width: 26px;
   height: 26px;
@@ -152,6 +176,13 @@
   border: 1px solid color-mix(in srgb, var(--node-tone) 25%, transparent);
   color: var(--node-tone);
   box-shadow: 0 1px 3px color-mix(in srgb, var(--node-tone) 15%, transparent);
+}
+.node-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  width: 100%;
 }
 :root[data-theme="light"] .model-node .node-kind {
   display: inline-flex;
