@@ -618,9 +618,23 @@ Refine typography colors, headline accents, and component proportions for a calm
   - 10/10 Playwright E2E tests passing cleanly on desktop and mobile in 42.8s.
   - Visual verification captured in `calming_decent_hero_live.png` and `calming_blueprint_live.png`.
 
+## D-048 - Remove cursor shadow dither effect and restore calm ambient background
+**2026-10-18 - explicit user request**
 
-
-
-
-
+Eliminate the interactive cursor shadow/distortion in the Bayer dither canvas background based on direct user request:
+- **Removed Cursor Dither Distortion & Space-Time Warping**:
+  - Removed cursor coordinate tracking, velocity lerping, aerodynamic comet wake, and interactive repulsion bubbles from `frontend/src/components/DitherBackground.tsx`.
+  - Discarded spatial mesh warping (`warpX`, `warpY`) and localized dither luminance surges (`disturbanceGlow`) that previously created a hollow shadow/halo under the mouse.
+  - Eliminated explosive shockwave ripples (`AntigravityRipple`) and click impulse wavefronts.
+  - Pixel luminance is now sampled directly from radiant ambient light pools, harmonic waves, and edge margin stippling (`l1 + l2 + l4 + wave1 + wave2 + edgeGlow`), rendering a steady, peaceful, and decent background.
+- **Natural Floating Zero-Gravity Particles**:
+  - Maintained the constellation of 220 floating zero-gravity quantum stipples drifting naturally with upward buoyancy.
+  - Removed cursor repulsion forces so particles drift calmly without parting, scattering, or creating cavities around the pointer.
+- **Removed Drop Shadow from Collaborative Presence Cursors**:
+  - In `frontend/src/pages/entry.css`, removed `filter: drop-shadow(0 6px 16px rgba(0, 0, 0, 0.45))` from `.collab-cursor` (`filter: none`).
+  - Ensures collaborative indicator badges and arrows sit cleanly with glassmorphic transparency without casting muddy shadows onto the dither canvas.
+- **Verification**:
+  - `npm run typecheck` passed cleanly with 0 TypeScript errors.
+  - 10/10 Playwright E2E tests (`entry-rebuild.spec.ts` & `graph-rebuild.spec.ts`) passed cleanly across desktop and mobile.
+  - Visual verification confirmed in `cursor_shadow_removed.png` showing zero cursor distortion, halos, or shadow effects during active pointer movement.
 
