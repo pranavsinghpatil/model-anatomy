@@ -28,8 +28,6 @@ def main(argv: list[str] | None = None) -> int:
     try:
         ir = reconstruct(args.model, revision=args.revision)
         slug = ir.model_id.replace("/", "--").lower()
-        if ir.model_id == "openai-community/gpt2":
-            slug = "gpt2"
         paths = write_outputs(
             ir,
             args.output or Path("output") / slug,

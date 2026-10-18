@@ -48,6 +48,11 @@ class StaticFlow:
     sequential_containers: set[str] = field(default_factory=set)
     warnings: list[str] = field(default_factory=list)
     profile_assumptions: list[dict[str, Any]] = field(default_factory=list)
+    input_profile: list[dict[str, Any]] = field(default_factory=list)
+    branch_conditions: list[dict[str, Any]] = field(default_factory=list)
+    unexplained_operations: list[dict[str, Any]] = field(default_factory=list)
+    call_sites: list[dict[str, Any]] = field(default_factory=list)
+    source_call_sites: list[dict[str, Any]] = field(default_factory=list)
 
 
 def combine(values: list[StaticValue]) -> StaticValue:
@@ -79,16 +84,23 @@ class StaticFlowAnalyzer:
         self.counter = 0
         self.source_globals: dict[str, Any] = {}
         self.returned: list[StaticValue] = []
+        self.source_name = ""
+        self.source_hash: str | None = None
+        self.tainted_attributes: dict[str, StaticValue] = {}
 
     def analyze(self) -> StaticFlow:
         try:
             method = inspect.unwrap(type(self.module).forward)
             self.source_globals = method.__globals__
-            tree = ast.parse(textwrap.dedent(inspect.getsource(method)))
+            source = textwrap.dedent(inspect.getsource(method))
+            self.source_name = f"{method.__module__}.{method.__qualname__}"
+            self.source_hash = hashlib.sha256(source.encode()).hexdigest()
+            tree = ast.parse(source)
             function = next(n for n in tree.body if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef)))
         except (OSError, TypeError, SyntaxError, StopIteration) as exc:
             self.flow.warnings.append(f"Forward source unavailable: {type(exc).__name__}")
             return self.flow
+        self.collect_source_calls(function)
         optional = {
             "attention_mask",
             "encoder_attention_mask",
@@ -106,7 +118,7 @@ class StaticFlowAnalyzer:
             self.classifications[self.path].kind in {"decoder", "decoder_block", "cross_attention"}
             and self.model.config.is_encoder_decoder
         )
-        for argument in function.args.args + function.args.kwonlyargs:
+        for argument in function.args.posonlyargs + function.args.args + function.args.kwonlyargs:
             name = argument.arg
             if name == "self":
                 continue
@@ -137,9 +149,108 @@ class StaticFlowAnalyzer:
                 self.env[name] = self.input(name)
             else:
                 self.env[name] = StaticValue(constant=None)
+            value = self.env[name]
+            if value.constant is not UNKNOWN:
+                self.flow.input_profile.append({
+                    "argument": name, "value": value.constant,
+                    "basis": "Canonical static profile; not a runtime observation",
+                    **self.source_location(argument),
+                })
+        if function.args.vararg:
+            self.env[function.args.vararg.arg] = StaticValue(items=[])
+            self.flow.input_profile.append({
+                "argument": function.args.vararg.arg, "value": [],
+                "basis": "Canonical profile supplies no additional positional arguments",
+                **self.source_location(function.args.vararg),
+            })
+        if function.args.kwarg:
+            self.env[function.args.kwarg.arg] = StaticValue(fields={})
+            self.flow.input_profile.append({
+                "argument": function.args.kwarg.arg, "value": {},
+                "basis": "Canonical profile supplies no additional keyword arguments",
+                **self.source_location(function.args.kwarg),
+            })
         self.statements(function.body)
         self.flow.outputs = merge_outputs(self.returned)
         return self.flow
+
+    def source_location(self, node: ast.AST) -> dict[str, Any]:
+        return {"line": getattr(node, "lineno", 0), "column": getattr(node, "col_offset", 0), "source": self.source_name,
+                "source_sha256": self.source_hash}
+
+    def collect_source_calls(
+        self, function: ast.FunctionDef | ast.AsyncFunctionDef, owner_path: str | None = None
+    ) -> None:
+        owner = self.path if owner_path is None else owner_path
+        for node in ast.walk(function):
+            if not isinstance(node, ast.Call):
+                continue
+            # A helper method on a module is not an invocation of that module's forward.
+            if isinstance(node.func, ast.Attribute) and node.func.attr != "forward":
+                name = ast.unparse(node.func)
+                if name.startswith("self.") and f"{owner}.{name[5:]}".lstrip(".") not in self.classifications:
+                    continue
+            candidates = []
+            for part in ast.walk(node.func):
+                if not isinstance(part, ast.Attribute):
+                    continue
+                name = ast.unparse(part)
+                if name.startswith("self."):
+                    path = f"{owner}.{name[5:]}".lstrip(".")
+                    if path in self.classifications:
+                        candidates.append(path)
+            if candidates:
+                self.flow.source_call_sites.append({"module_path": max(candidates, key=len),
+                                                    "excluded_by_profile": False,
+                                                    **self.source_location(node)})
+
+    def exclude_source_calls(self, nodes: list[ast.AST], evidence: dict[str, Any]) -> None:
+        locations = {(getattr(node, "lineno", 0), getattr(node, "col_offset", 0))
+                     for statement in nodes for node in ast.walk(statement) if isinstance(node, ast.Call)}
+        for call in self.flow.source_call_sites:
+            if call["source"] == self.source_name and (call["line"], call["column"]) in locations:
+                call["excluded_by_profile"] = True
+                call["profile_condition"] = evidence
+
+    def unsupported(self, node: ast.AST, reason: str,
+                    values: list[StaticValue] | None = None) -> StaticValue:
+        """Expose an opaque dependency boundary without interpreting its computation."""
+        detail = {"construct": type(node).__name__, "expression": ast.unparse(node),
+                  "reason": reason, **self.source_location(node)}
+        self.flow.unexplained_operations.append(detail)
+        self.flow.warnings.append(f"Unsupported {detail['construct']} at line {detail['line']}: {reason}")
+        dependencies = combine(values if values is not None else list(self.env.values()))
+        if isinstance(node, ast.stmt):
+            detail["potential_module_paths"] = sorted({
+                f"{self.path}.{ast.unparse(item)[5:]}".lstrip(".")
+                for item in ast.walk(node) if isinstance(item, ast.Attribute)
+                and ast.unparse(item).startswith("self.")
+                and f"{self.path}.{ast.unparse(item)[5:]}".lstrip(".") in self.classifications
+            })
+        value = self.event(node, None, "unknown", "Unsupported source boundary",
+                           {"dependencies": dependencies}, {"unsupported": detail})
+        if isinstance(node, ast.stmt):
+            for item in ast.walk(node):
+                if isinstance(item, ast.Name) and isinstance(item.ctx, ast.Store):
+                    self.env[item.id] = value
+                elif isinstance(item, ast.Attribute) and isinstance(item.ctx, ast.Store):
+                    name = ast.unparse(item)
+                    if name.startswith("self."):
+                        owner = self.env.get("self", StaticValue()).module_path or ""
+                        attribute = name[5:].split(".", 1)[0]
+                        self.tainted_attributes[f"{owner}.{attribute}".lstrip(".")] = value
+            if any(isinstance(item, ast.Return) for item in ast.walk(node)):
+                self.returned.append(value)
+        return value
+
+    def branch(self, node: ast.AST, value: Any) -> dict[str, Any]:
+        evidence = {"condition": ast.unparse(node),
+                    "resolved": value is not UNKNOWN,
+                    "value": bool(value) if value is not UNKNOWN else None,
+                    "basis": "Static attributes and canonical input profile",
+                    **self.source_location(node)}
+        self.flow.branch_conditions.append(evidence)
+        return evidence
 
     def input(self, name: str) -> StaticValue:
         value = StaticValue([(f"input:{name}", "output")])
@@ -173,6 +284,18 @@ class StaticFlowAnalyzer:
                     if value.items and index < len(value.items)
                     else StaticValue([(ref, str(index)) for ref, _ in value.refs]),
                 )
+        else:
+            boundary = self.unsupported(target, "Assignment target effects are unsupported", [value])
+            root = target
+            while isinstance(root, (ast.Attribute, ast.Subscript)):
+                root = root.value
+            if isinstance(root, ast.Name) and root.id != "self":
+                self.env[root.id] = boundary
+            elif isinstance(root, ast.Name):
+                name = ast.unparse(target)
+                attribute = name[5:].split(".", 1)[0].split("[", 1)[0]
+                owner = self.env.get("self", StaticValue()).module_path or ""
+                self.tainted_attributes[f"{owner}.{attribute}".lstrip(".")] = boundary
 
     def statements(self, statements: list[ast.stmt]) -> bool:
         for index, node in enumerate(statements):
@@ -190,13 +313,24 @@ class StaticFlowAnalyzer:
             elif isinstance(node, ast.Return):
                 self.flow.outputs = self.expression(node.value)
                 self.returned.append(self.flow.outputs)
+                self.exclude_source_calls(statements[index + 1:], {
+                    "condition": "Unreachable after return", "resolved": True,
+                    "value": False, **self.source_location(node),
+                })
                 return True
             elif isinstance(node, ast.Expr):
                 self.expression(node.value)
             elif isinstance(node, ast.If):
                 condition = self.expression(node.test).constant
+                evidence = self.branch(node.test, condition)
                 if condition is not UNKNOWN:
-                    if self.statements(node.body if condition else node.orelse):
+                    self.exclude_source_calls(node.orelse if condition else node.body, evidence)
+                    start = len(self.flow.events)
+                    returned = self.statements(node.body if condition else node.orelse)
+                    for event in self.flow.events[start:]:
+                        event.metadata.setdefault("branch_evidence", []).append(evidence)
+                    if returned:
+                        self.exclude_source_calls(statements[index + 1:], evidence)
                         return True
                 else:
                     # Do not speculate through dynamic guards. Preserve dependencies of assignments,
@@ -204,6 +338,10 @@ class StaticFlowAnalyzer:
                     before, start = dict(self.env), len(self.flow.events)
                     left_returns = self.statements(node.body)
                     left = dict(self.env)
+                    for event in self.flow.events[start:]:
+                        self.mark_conditional(event, ast.unparse(node.test))
+                        event.metadata.setdefault("branch_evidence", []).append(dict(evidence, arm="body"))
+                    right_start = len(self.flow.events)
                     self.env = dict(before)
                     right_returns = self.statements(node.orelse)
                     assignments_changed = before != left or before != self.env
@@ -213,13 +351,17 @@ class StaticFlowAnalyzer:
                         for name in left.keys() | self.env.keys():
                             a, b = left.get(name, StaticValue()), self.env.get(name, StaticValue())
                             self.env[name] = a if a == b else combine([a, b])
-                    for event in self.flow.events[start:]:
-                        self.mark_conditional(event, ast.unparse(node.test))
+                    for event in self.flow.events[right_start:]:
+                        self.mark_conditional(event, f"not ({ast.unparse(node.test)})")
+                        event.metadata.setdefault("branch_evidence", []).append(dict(evidence, arm="else"))
                     if len(self.flow.events) > start or left_returns or right_returns or assignments_changed:
                         self.flow.warnings.append(
                             f"Conditional source path is unresolved: {ast.unparse(node.test)}"
                         )
                     if left_returns and right_returns:
+                        self.exclude_source_calls(
+                            statements[index + 1:], dict(evidence, basis="Both branches return")
+                        )
                         return True
                     if left_returns or right_returns:
                         start = len(self.flow.events)
@@ -256,10 +398,17 @@ class StaticFlowAnalyzer:
                         ):
                             self.flow.sequential_containers.add(iterable.module_path)
                 else:
-                    self.flow.warnings.append(f"Loop could not be statically resolved at line {node.lineno}")
-            elif isinstance(node, (ast.With, ast.Try)):
-                if self.statements(node.body):
-                    return True
+                    self.unsupported(node, "Loop iterable and iteration effects could not be statically resolved")
+                if node.orelse:
+                    self.unsupported(node, "For/else completion and break conditions are not established")
+            elif isinstance(node, ast.Pass):
+                continue
+            elif isinstance(node, (ast.With, ast.AsyncWith)):
+                self.unsupported(node, "Context manager entry/exit and exception effects are not established")
+            elif isinstance(node, (ast.Try, ast.TryStar)):
+                self.unsupported(node, "Try body, handlers, else and finally remain possible; exception flow is unsupported")
+            else:
+                self.unsupported(node, "Statement semantics are not supported by the static interpreter")
         return False
 
     @staticmethod
@@ -341,6 +490,8 @@ class StaticFlowAnalyzer:
             return StaticValue()
         if value.module_path is not None:
             path = f"{value.module_path}.{name}" if value.module_path else name
+            if path in self.tainted_attributes:
+                return self.tainted_attributes[path]
             if path in self.classifications:
                 return StaticValue(module_path=path)
             module = self.model.get_submodule(value.module_path) if value.module_path else self.model
@@ -437,6 +588,17 @@ class StaticFlowAnalyzer:
             result = combine(values)
             result.items = values
             return result
+        if isinstance(node, ast.Dict):
+            fields = {}
+            for key, value in zip(node.keys, node.values):
+                if key is None or not isinstance(key, ast.Constant) or not isinstance(key.value, str):
+                    return self.unsupported(node, "Dictionary keys or unpacking are not statically known")
+                fields[key.value] = self.expression(value)
+            result = combine(list(fields.values()))
+            result.fields = fields
+            return result
+        if isinstance(node, ast.Slice):
+            return StaticValue()
         if isinstance(node, ast.Subscript):
             if getattr(self.model.config, "model_type", None) == "vit" and isinstance(node.slice, ast.Tuple):
                 value = self.expression(node.value)
@@ -470,22 +632,26 @@ class StaticFlowAnalyzer:
                 StaticValue(constant=not value.constant) if value.constant is not UNKNOWN else StaticValue()
             )
         if isinstance(node, ast.UnaryOp) and isinstance(node.op, (ast.USub, ast.UAdd)):
-            value = self.expression(node.operand).constant
-            if type(value) in (int, float):
-                return StaticValue(constant=-value if isinstance(node.op, ast.USub) else value)
-            return StaticValue()
+            value = self.expression(node.operand)
+            if type(value.constant) in (int, float):
+                return StaticValue(constant=-value.constant if isinstance(node.op, ast.USub) else value.constant)
+            return self.unsupported(node, "Unary operation is not statically established", [value])
         if isinstance(node, ast.BoolOp):
-            values = [self.expression(item) for item in node.values]
-            constants = [v.constant for v in values]
-            if isinstance(node.op, ast.And) and any(c is not UNKNOWN and not c for c in constants):
-                return StaticValue(constant=False)
-            if isinstance(node.op, ast.Or) and any(c is not UNKNOWN and bool(c) for c in constants):
-                return StaticValue(constant=True)
-            if all(c is not UNKNOWN for c in constants):
-                return StaticValue(
-                    constant=all(constants) if isinstance(node.op, ast.And) else any(constants)
-                )
-            return StaticValue()
+            value = self.expression(node.values[0])
+            for index, item in enumerate(node.values[1:], start=1):
+                if type(value.constant) not in (bool, int, float, str, type(None)):
+                    return self.unsupported(
+                        node, "Short-circuit condition is unresolved; later operands remain possible",
+                        [value, combine(list(self.env.values()))],
+                    )
+                if isinstance(node.op, ast.And) and not value.constant:
+                    self.exclude_source_calls(node.values[index:], self.branch(node, value.constant))
+                    return value
+                if isinstance(node.op, ast.Or) and value.constant:
+                    self.exclude_source_calls(node.values[index:], self.branch(node, value.constant))
+                    return value
+                value = self.expression(item)
+            return value
         if isinstance(node, ast.Compare) and len(node.ops) == 1:
             left, right = self.expression(node.left), self.expression(node.comparators[0])
             if isinstance(node.ops[0], (ast.Is, ast.IsNot)) and right.constant is None:
@@ -505,11 +671,32 @@ class StaticFlowAnalyzer:
             return StaticValue()
         if isinstance(node, ast.IfExp):
             condition = self.expression(node.test).constant
-            return (
-                self.expression(node.body if condition else node.orelse)
-                if condition is not UNKNOWN
-                else combine([self.expression(node.body), self.expression(node.orelse)])
-            )
+            evidence = self.branch(node.test, condition)
+            if condition is not UNKNOWN:
+                self.exclude_source_calls([node.orelse if condition else node.body], evidence)
+                start = len(self.flow.events)
+                value = self.expression(node.body if condition else node.orelse)
+                for event in self.flow.events[start:]:
+                    event.metadata.setdefault("branch_evidence", []).append(evidence)
+                return value
+            before = dict(self.env)
+            start = len(self.flow.events)
+            left = self.expression(node.body)
+            left_env = dict(self.env)
+            for event in self.flow.events[start:]:
+                self.mark_conditional(event, ast.unparse(node.test))
+                event.metadata.setdefault("branch_evidence", []).append(dict(evidence, arm="body"))
+            self.env = dict(before)
+            start = len(self.flow.events)
+            right = self.expression(node.orelse)
+            for event in self.flow.events[start:]:
+                self.mark_conditional(event, f"not ({ast.unparse(node.test)})")
+                event.metadata.setdefault("branch_evidence", []).append(dict(evidence, arm="else"))
+            for name in left_env.keys() | self.env.keys():
+                a, b = left_env.get(name, StaticValue()), self.env.get(name, StaticValue())
+                self.env[name] = a if a == b else combine([a, b])
+            self.flow.warnings.append(f"Conditional source path is unresolved: {ast.unparse(node.test)}")
+            return merge_outputs([left, right])
         if isinstance(node, ast.BinOp):
             return self.operation(node, self.expression(node.left), self.expression(node.right), node.op)
         if isinstance(node, ast.Call):
@@ -520,6 +707,21 @@ class StaticFlowAnalyzer:
                 else self.expression(node.func)
             )
             name = ast.unparse(node.func).rsplit(".", 1)[-1]
+            transparent_methods = {
+                "size", "dim", "numel", "view", "reshape", "contiguous", "to",
+                "type_as", "float", "half", "transpose", "permute", "unsqueeze",
+                "squeeze", "expand", "flatten",
+            }
+            if (
+                isinstance(node.func, ast.Attribute)
+                and name in transparent_methods
+                and (any(isinstance(arg, ast.Starred) for arg in node.args)
+                     or any(keyword.arg is None for keyword in node.keywords))
+            ):
+                return self.unsupported(
+                    node, "Star arguments for this tensor method cannot be safely bound",
+                    [receiver or StaticValue()],
+                )
             if isinstance(node.func, ast.Attribute) and name in {"size", "dim", "numel"}:
                 return StaticValue()
             if isinstance(node.func, ast.Attribute) and name in {
@@ -569,23 +771,51 @@ class StaticFlowAnalyzer:
                 return receiver
             if name in {"enumerate", "iter"} and node.args:
                 return self.expression(node.args[0])
-            arguments = {str(i): self.expression(arg) for i, arg in enumerate(node.args)}
-            arguments.update(
-                {kw.arg: self.expression(kw.value) for kw in node.keywords if kw.arg is not None}
-            )
+            positional = []
+            keywords = {}
+            unresolved_unpacking = False
+            for arg in node.args:
+                value = self.expression(arg.value if isinstance(arg, ast.Starred) else arg)
+                if isinstance(arg, ast.Starred):
+                    if value.items is None or len(value.items) > 128:
+                        unresolved_unpacking = True
+                        positional.append(value)
+                    else:
+                        positional.extend(value.items)
+                else:
+                    positional.append(value)
+            for keyword in node.keywords:
+                value = self.expression(keyword.value)
+                if keyword.arg is None:
+                    if value.fields is None or len(value.fields) > 128:
+                        unresolved_unpacking = True
+                        positional.append(value)
+                    elif keywords.keys() & value.fields.keys():
+                        unresolved_unpacking = True
+                    else:
+                        keywords.update(value.fields)
+                elif keyword.arg in keywords:
+                    unresolved_unpacking = True
+                else:
+                    keywords[keyword.arg] = value
+            arguments = {str(i): value for i, value in enumerate(positional)}
+            arguments.update(keywords)
+            if unresolved_unpacking:
+                return self.unsupported(node, "Star arguments or keyword expansion cannot be safely bound",
+                                        [receiver or StaticValue(), *arguments.values()])
             predicate = self.canonical_predicate(node, arguments)
             if predicate is not None:
                 return predicate
             if function.module_path is not None and function.method is None:
+                self.flow.call_sites.append({"module_path": function.module_path,
+                                             **self.source_location(node)})
                 return self.event(node, function.module_path, "module", function.module_path, arguments)
             if function.method is not None and self.depth < 3:
-                return self.helper(function.module_path, function.method, list(arguments.values()), node)
+                return self.helper(function.module_path, function.method, positional, node, keywords)
             if name == "apply_chunking_to_forward" and node.args:
                 helper = arguments["0"]
                 if helper.method:
-                    return self.helper(helper.module_path, helper.method, list(arguments.values())[3:], node)
-            if name.startswith("create_") and name.endswith("mask"):
-                return StaticValue()
+                    return self.helper(helper.module_path, helper.method, positional[3:], node, keywords)
             if name == "arange":
                 return self.input("position_ids")
             if name in {"matmul", "bmm", "einsum", "cat", "stack"}:
@@ -615,6 +845,9 @@ class StaticFlowAnalyzer:
                     self.flow.warnings.append(
                         f"Opaque call {ast.unparse(node.func)}: dependencies retained, transformation unverified"
                     )
+                    return self.unsupported(node, "Opaque call transformation is unverified", [receiver, *arguments.values()])
+                self.flow.unexplained_operations.append({"construct": "Call", "expression": ast.unparse(node),
+                                                        "reason": "Opaque call without tensor dependencies", **self.source_location(node)})
                 return result
             if name[0].isupper() and any(
                 key in arguments
@@ -648,11 +881,15 @@ class StaticFlowAnalyzer:
                 self.flow.warnings.append(
                     f"Opaque call {ast.unparse(node.func)}: dependencies retained, transformation unverified"
                 )
+                return self.unsupported(node, "Opaque call transformation is unverified", list(arguments.values()))
+            self.flow.unexplained_operations.append({"construct": "Call", "expression": ast.unparse(node),
+                                                    "reason": "Opaque call without tensor dependencies", **self.source_location(node)})
             return result
-        return StaticValue()
+        return self.unsupported(node, "Expression semantics are not supported by the static interpreter")
 
     def helper(
-        self, path: str | None, method_name: str, values: list[StaticValue], node: ast.AST
+        self, path: str | None, method_name: str, values: list[StaticValue], node: ast.AST,
+        keywords: dict[str, StaticValue] | None = None,
     ) -> StaticValue:
         module = self.model.get_submodule(path) if path else self.model
         try:
@@ -664,7 +901,16 @@ class StaticFlowAnalyzer:
             )
         except (AttributeError, OSError, TypeError, SyntaxError, StopIteration):
             self.flow.warnings.append(f"Helper source unavailable: {path}.{method_name}; dependencies only")
-            return combine(values)
+            return self.unsupported(node, f"Helper source unavailable: {path}.{method_name}",
+                                    [*values, *(keywords or {}).values()])
+        bound = self.bind_helper(function, values, keywords or {})
+        if bound is None:
+            return self.unsupported(node, f"Helper arguments cannot be bound: {method_name}",
+                                    [*values, *(keywords or {}).values()])
+        old_source = self.source_name, self.source_hash
+        self.source_name = f"{method.__module__}.{method.__qualname__}"
+        self.source_hash = hashlib.sha256(textwrap.dedent(inspect.getsource(method)).encode()).hexdigest()
+        self.collect_source_calls(function, path or "")
         old_env, old_output, old_globals, old_returned = (
             self.env,
             self.flow.outputs,
@@ -674,7 +920,7 @@ class StaticFlowAnalyzer:
         self.source_globals = method.__globals__
         self.returned = []
         self.env = {"self": StaticValue(module_path=path)}
-        self.env.update({arg.arg: value for arg, value in zip(function.args.args[1:], values)})
+        self.env.update(bound)
         self.depth += 1
         self.statements(function.body)
         result = merge_outputs(self.returned)
@@ -682,4 +928,45 @@ class StaticFlowAnalyzer:
         self.env, self.flow.outputs = old_env, old_output
         self.source_globals = old_globals
         self.returned = old_returned
+        self.source_name, self.source_hash = old_source
         return result
+
+    @staticmethod
+    def bind_helper(function: ast.FunctionDef, values: list[StaticValue],
+                    keywords: dict[str, StaticValue]) -> dict[str, StaticValue] | None:
+        """Bind AST parameter names, defaults and variadics without executing a helper."""
+        args = function.args
+        positional = args.posonlyargs + args.args
+        if positional and positional[0].arg in {"self", "cls"}:
+            positional = positional[1:]
+        if len(values) > len(positional) and args.vararg is None:
+            return None
+        bound = {arg.arg: value for arg, value in zip(positional, values)}
+        allowed = {arg.arg for arg in args.args + args.kwonlyargs} - {"self", "cls"}
+        extras = {}
+        for name, value in keywords.items():
+            if name in allowed:
+                if name in bound:
+                    return None
+                bound[name] = value
+            elif args.kwarg:
+                extras[name] = value
+            else:
+                return None
+        defaults = dict(zip([arg.arg for arg in positional][-len(args.defaults):], args.defaults)) if args.defaults else {}
+        defaults.update({arg.arg: default for arg, default in zip(args.kwonlyargs, args.kw_defaults) if default is not None})
+        for arg in positional + args.kwonlyargs:
+            if arg.arg in bound:
+                continue
+            if arg.arg not in defaults:
+                return None
+            try:
+                bound[arg.arg] = StaticValue(constant=ast.literal_eval(defaults[arg.arg]))
+            except (ValueError, TypeError, SyntaxError):
+                # Defaults referencing globals are unknown, never copied from the caller's environment.
+                bound[arg.arg] = StaticValue()
+        if args.vararg:
+            bound[args.vararg.arg] = StaticValue(items=values[len(positional):])
+        if args.kwarg:
+            bound[args.kwarg.arg] = StaticValue(fields=extras)
+        return bound

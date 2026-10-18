@@ -283,18 +283,15 @@ def reconstruct(
             checkpoint=checkpoint,
             reason_code="native_architecture_unavailable",
         )
-    from .adapters import adapter_for
     from .facts import inspect_native_model
+    from .coverage import source_completeness
     from .hierarchy import HierarchyBuilder
     from .inputs import InputResolver
     from .patterns import SemanticAnalyzer
 
     config_url = reference.url(config_file, revision)
     raw = inspect_native_model(model, checkpoint)
-    adapter = adapter_for(config.model_type)
-    if adapter:
-        adapter.refine_facts(raw, checkpoint, config_data)
-    analyzer = SemanticAnalyzer(model, raw, adapter)
+    analyzer = SemanticAnalyzer(model, raw)
     progress("analyzing_components")
     builder = HierarchyBuilder(model, raw, analyzer)
     root = builder.build()
@@ -357,7 +354,8 @@ def reconstruct(
             header_sha256=shard["header_sha256"],
             file_size=shard["file_size"],
         )
-    warnings = list(selection["warnings"]) + list(raw["warnings"])
+    completeness = source_completeness(root, builder.flow_reports)
+    warnings = list(selection["warnings"]) + list(raw["warnings"]) + completeness["warnings"]
     for path, report in builder.flow_reports.items():
         warnings.extend(f"{path or '<root>'}: {w}" for w in report["warnings"])
     unknown_tensors = [name for name, item in raw["checkpoint_extras"].items() if item["kind"] == "unmapped"]
@@ -415,7 +413,8 @@ def reconstruct(
             / len(edges)
             if edges
             else 0,
-            "adapters_used": [adapter.name] if adapter else [],
+            "adapters_used": [],
+            "source_completeness": completeness,
             "warnings": list(dict.fromkeys(warnings)),
         },
         "limitations": [

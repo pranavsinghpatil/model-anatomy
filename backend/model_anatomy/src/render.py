@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+import hashlib
+import re
 from html import escape
 from pathlib import Path
 
-from .errors import AnatomyError
+from .errors import AnatomyError, ArtifactError
 from .ir import Graph, ModelIR
+from .output_transaction import publish_files
 
 
 def _label(value: str) -> str:
@@ -44,31 +47,27 @@ def write_outputs(
 
     model_path = output_directory / "model.json"
     old_graph_ids = set()
+    previous = None
     if model_path.exists():
         try:
             previous = ModelIR.from_json(model_path.read_text(encoding="utf-8"))
-            if previous.model_id == ir.model_id:
-                old_graph_ids = {graph.id for graph in previous.root_graph.walk()}
         except (AnatomyError, ValueError, KeyError, TypeError):
             pass
+    if previous is not None:
+        if previous.model_id != ir.model_id:
+            raise ArtifactError("Output directory already belongs to a different model")
+        old_graph_ids = {graph.id for graph in previous.root_graph.walk()}
     serialized = ir.to_json()
     if ModelIR.from_json(serialized).to_dict() != ir.to_dict():
         raise ValueError("IR round-trip changed the model representation")
-    output_directory.mkdir(parents=True, exist_ok=True)
-    config_directory.mkdir(parents=True, exist_ok=True)
-    preview_directory.mkdir(parents=True, exist_ok=True)
-    model_path.write_text(serialized, encoding="utf-8")
+    contents = {model_path: serialized}
     config_path = config_directory / "config.json"
-    config_path.write_text(
-        json.dumps(ir.metadata["source_config"], indent=2, sort_keys=True) + "\n", encoding="utf-8"
-    )
+    contents[config_path] = json.dumps(ir.metadata["source_config"], indent=2, sort_keys=True) + "\n"
     audit_path = output_directory / "artifact_audit.json"
-    audit_path.write_text(
-        json.dumps(ir.metadata["artifacts"], indent=2, sort_keys=True) + "\n", encoding="utf-8"
-    )
+    contents[audit_path] = json.dumps(ir.metadata["artifacts"], indent=2, sort_keys=True) + "\n"
     paths = [model_path, config_path, audit_path]
     diagnostics_path = output_directory / "diagnostics.json"
-    diagnostics_path.write_text(
+    contents[diagnostics_path] = (
         json.dumps(
             {
                 "analysis_report": ir.metadata.get("analysis_report"),
@@ -79,8 +78,7 @@ def write_outputs(
             indent=2,
             sort_keys=True,
         )
-        + "\n",
-        encoding="utf-8",
+        + "\n"
     )
     paths.append(diagnostics_path)
     preview = [
@@ -96,18 +94,19 @@ def write_outputs(
     for graph in ir.root_graph.walk():
         rendered = mermaid(graph)
         path = output_directory / f"{graph.id}.mmd"
-        path.write_text(rendered, encoding="utf-8")
+        contents[path] = rendered
         paths.append(path)
         preview.extend([f"## {graph.id}", "", "```mermaid", rendered.rstrip(), "```", ""])
-    for obsolete_id in old_graph_ids - {graph.id for graph in ir.root_graph.walk()}:
-        if obsolete_id.replace("_", "").isalnum():
-            (output_directory / f"{obsolete_id}.mmd").unlink(missing_ok=True)
-    preview_name = (
-        "GPT2_PREVIEW.md"
-        if ir.metadata.get("source_config", {}).get("model_type") == "gpt2"
-        else output_directory.name.upper().replace("-", "_") + "_PREVIEW.md"
-    )
-    preview_path = preview_directory / preview_name
-    preview_path.write_text("\n".join(preview), encoding="utf-8")
+    obsolete = {
+        output_directory / f"{obsolete_id}.mmd"
+        for obsolete_id in old_graph_ids - {graph.id for graph in ir.root_graph.walk()}
+        if obsolete_id.replace("_", "").isalnum()
+    }
+    identity = f"{ir.model_id}@{ir.metadata['revision']}"
+    suffix = hashlib.sha256(identity.encode()).hexdigest()[:16]
+    stem = re.sub(r"[^A-Z0-9_]", "_", ir.model_id.upper().replace("/", "__"))[:120]
+    preview_path = preview_directory / f"{stem}_{suffix}_PREVIEW.md"
+    contents[preview_path] = "\n".join(preview)
     paths.append(preview_path)
+    publish_files(contents, obsolete)
     return paths

@@ -69,8 +69,6 @@ class HierarchyBuilder:
     def graph_id(self, path: str, suggested: str | None = None) -> str:
         if not path:
             suggested = "overview"
-        if self.analyzer.adapter and suggested is None:
-            suggested = self.analyzer.adapter.graph_aliases.get(self.raw["modules"].get(path, {}).get("type"))
         candidate = suggested or identifier(path)
         base, index = candidate, 1
         while candidate in self.graph_ids:
@@ -120,8 +118,6 @@ class HierarchyBuilder:
             "layernorm",
         }:
             label = "Final " + label
-        if self.analyzer.adapter:
-            label = self.analyzer.adapter.type_labels.get(record["type"], label)
         node = Node(
             node_id,
             label,
@@ -175,10 +171,13 @@ class HierarchyBuilder:
                     f"Block Stack ({sum(g.count for g in groups)} instances)",
                 )
                 node.metadata["variant_groups"] = [dict(asdict(g), count=g.count) for g in groups]
+        node.metadata["invocation_established"] = True
         return node
 
     def output_spec(self, node: Node, incoming: TensorSpec | None = None) -> TensorSpec:
         path, kind = node.module_path, node.kind
+        if node.metadata.get("unsupported"):
+            return TensorSpec(None, None, "unsupported_source_output")
         default = self.inputs.spec("hidden_states", path or "")
         if path is None:
             if self.inputs.native_vit and kind in {"reshape", "selection", "concatenation"}:
@@ -346,6 +345,7 @@ class HierarchyBuilder:
         graph.nodes.append(current)
         for index, child in enumerate(self.raw["modules"][path]["children"]):
             node = self.module_node(child, f"component{index}")
+            node.metadata["invocation_established"] = True
             self.connect(graph, current, node)
             node.outputs = [self.output_spec(node, current.outputs[0])]
             graph.nodes.append(node)
@@ -375,6 +375,7 @@ class HierarchyBuilder:
             graph.nodes.append(node)
             node.outputs = [self.output_spec(node)]
             if group.mode == "sequential":
+                node.metadata["invocation_established"] = True
                 self.connect(graph, current, node)
                 current = node
             else:
@@ -415,6 +416,8 @@ class HierarchyBuilder:
                 "warnings": flow.warnings,
                 "analysis_scope": "eval, no cache, no training loss, canonical modality inputs",
                 "profile_assumptions": flow.profile_assumptions,
+                "input_profile": flow.input_profile,
+                "branch_conditions": flow.branch_conditions,
                 **(
                     {
                         "shape_basis": "native ViT source and config; fixed resolution, unmasked, no interpolation"
@@ -429,6 +432,11 @@ class HierarchyBuilder:
             "event_count": len(flow.events),
             "sequential_containers": sorted(flow.sequential_containers),
             "profile_assumptions": flow.profile_assumptions,
+            "input_profile": flow.input_profile,
+            "branch_conditions": flow.branch_conditions,
+            "unexplained_operations": flow.unexplained_operations,
+            "call_sites": flow.call_sites,
+            "source_call_sites": flow.source_call_sites,
         }
         if not flow.events:
             graph.metadata["topology"] = "structural_only"
@@ -436,6 +444,8 @@ class HierarchyBuilder:
                 self.module_node(p, f"component{i}")
                 for i, p in enumerate(self.raw["modules"][path]["children"])
             ]
+            for node in graph.nodes:
+                node.metadata["invocation_not_established"] = True
             graph.metadata["warning"] = (
                 "No source dataflow established; component registration order is not execution order"
             )
@@ -458,7 +468,7 @@ class HierarchyBuilder:
             ref = value.refs[0][0]
             if ref not in used_inputs:
                 continue
-            alias = self.analyzer.adapter.input_aliases.get(name, name) if self.analyzer.adapter else name
+            alias = name
             spec = self.inputs.spec(name, path)
             node = Node(
                 unique(alias),
@@ -476,7 +486,7 @@ class HierarchyBuilder:
         for event in flow.events:
             if event.module_path is not None:
                 last = event.module_path.rsplit(".", 1)[-1]
-                alias = self.analyzer.adapter.node_aliases.get(last, last) if self.analyzer.adapter else last
+                alias = last
                 node = self.call_node(event, unique(alias))
             else:
                 embedding_add = "embedding" in self.raw["modules"][path]["type"].lower() or any(
@@ -561,16 +571,18 @@ class HierarchyBuilder:
         for child_path in self.raw["modules"][path]["children"]:
             if any(p == child_path or p.startswith(child_path + ".") for p in called_paths):
                 continue
-            classification = self.analyzer.classifications[child_path]
             aliases = [
                 group
                 for group in self.raw["parameter_alias_groups"]
                 if any(p.startswith(child_path + ".") for p in group)
             ]
-            if classification.kind != "unknown" and not (classification.kind == "embedding" and aliases):
-                continue
-            extra = self.module_node(child_path, unique(child_path.rsplit(".", 1)[-1]))
+            excluded = [call for call in flow.source_call_sites if call["module_path"] == child_path]
+            profile_excluded = bool(excluded) and all(call["excluded_by_profile"] for call in excluded)
+            extra = self.module_node(child_path, unique(child_path.rsplit(".", 1)[-1]), build_child=False)
             extra.metadata["invocation_not_established"] = True
+            extra.metadata["excluded_by_profile"] = profile_excluded
+            if profile_excluded:
+                extra.metadata["profile_conditions"] = [call["profile_condition"] for call in excluded]
             if aliases:
                 extra.label = "Shared Embedding"
                 for target in list(graph.nodes):

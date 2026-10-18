@@ -10,8 +10,6 @@ from typing import Any
 
 import torch
 
-from .adapters import ArchitectureAdapter
-
 
 @dataclass(frozen=True)
 class SemanticClassification:
@@ -41,10 +39,8 @@ class Repetition:
 
 
 class SemanticAnalyzer:
-    def __init__(
-        self, model: torch.nn.Module, raw: dict[str, Any], adapter: ArchitectureAdapter | None = None
-    ):
-        self.model, self.raw, self.adapter = model, raw, adapter
+    def __init__(self, model: torch.nn.Module, raw: dict[str, Any]):
+        self.model, self.raw = model, raw
         self.classifications: dict[str, SemanticClassification] = {}
         self.signatures: dict[str, StructuralSignature] = {}
         self.repetitions: dict[str, list[Repetition]] = {}
@@ -54,7 +50,7 @@ class SemanticAnalyzer:
             self.signature(path)
         for path, record in raw["modules"].items():
             children = record["children"]
-            if len(children) < 2 or not (
+            if not children or not (
                 record["container"] or all(p.rsplit(".", 1)[-1].isdigit() for p in children)
             ):
                 continue
@@ -191,9 +187,8 @@ class SemanticAnalyzer:
                     "causallm" in a.lower() or "lmheadmodel" in a.lower()
                     for a in (self.model.config.architectures or [])
                 )
-            kind = self.adapter.semantic_aliases.get(record["type"]) if self.adapter else None
             return result(
-                kind or ("decoder_block" if decoder else "encoder_block"),
+                "decoder_block" if decoder else "encoder_block",
                 0.96,
                 "normalization + attention + feed-forward subtree, with encoder/decoder context",
             )

@@ -170,9 +170,7 @@ def build_attention(builder: HierarchyBuilder, path: str) -> Graph:
     core = Graph(
         builder.graph_id(
             path,
-            builder.analyzer.adapter.graph_aliases.get("attention_core", graph.id + "_core")
-            if builder.analyzer.adapter
-            else graph.id + "_core",
+            graph.id + "_core",
         ),
         [],
         [],
