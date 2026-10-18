@@ -46,5 +46,17 @@ explicit = true
 [tool.uv.sources]
 torch = [{ index = "pytorch-cpu", marker = "sys_platform != 'darwin'" }]
 
+[project.scripts]
+model-anatomy = "model_anatomy.src.cli:main"
+
 [tool.setuptools.packages.find]
 where = ["backend"]
+
+[tool.pytest.ini_options]
+testpaths = [".tmp/tests"]
+addopts = "--basetemp=.tmp/pytest -o cache_dir=.tmp/pytest_cache"
+markers = ["integration: real Hugging Face metadata acceptance tests (network required)"]
+
+[tool.ruff]
+cache-dir = ".tmp/ruff_cache"
+line-length = 110

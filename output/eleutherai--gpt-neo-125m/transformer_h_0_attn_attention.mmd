@@ -1,0 +1,23 @@
+flowchart TD
+    n0["Hidden States"]
+    n1["Projection"]
+    n2["Projection"]
+    n3["Projection"]
+    n4["Matrix multiply"]
+    n5["Dropout"]
+    n6["Matrix multiply"]
+    n7["Projection"]
+    n8["Dropout"]
+    n9["Output"]
+    n0 -->|"[B, S, 768]"| n1
+    n0 -->|"[B, S, 768]"| n2
+    n0 -->|"[B, S, 768]"| n3
+    n1 -->|"[B, S, 768]"| n4
+    n2 -->|"[B, S, 768]"| n4
+    n4 -->|"[unknown shape]"| n5
+    n5 -->|"[unknown shape]"| n6
+    n3 -->|"[B, S, 768]"| n6
+    n6 -->|"[unknown shape]"| n7
+    n7 -->|"[B, S, 768]"| n8
+    n8 -->|"[B, S, 768]"| n9
+    n5 -->|"[unknown shape]"| n9

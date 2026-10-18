@@ -1,0 +1,20 @@
+flowchart TD
+    n0["Token IDs"]
+    n1["Position IDs"]
+    n2["Token Embedding"]
+    n3["Position Embedding"]
+    n4["Add embeddings"]
+    n5["Dropout"]
+    n6["Decoder Block x12"]
+    n7["Final LayerNorm"]
+    n8["LM Head"]
+    n9["Output"]
+    n8 -->|"[B, S, 50257]"| n9
+    n0 -->|"[B, S]"| n2
+    n1 -->|"[1, S]"| n3
+    n2 -->|"[B, S, 768]"| n4
+    n3 -->|"[1, S, 768]"| n4
+    n4 -->|"[B, S, 768]"| n5
+    n5 -->|"[B, S, 768]"| n6
+    n6 -->|"[B, S, 768]"| n7
+    n7 -->|"[B, S, 768]"| n8
