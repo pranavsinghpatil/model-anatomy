@@ -26,7 +26,7 @@ import { ErrorNotice, Loading, Status } from "../components/Common";
 import { Button, ThemeControl } from "../components/ui";
 import { ModelAnatomyMark } from "../components/Logo";
 import { useRecent, useService } from "../state/queries";
-import { DotPattern } from "../components/vendor/dot-pattern";
+import { DitherBackground } from "../components/DitherBackground";
 import "./entry.css";
 
 const examples = [
@@ -397,12 +397,30 @@ export function Start() {
 
   return (
     <div className="entry-page">
-      <div className="entry-backdrop" aria-hidden="true">
-        <DotPattern width={22} height={22} cr={0.8} />
-      </div>
+      <DitherBackground />
       <EntryHeader />
       <main id="main" tabIndex={-1} className="entry-main">
         <section className="entry-launch" aria-labelledby="entry-title">
+          {/* Floating collaborative inspection cursor badges (HarnessHive vibe) */}
+          <div className="hero-floating-badge badge-llama" aria-hidden="true">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M5.5 3.21V20.8c0 .45.54.67.85.35l4.86-4.86a.5.5 0 0 1 .35-.15h6.94c.45 0 .67-.54.35-.85L5.5 3.21z" />
+            </svg>
+            <span>SmolLM2 · 135M</span>
+          </div>
+          <div className="hero-floating-badge badge-safetensors" aria-hidden="true">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M5.5 3.21V20.8c0 .45.54.67.85.35l4.86-4.86a.5.5 0 0 1 .35-.15h6.94c.45 0 .67-.54.35-.85L5.5 3.21z" />
+            </svg>
+            <span>SafeTensors Verified</span>
+          </div>
+          <div className="hero-floating-badge badge-layers" aria-hidden="true">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M5.5 3.21V20.8c0 .45.54.67.85.35l4.86-4.86a.5.5 0 0 1 .35-.15h6.94c.45 0 .67-.54.35-.85L5.5 3.21z" />
+            </svg>
+            <span>30 Decoder Layers</span>
+          </div>
+
           <div className="entry-primary">
             <div className="entry-heading">
               <div className="entry-announcement-badge">
@@ -410,7 +428,9 @@ export function Start() {
                 <span>Tensor &amp; Architecture Inspection Studio</span>
                 <span className="badge-ver">v1.0</span>
               </div>
-              <h1 id="entry-title">See how a model is built.</h1>
+              <h1 id="entry-title">
+                See how a <span className="hero-highlight-amber">model is built.</span>
+              </h1>
               <p className="entry-lede">
                 Inspect architecture, tensors and evidence from an open-weight
                 Hugging Face model.
