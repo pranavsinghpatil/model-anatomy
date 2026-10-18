@@ -6,6 +6,7 @@ import ast
 import builtins
 import hashlib
 import inspect
+import json
 import math
 import operator as arithmetic
 import textwrap
@@ -19,6 +20,44 @@ from transformers.utils.import_utils import is_torch_fx_proxy, is_torchdynamo_co
 UNKNOWN = object()
 
 
+def argument_defaults(function: ast.FunctionDef | ast.AsyncFunctionDef) -> dict[str, ast.expr]:
+    """Return declared defaults by AST parameter name, including keyword-only parameters."""
+    args = function.args
+    positional = args.posonlyargs + args.args
+    defaults = dict(zip([arg.arg for arg in positional][-len(args.defaults):], args.defaults)) if args.defaults else {}
+    defaults.update({arg.arg: value for arg, value in zip(args.kwonlyargs, args.kw_defaults) if value is not None})
+    return defaults
+
+
+def literal_constant(node: ast.AST) -> Any:
+    """Read small literal defaults without executing publisher expressions or globals."""
+    if sum(1 for _ in ast.walk(node)) > 256:
+        return UNKNOWN
+    try:
+        value = ast.literal_eval(node)
+    except (ValueError, TypeError, SyntaxError, RecursionError):
+        return UNKNOWN
+
+    def bounded(item: Any, depth: int = 0) -> bool:
+        if depth > 8:
+            return False
+        if type(item) in (type(None), bool):
+            return True
+        if type(item) is int:
+            return item.bit_length() <= 64
+        if type(item) is float:
+            return math.isfinite(item)
+        if type(item) is str:
+            return len(item) <= 4096
+        if type(item) in (list, tuple):
+            return len(item) <= 128 and all(bounded(part, depth + 1) for part in item)
+        if type(item) is dict:
+            return len(item) <= 128 and all(type(key) is str and bounded(part, depth + 1) for key, part in item.items())
+        return False
+
+    return value if bounded(value) else UNKNOWN
+
+
 @dataclass
 class StaticValue:
     refs: list[tuple[str, str]] = field(default_factory=list)
@@ -27,6 +66,20 @@ class StaticValue:
     method: str | None = None
     items: list[StaticValue] | None = None
     fields: dict[str, StaticValue] | None = None
+    may_be_none: bool = False
+    unresolved_call: dict[str, Any] | None = None
+    domain: str = "unknown"
+
+    @classmethod
+    def literal(cls, value: Any) -> StaticValue:
+        result = cls(constant=value, domain="scalar")
+        if type(value) in (list, tuple):
+            result.domain = "container"
+            result.items = [cls.literal(item) for item in value]
+        elif type(value) is dict:
+            result.domain = "container"
+            result.fields = {key: cls.literal(item) for key, item in value.items()}
+        return result
 
 
 @dataclass
@@ -53,10 +106,15 @@ class StaticFlow:
     unexplained_operations: list[dict[str, Any]] = field(default_factory=list)
     call_sites: list[dict[str, Any]] = field(default_factory=list)
     source_call_sites: list[dict[str, Any]] = field(default_factory=list)
+    resolved_operations: list[dict[str, Any]] = field(default_factory=list)
+    unknown_inputs: set[str] = field(default_factory=set)
 
 
 def combine(values: list[StaticValue]) -> StaticValue:
-    return StaticValue(list(dict.fromkeys(ref for value in values for ref in value.refs)))
+    return StaticValue(
+        list(dict.fromkeys(ref for value in values for ref in value.refs)),
+        may_be_none=any(value.may_be_none or value.constant is None for value in values),
+    )
 
 
 def merge_outputs(values: list[StaticValue]) -> StaticValue:
@@ -87,6 +145,7 @@ class StaticFlowAnalyzer:
         self.source_name = ""
         self.source_hash: str | None = None
         self.tainted_attributes: dict[str, StaticValue] = {}
+        self.forward_parameters: dict[type, tuple[list[str], dict[str, Any]] | None] = {}
 
     def analyze(self) -> StaticFlow:
         try:
@@ -101,6 +160,7 @@ class StaticFlowAnalyzer:
             self.flow.warnings.append(f"Forward source unavailable: {type(exc).__name__}")
             return self.flow
         self.collect_source_calls(function)
+        defaults = argument_defaults(function)
         optional = {
             "attention_mask",
             "encoder_attention_mask",
@@ -120,6 +180,7 @@ class StaticFlowAnalyzer:
         )
         for argument in function.args.posonlyargs + function.args.args + function.args.kwonlyargs:
             name = argument.arg
+            basis = "Canonical static profile; not a runtime observation"
             if name == "self":
                 continue
             if name in optional or name == "encoder_hidden_states" and not cross:
@@ -148,12 +209,26 @@ class StaticFlowAnalyzer:
             ):
                 self.env[name] = self.input(name)
             else:
-                self.env[name] = StaticValue(constant=None)
+                value = literal_constant(defaults[name]) if name in defaults else UNKNOWN
+                basis = "Declared source default"
+                if value is UNKNOWN:
+                    self.flow.unknown_inputs.add(name)
+                    self.env[name] = self.input(name, may_be_none=True)
+                else:
+                    self.env[name] = StaticValue.literal(value)
             value = self.env[name]
             if value.constant is not UNKNOWN:
                 self.flow.input_profile.append({
-                    "argument": name, "value": value.constant,
-                    "basis": "Canonical static profile; not a runtime observation",
+                    "argument": name, "value": json.loads(json.dumps(value.constant, allow_nan=False)),
+                    "value_type": type(value.constant).__name__,
+                    "basis": basis, "known": True,
+                    **self.source_location(argument),
+                })
+            elif name in self.flow.unknown_inputs:
+                self.flow.input_profile.append({
+                    "argument": name, "known": False,
+                    "basis": "Unresolved source default" if name in defaults else "Required argument absent from canonical profile",
+                    **({"default_expression": ast.unparse(defaults[name])} if name in defaults else {}),
                     **self.source_location(argument),
                 })
         if function.args.vararg:
@@ -217,6 +292,16 @@ class StaticFlowAnalyzer:
         """Expose an opaque dependency boundary without interpreting its computation."""
         detail = {"construct": type(node).__name__, "expression": ast.unparse(node),
                   "reason": reason, **self.source_location(node)}
+        if isinstance(node, ast.Call):
+            name = ast.unparse(node.func)
+            label = f"Unresolved call: {name}"
+            detail = self.call_detail(node, reason)
+        elif isinstance(node, ast.stmt):
+            label = f"Unsupported statement: {type(node).__name__}"
+            detail["category"] = "statement"
+        else:
+            label = f"Unresolved expression: {ast.unparse(node)}"
+            detail["category"] = "expression"
         self.flow.unexplained_operations.append(detail)
         self.flow.warnings.append(f"Unsupported {detail['construct']} at line {detail['line']}: {reason}")
         dependencies = combine(values if values is not None else list(self.env.values()))
@@ -227,7 +312,7 @@ class StaticFlowAnalyzer:
                 and ast.unparse(item).startswith("self.")
                 and f"{self.path}.{ast.unparse(item)[5:]}".lstrip(".") in self.classifications
             })
-        value = self.event(node, None, "unknown", "Unsupported source boundary",
+        value = self.event(node, None, "unknown", label[:160],
                            {"dependencies": dependencies}, {"unsupported": detail})
         if isinstance(node, ast.stmt):
             for item in ast.walk(node):
@@ -252,8 +337,8 @@ class StaticFlowAnalyzer:
         self.flow.branch_conditions.append(evidence)
         return evidence
 
-    def input(self, name: str) -> StaticValue:
-        value = StaticValue([(f"input:{name}", "output")])
+    def input(self, name: str, *, may_be_none: bool = False) -> StaticValue:
+        value = StaticValue([(f"input:{name}", "output")], may_be_none=may_be_none)
         self.flow.inputs[name] = value
         return value
 
@@ -271,7 +356,7 @@ class StaticFlowAnalyzer:
         self.flow.events.append(
             FlowEvent(identifier, path, kind, label, arguments, getattr(node, "lineno", 0), metadata or {})
         )
-        return StaticValue([(identifier, "output")])
+        return StaticValue([(identifier, "output")], may_be_none=kind == "unknown")
 
     def assign(self, target: ast.AST, value: StaticValue) -> None:
         if isinstance(target, ast.Name):
@@ -440,6 +525,9 @@ class StaticFlowAnalyzer:
                         return StaticValue(constant=value)
                 except (OverflowError, ValueError, ZeroDivisionError):
                     pass
+            if left.unresolved_call or right.unresolved_call:
+                dependencies = [self.index_dependencies(left), self.index_dependencies(right)]
+                return self.unsupported(node, "Scalar arithmetic depends on unresolved calls", dependencies)
             return StaticValue()
         if not left.refs or not right.refs:
             if (
@@ -487,7 +575,7 @@ class StaticFlowAnalyzer:
 
     def attribute(self, value: StaticValue, name: str) -> StaticValue:
         if name in {"shape", "dtype", "device", "ndim"}:
-            return StaticValue()
+            return StaticValue(domain="shape" if name == "shape" else "metadata")
         if value.module_path is not None:
             path = f"{value.module_path}.{name}" if value.module_path else name
             if path in self.tainted_attributes:
@@ -505,40 +593,154 @@ class StaticFlowAnalyzer:
             return StaticValue(constant=getattr(value.constant, name, UNKNOWN))
         return StaticValue([(ref, name) for ref, _ in value.refs])
 
+    def global_symbol(self, expression: ast.AST) -> Any:
+        """Resolve globals through plain module dictionaries without invoking attributes."""
+        parts = []
+        while isinstance(expression, ast.Attribute):
+            parts.append(expression.attr)
+            expression = expression.value
+        if not isinstance(expression, ast.Name) or expression.id in self.env:
+            return UNKNOWN
+        function = self.source_globals.get(expression.id, vars(builtins).get(expression.id, UNKNOWN))
+        for name in reversed(parts):
+            if not isinstance(function, ModuleType):
+                return UNKNOWN
+            function = vars(function).get(name, UNKNOWN)
+        return function
+
+    def resolved(self, node: ast.AST, rule: str, **details: Any) -> None:
+        self.flow.resolved_operations.append({
+            "rule": rule, "expression": ast.unparse(node),
+            **self.source_location(node), **details,
+        })
+
+    def call_detail(self, node: ast.Call, reason: str) -> dict[str, Any]:
+        detail = {"construct": "Call", "expression": ast.unparse(node),
+                  "reason": reason, "category": "call", "call_target": ast.unparse(node.func),
+                  **self.source_location(node)}
+        function = self.global_symbol(node.func)
+        if inspect.isfunction(function) or inspect.isbuiltin(function) or function is builtins.slice:
+            try:
+                source_hash = hashlib.sha256(inspect.getsource(function).encode()).hexdigest()
+            except (OSError, TypeError):
+                source_hash = None
+            detail["callable"] = {
+                "qualified_name": f"{function.__module__}.{function.__qualname__}",
+                "source_sha256": source_hash,
+            }
+        return detail
+
+    def deferred_unknown_call(self, node: ast.Call) -> StaticValue:
+        detail = self.call_detail(node, "Opaque call without known tensor dependencies; computation is unverified")
+        self.flow.unexplained_operations.append(detail)
+        self.flow.warnings.append(f"Opaque call {detail['call_target']}: result type and computation are unverified")
+        return StaticValue(may_be_none=True, unresolved_call=detail)
+
+    def index_dependencies(self, value: StaticValue) -> StaticValue:
+        if value.unresolved_call and not value.refs:
+            detail = value.unresolved_call
+            location = ast.Pass(lineno=detail["line"], col_offset=detail["column"])
+            result = self.event(location, None, "unknown", f"Unresolved call: {detail['call_target']}",
+                                {}, {"unsupported": detail, "usage_roles": ["indices"]})
+            value.refs = result.refs
+        nested = [self.index_dependencies(item) for item in (value.items or [])]
+        return combine([value, *nested])
+
+    def module_argument_roles(self, path: str, arguments: dict[str, StaticValue]) -> dict[str, Any]:
+        """Name positional ports only when the native forward signatures agree."""
+        module = self.model.get_submodule(path) if path else self.model
+        targets = list(module.children()) if isinstance(module, torch.nn.ModuleList) else [module]
+        signatures = []
+        sources = {}
+        for target_type in dict.fromkeys(type(target) for target in targets):
+            if target_type not in self.forward_parameters:
+                try:
+                    method = inspect.unwrap(target_type.forward)
+                    source = textwrap.dedent(inspect.getsource(method))
+                    function = next(item for item in ast.parse(source).body if isinstance(item, ast.FunctionDef))
+                    names = [arg.arg for arg in function.args.posonlyargs + function.args.args]
+                    if names and names[0] == "self":
+                        names = names[1:]
+                    self.forward_parameters[target_type] = (names, {
+                        "qualified_name": f"{method.__module__}.{method.__qualname__}",
+                        "source_sha256": hashlib.sha256(source.encode()).hexdigest(),
+                    })
+                except (AttributeError, OSError, TypeError, SyntaxError, StopIteration):
+                    self.forward_parameters[target_type] = None
+            signature = self.forward_parameters[target_type]
+            if signature is None:
+                signatures = []
+                break
+            names, evidence = signature
+            signatures.append(names)
+            sources[evidence["qualified_name"]] = evidence
+        roles = {name: name for name in arguments if not name.isdigit()}
+        if signatures and all(names == signatures[0] for names in signatures):
+            roles.update({name: signatures[0][int(name)] for name in arguments
+                          if name.isdigit() and int(name) < len(signatures[0])})
+        return {"argument_roles": roles, "argument_role_sources": list(sources.values())}
+
+    def selection(self, node: ast.Subscript, value: StaticValue, index: StaticValue) -> StaticValue:
+        dependencies = self.index_dependencies(index)
+        indices = index.items if isinstance(node.slice, ast.Tuple) and index.items is not None else [index]
+        descriptors = []
+        full_slice = True
+        for item in indices:
+            constant = item.constant
+            if type(constant) is slice:
+                descriptors.append({"kind": "slice", "start": constant.start,
+                                    "stop": constant.stop, "step": constant.step})
+                full_slice = full_slice and constant.start in (None, 0) and constant.stop is None and constant.step in (None, 1)
+            elif type(constant) in (int, type(None)):
+                descriptors.append({"kind": "integer" if type(constant) is int else "new_axis", "value": constant})
+                full_slice = False
+            else:
+                descriptors.append({"kind": "unknown"})
+                full_slice = False
+        return self.event(node, None, "selection", "Select tensor elements",
+                          {"input": value, "indices": dependencies}, {"indexing": {
+                              "indices": descriptors, "full_slice": full_slice and not dependencies.refs,
+                              "expression": ast.unparse(node),
+                              "shape_proven": False, **self.source_location(node),
+                          }})
+
+    def canonical_slice(self, node: ast.Call, arguments: dict[str, StaticValue]) -> StaticValue | None:
+        if self.global_symbol(node.func) is not builtins.slice or node.keywords or not 1 <= len(node.args) <= 3:
+            return None
+        if any(isinstance(arg, ast.Starred) for arg in node.args):
+            return None
+        values = [arguments[str(index)] for index in range(len(node.args))]
+        if any(value.refs or type(value.constant) not in (int, type(None)) for value in values):
+            return None
+        descriptor = builtins.slice(*(value.constant for value in values))
+        if descriptor.step == 0:
+            return self.unsupported(node, "Slice step cannot be zero", values)
+        self.resolved(node, "builtin_slice", result={
+            "start": descriptor.start, "stop": descriptor.stop, "step": descriptor.step,
+        })
+        return StaticValue(constant=descriptor)
+
     def canonical_predicate(self, node: ast.Call, arguments: dict[str, StaticValue]) -> StaticValue | None:
         """Resolve native predicates by identity, never by the spelling of a call."""
         if any(isinstance(arg, ast.Starred) for arg in node.args) or any(
             keyword.arg is None for keyword in node.keywords
         ):
             return None
-        parts = []
-        expression = node.func
-        while isinstance(expression, ast.Attribute):
-            parts.append(expression.attr)
-            expression = expression.value
-        if not isinstance(expression, ast.Name) or expression.id in self.env:
-            return None
-        function = self.source_globals.get(expression.id, vars(builtins).get(expression.id, UNKNOWN))
-        for name in reversed(parts):
-            if not isinstance(function, ModuleType):
-                return None
-            function = vars(function).get(name, UNKNOWN)
+        function = self.global_symbol(node.func)
         if function is isinstance:
-            if len(node.args) != 2 or node.keywords or not isinstance(node.args[1], ast.Name):
+            if len(node.args) != 2 or node.keywords:
                 return None
-            target_name = node.args[1].id
-            if target_name in self.env:
+            target_nodes = node.args[1].elts if isinstance(node.args[1], ast.Tuple) else [node.args[1]]
+            targets = tuple(self.global_symbol(target) for target in target_nodes)
+            allowed = (dict, list, tuple, int, bool, float, str)
+            if not targets or not all(any(target is candidate for candidate in allowed) for target in targets):
                 return None
-            target = self.source_globals.get(target_name, vars(builtins).get(target_name, UNKNOWN))
             value = arguments["0"].constant
-            if any(target is container for container in (dict, list, tuple)) and type(value) in (
-                type(None),
-                bool,
-                int,
-                float,
-                str,
-            ):
-                return StaticValue(constant=False)
+            if type(value) in (type(None), bool, int, float, str, dict, list, tuple):
+                result = isinstance(value, targets)
+                self.resolved(node, "builtin_isinstance", value=result,
+                              target_types=[target.__name__ for target in targets])
+                return StaticValue(constant=result)
             return None
         if function is is_torch_fx_proxy:
             value = arguments.get("0", arguments.get("x", StaticValue()))
@@ -598,7 +800,13 @@ class StaticFlowAnalyzer:
             result.fields = fields
             return result
         if isinstance(node, ast.Slice):
-            return StaticValue()
+            bounds = [self.expression(part) for part in (node.lower, node.upper, node.step)]
+            if all(not value.refs and type(value.constant) in (int, type(None)) for value in bounds):
+                descriptor = slice(*(value.constant for value in bounds))
+                if descriptor.step == 0:
+                    return self.unsupported(node, "Slice step cannot be zero", bounds)
+                return StaticValue(constant=descriptor)
+            return combine(bounds)
         if isinstance(node, ast.Subscript):
             if getattr(self.model.config, "model_type", None) == "vit" and isinstance(node.slice, ast.Tuple):
                 value = self.expression(node.value)
@@ -613,7 +821,20 @@ class StaticFlowAnalyzer:
                 return self.event(
                     node, None, "selection", "Select tokens", {"input": value}, {"indices": indices}
                 )
-            value, index = self.expression(node.value), self.expression(node.slice).constant
+            value, index_value = self.expression(node.value), self.expression(node.slice)
+            index = index_value.constant
+            if value.domain == "shape":
+                result = combine([value, index_value])
+                result.domain = "metadata" if type(index) is int else "shape"
+                self.resolved(node, "shape_metadata_index", result_domain=result.domain)
+                return result
+            if type(value.constant) in (list, tuple, str, dict) and type(index) in (int, str, slice):
+                try:
+                    selected = value.constant[index]
+                except (IndexError, KeyError, TypeError, ValueError):
+                    return self.unsupported(node, "Literal indexing is invalid in the recorded profile", [value, index_value])
+                self.resolved(node, "literal_index", result_type=type(selected).__name__)
+                return StaticValue.literal(selected)
             if value.module_path is not None and type(index) is int:
                 module = self.model.get_submodule(value.module_path) if value.module_path else self.model
                 names = list(module._modules)
@@ -623,8 +844,19 @@ class StaticFlowAnalyzer:
                 return value
             if value.items and type(index) is int and -len(value.items) <= index < len(value.items):
                 return value.items[index]
+            if value.items is not None and type(index) is slice:
+                selected = value.items[index]
+                result = combine(selected)
+                result.items, result.domain = selected, "container"
+                self.resolved(node, "source_sequence_slice", item_count=len(selected))
+                return result
+            if value.fields and type(index) is str and index in value.fields:
+                return value.fields[index]
+            if isinstance(node.slice, (ast.Tuple, ast.Slice)) or type(index) is slice or index_value.refs:
+                return self.selection(node, value, index_value)
             return StaticValue(
-                [(ref, str(index) if index is not UNKNOWN else port) for ref, port in value.refs]
+                [(ref, str(index) if index is not UNKNOWN else port) for ref, port in value.refs],
+                may_be_none=value.may_be_none,
             )
         if isinstance(node, ast.UnaryOp) and isinstance(node.op, ast.Not):
             value = self.expression(node.operand)
@@ -635,7 +867,7 @@ class StaticFlowAnalyzer:
             value = self.expression(node.operand)
             if type(value.constant) in (int, float):
                 return StaticValue(constant=-value.constant if isinstance(node.op, ast.USub) else value.constant)
-            return self.unsupported(node, "Unary operation is not statically established", [value])
+            return self.unsupported(node, "Unary operation is not statically established", [self.index_dependencies(value)])
         if isinstance(node, ast.BoolOp):
             value = self.expression(node.values[0])
             for index, item in enumerate(node.values[1:], start=1):
@@ -655,7 +887,7 @@ class StaticFlowAnalyzer:
         if isinstance(node, ast.Compare) and len(node.ops) == 1:
             left, right = self.expression(node.left), self.expression(node.comparators[0])
             if isinstance(node.ops[0], (ast.Is, ast.IsNot)) and right.constant is None:
-                if left.refs or left.module_path is not None:
+                if left.refs and not left.may_be_none or left.module_path is not None:
                     return StaticValue(constant=isinstance(node.ops[0], ast.IsNot))
                 if left.constant is not UNKNOWN:
                     return StaticValue(constant=(left.constant is None) == isinstance(node.ops[0], ast.Is))
@@ -723,7 +955,7 @@ class StaticFlowAnalyzer:
                     [receiver or StaticValue()],
                 )
             if isinstance(node.func, ast.Attribute) and name in {"size", "dim", "numel"}:
-                return StaticValue()
+                return StaticValue(domain="shape" if name == "size" and not node.args and not node.keywords else "metadata")
             if isinstance(node.func, ast.Attribute) and name in {
                 "view",
                 "reshape",
@@ -806,10 +1038,14 @@ class StaticFlowAnalyzer:
             predicate = self.canonical_predicate(node, arguments)
             if predicate is not None:
                 return predicate
+            descriptor = self.canonical_slice(node, arguments)
+            if descriptor is not None:
+                return descriptor
             if function.module_path is not None and function.method is None:
                 self.flow.call_sites.append({"module_path": function.module_path,
                                              **self.source_location(node)})
-                return self.event(node, function.module_path, "module", function.module_path, arguments)
+                return self.event(node, function.module_path, "module", function.module_path, arguments,
+                                  self.module_argument_roles(function.module_path, arguments))
             if function.method is not None and self.depth < 3:
                 return self.helper(function.module_path, function.method, positional, node, keywords)
             if name == "apply_chunking_to_forward" and node.args:
@@ -846,9 +1082,7 @@ class StaticFlowAnalyzer:
                         f"Opaque call {ast.unparse(node.func)}: dependencies retained, transformation unverified"
                     )
                     return self.unsupported(node, "Opaque call transformation is unverified", [receiver, *arguments.values()])
-                self.flow.unexplained_operations.append({"construct": "Call", "expression": ast.unparse(node),
-                                                        "reason": "Opaque call without tensor dependencies", **self.source_location(node)})
-                return result
+                return self.deferred_unknown_call(node)
             if name[0].isupper() and any(
                 key in arguments
                 for key in (
@@ -882,9 +1116,7 @@ class StaticFlowAnalyzer:
                     f"Opaque call {ast.unparse(node.func)}: dependencies retained, transformation unverified"
                 )
                 return self.unsupported(node, "Opaque call transformation is unverified", list(arguments.values()))
-            self.flow.unexplained_operations.append({"construct": "Call", "expression": ast.unparse(node),
-                                                    "reason": "Opaque call without tensor dependencies", **self.source_location(node)})
-            return result
+            return self.deferred_unknown_call(node)
         return self.unsupported(node, "Expression semantics are not supported by the static interpreter")
 
     def helper(
@@ -953,18 +1185,14 @@ class StaticFlowAnalyzer:
                 extras[name] = value
             else:
                 return None
-        defaults = dict(zip([arg.arg for arg in positional][-len(args.defaults):], args.defaults)) if args.defaults else {}
-        defaults.update({arg.arg: default for arg, default in zip(args.kwonlyargs, args.kw_defaults) if default is not None})
+        defaults = argument_defaults(function)
         for arg in positional + args.kwonlyargs:
             if arg.arg in bound:
                 continue
             if arg.arg not in defaults:
                 return None
-            try:
-                bound[arg.arg] = StaticValue(constant=ast.literal_eval(defaults[arg.arg]))
-            except (ValueError, TypeError, SyntaxError):
-                # Defaults referencing globals are unknown, never copied from the caller's environment.
-                bound[arg.arg] = StaticValue()
+            value = literal_constant(defaults[arg.arg])
+            bound[arg.arg] = StaticValue(may_be_none=True) if value is UNKNOWN else StaticValue.literal(value)
         if args.vararg:
             bound[args.vararg.arg] = StaticValue(items=values[len(positional):])
         if args.kwarg:

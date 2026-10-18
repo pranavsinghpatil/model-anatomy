@@ -178,6 +178,14 @@ class HierarchyBuilder:
         path, kind = node.module_path, node.kind
         if node.metadata.get("unsupported"):
             return TensorSpec(None, None, "unsupported_source_output")
+        if kind == "selection" and "indexing" in node.metadata:
+            indexing = node.metadata["indexing"]
+            shape = incoming.shape if incoming else None
+            if indexing["full_slice"] and shape is not None and len(indexing["indices"]) <= len(shape):
+                indexing.update(shape_proven=True, rule="full_slice_identity", input_rank=len(shape))
+                return TensorSpec(list(shape), incoming.dtype, "selected_states")
+            indexing["reason"] = "General indexed output shape is not established"
+            return TensorSpec(None, incoming.dtype if incoming else None, "selected_states")
         default = self.inputs.spec("hidden_states", path or "")
         if path is None:
             if self.inputs.native_vit and kind in {"reshape", "selection", "concatenation"}:
@@ -437,6 +445,8 @@ class HierarchyBuilder:
             "unexplained_operations": flow.unexplained_operations,
             "call_sites": flow.call_sites,
             "source_call_sites": flow.source_call_sites,
+            "resolved_operations": flow.resolved_operations,
+            "unknown_inputs": sorted(flow.unknown_inputs),
         }
         if not flow.events:
             graph.metadata["topology"] = "structural_only"
@@ -469,13 +479,15 @@ class HierarchyBuilder:
             if ref not in used_inputs:
                 continue
             alias = name
-            spec = self.inputs.spec(name, path)
+            spec = TensorSpec(None, None, name) if name in flow.unknown_inputs else self.inputs.spec(name, path)
             node = Node(
                 unique(alias),
                 name.replace("_", " ").title(),
                 "input",
                 outputs=[spec],
-                metadata={"argument_name": name, "shape_evidence": "symbolic input convention"},
+                metadata={"argument_name": name, "shape_evidence":
+                          "Unresolved argument; rank and dtype unknown" if name in flow.unknown_inputs
+                          else "symbolic input convention"},
             )
             if name == "input_ids":
                 node.label = "Token IDs"
@@ -528,6 +540,9 @@ class HierarchyBuilder:
                             nodes[reference] = pnode
                     source = nodes.get(reference)
                     if source:
+                        role = event.metadata.get("argument_roles", {}).get(port, port)
+                        if source.metadata.get("unsupported"):
+                            source.metadata["usage_roles"] = sorted(set(source.metadata.get("usage_roles", [])) | {role})
                         target_port = (
                             "skip"
                             if node.kind == "residual" and port == event.metadata.get("skip_argument")
@@ -539,10 +554,22 @@ class HierarchyBuilder:
                             node,
                             source_port=source_port,
                             target_port=target_port,
-                            label="skip" if target_port == "skip" else None,
+                            label="skip" if target_port == "skip" else role if source.metadata.get("unsupported") else None,
                         )
             incoming = node.inputs[0] if node.inputs else None
             node.outputs = [self.output_spec(node, incoming)]
+            indexing = node.metadata.get("indexing", {})
+            input_refs = event.arguments.get("input")
+            if (
+                indexing.get("shape_proven") and input_refs and len(input_refs.refs) == 1
+                and input_refs.refs[0][1] in {"output", "0"}
+                and input_refs.refs[0][0] in nodes
+            ):
+                flow.resolved_operations.append(dict(indexing, rule="full_slice_identity"))
+                graph.nodes.remove(node)
+                graph.edges = [edge for edge in graph.edges if edge.target != node.id]
+                nodes[event.id] = nodes[input_refs.refs[0][0]]
+                continue
             if node.kind in {"add", "residual", "gating"} and node.inputs:
                 shape = list(node.inputs[0].shape) if node.inputs[0].shape is not None else None
                 for item in node.inputs[1:]:
