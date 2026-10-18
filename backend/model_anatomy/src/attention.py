@@ -134,7 +134,13 @@ def build_attention(builder: HierarchyBuilder, path: str) -> Graph:
             )
             projection_graph.nodes.append(p)
             builder.connect(projection_graph, q_input if index == 0 else kv_input, p)
-            builder.connect(projection_graph, p, projection_output, source_port=["q", "k", "v"][index])
+            builder.connect(
+                projection_graph,
+                p,
+                projection_output,
+                projection_specs[index],
+                source_port=["q", "k", "v"][index],
+            )
         projection_graph.nodes.append(projection_output)
         projection = Node(
             "qkv",

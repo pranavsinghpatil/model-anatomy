@@ -1,0 +1,78 @@
+.view-architecture > .learn-guide,
+.artifacts-page > .learn-guide {
+  flex: 0 0 auto;
+  max-height: none;
+  overflow: visible;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 11px;
+}
+
+.learn-guide > summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 36px;
+  padding: 7px 12px;
+  cursor: pointer;
+  list-style-position: inside;
+}
+
+.learn-guide > summary > span {
+  flex: 0 0 auto;
+  font-weight: 550;
+}
+
+.learn-guide > summary > small {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.learn-guide-content {
+  max-height: 170px;
+  overflow: auto;
+  padding: 0 12px 10px;
+  border-top: 1px solid var(--border);
+}
+
+.learn-guide-content header {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding-top: 8px;
+}
+
+.learn-guide-content header p,
+.learn-guide-copy {
+  margin: 5px 0;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.learn-guide-steps {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  margin: 7px 0;
+}
+
+.learn-guide-steps button {
+  flex: 0 0 auto;
+  padding: 5px 8px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface);
+  color: var(--muted);
+  font: inherit;
+  font-size: 10px;
+}
+
+.learn-guide-steps button[aria-pressed="true"] {
+  border-color: var(--accent);
+  color: var(--accent);
+}

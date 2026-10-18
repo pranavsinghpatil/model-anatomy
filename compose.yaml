@@ -1,0 +1,139 @@
+name: model-anatomy
+
+x-app: &app
+  env_file: infra/.env
+  environment: &environment
+    MODEL_ANATOMY_ENVIRONMENT: production
+    MODEL_ANATOMY_DATA_DIR: /data
+    MODEL_ANATOMY_STORAGE_BACKEND: supabase
+    MODEL_ANATOMY_DOCS_ENABLED: "false"
+    MODEL_ANATOMY_DATABASE_URL: ${MODEL_ANATOMY_DATABASE_URL:?Set PostgreSQL URL in infra/.env}
+    MODEL_ANATOMY_ALLOWED_HOSTS: '["${DOMAIN:?Set DOMAIN in infra/.env}","localhost","127.0.0.1"]'
+    MODEL_ANATOMY_CORS_ORIGINS: '["https://${DOMAIN}"]'
+    MODEL_ANATOMY_SUPABASE_URL: ${MODEL_ANATOMY_SUPABASE_URL:?Set Supabase URL}
+    MODEL_ANATOMY_SUPABASE_KEY: ${MODEL_ANATOMY_SUPABASE_KEY:?Set server-only Supabase key}
+    MODEL_ANATOMY_SUPABASE_BUCKET: ${MODEL_ANATOMY_SUPABASE_BUCKET:?Set private bucket}
+    MODEL_ANATOMY_NEBIUS_API_KEY: ${MODEL_ANATOMY_NEBIUS_API_KEY:?Set Token Factory key}
+    MODEL_ANATOMY_NEBIUS_MODEL: ${MODEL_ANATOMY_NEBIUS_MODEL:?Select a listed NVIDIA Nemotron model ID}
+  user: "10001:10001"
+  read_only: true
+  tmpfs:
+    - /tmp:rw,noexec,nosuid,size=536870912,uid=10001,gid=10001,mode=1770
+  cap_drop: [ALL]
+  security_opt: [no-new-privileges:true]
+  init: true
+  pids_limit: 128
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "3"
+  networks: [app]
+
+services:
+  migrate:
+    <<: *app
+    build:
+      context: .
+      target: api
+    image: model-anatomy-api:${RELEASE_TAG:-local}
+    command: [alembic, -c, alembic.ini, upgrade, head]
+    restart: "no"
+    mem_limit: 512m
+    cpus: 1.0
+
+  api:
+    <<: *app
+    build:
+      context: .
+      target: api
+    image: model-anatomy-api:${RELEASE_TAG:-local}
+    restart: unless-stopped
+    mem_limit: 768m
+    cpus: 1.0
+    volumes:
+      - app_data:/data
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: [CMD, python, /app/infra/healthcheck.py, api]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  worker:
+    <<: *app
+    build:
+      context: .
+      target: worker
+    image: model-anatomy-worker:${RELEASE_TAG:-local}
+    restart: unless-stopped
+    mem_limit: 4g
+    memswap_limit: 4g
+    cpus: 2.0
+    pids_limit: 256
+    stop_grace_period: 150s
+    volumes:
+      - app_data:/data
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: [CMD, python, /app/infra/healthcheck.py, worker]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  frontend:
+    build:
+      context: .
+      target: frontend
+    image: model-anatomy-frontend:${RELEASE_TAG:-local}
+    environment:
+      DOMAIN: ${DOMAIN:?Set DOMAIN}
+      ACME_EMAIL: ${ACME_EMAIL:?Set certificate contact email}
+    user: "10001:10001"
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=67108864,uid=10001,gid=10001,mode=1770
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    init: true
+    restart: unless-stopped
+    mem_limit: 256m
+    cpus: 0.5
+    pids_limit: 64
+    ports:
+      - "80:8080"
+      - "443:8443"
+      - "443:8443/udp"
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD, wget, -q, -O, /dev/null, http://127.0.0.1:8081/health]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks: [app]
+
+networks:
+  app:
+    driver: bridge
+
+volumes:
+  app_data:
+  caddy_data:
+  caddy_config:

@@ -1,0 +1,116 @@
+name: quality
+
+on:
+  pull_request:
+    branches: [main, b-mvp]
+  push:
+    branches: [main, b-mvp]
+
+jobs:
+  quality:
+    name: quality
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install project
+        uses: astral-sh/setup-uv@v6
+      - name: Install locked CPU dependencies
+        run: uv sync --frozen --extra api --extra engine --extra dev
+      - name: Compile
+        run: uv run --no-sync python -m compileall -q backend scripts infra
+      - name: Tests
+        run: uv run --no-sync pytest -q
+      - name: Lint
+        run: uv run --no-sync ruff check backend scripts infra
+
+  browser:
+    name: browser
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: astral-sh/setup-uv@v6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install browser and API dependencies
+        run: |
+          uv sync --frozen --extra api
+          npm ci --prefix frontend
+      - name: Check generated API contract
+        run: |
+          .venv/bin/python -m uvicorn model_anatomy.api.app:create_app --factory --host 127.0.0.1 --port 8001 --no-access-log > /tmp/anatomy-api.log 2>&1 &
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:8001/openapi.json > /dev/null; then break; fi
+            sleep 1
+          done
+          npm run generate:api --prefix frontend
+          git diff --exit-code -- frontend/src/api/generated.ts
+      - name: Browser build and formatting
+        run: |
+          npm run build --prefix frontend
+          npm run format:check --prefix frontend
+      - name: Install test browser
+        working-directory: frontend
+        run: npx playwright install --with-deps chromium
+      - name: Desktop and mobile browser tests
+        working-directory: frontend
+        run: npm run test:e2e -- --workers=2
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: browser-evidence
+          path: |
+            frontend/playwright-report
+            frontend/test-results
+
+  containers:
+    name: containers
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: astral-sh/setup-uv@v6
+      - name: Build locked CPU images
+        run: |
+          docker build --target api -t anatomy-api:ci .
+          docker build --target worker -t anatomy-worker:ci .
+          docker build --target frontend -t anatomy-frontend:ci .
+      - name: Validate runtime contract and HTTPS configuration
+        run: |
+          docker run --rm anatomy-api:ci python infra/preflight.py --static
+          docker run --rm -e DOMAIN=anatomy.example.com -e ACME_EMAIL=operator@example.com anatomy-frontend:ci caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
+      - name: Start bounded local container integration
+        run: |
+          docker network create anatomy-ci
+          docker volume create anatomy-ci-data
+          docker run -d --name anatomy-worker --network anatomy-ci --memory 4g --memory-swap 4g --cpus 2 --read-only --tmpfs /tmp:rw,noexec,nosuid,size=536870912,uid=10001,gid=10001 --cap-drop ALL --security-opt no-new-privileges -v anatomy-ci-data:/data anatomy-worker:ci
+          sleep 5
+          docker run -d --name anatomy-api --network anatomy-ci --memory 768m --cpus 1 --read-only --tmpfs /tmp:rw,noexec,nosuid,size=536870912,uid=10001,gid=10001 --cap-drop ALL --security-opt no-new-privileges -v anatomy-ci-data:/data -p 127.0.0.1:8001:8000 anatomy-api:ci
+      - name: Real pinned-model container acceptance
+        run: |
+          uv sync --frozen --extra api
+          uv run --no-sync python scripts/container_smoke.py
+      - name: Container diagnostics
+        if: always()
+        run: |
+          docker logs anatomy-worker 2>&1 || true
+          docker logs anatomy-api 2>&1 || true
+          docker stats --no-stream || true
+      - name: Stop test resources
+        if: always()
+        run: |
+          docker rm -f anatomy-api anatomy-worker || true
+          docker volume rm anatomy-ci-data || true
+          docker network rm anatomy-ci || true

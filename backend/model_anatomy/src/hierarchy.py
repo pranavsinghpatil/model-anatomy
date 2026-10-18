@@ -11,6 +11,7 @@ import torch
 from .inputs import InputResolver
 from .ir import Edge, Evidence, Graph, Node, RepetitionSpec, TensorSpec
 from .patterns import Repetition, SemanticAnalyzer
+from .shape_ops import operation_shape
 from .static_flow import FlowEvent, StaticFlowAnalyzer
 
 LABELS = {
@@ -180,10 +181,38 @@ class HierarchyBuilder:
         path, kind = node.module_path, node.kind
         default = self.inputs.spec("hidden_states", path or "")
         if path is None:
+            if self.inputs.native_vit and kind in {"reshape", "selection", "concatenation"}:
+                return operation_shape(kind, node.metadata, node.inputs)
             if kind in {"matmul", "concatenation", "operation"}:
                 return TensorSpec(None, None, "unresolved_operation_output")
             return incoming or TensorSpec(None, None, "result")
         module = self.model.get_submodule(path)
+        if self.inputs.native_vit and isinstance(module, torch.nn.Linear):
+            shape = list(incoming.shape) if incoming and incoming.shape else None
+            if shape and shape[-1] == module.in_features:
+                shape[-1] = module.out_features
+            else:
+                shape = None
+            return TensorSpec(shape, self.inputs.activation_dtype, "projected_states")
+        if self.inputs.native_vit and isinstance(module, torch.nn.Conv2d):
+            shape = incoming.shape if incoming else None
+            result = None
+            if (
+                shape
+                and len(shape) == 4
+                and shape[1] == module.in_channels
+                and all(type(v) is int for v in shape[2:])
+                and not isinstance(module.padding, str)
+            ):
+                spatial = [
+                    (size + 2 * pad - dilation * (kernel - 1) - 1) // stride + 1
+                    for size, pad, dilation, kernel, stride in zip(
+                        shape[2:], module.padding, module.dilation, module.kernel_size, module.stride
+                    )
+                ]
+                if all(v > 0 for v in spatial):
+                    result = [shape[0], module.out_channels, *spatial]
+            return TensorSpec(result, self.inputs.activation_dtype, "feature_map")
         if kind == "rotary_position_embedding":
             frequency = getattr(module, "inv_freq", None)
             dimension = frequency.numel() * 2 if isinstance(frequency, torch.Tensor) else None
@@ -385,12 +414,21 @@ class HierarchyBuilder:
                 "runtime_verified": False,
                 "warnings": flow.warnings,
                 "analysis_scope": "eval, no cache, no training loss, canonical modality inputs",
+                "profile_assumptions": flow.profile_assumptions,
+                **(
+                    {
+                        "shape_basis": "native ViT source and config; fixed resolution, unmasked, no interpolation"
+                    }
+                    if self.inputs.native_vit
+                    else {}
+                ),
             },
         )
         self.flow_reports[path] = {
             "warnings": flow.warnings,
             "event_count": len(flow.events),
             "sequential_containers": sorted(flow.sequential_containers),
+            "profile_assumptions": flow.profile_assumptions,
         }
         if not flow.events:
             graph.metadata["topology"] = "structural_only"
@@ -471,6 +509,8 @@ class HierarchyBuilder:
                                 outputs=[
                                     TensorSpec(parameter["shape"], self.inputs.activation_dtype, "parameter")
                                 ],
+                                parameter_count=parameter["parameter_count"],
+                                source_modules=[parameter_path],
                                 metadata={"parameter_refs": [parameter_path]},
                                 evidence=[Evidence("named_parameters", "direct", parameter_path)],
                             )

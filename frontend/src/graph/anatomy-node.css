@@ -1,0 +1,280 @@
+.model-node {
+  --node-tone: #52616b;
+  position: relative;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  text-align: left;
+  box-shadow: 0 2px 3px #00000008;
+}
+.model-node.category-embedding {
+  --node-tone: #3f7657;
+}
+.model-node.category-attention {
+  --node-tone: #6954a5;
+}
+.model-node.category-projection {
+  --node-tone: #256b8d;
+}
+.model-node.category-position {
+  --node-tone: #8a5c32;
+}
+.model-node.category-normalization {
+  --node-tone: #8a5365;
+}
+.model-node.category-structure {
+  --node-tone: #236b64;
+}
+:root[data-theme="dark"] .model-node.category-embedding {
+  --node-tone: #9cc6aa;
+}
+:root[data-theme="dark"] .model-node.category-attention {
+  --node-tone: #c0aff0;
+}
+:root[data-theme="dark"] .model-node.category-projection {
+  --node-tone: #91bddb;
+}
+:root[data-theme="dark"] .model-node.category-position {
+  --node-tone: #dbb48b;
+}
+:root[data-theme="dark"] .model-node.category-normalization {
+  --node-tone: #d1a5ba;
+}
+:root[data-theme="dark"] .model-node.category-structure {
+  --node-tone: #8bd1c6;
+}
+:root[data-theme="dark"] .model-node.category-other,
+:root[data-theme="dark"] .model-node.category-boundary {
+  --node-tone: #acbac2;
+}
+.anatomy-node-body {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  min-width: 0;
+  height: 76px;
+}
+.anatomy-node-icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 36px;
+  height: 36px;
+  color: var(--node-tone);
+  border: 1px solid color-mix(in srgb, var(--node-tone) 22%, var(--border));
+  background: color-mix(in srgb, var(--node-tone) 6%, var(--surface));
+  border-radius: 6px;
+}
+.anatomy-node-heading {
+  flex: 1;
+  min-width: 0;
+}
+.model-node .node-kind {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.4;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.model-node .node-kind > span:first-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.model-node .node-title {
+  margin: 3px 0 0;
+  padding: 0;
+  font-size: 17px;
+  line-height: 1.2;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  white-space: normal;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+.model-node .repeat {
+  display: inline-flex;
+  flex-shrink: 0;
+  margin-left: auto;
+  padding: 1px 5px;
+  border: 1px solid color-mix(in srgb, var(--node-tone) 26%, var(--border));
+  background: color-mix(in srgb, var(--node-tone) 8%, var(--surface));
+  color: var(--node-tone);
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0;
+}
+.model-node.is-repeated::before,
+.model-node.is-repeated::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: -5px 4px 5px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+}
+.model-node.is-repeated::after {
+  inset: -9px 8px 9px;
+  z-index: -2;
+}
+.model-node.is-repeated {
+  border-top: 2px solid var(--node-tone);
+}
+.model-node .node-open {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  height: 35px;
+  min-height: 35px;
+  padding: 0 12px;
+  border: 0;
+  border-top: 1px solid var(--border);
+  border-radius: 0 0 8px 8px;
+  background: color-mix(in srgb, var(--node-tone) 5%, var(--surface));
+  color: var(--node-tone);
+  font-size: 11px;
+  font-weight: 550;
+  cursor: pointer;
+}
+.model-node .node-open:hover {
+  background: color-mix(in srgb, var(--node-tone) 12%, var(--surface));
+}
+.model-node .node-open:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.anatomy-node-facts {
+  padding: 0 12px 12px;
+}
+.model-node .node-ports {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 14px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+.node-ports > div {
+  min-width: 0;
+}
+.node-ports > div > span {
+  display: block;
+  color: var(--muted);
+  font-size: 9px;
+  letter-spacing: 0.06em;
+}
+.node-ports code {
+  display: block;
+  font-size: 11px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 2px;
+}
+.model-node .node-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 12px;
+  font-size: 10px;
+  color: var(--muted);
+}
+.node-footer strong {
+  color: var(--text);
+  font-weight: 600;
+}
+.node-footer > code {
+  min-width: 0;
+  max-width: 100px;
+  font-size: 10px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.model-node.category-boundary {
+  border-radius: 28px;
+  border-style: dashed;
+  box-shadow: none;
+  background: color-mix(in srgb, var(--surface) 65%, var(--background));
+}
+.category-boundary .anatomy-node-body {
+  height: 56px;
+  padding: 8px 16px;
+  gap: 10px;
+}
+.category-boundary .anatomy-node-icon {
+  flex-basis: 20px;
+  height: 24px;
+  border: 0;
+  background: transparent;
+}
+.category-boundary .node-kind {
+  font-size: 9px;
+}
+.category-boundary .node-title {
+  font-size: 16px;
+  margin-top: 0;
+}
+.category-boundary .boundary-shape {
+  display: block;
+  padding-left: 34px;
+  color: var(--muted);
+  font-size: 11px;
+}
+.model-node.is-selected {
+  border-style: solid;
+  border-color: var(--accent);
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--accent) 22%, transparent),
+    0 4px 12px #0000000a;
+}
+.model-node.is-dimmed {
+  opacity: 0.22;
+}
+.model-node .react-flow__handle {
+  width: 7px;
+  height: 7px;
+  min-width: 7px;
+  min-height: 7px;
+  opacity: 1;
+  border: 1px solid var(--surface);
+  background: var(--border);
+}
+.model-node.is-selected .react-flow__handle {
+  background: var(--accent);
+}
+.graph-canvas.is-overview .model-node .anatomy-node-facts {
+  visibility: hidden;
+}
+.graph-canvas.is-distant .model-node .node-kind {
+  display: none;
+}
+.graph-canvas.is-distant .model-node .node-title {
+  font-size: 22px;
+}
+.graph-canvas.is-distant .model-node .node-open > span {
+  font-size: 13px;
+}
+.graph-canvas.is-distant .react-flow__edge-text,
+.graph-canvas.is-distant .react-flow__edge-textbg,
+.graph-canvas.is-overview
+  .react-flow__edge:not(.selected)
+  .react-flow__edge-text,
+.graph-canvas.is-overview
+  .react-flow__edge:not(.selected)
+  .react-flow__edge-textbg {
+  display: none;
+}

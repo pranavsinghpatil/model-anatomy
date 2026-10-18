@@ -6,6 +6,7 @@ __pycache__/
 venv/
 .env
 .env.*
+!.env.example
 node_modules/
 dist/
 build/
@@ -15,6 +16,15 @@ build/
 *.pt
 *.pth
 .DS_Store
+.local/
+
+playwright-report/
+test-results/
+test-results-live/
+frontend/test-results-*/
+frontend/dist/
+*.sqlite3
+*.sqlite3-*
 
 # local
 .tmp

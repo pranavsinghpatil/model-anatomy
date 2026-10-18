@@ -5,50 +5,41 @@ Build Model Anatomy as a serious engineering project, not a collection of discon
 
 > Given an open-weight Hugging Face model, reconstruct a trustworthy, semantic, tensor-aware representation of the actual model artifacts, render an inspectable architecture graph, and later use that representation for deeper model analysis.
 
-## Team rules
-1. Ground and decision log are the source of truth.
-2. Work in small, reviewable increments.
-3. Evidence over assumptions.
-4. No silent scope creep.
-5. No black-box LLM behavior as the core reconstruction mechanism.
-6. One real model end-to-end before broad support.
-7. Tests accompany core logic.
-8. Unsupported/custom models fail honestly.
-9. Keep docs current.
-10. Every update states: done, evidence, blocked, next.
+## Working rules
+1. `docs/00-GROUND.md` and `docs/DECISION_LOG.md` are the source of truth.
+2. **Never commit directly to `main`. All work reaches `main` through a pull request.**
+3. Work in small, reviewable increments.
+4. Evidence over assumptions.
+5. No silent scope creep.
+6. No black-box LLM behavior as the core reconstruction mechanism.
+7. One real model end-to-end before broad support.
+8. Tests accompany core logic.
+9. Unsupported/custom models fail honestly.
+10. Keep documentation aligned with implementation.
+11. Every work update states: done, evidence, blocked, next.
 
 ## Current build order
-HF model
-→ artifact resolver
-→ config / AutoConfig
-→ instantiated nn.Module
-→ module tree + graph tracing where possible
-→ Safetensors metadata
-→ Raw Architecture IR
-→ Semantic Architecture IR
-→ interactive graph
-→ tensor / parameter inspection
-→ Model Autopsy
+HF model → artifact resolver → config / AutoConfig → instantiated nn.Module → module tree + graph tracing where possible → Safetensors metadata → Raw Architecture IR → Semantic Architecture IR → interactive graph → tensor / parameter inspection → Model Autopsy
 
 ## Current scope
 - First target: decoder-only Transformer.
 - First milestone: HF URL → trustworthy architecture graph.
-- Model Autopsy is a later analysis layer.
+- Model Autopsy is a second-layer capability.
 
-## Engineering
+## Engineering standards
 - Python 3.11+
 - Type hints for core interfaces
-- Small modules
+- Small modules with clear responsibility
 - Deterministic extraction where possible
-- Stable IR
+- Stable IR schemas
 - Explicit evidence/provenance
-- Avoid unnecessary dependencies
 - Prefer metadata inspection before full weight loading
-- Never commit weights or secrets
+- Never commit model weights, credentials, or secrets
 
 ## Definition of done
-- implementation
-- tests
-- docs/status updated
-- limitations understood
-- clear commit
+A change is done only when:
+- implementation exists
+- meaningful tests exist
+- docs/status are updated when relevant
+- limitations are understood
+- the change is in a PR with clear evidence

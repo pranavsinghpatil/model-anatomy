@@ -1,0 +1,201 @@
+// Radix composition patterns adapted from shadcn/ui (MIT); see THIRD_PARTY.md.
+import * as Dropdown from "@radix-ui/react-dropdown-menu";
+import * as Dialog from "@radix-ui/react-dialog";
+import { cva, type VariantProps } from "class-variance-authority";
+import { clsx, type ClassValue } from "clsx";
+import { twMerge } from "tailwind-merge";
+import { Check, Copy, Monitor, Moon, Sun, X } from "lucide-react";
+import { useState, type ButtonHTMLAttributes, type ReactNode } from "react";
+import { usePreferences } from "../state/preferences";
+export const cn = (...inputs: ClassValue[]) => twMerge(clsx(inputs));
+const variants = cva("button", {
+  variants: {
+    variant: {
+      primary: "button-primary",
+      secondary: "button-secondary",
+      ghost: "button-ghost",
+    },
+  },
+  defaultVariants: { variant: "secondary" },
+});
+export function Button({
+  className,
+  variant,
+  ...props
+}: ButtonHTMLAttributes<HTMLButtonElement> & VariantProps<typeof variants>) {
+  return <button className={cn(variants({ variant }), className)} {...props} />;
+}
+export function Menu({
+  label,
+  children,
+  trigger,
+  disabled = false,
+}: {
+  label: string;
+  children: ReactNode;
+  trigger: ReactNode;
+  disabled?: boolean;
+}) {
+  return (
+    <Dropdown.Root>
+      <Dropdown.Trigger asChild>
+        <Button aria-label={label} disabled={disabled}>
+          {trigger}
+        </Button>
+      </Dropdown.Trigger>
+      <Dropdown.Portal>
+        <Dropdown.Content
+          className="menu-content"
+          sideOffset={8}
+          align="end"
+          collisionPadding={12}
+        >
+          {children}
+        </Dropdown.Content>
+      </Dropdown.Portal>
+    </Dropdown.Root>
+  );
+}
+export function MenuItem({
+  children,
+  onSelect,
+  disabled,
+}: {
+  children: ReactNode;
+  onSelect: () => void;
+  disabled?: boolean;
+}) {
+  return (
+    <Dropdown.Item
+      className="menu-item"
+      onSelect={onSelect}
+      disabled={disabled}
+    >
+      {children}
+    </Dropdown.Item>
+  );
+}
+export function ThemeControl() {
+  const { theme, setTheme } = usePreferences();
+  return (
+    <Menu
+      label="Theme"
+      trigger={
+        <>
+          <Sun size={16} />
+          <span className="wide-label">Theme</span>
+        </>
+      }
+    >
+      <Dropdown.RadioGroup
+        value={theme}
+        onValueChange={(value) => setTheme(value as typeof theme)}
+      >
+        {(
+          [
+            ["light", Sun],
+            ["dark", Moon],
+            ["system", Monitor],
+          ] as const
+        ).map(([value, Icon]) => (
+          <Dropdown.RadioItem key={value} value={value} className="menu-item">
+            <Icon size={16} />
+            {value[0].toUpperCase() + value.slice(1)}
+            <Dropdown.ItemIndicator>
+              <Check size={14} />
+            </Dropdown.ItemIndicator>
+          </Dropdown.RadioItem>
+        ))}
+      </Dropdown.RadioGroup>
+    </Menu>
+  );
+}
+export function ModeControl() {
+  const { mode, setMode } = usePreferences();
+  return (
+    <div className="mode-control" role="group" aria-label="Experience mode">
+      {(["learn", "research"] as const).map((value) => (
+        <button
+          key={value}
+          type="button"
+          aria-pressed={mode === value}
+          onClick={() => setMode(value)}
+        >
+          {value === "learn" ? "Learn" : "Research"}
+        </button>
+      ))}
+    </div>
+  );
+}
+export function Drawer({
+  open,
+  onOpenChange,
+  title,
+  trigger,
+  children,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  title: string;
+  trigger: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <Dialog.Root open={open} onOpenChange={onOpenChange}>
+      <Dialog.Trigger asChild>{trigger}</Dialog.Trigger>
+      <Dialog.Portal>
+        <Dialog.Overlay className="dialog-overlay" />
+        <Dialog.Content className="drawer">
+          <div className="panel-heading">
+            <Dialog.Title>{title}</Dialog.Title>
+            <Dialog.Close asChild>
+              <Button
+                variant="ghost"
+                aria-label={`Close ${title.toLowerCase()}`}
+              >
+                <X size={18} />
+              </Button>
+            </Dialog.Close>
+          </div>
+          <Dialog.Description className="sr-only">
+            Select a component in the current graph. Open its nested graph with
+            its separate action.
+          </Dialog.Description>
+          {children}
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
+  );
+}
+export function CopyButton({
+  value,
+  label = "Copy",
+}: {
+  value: string;
+  label?: string;
+}) {
+  const [state, setState] = useState<"idle" | "copied" | "failed">("idle");
+  return (
+    <span className="copy-control">
+      <Button
+        variant="ghost"
+        aria-label={label}
+        onClick={() => {
+          Promise.resolve()
+            .then(() => navigator.clipboard.writeText(value))
+            .then(() => setState("copied"))
+            .catch(() => setState("failed"));
+        }}
+      >
+        {state === "copied" ? <Check size={14} /> : <Copy size={14} />}
+      </Button>
+      <span role="status">
+        {state === "copied"
+          ? "Copied"
+          : state === "failed"
+            ? "Copy failed. Select and copy the text."
+            : ""}
+      </span>
+    </span>
+  );
+}

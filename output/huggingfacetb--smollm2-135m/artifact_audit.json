@@ -1,0 +1,51 @@
+{
+  "config_canonical_sha256": "751e4f1215bfcf2b078afff2df942944ccac28aac1617b809497de99bdf72d45",
+  "config_url": "https://huggingface.co/HuggingFaceTB/SmolLM2-135M/resolve/93efa2f097d58c2a74874c7e644dbc9b0cee75a2/config.json",
+  "file_size": 269060552,
+  "header_length": 30528,
+  "header_sha256": "05594b15679d772617048271ce61f74473539658d1b161c687e5c69ec8ab2b22",
+  "requests": [
+    {
+      "bytes_read": 4461,
+      "status": 200,
+      "url": "https://huggingface.co/api/models/HuggingFaceTB/SmolLM2-135M/revision/93efa2f097d58c2a74874c7e644dbc9b0cee75a2"
+    },
+    {
+      "bytes_read": 704,
+      "status": 200,
+      "url": "https://huggingface.co/HuggingFaceTB/SmolLM2-135M/resolve/93efa2f097d58c2a74874c7e644dbc9b0cee75a2/config.json"
+    },
+    {
+      "bytes_read": 8,
+      "content_range": "bytes 0-7/269060552",
+      "range": [
+        0,
+        7
+      ],
+      "status": 206,
+      "url": "https://huggingface.co/HuggingFaceTB/SmolLM2-135M/resolve/93efa2f097d58c2a74874c7e644dbc9b0cee75a2/model.safetensors"
+    },
+    {
+      "bytes_read": 30528,
+      "content_range": "bytes 8-30535/269060552",
+      "range": [
+        8,
+        30535
+      ],
+      "status": 206,
+      "url": "https://huggingface.co/HuggingFaceTB/SmolLM2-135M/resolve/93efa2f097d58c2a74874c7e644dbc9b0cee75a2/model.safetensors"
+    }
+  ],
+  "safetensors_bytes_read": 30536,
+  "safetensors_url": "https://huggingface.co/HuggingFaceTB/SmolLM2-135M/resolve/93efa2f097d58c2a74874c7e644dbc9b0cee75a2/model.safetensors",
+  "sharded": false,
+  "shards": {
+    "model.safetensors": {
+      "file_size": 269060552,
+      "header_length": 30528,
+      "header_sha256": "05594b15679d772617048271ce61f74473539658d1b161c687e5c69ec8ab2b22",
+      "url": "https://huggingface.co/HuggingFaceTB/SmolLM2-135M/resolve/93efa2f097d58c2a74874c7e644dbc9b0cee75a2/model.safetensors"
+    }
+  },
+  "weight_payload_bytes_read": 0
+}

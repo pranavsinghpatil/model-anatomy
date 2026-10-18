@@ -10,4 +10,4 @@ class ArtifactError(AnatomyError):
 
 
 class UnsupportedModelError(AnatomyError):
-    """The input falls outside the validated GPT-2 scope."""
+    """The input requires unsupported architecture, code, or dependencies."""
