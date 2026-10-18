@@ -32,7 +32,7 @@ model-anatomy-api = "model_anatomy.api.__main__:main"
 testpaths = ["backend/tests", "infra/tests"]
 pythonpath = ["backend", "."]
 markers = ["integration: real Hugging Face metadata inspection (network required)"]
-addopts = "--basetemp=.tmp/pytest -o cache_dir=.tmp/pytest_cache"
+
 
 [tool.ruff]
 target-version = "py311"
