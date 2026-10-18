@@ -17,27 +17,64 @@ const BAYER_8X8 = [
 
 interface DitherBackgroundProps {
   className?: string;
-  /** Size of each pixel block. Defaults to 4 for crisp retro-computational dither. */
+  /** Size of each pixel block. Defaults to 4 for crisp, bold, clearly discernible retro-computational dither. */
   pixelSize?: number;
 }
 
+interface AntigravityRipple {
+  x: number;
+  y: number;
+  radius: number;
+  maxRadius: number;
+  strength: number;
+  speed: number;
+}
+
+interface AntigravityParticle {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  baseVy: number;
+  colorType: "cyan" | "white" | "indigo";
+  size: number;
+  twinklePhase: number;
+}
+
 /**
- * DitherBackground Component
- * Reproduces the signature electric royal-blue ordered-dither aesthetic (as seen on HarnessHive).
- * Features:
- * - HTML5 Canvas downsampled and rendered with `image-rendering: pixelated`
- * - 8x8 Bayer matrix ordered dithering
- * - Organic floating radiant light pools (top-left indigo, bottom-right cobalt, center cyan)
- * - Interactive pointer tracking that illuminates dither stipples under the mouse
- * - Theme-aware (signature deep electric ultramarine in dark, modern blueprint-azure in light)
- * - Zero external dependencies, 60fps high efficiency with minimal CPU overhead
+ * DitherBackground Component with Antigravity Interactive Disturbance
+ *
+ * Replicates the signature electric royal ultramarine Bayer dither aesthetic
+ * enriched with real-time Antigravity interactive physics:
+ * - Anti-gravity coordinate space repulsion bubble warping the dither mesh
+ * - Aerodynamic comet wake trailing the cursor velocity
+ * - Expanding high-contrast shockwave ripples on clicks and rapid strokes
+ * - Constellation of 220 upward-floating zero-gravity quantum stipples (scattering on approach)
+ * - Multi-tier Bayer luminance quantization (deep void, ultramarine, indigo, cyan, specular white)
+ * - 60fps native performance with direct Uint32Array memory blits
  */
 export function DitherBackground({
   className = "",
-  pixelSize = 3,
+  pixelSize = 4,
 }: DitherBackgroundProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const pointerRef = useRef({ x: 0.5, y: 0.4, targetX: 0.5, targetY: 0.4, active: false });
+  const pointerRef = useRef({
+    x: 0.5,
+    y: 0.4,
+    targetX: 0.5,
+    targetY: 0.4,
+    prevX: 0.5,
+    prevY: 0.4,
+    vx: 0,
+    vy: 0,
+    speed: 0,
+    active: false,
+    down: false,
+    lastWakeTime: 0,
+  });
+
+  const ripplesRef = useRef<AntigravityRipple[]>([]);
+  const particlesRef = useRef<AntigravityParticle[]>([]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -52,22 +89,65 @@ export function DitherBackground({
     let rows = 0;
     let imgData: ImageData | null = null;
     let buf32: Uint32Array | null = null;
+    let lastTimestamp = performance.now();
 
-    // Check prefers-reduced-motion
     const prefersReducedMotion = window.matchMedia(
       "(prefers-reduced-motion: reduce)",
     ).matches;
 
-    // Detect theme attribute
-    const isLightTheme = () =>
-      document.documentElement.getAttribute("data-theme") === "light";
+    // Helper: pack 32-bit unsigned ABGR
+    const packABGR = (r: number, g: number, b: number, a: number = 255) =>
+      (((a & 0xff) << 24) | ((b & 0xff) << 16) | ((g & 0xff) << 8) | (r & 0xff)) >>> 0;
+
+    const colBase = packABGR(22, 0, 140, 255);    // #16008c royal ultramarine
+    const colDeep = packABGR(8, 0, 68, 255);      // #080044 deep void
+    const colT1 = packABGR(67, 56, 202, 255);     // #4338ca royal indigo
+    const colT2 = packABGR(59, 130, 246, 255);    // #3b82f6 electric blue
+    const colT3 = packABGR(56, 189, 248, 255);    // #38bdf8 vibrant cyan stipple
+    const colT4 = packABGR(255, 255, 255, 255);   // #ffffff specular white
+
+    // Initialize 220 floating zero-gravity quantum stipple motes
+    const initParticles = () => {
+      const count = 220;
+      const list: AntigravityParticle[] = [];
+      for (let i = 0; i < count; i++) {
+        const typeRoll = Math.random();
+        list.push({
+          x: Math.random(),
+          y: Math.random(),
+          vx: (Math.random() - 0.5) * 0.0004,
+          vy: -0.0004 - Math.random() * 0.001, // Negative gravity: continuous upward buoyancy!
+          baseVy: -0.0004 - Math.random() * 0.001,
+          colorType: typeRoll > 0.55 ? "white" : typeRoll > 0.2 ? "cyan" : "indigo",
+          size: Math.random() > 0.5 ? 2 : 1,
+          twinklePhase: Math.random() * Math.PI * 2,
+        });
+      }
+      particlesRef.current = list;
+    };
+
+    initParticles();
+
+    // Spawn an Antigravity disturbance shockwave ripple
+    const triggerRipple = (x: number, y: number, strength = 1.4, maxRadius = 0.75) => {
+      if (ripplesRef.current.length > 8) {
+        ripplesRef.current.shift();
+      }
+      ripplesRef.current.push({
+        x,
+        y,
+        radius: 0.02,
+        maxRadius,
+        strength,
+        speed: 0.72,
+      });
+    };
 
     const updateDimensions = () => {
       const parent = canvas.parentElement;
       const displayW = parent ? parent.clientWidth : window.innerWidth;
       const displayH = parent ? parent.clientHeight : window.innerHeight;
 
-      // Adjust pixel size dynamically for ultra-dense displays
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
       const effectivePixelSize = Math.max(3, Math.round(pixelSize * (dpr > 1.5 ? 1 : 1)));
 
@@ -77,7 +157,7 @@ export function DitherBackground({
       width = cols;
       height = rows;
 
-      if (canvas.width !== width || canvas.height !== height) {
+      if (!imgData || !buf32 || canvas.width !== width || canvas.height !== height) {
         canvas.width = width;
         canvas.height = height;
         imgData = ctx.createImageData(width, height);
@@ -89,80 +169,129 @@ export function DitherBackground({
 
     const handleResize = () => {
       updateDimensions();
-      if (prefersReducedMotion) {
-        renderFrame(0);
-      }
+      renderFrame(performance.now());
     };
 
     const handlePointerMove = (e: MouseEvent | PointerEvent) => {
       const rect = canvas.getBoundingClientRect();
-      pointerRef.current.targetX = (e.clientX - rect.left) / rect.width;
-      pointerRef.current.targetY = (e.clientY - rect.top) / rect.height;
-      pointerRef.current.active = true;
+      const nx = (e.clientX - rect.left) / rect.width;
+      const ny = (e.clientY - rect.top) / rect.height;
+
+      const ptr = pointerRef.current;
+      const vx = nx - ptr.prevX;
+      const vy = ny - ptr.prevY;
+      const speed = Math.sqrt(vx * vx + vy * vy);
+
+      ptr.targetX = nx;
+      ptr.targetY = ny;
+      ptr.vx = vx;
+      ptr.vy = vy;
+      ptr.speed = speed;
+      ptr.prevX = nx;
+      ptr.prevY = ny;
+      ptr.active = true;
+
+      // Antigravity wake: rapid movements emit shockwave pulses
+      const now = performance.now();
+      if (speed > 0.035 && now - ptr.lastWakeTime > 120) {
+        ptr.lastWakeTime = now;
+        triggerRipple(nx, ny, 1.1, 0.48);
+      }
+    };
+
+    const handlePointerDown = (e: MouseEvent | PointerEvent) => {
+      const rect = canvas.getBoundingClientRect();
+      const nx = (e.clientX - rect.left) / rect.width;
+      const ny = (e.clientY - rect.top) / rect.height;
+
+      const ptr = pointerRef.current;
+      ptr.down = true;
+      ptr.active = true;
+      ptr.targetX = nx;
+      ptr.targetY = ny;
+
+      // Explosive Antigravity shockwave burst
+      triggerRipple(nx, ny, 2.2, 0.95);
+
+      // Violent particle scattering on click
+      const particles = particlesRef.current;
+      const aspect = (width || 1) / (height || 1);
+      for (let i = 0; i < particles.length; i++) {
+        const p = particles[i];
+        const dx = p.x - nx;
+        const dy = (p.y - ny) * aspect;
+        const d = Math.sqrt(dx * dx + dy * dy);
+        if (d < 0.45) {
+          const impulse = Math.pow(1 - d / 0.45, 1.8) * 0.07;
+          p.vx += (dx / (d + 0.01)) * impulse;
+          p.vy += (dy / (d + 0.01)) * impulse;
+        }
+      }
+    };
+
+    const handlePointerUp = () => {
+      pointerRef.current.down = false;
     };
 
     const handlePointerLeave = () => {
-      pointerRef.current.active = false;
-      pointerRef.current.targetX = 0.5;
-      pointerRef.current.targetY = 0.4;
+      const ptr = pointerRef.current;
+      ptr.active = false;
+      ptr.down = false;
+      ptr.targetX = 0.5;
+      ptr.targetY = 0.4;
     };
 
     window.addEventListener("resize", handleResize);
     window.addEventListener("pointermove", handlePointerMove, { passive: true });
+    window.addEventListener("pointerdown", handlePointerDown, { passive: true });
+    window.addEventListener("pointerup", handlePointerUp, { passive: true });
     window.addEventListener("pointerleave", handlePointerLeave, { passive: true });
 
-    // Pre-calculate little-endian ABGR pack helper with unsigned 32-bit cast
-    const packABGR = (r: number, g: number, b: number, a: number = 255) =>
-      (((a & 0xff) << 24) | ((b & 0xff) << 16) | ((g & 0xff) << 8) | (r & 0xff)) >>> 0;
-
-    // Frame rendering loop
+    // Main frame rendering loop
     const renderFrame = (timestamp: number) => {
       if (!ctx || !imgData || !buf32 || cols <= 0 || rows <= 0) return;
 
-      const t = prefersReducedMotion ? 0 : timestamp * 0.0006;
+      const now = timestamp || performance.now();
+      const dt = Math.min(0.05, (now - lastTimestamp) * 0.001);
+      lastTimestamp = now;
+
+      const t = prefersReducedMotion ? 0 : now * 0.0007;
+      const aspect = width / height;
 
       // Smooth pointer lerp
       const ptr = pointerRef.current;
-      ptr.x += (ptr.targetX - ptr.x) * 0.08;
-      ptr.y += (ptr.targetY - ptr.y) * 0.08;
+      ptr.x += (ptr.targetX - ptr.x) * 0.16;
+      ptr.y += (ptr.targetY - ptr.y) * 0.16;
 
-      // Radiant orb centers (floating gently over time)
-      // Orb 1: Upper-left / Top center (indigo / violet)
+      // Decay velocity speed gently
+      ptr.speed *= 0.92;
+
+      // Update Antigravity shockwave ripples
+      const ripples = ripplesRef.current;
+      for (let r = ripples.length - 1; r >= 0; r--) {
+        const rip = ripples[r];
+        rip.radius += rip.speed * dt;
+        if (rip.radius >= rip.maxRadius) {
+          ripples.splice(r, 1);
+        }
+      }
+
+      // Radiant light pool centers
       const orb1X = 0.22 + Math.sin(t * 0.9) * 0.08;
       const orb1Y = 0.16 + Math.cos(t * 0.7) * 0.06;
       const orb1R = 0.58;
 
-      // Orb 2: Bottom-right (cobalt / electric blue)
       const orb2X = 0.82 + Math.cos(t * 0.8) * 0.08;
       const orb2Y = 0.78 + Math.sin(t * 1.1) * 0.06;
       const orb2R = 0.65;
 
-      // Orb 3: Interactive pointer / ambient pulse
-      const orb3X = ptr.x;
-      const orb3Y = ptr.y;
-      const orb3R = ptr.active ? 0.38 : 0.28 + Math.sin(t * 1.4) * 0.04;
-
-      // Orb 4: Center subtle fill
       const orb4X = 0.5 + Math.sin(t * 0.5) * 0.05;
       const orb4Y = 0.45 + Math.cos(t * 0.6) * 0.05;
       const orb4R = 0.42;
 
-      // Color Palette: HarnessHive signature electric royal ultramarine
-      // Base: rgb(22, 0, 140) - #16008c
-      // Deep void: rgb(8, 0, 68)
-      // Tier 1: rgb(67, 56, 202) - #4338ca royal indigo
-      // Tier 2: rgb(59, 130, 246) - #3b82f6 electric blue
-      // Tier 3: rgb(56, 189, 248) - #38bdf8 vibrant cyan bright stipple
-      // Tier 4: rgb(255, 255, 255) - radiant white specular highlights
-      const colBase = packABGR(22, 0, 140, 255);
-      const colDeep = packABGR(8, 0, 68, 255);
-      const colT1 = packABGR(67, 56, 202, 255);
-      const colT2 = packABGR(59, 130, 246, 255);
-      const colT3 = packABGR(56, 189, 248, 255);
-      const colT4 = packABGR(255, 255, 255, 255);
-
       const invW = 1.0 / cols;
       const invH = 1.0 / rows;
+      const numRipples = ripples.length;
 
       let idx = 0;
       for (let y = 0; y < rows; y++) {
@@ -172,60 +301,120 @@ export function DitherBackground({
         for (let x = 0; x < cols; x++) {
           const nx = x * invW;
 
-          // Normalized distance to light orbs
-          const dx1 = nx - orb1X;
-          const dy1 = ny - orb1Y;
+          // -----------------------------------------------------------------
+          // Antigravity Field Disturbance: Space-Time / Dither Mesh Warping
+          // -----------------------------------------------------------------
+          const dpx = nx - ptr.x;
+          const dpy = (ny - ptr.y) * aspect;
+          const pDist = Math.sqrt(dpx * dpx + dpy * dpy);
+
+          let warpX = 0;
+          let warpY = 0;
+          let disturbanceGlow = 0;
+
+          // Inverse-square Antigravity repulsion (pushes dither mesh outward)
+          const repelRadius = ptr.down ? 0.38 : ptr.active ? 0.28 : 0.18;
+          if (pDist < repelRadius && pDist > 0.001) {
+            const rNorm = pDist / repelRadius;
+            const force = Math.pow(1 - rNorm, 1.8) * (ptr.down ? 0.32 : 0.18) * (ptr.active ? 1.0 : 0.4);
+            warpX += (dpx / pDist) * force;
+            warpY += (dpy / pDist) * force;
+
+            // Radiant energy ring at the perimeter of the anti-gravity bubble
+            const crest = Math.sin(rNorm * Math.PI) * (ptr.down ? 0.85 : 0.52);
+            disturbanceGlow += crest;
+          }
+
+          // Aerodynamic wake behind cursor
+          if (ptr.speed > 0.012 && pDist < 0.32 && pDist > 0.01) {
+            const wakeAlignment = -(dpx * ptr.vx + dpy * ptr.vy) / (pDist * (ptr.speed + 0.001));
+            if (wakeAlignment > 0.15) {
+              const wakeStrength = wakeAlignment * (1 - pDist / 0.32) * ptr.speed * 14.0;
+              disturbanceGlow += Math.min(0.75, wakeStrength);
+            }
+          }
+
+          // Shockwave ripple displacement & concentric high-contrast wavefronts
+          for (let r = 0; r < numRipples; r++) {
+            const rip = ripples[r];
+            const rdx = nx - rip.x;
+            const rdy = (ny - rip.y) * aspect;
+            const rd = Math.sqrt(rdx * rdx + rdy * rdy);
+            const delta = Math.abs(rd - rip.radius);
+            const ringWidth = 0.085;
+            if (delta < ringWidth && rd > 0.001) {
+              const progress = rip.radius / rip.maxRadius;
+              const fade = (1 - progress) * rip.strength;
+              const env = (1 - delta / ringWidth) * fade;
+              const wave = Math.sin((rd - rip.radius) * (Math.PI / ringWidth) * 2);
+              warpX += (rdx / rd) * wave * env * 0.095;
+              warpY += (rdy / rd) * wave * env * 0.095;
+              disturbanceGlow += Math.max(0, env * 0.7);
+            }
+          }
+
+          // Sample coordinates warped by the Antigravity disturbance field
+          const snx = nx + warpX;
+          const sny = ny + warpY;
+
+          // Distance to background radiant orbs using warped coordinates
+          const dx1 = snx - orb1X;
+          const dy1 = sny - orb1Y;
           const d1 = Math.sqrt(dx1 * dx1 + dy1 * dy1) / orb1R;
 
-          const dx2 = nx - orb2X;
-          const dy2 = ny - orb2Y;
+          const dx2 = snx - orb2X;
+          const dy2 = sny - orb2Y;
           const d2 = Math.sqrt(dx2 * dx2 + dy2 * dy2) / orb2R;
 
-          const dx3 = nx - orb3X;
-          const dy3 = ny - orb3Y;
-          const d3 = Math.sqrt(dx3 * dx3 + dy3 * dy3) / orb3R;
-
-          const dx4 = nx - orb4X;
-          const dy4 = ny - orb4Y;
+          const dx4 = snx - orb4X;
+          const dy4 = sny - orb4Y;
           const d4 = Math.sqrt(dx4 * dx4 + dy4 * dy4) / orb4R;
 
-          // Compute smooth luminance field [0, 1]
+          // Smooth luminance fields
           const l1 = Math.max(0, 1 - d1);
           const l2 = Math.max(0, 1 - d2);
-          const l3 = Math.max(0, 1 - d3) * (ptr.active ? 1.3 : 0.85);
           const l4 = Math.max(0, 1 - d4) * 0.45;
 
-          // Multi-octave wave harmonic field creating organic pixel clouds on margins
-          const wave1 = Math.sin(nx * 5.2 + t * 0.7) * Math.cos(ny * 4.4 - t * 0.5) * 0.2;
-          const wave2 = Math.sin((nx + ny) * 8.0 - t * 0.9) * 0.12;
+          // Multi-octave wave harmonic field creating organic billows
+          const wave1 = Math.sin(snx * 5.2 + t * 0.7) * Math.cos(sny * 4.4 - t * 0.5) * 0.22;
+          const wave2 = Math.sin((snx + sny) * 8.0 - t * 0.9) * 0.14;
 
-          // Edge boost so dither stipples form perimeter clouds like HarnessHive
-          const edgeDist = Math.min(nx, 1 - nx, ny, 1 - ny);
-          const edgeGlow = (1 - Math.min(1, edgeDist * 3.2)) * 0.3;
+          // Edge boost for HarnessHive margin stippling
+          const edgeDist = Math.min(snx, 1 - snx, sny, 1 - sny);
+          const edgeGlow = (1 - Math.min(1, edgeDist * 3.2)) * 0.35;
 
-          // Combined non-linear glow response
+          // Combined luminance with Antigravity interactive disturbance boost
           const lum = Math.min(
             1.0,
-            Math.max(0, l1 * 0.7 + l2 * 0.65 + l3 * 0.6 + l4 * 0.3 + wave1 + wave2 + edgeGlow),
+            Math.max(
+              0,
+              l1 * 0.75 +
+                l2 * 0.7 +
+                l4 * 0.35 +
+                wave1 +
+                wave2 +
+                edgeGlow +
+                disturbanceGlow,
+            ),
           );
 
-          // Bayer matrix threshold [0, 1)
+          // 8x8 Bayer matrix thresholding
           const bayerThreshold = BAYER_8X8[bayerRow | (x & 7)] * (1.0 / 64.0);
 
-          // 5-tier Bayer quantization
-          if (lum < 0.1) {
+          // 5-tier Bayer quantization with crisp high-contrast cyan & specular stipples
+          if (lum < 0.08) {
             buf32[idx] = colDeep;
-          } else if (lum < 0.32) {
-            const factor = (lum - 0.1) / 0.22;
+          } else if (lum < 0.26) {
+            const factor = Math.min(1.0, (lum - 0.08) / 0.18);
             buf32[idx] = factor > bayerThreshold ? colT1 : colBase;
-          } else if (lum < 0.58) {
-            const factor = (lum - 0.32) / 0.26;
+          } else if (lum < 0.48) {
+            const factor = Math.min(1.0, (lum - 0.26) / 0.22);
             buf32[idx] = factor > bayerThreshold ? colT2 : colT1;
-          } else if (lum < 0.82) {
-            const factor = (lum - 0.58) / 0.24;
+          } else if (lum < 0.72) {
+            const factor = Math.min(1.0, (lum - 0.48) / 0.24);
             buf32[idx] = factor > bayerThreshold ? colT3 : colT2;
           } else {
-            const factor = (lum - 0.82) / 0.18;
+            const factor = Math.min(0.82, (lum - 0.72) / 0.28);
             buf32[idx] = factor > bayerThreshold ? colT4 : colT3;
           }
 
@@ -233,20 +422,79 @@ export function DitherBackground({
         }
       }
 
+      // -----------------------------------------------------------------
+      // Floating Zero-Gravity Quantum Particles (Defying Gravity!)
+      // -----------------------------------------------------------------
+      const particles = particlesRef.current;
+      const numParticles = particles.length;
+
+      for (let i = 0; i < numParticles; i++) {
+        const p = particles[i];
+
+        // Defy gravity: continuous upward buoyancy
+        p.vy += (p.baseVy - p.vy) * 0.04;
+
+        // Repel from cursor when within range (Antigravity repulsion forcefield)
+        const dx = p.x - ptr.x;
+        const dy = (p.y - ptr.y) * aspect;
+        const d = Math.sqrt(dx * dx + dy * dy);
+        const pRepelRadius = ptr.down ? 0.34 : 0.22;
+
+        if (d < pRepelRadius && d > 0.001) {
+          const force = (1 - d / pRepelRadius) * (ptr.down ? 0.025 : 0.011);
+          p.vx += (dx / d) * force;
+          p.vy += (dy / d) * force;
+        }
+
+        // Apply friction and integrate position
+        p.vx *= 0.94;
+        p.vy *= 0.97;
+        p.x += p.vx;
+        p.y += p.vy;
+
+        // Wrap boundaries: wrap upward particles to the bottom
+        if (p.y < -0.04) {
+          p.y = 1.04;
+          p.x = Math.random();
+          p.vx = (Math.random() - 0.5) * 0.0004;
+        } else if (p.y > 1.05) {
+          p.y = -0.03;
+        }
+        if (p.x < -0.04) p.x = 1.04;
+        else if (p.x > 1.04) p.x = -0.04;
+
+        // Draw particle directly into buffer if on screen
+        const px = Math.floor(p.x * cols);
+        const py = Math.floor(p.y * rows);
+
+        if (px >= 1 && px < cols - 1 && py >= 1 && py < rows - 1) {
+          const pCol = p.colorType === "white" ? colT4 : p.colorType === "cyan" ? colT3 : colT2;
+          const pIdx = py * cols + px;
+          buf32[pIdx] = pCol;
+
+          // Cross sparkle halo for visible quantum motes
+          if (p.size === 2) {
+            buf32[pIdx + 1] = colT3;
+            buf32[pIdx - 1] = colT3;
+            buf32[pIdx + cols] = colT3;
+            buf32[pIdx - cols] = colT3;
+          }
+        }
+      }
+
       ctx.putImageData(imgData, 0, 0);
 
-      if (!prefersReducedMotion) {
-        animationFrameId = requestAnimationFrame(renderFrame);
-      }
+      animationFrameId = requestAnimationFrame(renderFrame);
     };
 
-    // Kick off animation loop
     animationFrameId = requestAnimationFrame(renderFrame);
 
     return () => {
       cancelAnimationFrame(animationFrameId);
       window.removeEventListener("resize", handleResize);
       window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("pointerdown", handlePointerDown);
+      window.removeEventListener("pointerup", handlePointerUp);
       window.removeEventListener("pointerleave", handlePointerLeave);
     };
   }, [pixelSize]);

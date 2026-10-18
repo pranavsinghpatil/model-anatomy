@@ -544,6 +544,34 @@ Replicate the exact design architecture, background, theme, and collaborative ae
   - Full Playwright E2E test suite running with 100% test pass rate across desktop and mobile.
   - Visual verification captured via browser subagent.
 
+## D-045 - Antigravity interactive background disturbance: space-time mesh warping, shockwave wavefronts, and floating zero-gravity quantum stipples
+**2026-10-18 - explicit user request**
+
+Implement authentic Antigravity interactive background physics that dynamically disturb the 8×8 ordered Bayer dither canvas:
+- **Bug Fix for React 19 Canvas Re-Mount**:
+  - Resolved a critical initialization bug where `imgData` and `buf32` remained `null` on React re-mount because `canvas.width === width` was already set, causing `renderFrame` to exit silently with zero active pixels.
+  - Added robust initialization guard (`!imgData || !buf32 || canvas.width !== width || canvas.height !== height`).
+- **Antigravity Coordinate Space-Time Warping**:
+  - Implemented an inverse-square anti-gravity repulsive displacement field around the mouse cursor (`repelRadius: 0.28..0.38`).
+  - Sampling coordinates `(nx, ny)` are dynamically displaced radially outward (`snx = nx + warpX`, `sny = ny + warpY`), visibly bending and warping the Bayer dither wave mesh away from the cursor.
+  - Formed a luminous electric cyan/specular energy crest (`disturbanceGlow`) at the perimeter of the anti-gravity bubble.
+- **Aerodynamic Cursor Wake**:
+  - Calculated trailing velocity vector `(vx, vy)` and velocity speed; fast cursor movements generate a comet-like wake of bright dither stipples trailing behind the pointer.
+- **Explosive Click Shockwave Ripples**:
+  - Click interactions (`pointerdown`) trigger high-energy expanding shockwave rings (`strength: 1.8..2.2`, `speed: 0.72`) propagating concentrically across the viewport.
+  - Shockwave wavefronts exert localized sinusoidal spatial displacement and intense specular dither surges (`colT4` / `colT3`) with refraction troughs.
+- **220 Floating Zero-Gravity Quantum Stipples**:
+  - Introduced a persistent constellation of 220 upward-buoyant particles (negative gravity: `vy < 0`) rendered as 1px, 3px cross, and 5px diamond dither sparkles.
+  - Particles experience violent radial repulsive acceleration away from the cursor and explosive scattering on shockwave click bursts.
+- **Typography Preservation & Quantization Polish**:
+  - Capped specular highlight factor to `0.82` to ensure high-luminance wavefronts retain genuine Bayer stipple texture rather than blowing out into flat white blocks.
+  - Added layered `text-shadow` to `.entry-heading h1` and `.entry-lede` to preserve pristine typography contrast and legibility during intense background shockwaves.
+- **Verification**:
+  - `tsc --noEmit` passed with 0 errors.
+  - 10/10 Playwright E2E tests passing cleanly across desktop and mobile.
+  - Verified live rendering with 81,000/81,000 active pixels (`colT3: [56, 189, 248, 255]`) and captured high-resolution screenshot evidence.
+
+
 
 
 
