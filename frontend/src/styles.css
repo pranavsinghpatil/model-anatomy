@@ -9,7 +9,7 @@
   --font-mono: "JetBrains Mono Variable", monospace;
 }
 :root {
-  --ui-scale: 0.75;
+  --ui-scale: 1;
   zoom: var(--ui-scale);
   font-family: "Inter Variable", Inter, sans-serif;
   color: var(--text);
@@ -886,8 +886,8 @@ summary::marker {
   justify-content: space-between;
   gap: 8px;
   border-bottom: 1px solid var(--border);
-  padding: 8px 12px;
-  min-height: 52px;
+  padding: 6px 14px;
+  min-height: 44px;
   flex-shrink: 0;
 }
 .panel-heading h2 {
@@ -980,10 +980,10 @@ summary::marker {
   display: flex;
   align-items: center;
   gap: 8px;
-  min-height: 52px;
+  min-height: 44px;
   border-bottom: 1px solid var(--border);
   background: var(--surface);
-  padding: 8px 12px;
+  padding: 6px 14px;
   flex-shrink: 0;
 }
 .breadcrumbs {
@@ -1084,17 +1084,20 @@ summary::marker {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 5px;
+  gap: 6px;
   flex: 1;
-  min-height: 52px;
-  min-width: 80px;
-  padding: 12px 8px;
+  min-height: 36px;
+  min-width: 72px;
+  padding: 6px 14px;
   border: 0;
+  border-radius: 6px;
   border-bottom: 2px solid transparent;
   color: var(--muted);
   background: transparent;
   font-size: 13px;
+  font-weight: 550;
   cursor: pointer;
+  transition: all 150ms ease;
 }
 .panel-tabs > [role="tab"] > span {
   min-width: 18px;
@@ -1171,15 +1174,21 @@ summary::marker {
   color: var(--accent);
 }
 .inspector-definition > summary::before {
-  content: "+";
-  width: 10px;
-  font-weight: 600;
+  content: "";
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  border-right: 1.5px solid var(--accent);
+  border-bottom: 1.5px solid var(--accent);
+  transform: rotate(-45deg);
+  transition: transform 150ms ease;
+  margin-right: 2px;
 }
 .inspector-definition > summary::-webkit-details-marker {
   display: none;
 }
 .inspector-definition[open] > summary::before {
-  content: "−";
+  transform: rotate(45deg);
 }
 .inspector-purpose {
   margin-top: 8px;
@@ -1800,8 +1809,8 @@ summary::marker {
   }
   .panel-tabs > [role="tab"] {
     font-size: 12px;
-    min-height: 52px;
-    min-width: 80px;
+    min-height: 40px;
+    min-width: 72px;
   }
   .tensor-summary {
     font-size: 12px;
@@ -1835,7 +1844,7 @@ summary::marker {
     min-height: 44px;
   }
   .panel-tabs > [role="tab"] {
-    min-height: 52px;
+    min-height: 44px;
   }
   .workspace-header-actions [aria-label="Theme"],
   .workspace-header-actions .button,

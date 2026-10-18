@@ -24,6 +24,7 @@ import {
 import { api } from "../api/client";
 import { ErrorNotice, Loading, Status } from "../components/Common";
 import { Button, ThemeControl } from "../components/ui";
+import { ModelAnatomyMark } from "../components/Logo";
 import { useRecent, useService } from "../state/queries";
 import { DotPattern } from "../components/vendor/dot-pattern";
 import "./entry.css";
@@ -314,7 +315,7 @@ function Brand() {
   return (
     <Link className="entry-brand" to="/" aria-label="Model Anatomy home">
       <div className="brand-gem" aria-hidden="true">
-        <Network size={16} />
+        <ModelAnatomyMark size={18} />
       </div>
       <span className="entry-brand-name">Model Anatomy</span>
       <span className="brand-tag">STUDIO</span>
@@ -325,6 +326,9 @@ function Brand() {
 function FooterBrand() {
   return (
     <span className="entry-footer-brand">
+      <div className="brand-gem footer-gem" aria-hidden="true">
+        <ModelAnatomyMark size={14} />
+      </div>
       <span className="entry-brand-name">Model Anatomy</span>
     </span>
   );

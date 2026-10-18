@@ -16,6 +16,7 @@ import {
 import { api, graphReady, pending } from "../api/client";
 import type { Citation, ExportFormat } from "../api/contract";
 import { ErrorNotice, Loading, Status } from "../components/Common";
+import { ModelAnatomyMark } from "../components/Logo";
 import { Menu, MenuItem, ThemeControl } from "../components/ui";
 import { Overview, Report } from "../components/AnalysisSummary";
 import { ArtifactInspection } from "../components/ArtifactInspection";
@@ -219,8 +220,10 @@ function Workspace({ id }: { id: string }) {
           aria-label="Back to start"
           title="Model Anatomy · All analyses"
         >
-          <Network size={18} aria-hidden="true" />
-          <span>Model Anatomy</span>
+          <span className="brand-gem workspace-brand-gem" aria-hidden="true">
+            <ModelAnatomyMark size={18} />
+          </span>
+          <span className="entry-brand-name">Model Anatomy</span>
         </Link>
         <div className="model-switcher">
           <Menu

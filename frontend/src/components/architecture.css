@@ -187,12 +187,14 @@
 }
 
 .inspector-header > .panel-tabs > [role="tab"] {
-  min-height: 52px;
-  min-width: 80px;
+  min-height: 36px;
+  min-width: 72px;
   flex: 0 0 auto;
-  padding: 0 8px;
+  padding: 6px 12px;
   color: var(--muted);
-  font-size: 12px;
+  font-size: 13px;
+  font-weight: 550;
+  border-radius: 6px;
   transition:
     color 160ms cubic-bezier(0.22, 1, 0.36, 1),
     border-color 160ms cubic-bezier(0.22, 1, 0.36, 1);
@@ -296,7 +298,7 @@
   }
 
   .inspector-header > .panel-tabs > [role="tab"] {
-    min-height: 52px;
+    min-height: 42px;
   }
 }
 

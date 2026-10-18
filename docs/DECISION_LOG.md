@@ -489,5 +489,28 @@ Elevate the UI and UX of Model Anatomy from minimal to a rich, immersive, and pr
   - 10/10 Playwright tests passing cleanly across desktop and mobile suites (`e2e/entry-rebuild.spec.ts` and `e2e/graph-rebuild.spec.ts`).
   - Zero modifications to backend APIs or IR schema contracts; dark theme remains 100% preserved.
 
+## D-043 - Bespoke isometric neural tensor logo, full scale 100% normalization, and ergonomic button & tab ratio overhaul
+**2026-10-18 - explicit user request**
+
+Resolve disproportionate and absurd button/tab dimensions, eliminate artificial root zoom, and introduce the official Model Anatomy brand identity:
+- **Model Anatomy Custom Vector Logo (`Logo.tsx`)**:
+  - Replaced generic Lucide `Network` icon with a dedicated SVG isometric axonometric tensor emblem (`<ModelAnatomyMark />` and `<ModelAnatomyLogo />`).
+  - Features 3 unfolding tensor planes with electric indigo, cyan, and deep purple gradient facets, internal neural lattice dissection vectors, and a radiant junction core.
+  - Deployed consistently across the landing page header brand, footer, workspace navbar, and browser tab (`public/favicon.svg` linked in `index.html`).
+- **Scale Normalization (`--ui-scale: 1;`)**:
+  - Removed artificial `--ui-scale: 0.75` zoom distortion from `:root` in `styles.css`, restoring 100% natural scaling so text, icons, borders, and touch targets render at true ergonomic proportions.
+- **Button & Tab Ratio Overhaul**:
+  - Eliminated bloated `52px` min-height on inspector and workspace tabs; normalized to ergonomic `36px` desktop / `40px` touch targets with `6px 14px` padding and rounded pill indicators.
+  - Normalized `.panel-heading` and `.graph-topbar` from `52px` to `44px`.
+  - Replaced crude monospace `+` and `−` characters in component definition summary with a refined CSS micro-chevron.
+  - Upgraded model switcher and workspace action buttons to `36px` min-height with balanced padding.
+  - Upgraded `.catalog-btn` from cramped `11.5px` sliver to a substantial `38px` action button with readable `12.5px` typography.
+  - Refined teaser tabs to `34px` height with `6px 16px` padding and `13px` semibold labels.
+- **Verification**:
+  - Clean `tsc --noEmit` and Vite production build in 36.22s.
+  - 10/10 Playwright tests passing in 30.2s (`e2e/entry-rebuild.spec.ts` & `e2e/graph-rebuild.spec.ts`).
+  - High-resolution visual screenshots captured in light and dark mode verifying the new logo and proportional components.
+
+
 
 
