@@ -5,6 +5,36 @@ in this repository as of 2026-10-12. "Tested" means there is a pinned real-model
 engine or live HTTP acceptance path; a generic code path or fixture is not proof
 that a model family works end to end.
 
+## October 19 Backend Reliability
+
+Engine `2026.10.19.1` closes the bounded issues found in the backend review:
+
+- A request or health probe can retry failed startup initialization after a
+  five-second cooldown. A nonblocking lock prevents concurrent initialization;
+  unrecovered dependencies still return 503 without exposing provider details.
+- Transient retention-storage failures leave the worker running and queued work
+  eligible for processing. Cleanup retries back off from one second to a maximum
+  of thirty seconds. Lease renewal follows idle cleanup, including recovery when
+  cleanup outlives the lease; configuration errors still fail explicitly.
+- Static tracing retains known try-body facts but warns when exception handlers,
+  `else` paths or `finally` blocks are omitted. These warnings keep the report
+  partial; general Python exception-flow reconstruction remains unsupported.
+- Explanation validation rejects scientific notation instead of letting compact
+  invented numbers bypass exact-value checks. This does not establish general
+  natural-language entailment or replace the live citation-evaluation gate.
+- Checkpoint availability describes the whole stored report, including on empty
+  tensor pages. An explicit unavailable checkpoint remains unavailable.
+
+The extraction cache version changes because source-flow warning behavior
+changed. Saved reports remain immutable and IR schema 1.1 is unchanged. These
+fixes do not establish additional model-family, scale or hosted-runtime support.
+
+Verification: 336 offline backend/infrastructure tests passed; the Linux-only
+memory check was skipped on Windows. Four real integration checks passed:
+pinned GPT-2 and SmolLM2 engine reconstruction plus text/image HTTP-worker
+cold/cache acceptance. Ruff, Python compilation and whitespace checks passed.
+Other model-family integration cases and hosted acceptance were not rerun.
+
 ## Current Evidence
 
 The runtime now serves only submitted visitor-owned jobs. Prepared examples and

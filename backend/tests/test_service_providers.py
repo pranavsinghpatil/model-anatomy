@@ -56,6 +56,30 @@ def test_provider_actual_json_http_call_and_valid_citations(ir):
 
 
 @pytest.mark.parametrize(
+    "answer",
+    [
+        "The model has 9e99 parameters.",
+        "The model has 9E99 parameters.",
+        "The model has +9e+99 parameters.",
+        "The model has -9.0e-99 parameters.",
+        "The model has .9e99 parameters.",
+        "The model has 1.24439808e8 parameters.",
+    ],
+)
+def test_provider_rejects_scientific_notation_even_when_numeric_value_is_supported(ir, answer):
+    ai, _ = provider(ir, answer)
+    with pytest.raises(ServiceError) as exc:
+        ai.answer(ir, "How many parameters?")
+    assert exc.value.code == "invalid_ai_response"
+
+
+def test_provider_preserves_model_and_evidence_identifiers_and_exact_numbers(ir):
+    ai, _ = provider(ir, "GPT2 is described by e1; the exact parameter count is 124439808.")
+    result = ai.answer(ir, "How many parameters?")
+    assert result["answer"].endswith("124439808.")
+
+
+@pytest.mark.parametrize(
     "answer,citations",
     [
         ("This model has 999999999 parameters.", ["e1"]),

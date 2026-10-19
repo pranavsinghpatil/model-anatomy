@@ -257,7 +257,22 @@ class StaticFlowAnalyzer:
                             self.flow.sequential_containers.add(iterable.module_path)
                 else:
                     self.flow.warnings.append(f"Loop could not be statically resolved at line {node.lineno}")
-            elif isinstance(node, (ast.With, ast.Try)):
+            elif isinstance(node, ast.Try):
+                unmodeled = []
+                if node.handlers:
+                    unmodeled.append("exception handlers")
+                if node.orelse:
+                    unmodeled.append("else path")
+                if node.finalbody:
+                    unmodeled.append("finally block")
+                if unmodeled:
+                    self.flow.warnings.append(
+                        f"Try control flow is partially modeled at line {node.lineno}; "
+                        f"unmodeled: {', '.join(unmodeled)}"
+                    )
+                if self.statements(node.body):
+                    return True
+            elif isinstance(node, ast.With):
                 if self.statements(node.body):
                     return True
         return False

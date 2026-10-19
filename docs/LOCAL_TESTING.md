@@ -71,6 +71,13 @@ same data directory. The currently launched local workspace uses `.local/app-v1`
 the documented default for a fresh checkout is `.local/model-anatomy`.
 Neither directory or its visitor data belongs in Git.
 
+If a dependency is unavailable during API startup, requests and health probes
+retry initialization at most once every five seconds. Once the dependencies and
+worker recover, inspection becomes available without restarting the API. The
+worker also defers transient retention-storage failures with bounded retry
+backoff, while continuing to process jobs; unavailable report storage can still
+prevent an individual job from finishing. Configuration errors remain explicit.
+
 Hosted release still requires cloud account/credit setup, Supabase PostgreSQL
 and private storage, real Nebius Nemotron inference, Linux container checks,
 HTTPS deployment and external load/recovery checks. No credentials, VM or paid
