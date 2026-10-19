@@ -355,7 +355,10 @@ def reconstruct(
             file_size=shard["file_size"],
         )
     completeness = source_completeness(root, builder.flow_reports)
-    warnings = list(selection["warnings"]) + list(raw["warnings"]) + completeness["warnings"]
+    from .shape_validation import validate_shapes
+    from .shape_rules import known as known_shape
+    shape_validation = validate_shapes(root, model)
+    warnings = list(selection["warnings"]) + list(raw["warnings"]) + completeness["warnings"] + shape_validation["warnings"]
     for path, report in builder.flow_reports.items():
         warnings.extend(f"{path or '<root>'}: {w}" for w in report["warnings"])
     unknown_tensors = [name for name, item in raw["checkpoint_extras"].items() if item["kind"] == "unmapped"]
@@ -409,12 +412,13 @@ def reconstruct(
             / raw["unique_parameter_count"]
             if raw["unique_parameter_count"]
             else 1,
-            "tensor_shape_coverage": sum(e.tensor is not None and e.tensor.shape is not None for e in edges)
+            "tensor_shape_coverage": sum(e.tensor is not None and known_shape(e.tensor.shape) for e in edges)
             / len(edges)
             if edges
             else 0,
             "adapters_used": [],
             "source_completeness": completeness,
+            "shape_validation": shape_validation,
             "diagnostics": [dict(item, module_path=path) for path, flow in builder.flow_reports.items() for item in flow.get("diagnostics", [])],
             "warnings": list(dict.fromkeys(warnings)),
         },

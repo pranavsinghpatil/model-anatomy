@@ -13,6 +13,7 @@ from .ir import TensorSpec
 class InputResolver:
     def __init__(self, model: torch.nn.Module):
         self.model = model
+        self.overrides: dict[tuple[str, str], TensorSpec] = {}
         self.native_vit = (
             getattr(model.config, "model_type", None) == "vit"
             and type(model).__module__ == "transformers.models.vit.modeling_vit"
@@ -50,6 +51,8 @@ class InputResolver:
         }
 
     def spec(self, name: str, path: str = "") -> TensorSpec:
+        if (path, name) in self.overrides:
+            return self.overrides[(path, name)]
         config = self.model.config
         sequence = (
             "T" if name == "decoder_input_ids" or "decoder" in path and config.is_encoder_decoder else "S"

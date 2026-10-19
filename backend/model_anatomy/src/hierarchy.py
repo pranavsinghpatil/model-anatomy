@@ -11,8 +11,10 @@ import torch
 from .inputs import InputResolver
 from .ir import Edge, Evidence, Graph, Node, RepetitionSpec, TensorSpec
 from .patterns import Repetition, SemanticAnalyzer
-from .shape_ops import operation_shape
-from .static_flow import FlowEvent, StaticFlowAnalyzer
+from .static_flow import FlowEvent, StaticFlowAnalyzer, StaticValue
+from .shape_rules import module_contract, known
+from .shape_values import describe, bind as bind_output, ports as output_ports
+from .source_eval import DTYPES
 
 LABELS = {
     "embedding": "Token Embedding",
@@ -65,6 +67,7 @@ class HierarchyBuilder:
         self.graph_ids: set[str] = set()
         self.flow_reports: dict[str, dict[str, Any]] = {}
         self.active: set[str] = set()
+        self.call_contexts: dict[str, dict[str, StaticValue]] = {}
 
     def graph_id(self, path: str, suggested: str | None = None) -> str:
         if not path:
@@ -160,11 +163,11 @@ class HierarchyBuilder:
         path = event.module_path
         groups = self.analyzer.repetitions.get(path)
         if groups and len(groups) == 1:
-            node = self.module_node(groups[0].instance_paths[0], node_id, groups[0])
+            node = self.module_node(groups[0].instance_paths[0], node_id, groups[0], build_child=False)
             node.module_path, node.module_type = path, self.raw["modules"][path]["type"]
             node.metadata["instance_module_type"] = self.raw["modules"][groups[0].instance_paths[0]]["type"]
         else:
-            node = self.module_node(path, node_id)
+            node = self.module_node(path, node_id, build_child=False)
             if groups and node.kind == "container":
                 node.kind, node.label = (
                     "block_stack",
@@ -172,120 +175,31 @@ class HierarchyBuilder:
                 )
                 node.metadata["variant_groups"] = [dict(asdict(g), count=g.count) for g in groups]
         node.metadata["invocation_established"] = True
+        node.child_graph = event.resolved_graph
         return node
 
     def output_spec(self, node: Node, incoming: TensorSpec | None = None) -> TensorSpec:
         path, kind = node.module_path, node.kind
+        if "shape_check" in node.metadata or "output_structure" in node.metadata:
+            structure = node.metadata.get("output_structure")
+            if structure:
+                values = list(output_ports(structure).values())
+                if values:
+                    return TensorSpec(values[0]["shape"], values[0]["dtype"], "source_output")
+            output = node.metadata.get("proven_output", {})
+            return TensorSpec(output.get("shape"), output.get("dtype"), "checked_output")
         if kind == "source_operation" and node.metadata.get("source_proof"):
             output = node.metadata["proven_output"]
             return TensorSpec(output["shape"], output["dtype"], "source_result")
         if node.metadata.get("unsupported"):
             return TensorSpec(None, None, "unsupported_source_output")
-        if kind == "selection" and "indexing" in node.metadata:
-            indexing = node.metadata["indexing"]
-            shape = incoming.shape if incoming else None
-            if indexing["full_slice"] and shape is not None and len(indexing["indices"]) <= len(shape):
-                indexing.update(shape_proven=True, rule="full_slice_identity", input_rank=len(shape))
-                return TensorSpec(list(shape), incoming.dtype, "selected_states")
-            indexing["reason"] = "General indexed output shape is not established"
-            return TensorSpec(None, incoming.dtype if incoming else None, "selected_states")
-        default = self.inputs.spec("hidden_states", path or "")
-        if path is None:
-            if self.inputs.native_vit and kind in {"reshape", "selection", "concatenation"}:
-                return operation_shape(kind, node.metadata, node.inputs)
-            if kind in {"matmul", "concatenation", "operation"}:
-                return TensorSpec(None, None, "unresolved_operation_output")
-            return incoming or TensorSpec(None, None, "result")
-        module = self.model.get_submodule(path)
-        if self.inputs.native_vit and isinstance(module, torch.nn.Linear):
-            shape = list(incoming.shape) if incoming and incoming.shape else None
-            if shape and shape[-1] == module.in_features:
-                shape[-1] = module.out_features
-            else:
-                shape = None
-            return TensorSpec(shape, self.inputs.activation_dtype, "projected_states")
-        if self.inputs.native_vit and isinstance(module, torch.nn.Conv2d):
-            shape = incoming.shape if incoming else None
-            result = None
-            if (
-                shape
-                and len(shape) == 4
-                and shape[1] == module.in_channels
-                and all(type(v) is int for v in shape[2:])
-                and not isinstance(module.padding, str)
-            ):
-                spatial = [
-                    (size + 2 * pad - dilation * (kernel - 1) - 1) // stride + 1
-                    for size, pad, dilation, kernel, stride in zip(
-                        shape[2:], module.padding, module.dilation, module.kernel_size, module.stride
-                    )
-                ]
-                if all(v > 0 for v in spatial):
-                    result = [shape[0], module.out_channels, *spatial]
-            return TensorSpec(result, self.inputs.activation_dtype, "feature_map")
-        if kind == "rotary_position_embedding":
-            frequency = getattr(module, "inv_freq", None)
-            dimension = frequency.numel() * 2 if isinstance(frequency, torch.Tensor) else None
-            return TensorSpec(
-                ["B", "S", dimension] if dimension else None, self.inputs.activation_dtype, "rotary_cos_sin"
-            )
-        if isinstance(module, torch.nn.Embedding):
-            sequence = "T" if "decoder" in path and self.model.config.is_encoder_decoder else "S"
-            return TensorSpec(
-                [1 if kind == "position_embedding" else "B", sequence, module.embedding_dim],
-                self.inputs.activation_dtype,
-                "embedding",
-            )
-        if kind in {"classifier", "lm_head"}:
-            output = getattr(module, "out_features", getattr(self.model.config, "vocab_size", None))
-            if kind == "classifier":
-                output = getattr(self.model.config, "num_labels", output)
-                shape = (
-                    ["B", "S", output]
-                    if "TokenClassification" in type(self.model).__name__
-                    else ["B", output]
-                )
-            else:
-                shape = ["B", "T" if self.model.config.is_encoder_decoder else "S", output]
-            return TensorSpec(shape if type(output) is int else None, self.inputs.activation_dtype, "logits")
-        if isinstance(module, torch.nn.Linear):
-            shape = (
-                list(incoming.shape)
-                if incoming and incoming.shape
-                else list(default.shape)
-                if default.shape
-                else None
-            )
-            if shape:
-                shape[-1] = module.out_features
-            return TensorSpec(shape, self.inputs.activation_dtype, "projected_states")
-        if self.raw["modules"][path]["type"] == "Conv1D":
-            shape = (
-                list(incoming.shape or default.shape)
-                if incoming and (incoming.shape or default.shape)
-                else default.shape
-            )
-            shape = list(shape) if shape else None
-            if shape:
-                shape[-1] = module.nf
-            return TensorSpec(shape, self.inputs.activation_dtype, "projected_states")
-        if kind in {"convolution", "pooling", "stem", "residual_stage", "residual_block"}:
-            return TensorSpec(None, self.inputs.activation_dtype, "feature_map")
-        if kind in {
-            "dropout",
-            "layer_norm",
-            "rms_norm",
-            "normalization",
-            "batch_norm",
-            "activation",
-            "identity",
-        }:
-            return incoming or default
         if node.child_graph:
-            output_node = next((n for n in node.child_graph.nodes if n.kind == "output"), None)
-            if output_node and output_node.outputs:
-                return output_node.outputs[0]
-        return default if kind != "unknown" else TensorSpec(None, None, "unknown")
+            structure = node.child_graph.metadata.get("output_structure")
+            if structure:
+                outputs = list(output_ports(structure).values())
+                if outputs:
+                    return TensorSpec(outputs[0]["shape"], outputs[0]["dtype"], "child_output")
+        return TensorSpec(None, None, "unproven_output")
 
     def connect(
         self,
@@ -298,11 +212,12 @@ class HierarchyBuilder:
         label: str | None = None,
     ) -> None:
         if spec is None:
+            explicit = source.metadata.get("output_ports", {}).get(source_port)
             primary = source_port in {"output", "0", "last_hidden_state", "logits"}
             known_rotary = source.kind == "rotary_position_embedding" and source_port in {"0", "1"}
-            spec = (
+            spec = TensorSpec(explicit["shape"], explicit["dtype"], source_port) if explicit is not None else (
                 source.outputs[0]
-                if source.outputs and (primary or known_rotary)
+                if "output_ports" not in source.metadata and source.outputs and (primary or known_rotary)
                 else TensorSpec(None, None, f"unresolved_port:{source_port}")
             )
         if spec not in source.outputs:
@@ -325,8 +240,20 @@ class HierarchyBuilder:
                                                    {"sources": proof["sources"], "conditions": proof["conditions"],
                                                     "tensor_execution": False}))
 
-    def build(self, path: str = "") -> Graph:
+    def build(self, path: str = "", arguments: dict[str, StaticValue] | None = None) -> Graph:
+        contexts, overrides = dict(self.call_contexts), dict(self.inputs.overrides)
+        try:
+            return self.build_context(path, arguments)
+        finally:
+            self.active.discard(path)
+            self.call_contexts, self.inputs.overrides = contexts, overrides
+
+    def build_context(self, path: str, arguments: dict[str, StaticValue] | None) -> Graph:
         self.active.add(path)
+        if arguments is not None:
+            self.call_contexts[path] = arguments
+            for name, value in arguments.items():
+                self.inputs.overrides[(path, name)] = StaticFlowAnalyzer.tensor_spec(value)
         module = self.model.get_submodule(path) if path else self.model
         classification = self.analyzer.classifications[path]
         children = self.raw["modules"][path]["children"]
@@ -350,70 +277,135 @@ class HierarchyBuilder:
             self.flatten_decoder_backbone(graph)
         return graph
 
+    def resolve_module(self, event: FlowEvent, arguments: dict[str, StaticValue]) -> StaticValue:
+        path = event.module_path
+        module = self.model.get_submodule(path) if path else self.model
+        roles = event.metadata.get("argument_roles", {})
+        named = {roles.get(name, name): value for name, value in arguments.items()}
+        incoming = next((StaticFlowAnalyzer.tensor_spec(value) for value in arguments.values()
+                         if value.domain == "tensor" or value.symbolic is not None), None)
+        if self.analyzer.classifications[path].kind == "rotary_position_embedding":
+            # Preserve the existing semantic boundary while E03 remains deferred.
+            # Container ports come from source; their dimensions remain conditional.
+            flow = StaticFlowAnalyzer(self.model, path, self.analyzer.classifications,
+                                      argument_overrides=named).analyze()
+            structure = describe(flow.outputs)
+            frequency = getattr(module, "inv_freq", None)
+            positions = named.get("position_ids")
+            position_spec = StaticFlowAnalyzer.tensor_spec(positions) if positions is not None else None
+            width = frequency.numel() * 2 if isinstance(frequency, torch.Tensor) and frequency.ndim == 1 else None
+            if structure.get("kind") == "tuple" and position_spec and position_spec.shape is not None and width:
+                for item in structure["items"]:
+                    if item.get("kind") == "tensor":
+                        item.update(shape=[*position_spec.shape, width], dtype=incoming.dtype if incoming else None)
+            event.metadata.update(output_structure=structure, output_ports=output_ports(structure),
+                                  shape_pattern_boundary={"rule": "existing_rotary_semantic_pattern",
+                                      "status": "conditional", "source_equivalence_verified": False,
+                                      "reason": "E03 is deferred; dimensions depend on the existing rotary pattern",
+                                      "source_conditions": flow.branch_conditions,
+                                      "source_analysis_boundaries": flow.unexplained_operations,
+                                      "runtime_verified": False})
+            return bind_output(structure, event.id)
+        check = module_contract(module, incoming)
+        if check is not None:
+            structure = {"kind": "tensor", "shape": check.spec.shape, "dtype": check.spec.dtype}
+            event.metadata.update(shape_check=check.record(), output_structure=structure,
+                                  output_ports=output_ports(structure))
+            return bind_output(structure, event.id)
+        if path in self.active:
+            structure = {"kind": "unknown", "shape": None, "dtype": None}
+            event.metadata["shape_check"] = {"rule": "recursive_module", "status": "unknown", "reason": "Recursive module shape contract is not established"}
+        else:
+            graph = self.build(path, named)
+            event.resolved_graph = graph
+            structure = graph.metadata.get("output_structure", {"kind": "unknown"})
+        event.metadata.update(output_structure=structure, output_ports=output_ports(structure))
+        return bind_output(structure, event.id)
+
     def sequential(self, path: str) -> Graph:
-        graph = Graph(
-            self.graph_id(path),
-            [],
-            [],
-            {"module_path": path, "topology": "nn.Sequential contract", "runtime_verified": False},
-        )
-        current = Node("input", "Input", "input", outputs=[self.inputs.spec("hidden_states", path)])
-        graph.nodes.append(current)
-        for index, child in enumerate(self.raw["modules"][path]["children"]):
-            node = self.module_node(child, f"component{index}")
-            node.metadata["invocation_established"] = True
-            self.connect(graph, current, node)
-            node.outputs = [self.output_spec(node, current.outputs[0])]
-            graph.nodes.append(node)
-            current = node
-        output = Node("output", "Output", "output", outputs=list(current.outputs))
-        graph.nodes.append(output)
-        self.connect(graph, current, output)
-        return graph
+        return self.component_chain(path, None)
 
     def container(self, path: str) -> Graph:
-        groups = self.analyzer.repetitions[path]
-        graph = Graph(
-            self.graph_id(path),
-            [],
-            [],
-            {
-                "module_path": path,
-                "topology": "repeated subtrees",
-                "runtime_verified": False,
-                "total_instances": sum(g.count for g in groups),
-            },
-        )
-        current = Node("input", "Input", "input", outputs=[self.inputs.spec("hidden_states", path)])
+        return self.component_chain(path, self.analyzer.repetitions[path])
+
+    def component_chain(self, path: str, groups: list[Repetition] | None) -> Graph:
+        """Propagate actual caller contracts through sequential representative components."""
+        arguments = dict(self.call_contexts.get(path, {}))
+        if not arguments:
+            spec = self.inputs.spec("hidden_states", path)
+            arguments = {"hidden_states": bind_output({"kind": "tensor", "shape": spec.shape,
+                                                       "dtype": spec.dtype}, "input")}
+        incoming = next(iter(arguments.values()))
+        sequential_contract = isinstance(self.model.get_submodule(path), torch.nn.Sequential)
+        if groups is None or sequential_contract:
+            arguments = {"0": incoming}
+        spec = StaticFlowAnalyzer.tensor_spec(incoming)
+        graph = Graph(self.graph_id(path), [], [], {"module_path": path,
+            "topology": "repeated subtrees" if groups is not None else "nn.Sequential contract",
+            "runtime_verified": False})
+        current = Node("input", "Input", "input", outputs=[spec])
         graph.nodes.append(current)
-        for index, group in enumerate(groups):
-            node = self.module_node(group.instance_paths[0], f"group{index}", group)
+        components = [(group.instance_paths[0], group) for group in groups] if groups is not None else [
+            (child, None) for child in self.raw["modules"][path]["children"]]
+        structure = describe(incoming)
+        for index, (child, group) in enumerate(components):
+            sequential = group is None or group.mode == "sequential"
+            if not sequential:
+                node = self.module_node(child, f"group{index}", group, build_child=False)
+                node.metadata["invocation_not_established"] = True
+                graph.nodes.append(node)
+                graph.edges.append(Edge("input", node.id, None, relation="contains"))
+                structure = {"kind": "unknown"}
+                continue
+            roles = StaticFlowAnalyzer(self.model, path, self.analyzer.classifications).module_argument_roles(child, arguments)
+            event = FlowEvent(f"component{index}", child, "module", child, arguments, 0, roles)
+            value = self.resolve_module(event, arguments)
+            node = self.module_node(child, event.id, group, build_child=False)
+            node.child_graph = event.resolved_graph
+            node.metadata.update(event.metadata, invocation_established=True)
+            node.outputs = [TensorSpec(item["shape"], item["dtype"], port)
+                            for port, item in node.metadata.get("output_ports", {}).items()]
+            for port in current.metadata.get("output_ports", {"output": None}):
+                self.connect(graph, current, node, source_port=port, target_port="0")
             graph.nodes.append(node)
-            node.outputs = [self.output_spec(node)]
-            if group.mode == "sequential":
-                node.metadata["invocation_established"] = True
-                self.connect(graph, current, node)
-                current = node
-            else:
-                graph.edges.append(
-                    Edge(
-                        "input",
-                        node.id,
-                        None,
-                        relation="contains",
-                        evidence=[self.evidence(path, "structural_membership", "direct")],
-                    )
-                )
-        output = Node("output", "Output", "output", outputs=list(current.outputs))
+            structure = describe(value)
+            if group and group.count > 1:
+                primary = next(iter(output_ports(structure).values()), {"shape": None, "dtype": None})
+                compatible = primary["shape"] == spec.shape and primary["dtype"] == spec.dtype and spec.shape is not None
+                node.metadata["repetition_shape_contract"] = {
+                    "status": "conditional" if compatible else "unknown",
+                    "rule": "representative_shape_invariance", "runtime_verified": False,
+                    "reason": "Conditional on existing repeated-template equivalence; E01 remains separate",
+                    "input_shape": spec.shape, "output_shape": primary["shape"]}
+                if not compatible:
+                    structure = {"kind": "unknown"}
+            current = node
+            if group is None or sequential_contract:
+                arguments = {"0": value}
+            elif index + 1 < len(components):
+                primary_value = value.items[0] if value.items else value
+                arguments[next(iter(arguments))] = primary_value
+        graph.metadata["output_structure"] = structure
+        output = Node("output", "Output", "output", outputs=[TensorSpec(item["shape"], item["dtype"], port)
+            for port, item in output_ports(structure).items()], metadata={"output_ports": output_ports(structure)})
         graph.nodes.append(output)
-        if all(g.mode == "sequential" for g in groups):
-            self.connect(graph, current, output)
-        else:
+        for port in output_ports(structure):
+            self.connect(graph, current, output, source_port=port)
+        if groups is not None and any(group.mode != "sequential" for group in groups):
             graph.metadata["warning"] = "Execution connectivity is unknown; containment is not dataflow"
         return graph
 
     def source_graph(self, path: str) -> Graph:
-        flow = StaticFlowAnalyzer(self.model, path, self.analyzer.classifications).analyze()
+        if any(child in self.analyzer.repetitions for child in self.raw["modules"][path]["children"]):
+            probe = StaticFlowAnalyzer(self.model, path, self.analyzer.classifications,
+                                       argument_overrides=self.call_contexts.get(path)).analyze()
+            for container_path in probe.sequential_containers:
+                for group in self.analyzer.repetitions.get(container_path, []):
+                    if group.mode != "parallel":
+                        group.mode, group.evidence = "sequential", (
+                            "Static source loop carries the previous layer output into the next layer input")
+        flow = StaticFlowAnalyzer(self.model, path, self.analyzer.classifications,
+                                  self.resolve_module, self.call_contexts.get(path)).analyze()
         for container_path in flow.sequential_containers:
             for group in self.analyzer.repetitions.get(container_path, []):
                 if group.mode != "parallel":
@@ -489,7 +481,7 @@ class HierarchyBuilder:
             if ref not in used_inputs:
                 continue
             alias = name
-            spec = TensorSpec(None, None, name) if name in flow.unknown_inputs else self.inputs.spec(name, path)
+            spec = StaticFlowAnalyzer.tensor_spec(value) if value.shape_spec is not None or value.symbolic is not None else TensorSpec(None, None, name)
             node = Node(
                 unique(alias),
                 name.replace("_", " ").title(),
@@ -532,21 +524,22 @@ class HierarchyBuilder:
             graph.nodes.append(node)
             for port, value in event.arguments.items():
                 for reference, source_port in value.refs:
-                    if reference.startswith("parameter:") and reference not in nodes:
-                        parameter_path = reference.removeprefix("parameter:")
-                        parameter = self.raw["parameters"].get(parameter_path)
+                    if reference.startswith(("parameter:", "buffer:")) and reference not in nodes:
+                        is_buffer = reference.startswith("buffer:")
+                        parameter_path = reference.split(":", 1)[1]
+                        parameter = self.raw["buffers" if is_buffer else "parameters"].get(parameter_path)
                         if parameter:
                             pnode = Node(
                                 unique(parameter_path.rsplit(".", 1)[-1]),
                                 parameter_path.rsplit(".", 1)[-1],
-                                "position_embedding" if "position" in parameter_path else "parameter",
+                                "buffer" if is_buffer else "parameter",
                                 outputs=[
-                                    TensorSpec(parameter["shape"], self.inputs.activation_dtype, "parameter")
+                                    TensorSpec(parameter["shape"], {str(dtype): code for dtype, code in DTYPES.items()}.get(parameter["dtype"], parameter["dtype"]), "buffer" if is_buffer else "parameter")
                                 ],
-                                parameter_count=parameter["parameter_count"],
+                                parameter_count=0 if is_buffer else parameter["parameter_count"],
                                 source_modules=[parameter_path],
-                                metadata={"parameter_refs": [parameter_path]},
-                                evidence=[Evidence("named_parameters", "direct", parameter_path)],
+                                metadata={"buffer_ref": parameter_path} if is_buffer else {"parameter_refs": [parameter_path]},
+                                evidence=[Evidence("named_buffers" if is_buffer else "named_parameters", "direct", parameter_path)],
                             )
                             graph.nodes.append(pnode)
                             nodes[reference] = pnode
@@ -571,11 +564,13 @@ class HierarchyBuilder:
                         )
             incoming = node.inputs[0] if node.inputs else None
             node.outputs = [self.output_spec(node, incoming)]
+            if node.metadata.get("output_ports"):
+                node.outputs = [TensorSpec(item["shape"], item["dtype"], port) for port, item in node.metadata["output_ports"].items()]
             indexing = node.metadata.get("indexing", {})
             input_refs = event.arguments.get("input")
             if (
                 indexing.get("shape_proven") and input_refs and len(input_refs.refs) == 1
-                and input_refs.refs[0][1] in {"output", "0"}
+                and input_refs.refs[0][1] == "output"
                 and input_refs.refs[0][0] in nodes
             ):
                 flow.resolved_operations.append(dict(indexing, rule="full_slice_identity"))
@@ -583,7 +578,7 @@ class HierarchyBuilder:
                 graph.edges = [edge for edge in graph.edges if edge.target != node.id]
                 nodes[event.id] = nodes[input_refs.refs[0][0]]
                 continue
-            if node.kind in {"add", "residual", "gating"} and node.inputs:
+            if node.kind in {"add", "residual", "gating"} and node.inputs and "shape_check" not in node.metadata:
                 shape = list(node.inputs[0].shape) if node.inputs[0].shape is not None else None
                 for item in node.inputs[1:]:
                     if shape is None or item.shape is None:
@@ -607,6 +602,8 @@ class HierarchyBuilder:
             name: [[nodes[ref].id, port] for ref, port in value.refs if ref in nodes]
             for name, value in (flow.outputs.fields or {}).items()
         }
+        graph.metadata["output_structure"] = describe(flow.outputs)
+        output.metadata["output_ports"] = output_ports(graph.metadata["output_structure"])
         called_paths = {event.module_path for event in flow.events if event.module_path}
         for child_path in self.raw["modules"][path]["children"]:
             if any(p == child_path or p.startswith(child_path + ".") for p in called_paths):
@@ -656,6 +653,7 @@ class HierarchyBuilder:
         incoming = [e for e in graph.edges if e.target == backbone.id]
         outgoing = [e for e in graph.edges if e.source == backbone.id]
         mapping = {}
+        input_ports = {}
         for node in child.nodes:
             if node.kind == "input":
                 argument = node.metadata.get("argument_name")
@@ -669,6 +667,7 @@ class HierarchyBuilder:
                 )
                 if edge:
                     mapping[node.id] = edge.source
+                    input_ports[node.id] = edge.source_port
                     continue
             if node.kind == "output":
                 continue
@@ -683,12 +682,17 @@ class HierarchyBuilder:
         graph.edges = [e for e in graph.edges if e.source != backbone.id and e.target != backbone.id]
         for edge in child.edges:
             if edge.target not in output_nodes and edge.source in mapping and edge.target in mapping:
+                edge.source_port = input_ports.get(edge.source, edge.source_port)
                 edge.source, edge.target = mapping[edge.source], mapping[edge.target]
                 graph.edges.append(edge)
         if primary:
             for edge in outgoing:
-                edge.source = mapping[primary.source]
-                edge.tensor = primary.tensor
+                refs = child.metadata.get("output_fields", {}).get(edge.source_port, [])
+                resolved = refs[0] if len(refs) == 1 else [primary.source, primary.source_port]
+                edge.source = mapping[resolved[0]]
+                edge.source_port = resolved[1]
+                matching = next((item for item in child.edges if item.target in output_nodes and item.source == resolved[0] and item.source_port == resolved[1]), primary)
+                edge.tensor = matching.tensor
                 graph.edges.append(edge)
         graph.metadata["backbone_path"] = backbone.module_path
         # Render nodes in a stable topological order after inlining the backbone.
@@ -712,4 +716,36 @@ class HierarchyBuilder:
     def attention(self, path: str) -> Graph:
         from .attention import build_attention
 
-        return build_attention(self, path)
+        if not known(self.inputs.spec("hidden_states", path).shape):
+            graph = self.source_graph(path)
+            graph.metadata["refinement_failure"] = "Caller input layout is unknown; config dimensions cannot fill it"
+            return graph
+        graph = build_attention(self, path)
+        if "output_structure" in graph.metadata:
+            return graph
+        # Establish the Python return container independently of the existing pattern.
+        flow = StaticFlowAnalyzer(self.model, path, self.analyzer.classifications,
+                                  self.resolve_module, self.call_contexts.get(path)).analyze()
+        structure = describe(flow.outputs)
+        primary = next(iter(output_ports(structure)), None)
+        hidden = self.inputs.spec("hidden_states", path)
+
+        def annotate(tree: dict[str, Any], prefix: str = "") -> None:
+            if tree.get("kind") == "tuple":
+                for index, child in enumerate(tree["items"]):
+                    annotate(child, f"{prefix}.{index}".strip("."))
+            elif tree.get("kind") == "model_output":
+                for name, child in tree["fields"].items():
+                    annotate(child, f"{prefix}.{name}".strip("."))
+            elif ((prefix or "output") == primary and tree.get("kind") != "none" and tree.get("shape") is None
+                  and not any(event.metadata.get("shape_check", {}).get("status") == "invalid" for event in flow.events)):
+                tree.update(kind="tensor", shape=hidden.shape, dtype=hidden.dtype)
+
+        annotate(structure)
+        graph.metadata.update(output_structure=structure, return_contract={
+            "basis": "Source return container with primary shape conditional on existing attention pattern",
+            "status": "conditional", "runtime_verified": False,
+            "source_equivalence_verified": False, "profile_conditions": flow.branch_conditions,
+            "source_analysis_boundaries": flow.unexplained_operations,
+            "limitations": "Attention semantic refinement validation is deferred to E03"})
+        return graph

@@ -508,6 +508,12 @@ class SourceEvaluator:
         raise SourceBoundary(f"Unsupported helper expression: {type(node).__name__}")
 
     def binary(self, left: Any, right: Any, op: ast.AST) -> Any:
+        if isinstance(op, ast.Add) and type(left) in (list, tuple) and type(left) is type(right) and len(left) + len(right) <= 128:
+            return self.container(left + right)
+        if isinstance(op, ast.Mult):
+            sequence, count = (left, right) if type(left) in (list, tuple) else (right, left)
+            if type(sequence) in (list, tuple) and type(count) is int and 0 <= count <= 128 and len(sequence) * count <= 128:
+                return self.container(sequence * count)
         if isinstance(op, ast.BitXor):
             if type(left) is bool and type(right) is bool:
                 return left ^ right
@@ -591,32 +597,25 @@ class SourceEvaluator:
                     raise SourceBoundary("Tensor conversion target is not established")
                 dtype = kwargs.get("dtype", args[0] if args and type(args[0]) is torch.dtype else None)
                 result = Tensor(owner.shape, dtype_name(dtype) if dtype is not None else owner.dtype, owner.expression)
-            elif name == "expand":
-                dims = args[0] if len(args) == 1 and type(args[0]) in (list, tuple) else args
-                if kwargs or len(dims) != len(owner.shape):
-                    raise SourceBoundary("Unsupported symbolic expansion")
-                if any(old != new and old != 1 and new != -1 for old, new in zip(owner.shape, dims)):
-                    raise SourceBoundary("Tensor expansion dimensions are incompatible")
-                result = Tensor(tuple(old if new == -1 else new for old, new in zip(owner.shape, dims)), owner.dtype, f"expand({owner.expression})")
-            elif name in {"view", "reshape"}:
+            elif name in {"float", "half"} and not args and not kwargs:
+                result = Tensor(owner.shape, "F32" if name == "float" else "F16", owner.expression)
+            elif name in {"expand", "view", "reshape", "transpose", "permute", "unsqueeze", "squeeze", "flatten", "contiguous"}:
+                from .ir import TensorSpec
+                from .shape_rules import transform
+
                 dims = list(args[0]) if len(args) == 1 and type(args[0]) in (list, tuple) else list(args)
-                if kwargs or any(not isinstance(d, Symbol) and type(d) is not int for d in dims) or dims.count(-1) > 1:
-                    raise SourceBoundary("Reshape dimensions are unresolved")
-                remaining = list(owner.shape)
-                for dim in dims:
-                    if dim == -1 or dim == 1:
-                        continue
-                    if dim not in remaining:
-                        raise SourceBoundary("Reshape element count is not established")
-                    remaining.remove(dim)
-                remaining = [d for d in remaining if d != 1]
-                if -1 in dims:
-                    if len(remaining) > 1:
-                        raise SourceBoundary("Inferred reshape dimension requires unsupported symbolic algebra")
-                    dims[dims.index(-1)] = remaining[0] if remaining else 1
-                elif remaining:
-                    raise SourceBoundary("Reshape discards non-unit dimensions")
-                result = Tensor(tuple(dims), owner.dtype, f"{name}({owner.expression})")
+                if kwargs:
+                    raise SourceBoundary("Layout keyword arguments are not yet bound")
+                check = transform(TensorSpec([render(d) for d in owner.shape], owner.dtype, "helper_input"),
+                                  name, [render(d) for d in dims])
+                if check.status not in {"proven", "conditional"}:
+                    raise SourceBoundary(check.reason)
+                for condition in check.constraints:
+                    self.conditions.append({"condition": condition, "resolved": False, "value": None,
+                                            "basis": "required_input_constraint", **self.current})
+                self.record(node, "tensor_layout_contract", shape_check=check.record())
+                result = Tensor(tuple(Symbol(d) if type(d) is str else d for d in check.spec.shape),
+                                owner.dtype, f"{name}({owner.expression})")
             elif name == "cumsum" and len(args) == 1 and type(args[0]) is int and not kwargs:
                 result = Tensor(owner.shape, "I64" if owner.dtype in {"BOOL", "I32", "I64"} else owner.dtype, f"cumsum({owner.expression}, {args[0]})")
             elif name == "new_ones" and args == [()] and set(kwargs) <= {"dtype"}:
