@@ -18,7 +18,11 @@ export type Citation = components["schemas"]["Citation"];
 export type QuestionAnswer = components["schemas"]["QuestionAnswer"];
 export type Health = components["schemas"]["Health"];
 export type AnalysesResponse = components["schemas"]["AnalysesResponse"];
-export type CreateAnalysisRequest = components["schemas"]["CreateAnalysis"];
+// The server defaults refresh; omit it to keep the model-only request contract.
+export type CreateAnalysisRequest = Omit<
+  components["schemas"]["CreateAnalysis"],
+  "refresh"
+> & { refresh?: boolean };
 export type CatalogItem = components["schemas"]["CatalogItem"];
 export type CatalogResponse = components["schemas"]["CatalogResponse"];
 export type QuestionRequest = components["schemas"]["Question"];

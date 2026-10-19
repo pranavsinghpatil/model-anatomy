@@ -94,8 +94,10 @@ for a normal checkout and fresh-project provisioning.
   upgrades are included. A process-start timeout observed during concurrent
   browser load did not recur in the final full Python run.
 - Ruff, Python compilation, PowerShell parsing, and `git diff --check` passed.
-- Frontend TypeScript and production build passed; focused catalog and landing
-  browser checks passed on desktop and mobile.
+- Frontend TypeScript and production build passed. Focused desktop/mobile
+  browser checks passed: catalog 8, landing 6, artifact inspection 10,
+  worker-offline saved-hit/cache-miss 4, and unknown-health handling 4
+  (32 checks total).
 - The broad browser run recorded 136 passed, 26 skipped, and 24 failed. It exposed
   outdated request/health assertions alongside layout and timeout failures.
   Updated change-specific checks are verified separately; this run is not a
