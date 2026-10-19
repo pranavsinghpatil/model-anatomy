@@ -7,7 +7,7 @@ import json
 import re
 import struct
 from dataclasses import dataclass, field
-from math import prod
+from math import isfinite, prod
 from typing import Any
 from urllib.parse import quote, unquote, urlsplit
 
@@ -144,6 +144,17 @@ def _unique_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
     return result
 
 
+def _finite_float(value: str) -> float:
+    result = float(value)
+    if not isfinite(result):
+        raise ValueError("Non-finite JSON number")
+    return result
+
+
+def _reject_json_constant(value: str) -> Any:
+    raise ValueError(f"Invalid JSON constant: {value}")
+
+
 def parse_safetensors_header(header_bytes: bytes, file_size: int) -> SafetensorsMetadata:
     try:
         header = json.loads(header_bytes, object_pairs_hook=_unique_object)
@@ -214,7 +225,12 @@ class MetadataClient:
             if len(body) > max_bytes:
                 raise ArtifactError("JSON metadata exceeds the size limit")
             try:
-                result = json.loads(body, object_pairs_hook=_unique_object)
+                result = json.loads(
+                    body,
+                    object_pairs_hook=_unique_object,
+                    parse_constant=_reject_json_constant,
+                    parse_float=_finite_float,
+                )
             except (ValueError, UnicodeError, RecursionError) as exc:
                 raise ArtifactError(f"Invalid JSON metadata: {url}") from exc
             if not isinstance(result, dict):

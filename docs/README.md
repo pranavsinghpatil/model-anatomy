@@ -13,6 +13,11 @@ Read [AGENTS.md](../AGENTS.md) first when performing repository work.
 For application users, [Reading Reports](READING_REPORTS.md) explains status,
 revision, coverage checks, actual warnings, analysis scope and manual verification.
 
+The [120-repository matrix](HUNDRED_MODEL_BENCHMARK.md) describes cross-family
+validation and its limits. [Family reconstruction strategies](MODEL_FAMILY_STRATEGIES.md)
+sets separate acceptance gates for native models, diffusion, audio/video, RL,
+adapters and GGUF.
+
 [UI redesign](UI_REDESIGN.md) documents the application flow, design system,
 responsive workspace and validation requirements. Its annotated
 [wireframes](design/workspace-wireframes.svg) describe desktop and mobile layouts.

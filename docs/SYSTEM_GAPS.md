@@ -1,9 +1,39 @@
 # System Gaps and Acceptance Gates
 
 This is an implementation audit, not a support promise. Status describes evidence
-in this repository as of 2026-10-12. "Tested" means there is a pinned real-model
+in the dated sections below. "Tested" means there is a pinned real-model
 engine or live HTTP acceptance path; a generic code path or fixture is not proof
 that a model family works end to end.
+
+## October 19 Cross-Family Matrix
+
+All 120 distinct pinned repositories were attempted, followed by 22 targeted
+rechecks with engine `2026.10.19.3`. Latest observations are ten complete static
+reports, 45 valid partial graphs and 61 graph-free artifact inspections. Three
+repositories have gated files; XTTS contains invalid non-finite JSON. The remaining
+98 observations are from the unchanged `.2` baseline. See the
+[full methodology and results](HUNDRED_MODEL_BENCHMARK.md).
+
+The fixes accept native SegFormer stage schedules with layer budgets, avoid
+applying Transformers dimension fields to foreign Diffusers configs, preserve
+unsupported-construction exceptions for safe artifact fallback, and reject
+non-finite JSON before serialization. Verified native mappings can select a local
+implementation despite a publisher root `auto_map`; original config, an explicit
+decision and an unverified-custom-code-equivalence warning remain. Remote-only
+classes and nested remote mappings stay disabled. IR schema 1.1 is unchanged.
+
+All eleven measured configuration/construction rejections now return validated
+reports; this includes a real native partial SegFormer B0 graph. Phi-3 also
+advances to a native partial graph. This does not implement Diffusers pipeline
+graphs, general speech/codec construction, SB3 archive reconstruction or GGUF
+dataflow. The [family-specific plan](MODEL_FAMILY_STRATEGIES.md) defines those
+separate acceptance gates instead of counting artifact inventory as anatomy.
+
+Final verification: 427 backend/infrastructure tests passed with all eighteen
+real integrations enabled; one Linux-only test was skipped on Windows. Ruff,
+compilation and diff checks passed. Fresh uncached Phi-3 and SegFormer jobs also
+passed through the restarted local API/worker on port 8000, including stored
+reports, graphs, tensor inspection and exports. No frontend files were changed.
 
 ## October 19 Model-Family Validation
 
@@ -68,7 +98,7 @@ verification sections below describe historical test runs, not current features.
 | Decoder-only text, GPT-2 (~124M) and SmolLM2-135M | **Tested canonical static architecture** | October 12 pinned engine checks require all four coverage ratios of 1, no extraction warnings, exact revision/dimensions, full checkpoint parameter mapping, graph validation, no forward pass and zero weight payload reads. See [test_engine_integration.py](../backend/tests/test_engine_integration.py) and [ENGINE_ACCEPTANCE.md](ENGINE_ACCEPTANCE.md). Static shapes and classifications are not runtime observations or proof of every input path. |
 | Decoder-only text, SmolLM2-360M | **Tested local application path** | Fresh live desktop/mobile browser tests require completed status, no extraction warnings, nested graph/tensor inspection and exports. The local HTTP acceptance also checks exact-revision cache, visitor isolation, limits and honest missing-repository failure. This is local Windows evidence, not cloud capacity evidence. See [test_live_http.py](../backend/tests/test_live_http.py) and [LIVE_BACKEND_ACCEPTANCE.md](LIVE_BACKEND_ACCEPTANCE.md); earlier partial results there are historical. |
 | Qwen3-4B-Thinking-2507 (~4.02B) | **Tested canonical static engine** | Pinned revision `768f209d9ea81521153ed38c47d515654e938aea` passes the October 12 engine checks: 4,022,468,096 unique parameters, 36 layers, hidden size 2560, all four coverage ratios of 1, no extraction warnings, valid graph/IR round-trip and zero weight payload reads. Earlier local HTTP partial results use an older engine. This is not proof of larger text or other modalities. |
-| Text models larger than the tested Qwen 4B checkpoint | **Unverified** | There is no parameter-count ceiling. Meta construction still creates the complete module hierarchy and IR; header-only weight access does not make those steps constant-memory. Service jobs are bounded by a 4 GiB memory setting and 120 seconds, and recognized nested scalar/per-stage layer fields reject more than 512 layers. See [registry.py](../backend/model_anatomy/src/registry.py), [settings.py](../backend/model_anatomy/api/settings.py), and [ENGINE_ACCEPTANCE.md](ENGINE_ACCEPTANCE.md). |
+| Text models larger than the tested Qwen 4B checkpoint | **Measured partial samples; arbitrary size unverified** | The October 19 matrix includes valid native partial Mistral-7B and Zephyr-7B reports. This is not full semantics or arbitrary-scale support. Meta construction still creates the complete hierarchy and IR; header-only access does not make those steps constant-memory. Jobs retain the 4 GiB setting, 120-second deadline and 512-layer validation cap. See [matrix evidence](HUNDRED_MODEL_BENCHMARK.md), [registry.py](../backend/model_anatomy/src/registry.py) and [settings.py](../backend/model_anatomy/api/settings.py). |
 | Encoder-decoder text | **Pinned partial T5 report** | T5-small has 132 tensors and full native parameter mapping; unresolved mask/numerical-guard source paths remain. This is not full cross-attention/control-flow proof. See [DYNAMIC_ROUTING_ACCEPTANCE.md](DYNAMIC_ROUTING_ACCEPTANCE.md). |
 | Google ViT image classification (~86.57M) | **Tested canonical static architecture; completed report** | `google/vit-base-patch16-224` at `10064cc17b69d623a025c9e90e11230cc8ba6967`: 86,567,656 parameters, 200 tensors, `[B,3,224,224]` pixels, 196 patches, CLS/position addition to `[B,197,768]`, encoder output projections/residuals, CLS selection `[B,768]` and classifier `[B,1000]`. Engine `2026.10.12.2` retains known Q/K/V named-output shapes; all scoped edges have shapes, all native modules are classified and all checkpoint parameters map. No extraction warnings or payload reads. Fresh HTTP-worker and real desktop/mobile tests require completed status. Shapes describe fixed-resolution, unmasked inputs without interpolation, not runtime observations. Preprocessing and other vision architectures remain unverified. |
 | Additional image architectures | **Pinned partial Swin report** | 233 tensors, full native parameter mapping and staged heads; API serialization is fixed. Shifted windows, padding, shapes and classification still need semantic acceptance. |
@@ -76,7 +106,7 @@ verification sections below describe historical test runs, not current features.
 | Audio | **Pinned partial Whisper report** | 167 tensors and full native parameter mapping. Augmentation/control flow and some connection shapes remain unresolved. |
 | Video | **Pinned partial VideoMAE report** | 186 tensors and full native parameter mapping. Native source/config establishes canonical `[B,16,3,224,224]`; pooling/position semantics and classifications remain incomplete. Other video layouts remain unverified and explicitly unknown. |
 | Diffusion pipelines | **Manifest/component artifact inspection** | Stable Diffusion v1.5 is pinned and its selected UNet Safetensors headers are verified against sibling config. Native Diffusers graphs and pipeline execution edges are not implemented. |
-| Custom / remote-code architecture | **Unsupported by policy** | `auto_map`, third-party classes and external backbone fetches remain disabled. Valid non-PyTorch Safetensors may produce graph-free artifact inspection; malformed headers still fail. No weights/custom code are loaded. |
+| Custom / remote-code architecture | **Publisher code disabled; bounded native alternative** | A root `auto_map` may be ignored only when all declared architectures match installed native mappings; retain original metadata and warn that custom-code equivalence is unverified. Remote-only/third-party classes, nested remote maps and external backbone fetches stay disabled. Valid unsupported formats may yield graph-free artifact inspection; malformed metadata still fails. |
 
 "Small", "medium", and "large" are not currently product-defined parameter bands.
 The tested checkpoints are a narrow sample, not evidence of general size scaling.

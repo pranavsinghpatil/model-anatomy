@@ -306,3 +306,30 @@ Keep exact shapes, provenance and other relationship types in the technical grap
 and shared inspector. No backend/schema changes, new paid dependencies, third-party
 drawing service or model data upload are introduced. See
 `CANVAS_WORKSPACE.md` and `ANATOMY_ILLUSTRATION.md` for validation evidence.
+
+## D-031 - Measure cross-family compatibility and preserve native boundaries
+**2026-10-19 - user-directed validation increment**
+
+Attempt at least 100 distinct pinned Hugging Face repositories across text,
+vision, multimodal, speech, diffusion/video generation and actual RL policies.
+Keep complete static checks, partial architecture, artifact inspection and failures
+as separate outcomes. Preserve an unchanged baseline, fix measured defects, and
+rerun affected cases with a new engine identity. See `HUNDRED_MODEL_BENCHMARK.md`.
+
+Registered native Transformers configuration and exact installed architecture-name
+mappings may authorize selecting the native implementation despite a publisher
+root `auto_map`. Do not execute the publisher mapping. Retain the original source
+config, the selection decision and a warning that custom-code equivalence is
+unverified; the result stays partial. Nested remote mappings, external pretrained
+backbones and unregistered classes remain unavailable for native construction.
+
+Apply original metadata budgets before unsupported-model exits. Validate native
+stage schedules using their actual family contract; foreign component configs do
+not inherit Transformers dimension rules. Preserve construction guard exceptions
+so unsupported native paths can return verified artifact inspection. Malformed or
+non-finite JSON remains a validation error. No guard is relaxed, IR schema 1.1 is
+unchanged, and the extraction cache identity advances to `2026.10.19.3`.
+
+Use family-specific source/configuration, tensor-ownership, input/output and graph
+acceptance gates for the remaining scope. A manifest, tensor inventory or task tag
+cannot substitute for an execution graph. See `MODEL_FAMILY_STRATEGIES.md`.

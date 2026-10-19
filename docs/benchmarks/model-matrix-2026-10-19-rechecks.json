@@ -1,0 +1,985 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-10-19T16:59:51.431483+00:00",
+  "experiment": "real pinned metadata-only reconstruction compatibility",
+  "cases": 22,
+  "status_counts": {
+    "completed": 2,
+    "partial": 4,
+    "http_access": 3,
+    "inspected": 12,
+    "artifact_error": 1
+  },
+  "category_counts": {
+    "causal-lm": {
+      "completed": 1,
+      "partial": 1,
+      "http_access": 1
+    },
+    "embedding": {
+      "inspected": 1
+    },
+    "image-classification": {
+      "completed": 1,
+      "inspected": 1
+    },
+    "image-segmentation": {
+      "partial": 1,
+      "inspected": 1
+    },
+    "image-text-to-text": {
+      "partial": 1
+    },
+    "neural-audio-codec": {
+      "inspected": 1
+    },
+    "rlhf-reward-model": {
+      "inspected": 1
+    },
+    "speech-recognition": {
+      "partial": 1,
+      "inspected": 3
+    },
+    "text-to-image": {
+      "inspected": 3,
+      "http_access": 2
+    },
+    "text-to-speech": {
+      "inspected": 1
+    },
+    "voice-cloning-tts": {
+      "artifact_error": 1
+    }
+  },
+  "environment": {
+    "python": "3.11.4",
+    "platform": "Windows-10-10.0.26300-SP0",
+    "engine_version": "2026.10.19.3",
+    "runner_sha256": "a04eacbbf25411863e8f25ac430dd882b48a42c78e32d29980ab69ba9fa54c2b",
+    "engine_source_sha256": "47b06674ddda1d63a2d514cd35f8d7697e7b087843427efd6d0c79b1dc11c36f",
+    "dependencies": {
+      "torch": "2.14.1+cpu",
+      "transformers": "4.57.6",
+      "safetensors": "0.8.0",
+      "requests": "2.34.2",
+      "huggingface-hub": "0.36.2",
+      "pydantic": "2.13.5",
+      "psutil": "7.2.2"
+    },
+    "workers": 1,
+    "wall_timeout_seconds": 120,
+    "process_tree_rss_limit_bytes": 4294967296,
+    "rss_sampling_interval_ms": 50,
+    "weight_payload_loading_enabled": false,
+    "forward_execution_enabled": false,
+    "rss_guard_kind": "sampled process-tree RSS; not a Windows OS memory limit"
+  },
+  "evidence": {
+    "manifest_sha256": "07af078baaf25738f10f9cdc82fec6e5c40514bbaf047423e5f6557a1d3aedb0",
+    "raw_summary_sha256": "57f9f0811e95f7d9b3ccee70daf1b7511f23edb24df547069ede611f208d79dd",
+    "emitted_report_count": 18,
+    "valid_report_contract_count": 18,
+    "reports_asserting_zero_weight_payload_bytes": 18,
+    "reports_asserting_no_forward_execution": 18,
+    "cases_without_validated_report_evidence": 4,
+    "wall_seconds_median": 13.474,
+    "wall_seconds_max": 19.277,
+    "sampled_peak_process_tree_rss_bytes_max": 339922944,
+    "serialized_report_bytes_max": 2912338
+  },
+  "interpretation": [
+    "Task labels are publisher metadata, not architecture or training proofs.",
+    "Completed means bounded static checks pass; it is not universal execution-path correctness.",
+    "Inspected is graph-free artifact inventory/header evidence, not architecture support.",
+    "Every graph schema is validated; NodeInspection is one representative owned-tensor sample.",
+    "Payload and forward fields are source-backed engine assertions, not independent instrumentation.",
+    "Failed/killed cases have no successful-report invariant evidence.",
+    "Raw local records retain longer warning samples and exception traces; this snapshot omits paths and truncates warnings."
+  ],
+  "results": [
+    {
+      "model_id": "openai-community/gpt2",
+      "category": "causal-lm",
+      "revision": "607a30d783dfa663caf39e06633721c8d4cfcd7e",
+      "engine_version": "2026.10.19.3",
+      "status": "completed",
+      "architecture": "GPT2LMHeadModel",
+      "inspection_only": false,
+      "coverage": {
+        "semantic_coverage": 1.0,
+        "module_semantic_coverage": 1.0,
+        "checkpoint_parameter_coverage": 1.0,
+        "tensor_shape_coverage": 1.0
+      },
+      "warning_count": 0,
+      "graph_count": 5,
+      "node_count": 44,
+      "edge_count": 44,
+      "tensor_count": 160,
+      "serialized_report_bytes": 579532,
+      "storage_contract_valid": true,
+      "service_contract_valid": true,
+      "parameter_counts": {
+        "unique": 124439808,
+        "logical": 163037184,
+        "checkpoint_tensor_elements": 137022720
+      },
+      "weight_payload_bytes_read": 0,
+      "forward_executed": false,
+      "reason_codes": [],
+      "native_blockers": [],
+      "wall_seconds": 13.088,
+      "peak_process_tree_rss_bytes": 329478144,
+      "started_at": "2026-10-19T16:55:37.131353+00:00",
+      "finished_at": "2026-10-19T16:55:50.225986+00:00",
+      "declared_task": "text-generation",
+      "warning_sample": []
+    },
+    {
+      "model_id": "microsoft/Phi-3-mini-4k-instruct",
+      "category": "causal-lm",
+      "revision": "f39ac1d28e925b323eae81227eaba4464caced4e",
+      "engine_version": "2026.10.19.3",
+      "status": "partial",
+      "architecture": "Phi3ForCausalLM",
+      "inspection_only": false,
+      "coverage": {
+        "semantic_coverage": 0.85,
+        "module_semantic_coverage": 0.7544757033248082,
+        "checkpoint_parameter_coverage": 1.0,
+        "tensor_shape_coverage": 0.918918918918919
+      },
+      "warning_count": 5,
+      "graph_count": 5,
+      "node_count": 31,
+      "edge_count": 37,
+      "tensor_count": 195,
+      "serialized_report_bytes": 974040,
+      "storage_contract_valid": true,
+      "service_contract_valid": true,
+      "parameter_counts": {
+        "unique": 3821079552,
+        "logical": 3821079552,
+        "checkpoint_tensor_elements": 3821079552
+      },
+      "weight_payload_bytes_read": 0,
+      "forward_executed": false,
+      "reason_codes": [
+        "coverage_not_complete"
+      ],
+      "native_blockers": [],
+      "wall_seconds": 15.157,
+      "peak_process_tree_rss_bytes": 331538432,
+      "started_at": "2026-10-19T16:55:50.229172+00:00",
+      "finished_at": "2026-10-19T16:56:05.385769+00:00",
+      "declared_task": "text-generation",
+      "warning_sample": [
+        "Publisher root auto_map was ignored because every declared architecture matched an installed native Transformers mapping; equivalence to publisher custom code is unverified, and remote code remains disabled",
+        "model: Opaque call mask_function: dependencies retained, transformation unverified",
+        "model.layers.0.self_attn: Opaque call apply_rotary_pos_emb: dependencies retained, transformation unverified",
+        "model.layers.0.self_attn: Opaque call attention_interface: dependencies retained, transformation unverified",
+        "model.layers.0.mlp: Opaque call up_states.chunk: dependencies retained, transformation unverified"
+      ]
+    },
+    {
+      "model_id": "meta-llama/Llama-3.2-1B-Instruct",
+      "category": "causal-lm",
+      "revision": "9213176726f574b556790deb65791e0c5aa438b6",
+      "status": "http_access",
+      "wall_seconds": 1.102,
+      "peak_process_tree_rss_bytes": 43196416,
+      "message": "401 Client Error: Unauthorized for url: https://huggingface.co/meta-llama/Llama-3.2-1B-Instruct/resolve/9213176726f574b556790deb65791e0c5aa438b6/config.json",
+      "stage": "reconstruction",
+      "cause_type": "HTTPError",
+      "started_at": "2026-10-19T16:56:05.389095+00:00",
+      "finished_at": "2026-10-19T16:56:06.491091+00:00",
+      "declared_task": "text-generation",
+      "exception_chain": [
+        {
+          "type": "requests.exceptions.HTTPError",
+          "message": "401 Client Error: Unauthorized for url: https://huggingface.co/meta-llama/Llama-3.2-1B-Instruct/resolve/9213176726f574b556790deb65791e0c5aa438b6/config.json"
+        },
+        {
+          "type": "__mp_main__.CaseStageError",
+          "message": "401 Client Error: Unauthorized for url: https://huggingface.co/meta-llama/Llama-3.2-1B-Instruct/resolve/9213176726f574b556790deb65791e0c5aa438b6/config.json"
+        }
+      ]
+    },
+    {
+      "model_id": "RLHFlow/ArmoRM-Llama3-8B-v0.1",
+      "category": "rlhf-reward-model",
+      "revision": "eb2676d20da2f2d41082289d23c59b9f7427f955",
+      "engine_version": "2026.10.19.3",
+      "status": "inspected",
+      "architecture": null,
+      "inspection_only": true,
+      "coverage": {
+        "semantic_coverage": null,
+        "module_semantic_coverage": null,
+        "checkpoint_parameter_coverage": null,
+        "tensor_shape_coverage": null
+      },
+      "warning_count": 0,
+      "graph_count": 0,
+      "node_count": 0,
+      "edge_count": 0,
+      "tensor_count": 301,
+      "serialized_report_bytes": 153263,
+      "storage_contract_valid": true,
+      "service_contract_valid": true,
+      "parameter_counts": {
+        "unique": null,
+        "logical": null,
+        "checkpoint_tensor_elements": 7511320957
+      },
+      "weight_payload_bytes_read": 0,
+      "forward_executed": false,
+      "reason_codes": [
+        "native_architecture_unavailable",
+        "Publisher auto_map can be ignored only when every declared architecture matches an installed native Auto mapping",
+        "coverage_not_complete"
+      ],
+      "native_blockers": [
+        "Publisher auto_map can be ignored only when every declared architecture matches an installed native Auto mapping"
+      ],
+      "wall_seconds": 19.277,
+      "peak_process_tree_rss_bytes": 316809216,
+      "started_at": "2026-10-19T16:56:06.494093+00:00",
+      "finished_at": "2026-10-19T16:56:25.771011+00:00",
+      "declared_task": "text-classification",
+      "warning_sample": []
+    },
+    {
+      "model_id": "jinaai/jina-embeddings-v2-small-en",
+      "category": "embedding",
+      "revision": "44e7d1d6caec8c883c2d4b207588504d519788d0",
+      "engine_version": "2026.10.19.3",
+      "status": "inspected",
+      "architecture": null,
+      "inspection_only": true,
+      "coverage": {
+        "semantic_coverage": null,
+        "module_semantic_coverage": null,
+        "checkpoint_parameter_coverage": null,
+        "tensor_shape_coverage": null
+      },
+      "warning_count": 0,
+      "graph_count": 0,
+      "node_count": 0,
+      "edge_count": 0,
+      "tensor_count": 66,
+      "serialized_report_bytes": 38540,
+      "storage_contract_valid": true,
+      "service_contract_valid": true,
+      "parameter_counts": {
+        "unique": null,
+        "logical": null,
+        "checkpoint_tensor_elements": 32690688
+      },
+      "weight_payload_bytes_read": 0,
+      "forward_executed": false,
+      "reason_codes": [
+        "native_architecture_unavailable",
+        "Publisher auto_map can be ignored only when every declared architecture matches an installed native Auto mapping",
+        "coverage_not_complete"
+      ],
+      "native_blockers": [
+        "Publisher auto_map can be ignored only when every declared architecture matches an installed native Auto mapping"
+      ],
+      "wall_seconds": 14.456,
+      "peak_process_tree_rss_bytes": 316526592,
+      "started_at": "2026-10-19T16:56:25.772008+00:00",
+      "finished_at": "2026-10-19T16:56:40.228719+00:00",
+      "declared_task": "feature-extraction",
+      "warning_sample": []
+    },
+    {
+      "model_id": "google/vit-base-patch16-224",
+      "category": "image-classification",
+      "revision": "3f49326eb077187dfe1c2a2bb15fbd74e6ab91e3",
+      "engine_version": "2026.10.19.3",
+      "status": "completed",
+      "architecture": "ViTForImageClassification",
+      "inspection_only": false,
+      "coverage": {
+        "semantic_coverage": 1.0,
+        "module_semantic_coverage": 1.0,
+        "checkpoint_parameter_coverage": 1.0,
+        "tensor_shape_coverage": 1.0
+      },
+      "warning_count": 0,
+      "graph_count": 13,
+      "node_count": 75,
+      "edge_count": 73,
+      "tensor_count": 200,
+      "serialized_report_bytes": 1127101,
+      "storage_contract_valid": true,
+      "service_contract_valid": true,
+      "parameter_counts": {
+        "unique": 86567656,
+        "logical": 86567656,
+        "checkpoint_tensor_elements": 86567656
+      },
+      "weight_payload_bytes_read": 0,
+      "forward_executed": false,
+      "reason_codes": [],
+      "native_blockers": [],
+      "wall_seconds": 14.013,
+      "peak_process_tree_rss_bytes": 332025856,
+      "started_at": "2026-10-19T16:56:40.230722+00:00",
+      "finished_at": "2026-10-19T16:56:54.244447+00:00",
+      "declared_task": "image-classification",
+      "warning_sample": []
+    },
+    {
+      "model_id": "nvidia/mit-b0",
+      "category": "image-classification",
+      "revision": "80983a413c30d36a39c20203974ae7807835e2b4",
+      "engine_version": "2026.10.19.3",
+      "status": "inspected",
+      "architecture": null,
+      "inspection_only": true,
+      "coverage": {
+        "semantic_coverage": null,
+        "module_semantic_coverage": null,
+        "checkpoint_parameter_coverage": null,
+        "tensor_shape_coverage": null
+      },
+      "warning_count": 0,
+      "graph_count": 0,
+      "node_count": 0,
+      "edge_count": 0,
+      "tensor_count": 0,
+      "serialized_report_bytes": 81985,
+      "storage_contract_valid": true,
+      "service_contract_valid": true,
+      "parameter_counts": {
+        "unique": null,
+        "logical": null,
+        "checkpoint_tensor_elements": null
+      },
+      "weight_payload_bytes_read": 0,
+      "forward_executed": false,
+      "reason_codes": [
+        "safetensors_unavailable",
+        "coverage_not_complete"
+      ],
+      "native_blockers": [],
+      "wall_seconds": 10.384,
+      "peak_process_tree_rss_bytes": 280666112,
+      "started_at": "2026-10-19T16:56:54.247676+00:00",
+      "finished_at": "2026-10-19T16:57:04.632644+00:00",
+      "declared_task": "image-classification",
+      "warning_sample": []
+    },
+    {
+      "model_id": "nvidia/segformer-b0-finetuned-ade-512-512",
+      "category": "image-segmentation",
+      "revision": "489d5cd81a0b59fab9b7ea758d3548ebe99677da",
+      "engine_version": "2026.10.19.3",
+      "status": "partial",
+      "architecture": "SegformerForSemanticSegmentation",
+      "inspection_only": false,
+      "coverage": {
+        "semantic_coverage": 0.8722466960352423,
+        "module_semantic_coverage": 0.7934272300469484,
+        "checkpoint_parameter_coverage": 1.0,
+        "tensor_shape_coverage": 0.49056603773584906
+      },
+      "warning_count": 2,
+      "graph_count": 55,
+      "node_count": 334,
+      "edge_count": 335,
+      "tensor_count": 208,
+      "serialized_report_bytes": 2912338,
+      "storage_contract_valid": true,
+      "service_contract_valid": true,
+      "parameter_counts": {
+        "unique": 3752694,
+        "logical": 3752694,
+        "checkpoint_tensor_elements": 3753207
+      },
+      "weight_payload_bytes_read": 0,
+      "forward_executed": false,
+      "reason_codes": [
+        "coverage_not_complete"
+      ],
+      "native_blockers": [],
+      "wall_seconds": 14.684,
+      "peak_process_tree_rss_bytes": 339570688,
+      "started_at": "2026-10-19T16:57:04.633644+00:00",
+      "finished_at": "2026-10-19T16:57:19.317535+00:00",
+      "declared_task": "image-segmentation",
+      "warning_sample": [
+        "segformer.encoder: Loop could not be statically resolved at line 14",
+        "decode_head: Loop could not be statically resolved at line 5"
+      ]
+    },
+    {
+      "model_id": "nvidia/segformer-b1-finetuned-ade-512-512",
+      "category": "image-segmentation",
+      "revision": "a775b4f5dcb2179e57006dca0e268281306412ef",
+      "engine_version": "2026.10.19.3",
+      "status": "inspected",
+      "architecture": null,
+      "inspection_only": true,
+      "coverage": {
+        "semantic_coverage": null,
+        "module_semantic_coverage": null,
+        "checkpoint_parameter_coverage": null,
+        "tensor_shape_coverage": null
+      },
+      "warning_count": 0,
+      "graph_count": 0,
+      "node_count": 0,
+      "edge_count": 0,
+      "tensor_count": 0,
+      "serialized_report_bytes": 12201,
+      "storage_contract_valid": true,
+      "service_contract_valid": true,
+      "parameter_counts": {
+        "unique": null,
+        "logical": null,
+        "checkpoint_tensor_elements": null
+      },
+      "weight_payload_bytes_read": 0,
+      "forward_executed": false,
+      "reason_codes": [
+        "safetensors_unavailable",
+        "coverage_not_complete"
+      ],
+      "native_blockers": [],
+      "wall_seconds": 9.54,
+      "peak_process_tree_rss_bytes": 279011328,
+      "started_at": "2026-10-19T16:57:19.319537+00:00",
+      "finished_at": "2026-10-19T16:57:28.860195+00:00",
+      "declared_task": "image-segmentation",
+      "warning_sample": []
+    },
+    {
+      "model_id": "HuggingFaceTB/SmolVLM-256M-Instruct",
+      "category": "image-text-to-text",
+      "revision": "7e3e67edbbed1bf9888184d9df282b700a323964",
+      "engine_version": "2026.10.19.3",
+      "status": "partial",
+      "architecture": "Idefics3ForConditionalGeneration",
+      "inspection_only": false,
+      "coverage": {
+        "semantic_coverage": 0.9466666666666667,
+        "module_semantic_coverage": 0.9927536231884058,
+        "checkpoint_parameter_coverage": 1.0,
+        "tensor_shape_coverage": 0.6206896551724138
+      },
+      "warning_count": 5,
+      "graph_count": 17,
+      "node_count": 109,
+      "edge_count": 116,
+      "tensor_count": 471,
+      "serialized_report_bytes": 2207534,
+      "storage_contract_valid": true,
+      "service_contract_valid": true,
+      "parameter_counts": {
+        "unique": 256484928,
+        "logical": 256484928,
+        "checkpoint_tensor_elements": 256484928
+      },
+      "weight_payload_bytes_read": 0,
+      "forward_executed": false,
+      "reason_codes": [
+        "coverage_not_complete"
+      ],
+      "native_blockers": [],
+      "wall_seconds": 15.232,
+      "peak_process_tree_rss_bytes": 339922944,
+      "started_at": "2026-10-19T16:57:28.861555+00:00",
+      "finished_at": "2026-10-19T16:57:44.094050+00:00",
+      "declared_task": "image-text-to-text",
+      "warning_sample": [
+        "model: Conditional source path is unresolved: (default_embedding := getattr(self, name, None)) is not None",
+        "model: Opaque call self.text_model.get_input_embeddings(): dependencies retained, transformation unverified",
+        "model: Opaque call special_image_mask.unsqueeze(-1).expand_as: dependencies retained, transformation unverified",
+        "model: Opaque call inputs_embeds.masked_scatter: dependencies retained, transformation unverified",
+        "model.vision_model.embeddings: Loop could not be statically resolved at line 15"
+      ]
+    },
+    {
+      "model_id": "openai/whisper-tiny",
+      "category": "speech-recognition",
+      "revision": "169d4a4341b33bc18d8881c4b69c2e104e1cc0af",
+      "engine_version": "2026.10.19.3",
+      "status": "partial",
+      "architecture": "WhisperForConditionalGeneration",
+      "inspection_only": false,
+      "coverage": {
+        "semantic_coverage": 1.0,
+        "module_semantic_coverage": 1.0,
+        "checkpoint_parameter_coverage": 1.0,
+        "tensor_shape_coverage": 0.9619047619047619
+      },
+      "warning_count": 9,
+      "graph_count": 12,
+      "node_count": 94,
+      "edge_count": 105,
+      "tensor_count": 167,
+      "serialized_report_bytes": 983327,
+      "storage_contract_valid": true,
+      "service_contract_valid": true,
+      "parameter_counts": {
+        "unique": 37760640,
+        "logical": 57676800,
+        "checkpoint_tensor_elements": 37760640
+      },
+      "weight_payload_bytes_read": 0,
+      "forward_executed": false,
+      "reason_codes": [
+        "coverage_not_complete"
+      ],
+      "native_blockers": [],
+      "wall_seconds": 13.698,
+      "peak_process_tree_rss_bytes": 333299712,
+      "started_at": "2026-10-19T16:57:44.095556+00:00",
+      "finished_at": "2026-10-19T16:57:57.794647+00:00",
+      "declared_task": "automatic-speech-recognition",
+      "warning_sample": [
+        "model: Conditional source path is unresolved: not getattr(self.config, 'apply_spec_augment', True)",
+        "model.encoder: Opaque call nn.functional.gelu: dependencies retained, transformation unverified",
+        "model.encoder: Opaque call nn.functional.dropout: dependencies retained, transformation unverified",
+        "model.encoder.layers.0: Opaque call nn.functional.dropout: dependencies retained, transformation unverified",
+        "model.encoder.layers.0: Opaque call torch.clamp: dependencies retained, transformation unverified"
+      ]
+    },
+    {
+      "model_id": "facebook/wav2vec2-base-960h",
+      "category": "speech-recognition",
+      "revision": "22aad52d435eb6dbaf354bdad9b0da84ce7d6156",
+      "engine_version": "2026.10.19.3",
+      "status": "inspected",
+      "architecture": null,
+      "inspection_only": true,
+      "coverage": {
+        "semantic_coverage": null,
+        "module_semantic_coverage": null,
+        "checkpoint_parameter_coverage": null,
+        "tensor_shape_coverage": null
+      },
+      "warning_count": 0,
+      "graph_count": 0,
+      "node_count": 0,
+      "edge_count": 0,
+      "tensor_count": 212,
+      "serialized_report_bytes": 106684,
+      "storage_contract_valid": true,
+      "service_contract_valid": true,
+      "parameter_counts": {
+        "unique": null,
+        "logical": null,
+        "checkpoint_tensor_elements": 94395552
+      },
+      "weight_payload_bytes_read": 0,
+      "forward_executed": false,
+      "reason_codes": [
+        "native_architecture_unavailable",
+        "Native construction attempted forward execution; it is disabled",
+        "coverage_not_complete"
+      ],
+      "native_blockers": [
+        "Native construction attempted forward execution; it is disabled"
+      ],
+      "wall_seconds": 12.492,
+      "peak_process_tree_rss_bytes": 323846144,
+      "started_at": "2026-10-19T16:57:57.797759+00:00",
+      "finished_at": "2026-10-19T16:58:10.290057+00:00",
+      "declared_task": "automatic-speech-recognition",
+      "warning_sample": []
+    },
+    {
+      "model_id": "jonatasgrosman/wav2vec2-large-xlsr-53-english",
+      "category": "speech-recognition",
+      "revision": "569a6236e92bd5f7652a0420bfe9bb94c5664080",
+      "engine_version": "2026.10.19.3",
+      "status": "inspected",
+      "architecture": null,
+      "inspection_only": true,
+      "coverage": {
+        "semantic_coverage": null,
+        "module_semantic_coverage": null,
+        "checkpoint_parameter_coverage": null,
+        "tensor_shape_coverage": null
+      },
+      "warning_count": 0,
+      "graph_count": 0,
+      "node_count": 0,
+      "edge_count": 0,
+      "tensor_count": 424,
+      "serialized_report_bytes": 216856,
+      "storage_contract_valid": true,
+      "service_contract_valid": true,
+      "parameter_counts": {
+        "unique": null,
+        "logical": null,
+        "checkpoint_tensor_elements": 315472545
+      },
+      "weight_payload_bytes_read": 0,
+      "forward_executed": false,
+      "reason_codes": [
+        "native_architecture_unavailable",
+        "Native construction attempted forward execution; it is disabled",
+        "coverage_not_complete"
+      ],
+      "native_blockers": [
+        "Native construction attempted forward execution; it is disabled"
+      ],
+      "wall_seconds": 13.586,
+      "peak_process_tree_rss_bytes": 325255168,
+      "started_at": "2026-10-19T16:58:10.291064+00:00",
+      "finished_at": "2026-10-19T16:58:23.877499+00:00",
+      "declared_task": "automatic-speech-recognition",
+      "warning_sample": []
+    },
+    {
+      "model_id": "facebook/mms-1b-all",
+      "category": "speech-recognition",
+      "revision": "3d33597edbdaaba14a8e858e2c8caa76e3cec0cd",
+      "engine_version": "2026.10.19.3",
+      "status": "inspected",
+      "architecture": null,
+      "inspection_only": true,
+      "coverage": {
+        "semantic_coverage": null,
+        "module_semantic_coverage": null,
+        "checkpoint_parameter_coverage": null,
+        "tensor_shape_coverage": null
+      },
+      "warning_count": 0,
+      "graph_count": 0,
+      "node_count": 0,
+      "edge_count": 0,
+      "tensor_count": 1096,
+      "serialized_report_bytes": 847522,
+      "storage_contract_valid": true,
+      "service_contract_valid": true,
+      "parameter_counts": {
+        "unique": null,
+        "logical": null,
+        "checkpoint_tensor_elements": 964845850
+      },
+      "weight_payload_bytes_read": 0,
+      "forward_executed": false,
+      "reason_codes": [
+        "native_architecture_unavailable",
+        "Native construction attempted forward execution; it is disabled",
+        "coverage_not_complete"
+      ],
+      "native_blockers": [
+        "Native construction attempted forward execution; it is disabled"
+      ],
+      "wall_seconds": 13.552,
+      "peak_process_tree_rss_bytes": 330809344,
+      "started_at": "2026-10-19T16:58:23.880586+00:00",
+      "finished_at": "2026-10-19T16:58:37.432563+00:00",
+      "declared_task": "automatic-speech-recognition",
+      "warning_sample": []
+    },
+    {
+      "model_id": "coqui/XTTS-v2",
+      "category": "voice-cloning-tts",
+      "revision": "6c2b0d75eae4b7047358e3b6bd9325f857d43f77",
+      "status": "artifact_error",
+      "wall_seconds": 1.595,
+      "peak_process_tree_rss_bytes": 43077632,
+      "message": "Invalid JSON metadata: https://huggingface.co/coqui/XTTS-v2/resolve/6c2b0d75eae4b7047358e3b6bd9325f857d43f77/config.json",
+      "stage": "reconstruction",
+      "cause_type": "ArtifactError",
+      "started_at": "2026-10-19T16:58:37.434774+00:00",
+      "finished_at": "2026-10-19T16:58:39.030196+00:00",
+      "declared_task": "text-to-speech",
+      "exception_chain": [
+        {
+          "type": "ValueError",
+          "message": "Invalid JSON constant: Infinity"
+        },
+        {
+          "type": "model_anatomy.src.errors.ArtifactError",
+          "message": "Invalid JSON metadata: https://huggingface.co/coqui/XTTS-v2/resolve/6c2b0d75eae4b7047358e3b6bd9325f857d43f77/config.json"
+        },
+        {
+          "type": "__mp_main__.CaseStageError",
+          "message": "Invalid JSON metadata: https://huggingface.co/coqui/XTTS-v2/resolve/6c2b0d75eae4b7047358e3b6bd9325f857d43f77/config.json"
+        }
+      ]
+    },
+    {
+      "model_id": "facebook/encodec_24khz",
+      "category": "neural-audio-codec",
+      "revision": "c1dbe2ae3f1de713481a3b3e7c47f357092ee040",
+      "engine_version": "2026.10.19.3",
+      "status": "inspected",
+      "architecture": null,
+      "inspection_only": true,
+      "coverage": {
+        "semantic_coverage": null,
+        "module_semantic_coverage": null,
+        "checkpoint_parameter_coverage": null,
+        "tensor_shape_coverage": null
+      },
+      "warning_count": 0,
+      "graph_count": 0,
+      "node_count": 0,
+      "edge_count": 0,
+      "tensor_count": 252,
+      "serialized_report_bytes": 116229,
+      "storage_contract_valid": true,
+      "service_contract_valid": true,
+      "parameter_counts": {
+        "unique": null,
+        "logical": null,
+        "checkpoint_tensor_elements": 23273218
+      },
+      "weight_payload_bytes_read": 0,
+      "forward_executed": false,
+      "reason_codes": [
+        "native_architecture_unavailable",
+        "Native construction attempted forward execution; it is disabled",
+        "coverage_not_complete"
+      ],
+      "native_blockers": [
+        "Native construction attempted forward execution; it is disabled"
+      ],
+      "wall_seconds": 16.129,
+      "peak_process_tree_rss_bytes": 322768896,
+      "started_at": "2026-10-19T16:58:39.030735+00:00",
+      "finished_at": "2026-10-19T16:58:55.159725+00:00",
+      "declared_task": "feature-extraction",
+      "warning_sample": []
+    },
+    {
+      "model_id": "facebook/mms-tts-eng",
+      "category": "text-to-speech",
+      "revision": "c71de0fe7204c83f1c10820a7d696d0b450048ba",
+      "engine_version": "2026.10.19.3",
+      "status": "inspected",
+      "architecture": null,
+      "inspection_only": true,
+      "coverage": {
+        "semantic_coverage": null,
+        "module_semantic_coverage": null,
+        "checkpoint_parameter_coverage": null,
+        "tensor_shape_coverage": null
+      },
+      "warning_count": 0,
+      "graph_count": 0,
+      "node_count": 0,
+      "edge_count": 0,
+      "tensor_count": 762,
+      "serialized_report_bytes": 353399,
+      "storage_contract_valid": true,
+      "service_contract_valid": true,
+      "parameter_counts": {
+        "unique": null,
+        "logical": null,
+        "checkpoint_tensor_elements": 36284592
+      },
+      "weight_payload_bytes_read": 0,
+      "forward_executed": false,
+      "reason_codes": [
+        "native_architecture_unavailable",
+        "Native construction attempted forward execution; it is disabled",
+        "coverage_not_complete"
+      ],
+      "native_blockers": [
+        "Native construction attempted forward execution; it is disabled"
+      ],
+      "wall_seconds": 14.491,
+      "peak_process_tree_rss_bytes": 329637888,
+      "started_at": "2026-10-19T16:58:55.163738+00:00",
+      "finished_at": "2026-10-19T16:59:09.655301+00:00",
+      "declared_task": "text-to-speech",
+      "warning_sample": []
+    },
+    {
+      "model_id": "stabilityai/sd-turbo",
+      "category": "text-to-image",
+      "revision": "b261bac6fd2cf515557d5d0707481eafa0485ec2",
+      "engine_version": "2026.10.19.3",
+      "status": "inspected",
+      "architecture": null,
+      "inspection_only": true,
+      "coverage": {
+        "semantic_coverage": null,
+        "module_semantic_coverage": null,
+        "checkpoint_parameter_coverage": null,
+        "tensor_shape_coverage": null
+      },
+      "warning_count": 0,
+      "graph_count": 0,
+      "node_count": 0,
+      "edge_count": 0,
+      "tensor_count": 686,
+      "serialized_report_bytes": 343224,
+      "storage_contract_valid": true,
+      "service_contract_valid": true,
+      "parameter_counts": {
+        "unique": null,
+        "logical": null,
+        "checkpoint_tensor_elements": 865910724
+      },
+      "weight_payload_bytes_read": 0,
+      "forward_executed": false,
+      "reason_codes": [
+        "native_architecture_unavailable",
+        "A native Transformers config is required; remote code is disabled",
+        "coverage_not_complete"
+      ],
+      "native_blockers": [
+        "A native Transformers config is required; remote code is disabled"
+      ],
+      "wall_seconds": 12.723,
+      "peak_process_tree_rss_bytes": 282787840,
+      "started_at": "2026-10-19T16:59:09.656612+00:00",
+      "finished_at": "2026-10-19T16:59:22.378697+00:00",
+      "reference": "https://huggingface.co/stabilityai/sd-turbo/blob/b261bac6fd2cf515557d5d0707481eafa0485ec2/unet/diffusion_pytorch_model.safetensors",
+      "declared_task": "text-to-image",
+      "warning_sample": []
+    },
+    {
+      "model_id": "stabilityai/sdxl-turbo",
+      "category": "text-to-image",
+      "revision": "71153311d3dbb46851df1931d3ca6e939de83304",
+      "engine_version": "2026.10.19.3",
+      "status": "inspected",
+      "architecture": null,
+      "inspection_only": true,
+      "coverage": {
+        "semantic_coverage": null,
+        "module_semantic_coverage": null,
+        "checkpoint_parameter_coverage": null,
+        "tensor_shape_coverage": null
+      },
+      "warning_count": 0,
+      "graph_count": 0,
+      "node_count": 0,
+      "edge_count": 0,
+      "tensor_count": 1680,
+      "serialized_report_bytes": 858234,
+      "storage_contract_valid": true,
+      "service_contract_valid": true,
+      "parameter_counts": {
+        "unique": null,
+        "logical": null,
+        "checkpoint_tensor_elements": 2567463684
+      },
+      "weight_payload_bytes_read": 0,
+      "forward_executed": false,
+      "reason_codes": [
+        "native_architecture_unavailable",
+        "A native Transformers config is required; remote code is disabled",
+        "coverage_not_complete"
+      ],
+      "native_blockers": [
+        "A native Transformers config is required; remote code is disabled"
+      ],
+      "wall_seconds": 13.149,
+      "peak_process_tree_rss_bytes": 288002048,
+      "started_at": "2026-10-19T16:59:22.381341+00:00",
+      "finished_at": "2026-10-19T16:59:35.530855+00:00",
+      "reference": "https://huggingface.co/stabilityai/sdxl-turbo/blob/71153311d3dbb46851df1931d3ca6e939de83304/unet/diffusion_pytorch_model.safetensors",
+      "declared_task": "text-to-image",
+      "warning_sample": []
+    },
+    {
+      "model_id": "stabilityai/stable-diffusion-xl-base-1.0",
+      "category": "text-to-image",
+      "revision": "462165984030d82259a11f4367a4eed129e94a7b",
+      "engine_version": "2026.10.19.3",
+      "status": "inspected",
+      "architecture": null,
+      "inspection_only": true,
+      "coverage": {
+        "semantic_coverage": null,
+        "module_semantic_coverage": null,
+        "checkpoint_parameter_coverage": null,
+        "tensor_shape_coverage": null
+      },
+      "warning_count": 0,
+      "graph_count": 0,
+      "node_count": 0,
+      "edge_count": 0,
+      "tensor_count": 1680,
+      "serialized_report_bytes": 890302,
+      "storage_contract_valid": true,
+      "service_contract_valid": true,
+      "parameter_counts": {
+        "unique": null,
+        "logical": null,
+        "checkpoint_tensor_elements": 2567463684
+      },
+      "weight_payload_bytes_read": 0,
+      "forward_executed": false,
+      "reason_codes": [
+        "native_architecture_unavailable",
+        "A native Transformers config is required; remote code is disabled",
+        "coverage_not_complete"
+      ],
+      "native_blockers": [
+        "A native Transformers config is required; remote code is disabled"
+      ],
+      "wall_seconds": 13.396,
+      "peak_process_tree_rss_bytes": 288956416,
+      "started_at": "2026-10-19T16:59:35.531832+00:00",
+      "finished_at": "2026-10-19T16:59:48.928337+00:00",
+      "reference": "https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0/blob/462165984030d82259a11f4367a4eed129e94a7b/unet/diffusion_pytorch_model.safetensors",
+      "declared_task": "text-to-image",
+      "warning_sample": []
+    },
+    {
+      "model_id": "black-forest-labs/FLUX.1-schnell",
+      "category": "text-to-image",
+      "revision": "741f7c3ce8b383c54771c7003378a50191e9efe9",
+      "status": "http_access",
+      "wall_seconds": 1.197,
+      "peak_process_tree_rss_bytes": 43253760,
+      "message": "401 Client Error: Unauthorized for url: https://huggingface.co/black-forest-labs/FLUX.1-schnell/resolve/741f7c3ce8b383c54771c7003378a50191e9efe9/transformer/config.json",
+      "stage": "reconstruction",
+      "cause_type": "HTTPError",
+      "started_at": "2026-10-19T16:59:48.930329+00:00",
+      "finished_at": "2026-10-19T16:59:50.127946+00:00",
+      "reference": "https://huggingface.co/black-forest-labs/FLUX.1-schnell/blob/741f7c3ce8b383c54771c7003378a50191e9efe9/transformer/diffusion_pytorch_model-00001-of-00003.safetensors",
+      "declared_task": "text-to-image",
+      "exception_chain": [
+        {
+          "type": "requests.exceptions.HTTPError",
+          "message": "401 Client Error: Unauthorized for url: https://huggingface.co/black-forest-labs/FLUX.1-schnell/resolve/741f7c3ce8b383c54771c7003378a50191e9efe9/transformer/config.json"
+        },
+        {
+          "type": "__mp_main__.CaseStageError",
+          "message": "401 Client Error: Unauthorized for url: https://huggingface.co/black-forest-labs/FLUX.1-schnell/resolve/741f7c3ce8b383c54771c7003378a50191e9efe9/transformer/config.json"
+        }
+      ]
+    },
+    {
+      "model_id": "DeepFloyd/IF-I-XL-v1.0",
+      "category": "text-to-image",
+      "revision": "c03d510e9b75bce9f9db5bb85148c1402ad7e694",
+      "status": "http_access",
+      "wall_seconds": 1.301,
+      "peak_process_tree_rss_bytes": 43126784,
+      "message": "401 Client Error: Unauthorized for url: https://huggingface.co/DeepFloyd/IF-I-XL-v1.0/resolve/c03d510e9b75bce9f9db5bb85148c1402ad7e694/unet/config.json",
+      "stage": "reconstruction",
+      "cause_type": "HTTPError",
+      "started_at": "2026-10-19T16:59:50.129096+00:00",
+      "finished_at": "2026-10-19T16:59:51.430496+00:00",
+      "reference": "https://huggingface.co/DeepFloyd/IF-I-XL-v1.0/blob/c03d510e9b75bce9f9db5bb85148c1402ad7e694/unet/diffusion_pytorch_model.safetensors",
+      "declared_task": "text-to-image",
+      "exception_chain": [
+        {
+          "type": "requests.exceptions.HTTPError",
+          "message": "401 Client Error: Unauthorized for url: https://huggingface.co/DeepFloyd/IF-I-XL-v1.0/resolve/c03d510e9b75bce9f9db5bb85148c1402ad7e694/unet/config.json"
+        },
+        {
+          "type": "__mp_main__.CaseStageError",
+          "message": "401 Client Error: Unauthorized for url: https://huggingface.co/DeepFloyd/IF-I-XL-v1.0/resolve/c03d510e9b75bce9f9db5bb85148c1402ad7e694/unet/config.json"
+        }
+      ]
+    }
+  ]
+}

@@ -1,5 +1,9 @@
 # Verification and Benchmarks
 
+The [cross-family matrix](HUNDRED_MODEL_BENCHMARK.md) adds 120 distinct pinned
+repository attempts. It measures reconstruction compatibility and report contracts;
+the HTTP measurements below remain a separate service-performance experiment.
+
 ## Current Real-Job Run: October 12
 
 Engine `2026.10.12.2`, Python 3.11.4, Windows, SQLite/local storage and a

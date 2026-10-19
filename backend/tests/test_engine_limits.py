@@ -16,6 +16,7 @@ from model_anatomy.src.artifacts import (
 )
 from model_anatomy.src.errors import ArtifactError, UnsupportedModelError
 from model_anatomy.src.facts import inspect_native_model
+from model_anatomy.src.profile import native_dimensions
 
 
 class Response:
@@ -199,6 +200,76 @@ def test_valid_swin_stage_depths_and_unrelated_depths_remain_accepted(monkeypatc
     # A generic field named depths is not necessarily a layer schedule.
     config = registry.load_native_config(tiny_config(auxiliary={"depths": [1_000_000_000]}))
     assert config.model_type == "gpt2"
+
+
+def test_valid_segformer_stage_schedules_are_accepted():
+    config = registry.load_native_config(
+        {
+            "model_type": "segformer",
+            "depths": [1, 2, 1, 1],
+            "num_attention_heads": [1, 2, 5, 8],
+        }
+    )
+
+    assert config.depths == [1, 2, 1, 1]
+    assert config.num_attention_heads == [1, 2, 5, 8]
+
+
+def test_segformer_profile_layer_count_uses_sum_of_stage_depths():
+    dimensions = native_dimensions(
+        SimpleNamespace(model_type="segformer", num_hidden_layers=None, num_layers=None, depths=[1, 2, 1, 1])
+    )
+
+    assert dimensions["layers"] == 5
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("num_attention_heads", 4),
+        ("num_attention_heads", []),
+        ("num_attention_heads", [1, 2, 5]),
+        ("num_attention_heads", [1, 2, 5, 0]),
+        ("num_attention_heads", [1, 2, 5, True]),
+        ("depths", []),
+        ("depths", [1, 2, 1]),
+    ],
+)
+def test_malformed_segformer_stage_schedules_are_rejected_before_autoconfig(monkeypatch, field, value):
+    monkeypatch.setattr(
+        registry.AutoConfig,
+        "for_model",
+        lambda *args, **kwargs: pytest.fail("AutoConfig must not run for malformed SegFormer schedules"),
+    )
+    with pytest.raises(ArtifactError, match="schedule"):
+        registry.load_native_config({"model_type": "segformer", field: value})
+
+
+def test_excessive_segformer_total_depth_is_rejected_before_autoconfig(monkeypatch):
+    monkeypatch.setattr(limits, "MAX_MODEL_LAYERS", 3)
+    monkeypatch.setattr(
+        registry.AutoConfig,
+        "for_model",
+        lambda *args, **kwargs: pytest.fail("AutoConfig must not run for excessive SegFormer depth"),
+    )
+    with pytest.raises(UnsupportedModelError, match="layer count"):
+        registry.load_native_config({"model_type": "segformer", "depths": [1, 1, 2, 1]})
+
+
+def test_text_family_still_rejects_head_schedules():
+    with pytest.raises(ArtifactError, match="num_attention_heads"):
+        registry.load_native_config(tiny_config(num_attention_heads=[2, 2]))
+    with pytest.raises(ArtifactError, match="num_attention_heads"):
+        registry.load_native_config(tiny_config(num_attention_heads=None))
+
+
+def test_foreign_config_still_obeys_generic_container_budgets(monkeypatch):
+    monkeypatch.setattr(limits, "MAX_CONFIG_NESTING_DEPTH", 1)
+
+    with pytest.raises(ArtifactError, match="depth limit"):
+        registry.load_native_config(
+            {"_class_name": "UNet2DConditionModel", "num_attention_heads": None, "nested": {"value": {}}}
+        )
 
 
 def test_shard_tensor_budget_aggregates_and_stops_before_later_shards(monkeypatch):

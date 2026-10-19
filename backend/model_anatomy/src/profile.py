@@ -19,7 +19,8 @@ def native_dimensions(config: Any) -> dict[str, Any]:
     layers = getattr(config, "num_hidden_layers", None) or getattr(config, "num_layers", None)
     depths = getattr(config, "depths", None)
     if (
-        getattr(config, "model_type", None) in {"swin", "swinv2", "donut-swin", "maskformer-swin"}
+        getattr(config, "model_type", None)
+        in {"swin", "swinv2", "donut-swin", "maskformer-swin", "segformer"}
         and isinstance(depths, list)
         and all(type(depth) is int and depth > 0 for depth in depths)
     ):

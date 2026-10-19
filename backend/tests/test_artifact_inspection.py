@@ -5,8 +5,9 @@ import json
 
 import pytest
 import requests
+import torch
 
-from model_anatomy.src import limits
+from model_anatomy.src import limits, registry
 from model_anatomy.src.artifacts import (
     AmbiguousCheckpointError,
     CheckpointMetadata,
@@ -109,6 +110,47 @@ def test_unknown_native_architecture_has_only_verified_inventory():
     assert ir.tensors["layers.0.weight"]["shape"] == [2, 3]
     assert ir.tensors["layers.0.weight"]["role"] == "unclassified"
     assert "semantic_coverage" not in ir.metadata["analysis_report"]
+
+
+def test_foreign_diffusers_config_reaches_inventory_without_transformers_dimension_rules():
+    client = InspectionClient(
+        {"config.json", "diffusion_pytorch_model.safetensors"},
+        {"_class_name": "UNet2DConditionModel", "num_attention_heads": None},
+        checkpoint_with_tensor(),
+    )
+
+    ir = inspect(client)
+
+    assert_inventory_only(ir, "native_architecture_unavailable")
+    assert ir.metadata["model_profile"]["config_model_type"] is None
+
+
+def test_forward_guard_remains_unsupported_and_pipeline_falls_back_to_inventory(monkeypatch):
+    class ForwardProbe(torch.nn.Module):
+        def forward(self, inputs):
+            return inputs
+
+    class FakeAutoModel:
+        @classmethod
+        def from_config(cls, config, trust_remote_code=False):
+            model = ForwardProbe()
+            model(torch.ones(1))
+            return model
+
+    monkeypatch.setattr(registry, "select_auto_class", lambda config: (FakeAutoModel, []))
+    client = InspectionClient(
+        {"config.json", "model.safetensors"},
+        GPT2_CONFIG,
+        checkpoint_with_tensor(),
+    )
+
+    ir = inspect(client)
+
+    assert_inventory_only(ir, "native_architecture_unavailable")
+    assert any(
+        "Native construction attempted forward execution" in blocker
+        for blocker in ir.metadata["model_profile"]["architecture_blockers"]
+    )
 
 
 def test_adapter_config_requires_base_and_keeps_header_evidence():
