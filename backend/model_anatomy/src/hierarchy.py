@@ -17,6 +17,8 @@ from .shape_values import describe, bind as bind_output, ports as output_ports
 from .source_eval import DTYPES
 
 LABELS = {
+    "selection_projection": "Select / Project",
+    "output_head_group": "Output Heads",
     "embedding": "Token Embedding",
     "position_embedding": "Position Embedding",
     "embeddings": "Embeddings",

@@ -291,6 +291,10 @@ class SemanticAnalyzer:
             return result("container", 1.0, "native module container; no execution topology assumed")
         if path == self.raw["base_model_prefix"] and children:
             return result("backbone", 0.99, "native base_model_prefix identifies backbone ownership")
+        from .source_composition import source_composition
+        composition = source_composition(module) if children else None
+        if composition is not None:
+            return result(composition[0], 0.98, composition[1])
         return result("unknown", 0.0, "No sufficiently supported semantic rule; preserve raw module facts")
 
     def signature(self, path: str) -> StructuralSignature:

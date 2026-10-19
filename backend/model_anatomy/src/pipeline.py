@@ -291,6 +291,9 @@ def reconstruct(
 
     config_url = reference.url(config_file, revision)
     raw = inspect_native_model(model, checkpoint)
+    from .architecture_selection import select_checkpoint_architecture
+
+    model, selection, raw = select_checkpoint_architecture(config, checkpoint, model, selection, raw)
     analyzer = SemanticAnalyzer(model, raw)
     progress("analyzing_components")
     builder = HierarchyBuilder(model, raw, analyzer)
@@ -395,6 +398,7 @@ def reconstruct(
         "inputs": InputResolver(model).describe(),
         "parameter_count_policy": "Model parameter object identity is unique; checkpoint duplicates and hierarchy references are reported separately",
         "analysis_report": {
+            "architecture_selection": selection["architecture_selection"],
             "mode": "static",
             "forward_executed": False,
             "runtime_trace_available": False,
@@ -433,6 +437,12 @@ def reconstruct(
             "Collapsed child graphs show a representative instance; all source paths and raw parameter records are retained",
         ],
     }
+    if selection["architecture_selection"]["status"] == "checkpoint_selected":
+        metadata["limitations"].append(
+            f"Native architecture {type(model).__name__} is a unique checkpoint-compatible interpretation; "
+            f"the publisher config declares {selection['architecture_selection']['declared_architectures']}. "
+            "Metadata compatibility does not prove publisher task intent or runtime numerical equivalence"
+        )
     evidence = [
         Evidence("hf_config", "direct", config_url, {"revision": revision}),
         Evidence(
@@ -442,6 +452,8 @@ def reconstruct(
             {"shards": shard_audit, "payload_bytes_read": 0},
         ),
         Evidence("native_auto_mapping", "direct", selection["auto_class"], selection),
+        Evidence("checkpoint_architecture_selection", "derived", "unique_complete_native_checkpoint_match",
+                 selection["architecture_selection"]),
         Evidence(
             "parameter_identity",
             "direct",

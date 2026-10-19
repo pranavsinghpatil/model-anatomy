@@ -11,8 +11,8 @@ import torch
 import transformers
 
 from . import limits
-from .artifacts import CheckpointMetadata, SafetensorsMetadata
-from .errors import ArtifactError
+from .artifacts import CheckpointMetadata, InspectionBudgetError, SafetensorsMetadata
+from .errors import ArtifactError, NativeShapeMismatchError
 
 ATTRIBUTES = (
     "in_features",
@@ -50,21 +50,21 @@ def inspect_native_model(
     model: torch.nn.Module, checkpoint: CheckpointMetadata | SafetensorsMetadata
 ) -> dict[str, Any]:
     if len(checkpoint.tensors) > limits.MAX_CHECKPOINT_TENSORS:
-        raise ArtifactError("Checkpoint exceeds the supported tensor record count")
+        raise InspectionBudgetError("Checkpoint exceeds the supported tensor record count")
     module_items = []
     for item in model.named_modules(remove_duplicate=False):
         if len(module_items) >= limits.MAX_NATIVE_MODULE_RECORDS:
-            raise ArtifactError("Native model exceeds the supported module record count")
+            raise InspectionBudgetError("Native model exceeds the supported module record count")
         module_items.append(item)
     named_items = []
     for item in model.named_parameters(remove_duplicate=False):
         if len(named_items) >= limits.MAX_NATIVE_PARAMETER_RECORDS:
-            raise ArtifactError("Native model exceeds the supported parameter record count")
+            raise InspectionBudgetError("Native model exceeds the supported parameter record count")
         named_items.append(item)
     buffer_items = []
     for item in model.named_buffers(remove_duplicate=False):
         if len(buffer_items) >= limits.MAX_NATIVE_BUFFER_RECORDS:
-            raise ArtifactError("Native model exceeds the supported buffer record count")
+            raise InspectionBudgetError("Native model exceeds the supported buffer record count")
         buffer_items.append(item)
     modules: dict[str, dict[str, Any]] = {}
     source_types: dict[str, dict[str, Any]] = {}
@@ -166,7 +166,7 @@ def inspect_native_model(
         stored = sorted({checkpoint_names[alias] for alias in shared if alias in checkpoint_names})
         for tensor_name in stored:
             if tuple(parameter.shape) != checkpoint.tensors[tensor_name].shape:
-                raise ArtifactError(f"Checkpoint/module shape mismatch: {tensor_name}")
+                raise NativeShapeMismatchError(f"Checkpoint/module shape mismatch: {tensor_name}")
         if name == shared[0]:
             if not stored:
                 warnings.append(f"No checkpoint tensor matched model parameter {name}")
@@ -193,14 +193,18 @@ def inspect_native_model(
         for name, buffer in buffer_items
     }
     extras = {}
+    native_buffers = dict(buffer_items)
     for name, tensor in checkpoint.tensors.items():
         if name in checkpoint_names.values():
             continue
         converted = name_conversions.get(name, {}).get("target", name)
         candidates = {converted, prefix + converted, converted.removeprefix(prefix)} & buffers.keys()
         owners = [p for p in candidates if tuple(buffers[p]["shape"]) == tensor.shape]
+        if len({id(native_buffers[path]) for path in owners}) > 1:
+            raise ArtifactError(f"Ambiguous checkpoint/buffer naming for {name}")
         if owners:
-            extras[name] = {"kind": "buffer", "evidence_kind": "reconstructed", "buffer_paths": owners}
+            extras[name] = {"kind": "buffer", "evidence_kind": "reconstructed", "buffer_paths": owners,
+                            "checkpoint_dtype": tensor.dtype}
         elif any(re.search(pattern, name) for pattern in (model._keys_to_ignore_on_load_unexpected or [])):
             extras[name] = {
                 "kind": "legacy_checkpoint_tensor",

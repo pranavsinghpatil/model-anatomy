@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from contextvars import ContextVar
+from copy import deepcopy
 from typing import Any
 
 import torch
@@ -215,13 +216,39 @@ def _task_routing_hint(config: PretrainedConfig) -> str | None:
 
 def instantiate_native(config: PretrainedConfig) -> tuple[torch.nn.Module, dict[str, Any]]:
     auto_class, warnings = select_auto_class(config)
+    return _construct_native(config, auto_class.from_config, auto_class.__name__, warnings)
+
+
+def instantiate_candidate(
+    config: PretrainedConfig, candidate: tuple[str, type, str]
+) -> tuple[torch.nn.Module, dict[str, Any]]:
+    """Resolve one upstream implementation without rewriting the publisher config."""
+    auto_name, auto_class, class_name = candidate
+    mapping = auto_class._model_mapping
+    implementations = mapping[type(config)]
+    if not isinstance(implementations, (tuple, list)):
+        implementations = (implementations,)
+    matches = [implementation for implementation in implementations
+               if implementation.__name__ == class_name]
+    if len(matches) != 1 or not matches[0].__module__.startswith("transformers."):
+        raise UnsupportedModelError("Candidate is not a unique native AutoModel implementation")
+    effective = deepcopy(config)
+    effective.architectures = [class_name]
+    model_class = matches[0]
+    return _construct_native(effective, model_class._from_config, auto_name, [], concrete=True)
+
+
+def _construct_native(
+    config: PretrainedConfig, factory: Any, auto_name: str, warnings: list[str], *, concrete: bool = False
+) -> tuple[torch.nn.Module, dict[str, Any]]:
+    """Keep every construction path under the same no-forward/meta-only guard."""
     # Eager implementation exposes inspectable source; no attention is executed.
     config._attn_implementation = "eager"
     token = _CONSTRUCTING.set(True)
     handle = torch.nn.modules.module.register_module_forward_pre_hook(_forbid_forward)
     try:
         with torch.device("meta"):
-            model = auto_class.from_config(config, trust_remote_code=False)
+            model = factory(config) if concrete else factory(config, trust_remote_code=False)
             model.tie_weights()
             model.eval()
     except (ValueError, TypeError) as exc:
@@ -240,7 +267,7 @@ def instantiate_native(config: PretrainedConfig) -> tuple[torch.nn.Module, dict[
             "Native construction allocated non-meta model tensors; no CPU fallback is allowed"
         )
     return model, {
-        "auto_class": auto_class.__name__,
+        "auto_class": auto_name,
         "model_class": type(model).__name__,
         "trust_remote_code": False,
         "device": "meta",
