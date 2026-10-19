@@ -9,6 +9,7 @@ import type {
   CreateAnalysisRequest,
   QuestionRequest,
   QuestionAnswer,
+  CatalogResponse,
 } from "./contract";
 
 const prefix = "/api/v1";
@@ -107,10 +108,24 @@ export const api = {
   },
   analyses: (signal?: AbortSignal) =>
     request<AnalysesResponse>("/analyses", { signal }),
+  catalog: (q: string, offset = 0, limit = 24, signal?: AbortSignal) => {
+    const params = new URLSearchParams({
+      q,
+      offset: String(offset),
+      limit: String(limit),
+    });
+    return request<CatalogResponse>(`/catalog?${params}`, { signal });
+  },
+  inspectCatalog: (id: string) =>
+    request<AnalysisDetail>(`/catalog/${segment(id)}/inspect`, {
+      method: "POST",
+    }),
   analyze: (model: string) =>
     request<AnalysisDetail>("/analyses", {
       method: "POST",
-      body: JSON.stringify({ model } satisfies CreateAnalysisRequest),
+      body: JSON.stringify({
+        model,
+      } satisfies CreateAnalysisRequest),
     }),
   analysis: (id: string, signal?: AbortSignal) =>
     request<AnalysisDetail>(`/analyses/${segment(id)}`, { signal }),

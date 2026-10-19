@@ -790,3 +790,25 @@ Elevate the model dashboard (`/app/analyses/:id` across `overview`, `architectur
   - `e2e/report-quality.spec.ts`: 9/9 passed.
   - Total: 24/24 E2E tests passing cleanly.
 
+
+## D-056 — Durable database-first inspections and real catalog
+**2026-10-20 — explicit user request**
+
+Inspection requests first consult a durable report registry in Supabase
+PostgreSQL. Compatible saved reports create a new visitor-owned analysis without
+HF resolution or worker execution. Misses inspect real artifacts and save their
+private report plus catalog metadata. Explicit refresh bypasses both caches.
+Identity includes immutable revision, requested selector, engine/schema version,
+and checkpoint context; saved `main` snapshots are not asserted to be current
+upstream revisions.
+
+This supersedes D-053's hardcoded catalog and landing preview facts. Catalog
+search/pagination and exact-record opening use the API. Empty/error states have
+no sample fallback; unknown fields stay unknown. Reports survive visitor-history
+and worker-cache expiry. Browser roles have no direct database or private-bucket
+access. PostgreSQL schema creation is exclusively through reviewed migrations.
+
+Live evidence: SmolLM2-135M completed and persisted at revision
+`93efa2f097d58c2a74874c7e644dbc9b0cee75a2`; repeat requests returned cached reports
+and cross-visitor reads returned 404. See [database catalog](DATABASE_CATALOG.md)
+for runtime evidence and [Supabase setup](SUPABASE_SETUP.md) for operations.

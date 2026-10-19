@@ -316,7 +316,7 @@ test("nested navigation preserves each graph viewport through resize and reduced
   await expect.poll(() => page.evaluate(hasNoHorizontalOverflow)).toBe(true);
 });
 
-test("503 health disables new analysis without hiding recent reports", async ({
+test("worker-offline health still opens a stored inspection", async ({
   page,
   isMobile,
 }) => {
@@ -338,15 +338,18 @@ test("503 health disables new analysis without hiding recent reports", async ({
   await expect(
     page
       .getByRole("status")
-      .filter({ hasText: "New analyses are unavailable" }),
-  ).toContainText("Worker unavailable");
+      .filter({ hasText: "Stored inspection service available" }),
+  ).toContainText("Stored inspection service available");
   await page
     .getByLabel("Hugging Face model", { exact: true })
     .fill("org/model");
   await expect(
     page.getByRole("button", { name: "Inspect model", exact: true }),
-  ).toBeDisabled();
-  await openAnalysis(page);
+  ).toBeEnabled();
+  await page
+    .getByRole("button", { name: "Inspect model", exact: true })
+    .click();
+  await expect(page).toHaveURL(/\/app\/analyses\/job-test\?view=architecture$/);
   await expect(page.getByTestId("graph-canvas")).toBeVisible();
   await expect(page.getByRole("heading", { level: 1 })).toContainText(
     analysisFor().model_id,
@@ -357,12 +360,51 @@ test("503 health disables new analysis without hiding recent reports", async ({
     page.getByText("AI service unavailable", { exact: true }),
   ).toBeVisible();
   expect(requests.filter((request) => request.method === "POST")).toHaveLength(
-    0,
+    1,
   );
+  expect(requests.find((request) => request.method === "POST")?.body).toEqual({
+    model: "org/model",
+  });
   expect(requests.some((request) => request.path === "/health")).toBe(true);
   expect(
     requests.some((request) => request.path.includes("capabilities")),
   ).toBe(false);
+});
+
+test("worker-offline cache miss returns the service error without a fallback", async ({
+  page,
+}) => {
+  const requests = await mockService(page, {
+    postStatus: 503,
+    postError: "worker_unavailable",
+    health: {
+      status: "degraded",
+      api_version: "v1",
+      checks: { database: true, storage: true, worker: false },
+      analysis_available: false,
+      ai_available: false,
+      storage_backend: "local",
+      reason: "Worker unavailable",
+    },
+  });
+  await page.goto("/app");
+  await page
+    .getByLabel("Hugging Face model", { exact: true })
+    .fill("org/cache-miss");
+  await expect(
+    page.getByRole("button", { name: "Inspect model", exact: true }),
+  ).toBeEnabled();
+  await page
+    .getByRole("button", { name: "Inspect model", exact: true })
+    .click();
+  await expect(page.getByRole("alert")).toContainText(
+    "Analysis could not be started",
+  );
+  await expect(page).toHaveURL(/\/app$/);
+  await expect(page.getByTestId("graph-canvas")).toHaveCount(0);
+  expect(requests.find((request) => request.method === "POST")?.body).toEqual({
+    model: "org/cache-miss",
+  });
 });
 
 test("new visitor starts with an empty workspace", async ({
@@ -431,8 +473,8 @@ for (const healthError of ["network", "invalid"] as const)
     await expect(
       page
         .getByRole("status")
-        .filter({ hasText: "New analyses are unavailable" }),
-    ).toContainText("New analyses are unavailable");
+        .filter({ hasText: "Stored inspections are unavailable" }),
+    ).toContainText("Stored inspections are unavailable");
     await page
       .getByLabel("Hugging Face model", { exact: true })
       .fill("org/model");

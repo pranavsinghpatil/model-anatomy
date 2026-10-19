@@ -1,242 +1,116 @@
-import { useState, useMemo } from "react";
+import { useEffect, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "react-router-dom";
 import {
   ArrowRight,
   Search,
   Copy,
   Check,
-  Layers,
-  Cpu,
-  Database,
   ExternalLink,
-  Sparkles,
   SlidersHorizontal,
 } from "lucide-react";
+import { ApiError, api, retryQuery } from "../api/client";
+import type { CatalogItem } from "../api/contract";
 import { DitherBackground } from "../components/DitherBackground";
 import { EntryHeader, PageFooter } from "./Entry";
 import "./entry.css";
 
-export interface CatalogModelItem {
-  id: string;
-  name: string;
-  family: string;
-  category: "decoder" | "sliding-window" | "encoder";
-  params: string;
-  layers: number;
-  heads: number;
-  kvHeads?: number;
-  ctx: string;
-  hiddenDim: number;
-  attention: string;
-  posEncoding: string;
-  description: string;
-  architectureTag: string;
-  badge?: string;
+const pageSize = 24;
+function displayed(value: number | null | undefined) {
+  return value == null ? "Unknown" : value.toLocaleString();
 }
-
-export const catalogModels: CatalogModelItem[] = [
-  {
-    id: "HuggingFaceTB/SmolLM2-135M",
-    name: "SmolLM2 · 135M",
-    family: "Llama 3.2",
-    category: "decoder",
-    params: "134.5M",
-    layers: 30,
-    heads: 9,
-    kvHeads: 3,
-    ctx: "2,048",
-    hiddenDim: 576,
-    attention: "GQA (3:1 Query-to-KV)",
-    posEncoding: "RoPE (theta = 500,000)",
-    description: "Ultra-compact decoder from HuggingFaceTB designed for fast local reasoning with genuine Llama 3.2 block architecture.",
-    architectureTag: "LlamaForCausalLM",
-    badge: "Recommended",
-  },
-  {
-    id: "HuggingFaceTB/SmolLM2-360M",
-    name: "SmolLM2 · 360M",
-    family: "Llama 3.2",
-    category: "decoder",
-    params: "362M",
-    layers: 32,
-    heads: 15,
-    kvHeads: 5,
-    ctx: "2,048",
-    hiddenDim: 960,
-    attention: "GQA (3:1 Query-to-KV)",
-    posEncoding: "RoPE (theta = 500,000)",
-    description: "Mid-scale SmolLM2 architecture trained on 4 trillion tokens, balancing parameter density with multi-step reasoning capabilities.",
-    architectureTag: "LlamaForCausalLM",
-  },
-  {
-    id: "meta-llama/Llama-3.2-1B",
-    name: "Llama 3.2 · 1B",
-    family: "Modern Decoder",
-    category: "decoder",
-    params: "1.23B",
-    layers: 16,
-    heads: 32,
-    kvHeads: 8,
-    ctx: "8,192",
-    hiddenDim: 2048,
-    attention: "GQA (4:1 Query-to-KV)",
-    posEncoding: "RoPE (theta = 500,000)",
-    description: "Meta's flagship lightweight decoder featuring grouped-query attention and expanded 8k context window support.",
-    architectureTag: "LlamaForCausalLM",
-    badge: "Popular",
-  },
-  {
-    id: "mistralai/Mistral-7B-v0.1",
-    name: "Mistral · 7B",
-    family: "Sliding Window",
-    category: "sliding-window",
-    params: "7.24B",
-    layers: 32,
-    heads: 32,
-    kvHeads: 8,
-    ctx: "32,768",
-    hiddenDim: 4096,
-    attention: "Sliding Window Attention (4096 window) + GQA",
-    posEncoding: "RoPE (theta = 10,000)",
-    description: "Pioneering sliding window attention architecture achieving high decoding throughput across 32k token contexts.",
-    architectureTag: "MistralForCausalLM",
-  },
-  {
-    id: "Qwen/Qwen2.5-0.5B",
-    name: "Qwen 2.5 · 0.5B",
-    family: "Dense Transformer",
-    category: "decoder",
-    params: "490M",
-    layers: 24,
-    heads: 14,
-    kvHeads: 2,
-    ctx: "32,768",
-    hiddenDim: 896,
-    attention: "GQA (7:1 Query-to-KV) + Dual-chunk",
-    posEncoding: "RoPE + SwiGLU MLP",
-    description: "Alibaba's dense transformer optimized with SwiGLU non-linearities and 32k context capability in under 500M weights.",
-    architectureTag: "Qwen2ForCausalLM",
-  },
-  {
-    id: "openai-community/gpt2",
-    name: "GPT-2 · Small",
-    family: "Causal Decoder",
-    category: "decoder",
-    params: "124.4M",
-    layers: 12,
-    heads: 12,
-    kvHeads: 12,
-    ctx: "1,024",
-    hiddenDim: 768,
-    attention: "Full MHA (1:1 Query-to-KV)",
-    posEncoding: "Learned Absolute Position Embeddings",
-    description: "The classic foundation causal transformer with 12 transformer decoder blocks and pre-LayerNorm residual flow.",
-    architectureTag: "GPT2LMHeadModel",
-  },
-  {
-    id: "google-bert/bert-base-uncased",
-    name: "BERT · Base",
-    family: "Bidirectional Encoder",
-    category: "encoder",
-    params: "109.5M",
-    layers: 12,
-    heads: 12,
-    kvHeads: 12,
-    ctx: "512",
-    hiddenDim: 768,
-    attention: "Full Bidirectional Self-Attention",
-    posEncoding: "Learned Absolute Position Embeddings",
-    description: "Google's landmark masked language model encoder with bidirectional token representations across 12 layers.",
-    architectureTag: "BertForMaskedLM",
-  },
-  {
-    id: "distilbert/distilbert-base-uncased",
-    name: "DistilBERT",
-    family: "Compact Encoder",
-    category: "encoder",
-    params: "66.4M",
-    layers: 6,
-    heads: 12,
-    kvHeads: 12,
-    ctx: "512",
-    hiddenDim: 768,
-    attention: "Distilled Bidirectional Attention",
-    posEncoding: "Learned Position Embeddings",
-    description: "Knowledge-distilled version of BERT retaining 97% of language understanding with 40% fewer parameters and 6 layers.",
-    architectureTag: "DistilBertForMaskedLM",
-  },
-];
-
-type CategoryFilter = "all" | "decoder" | "sliding-window" | "encoder";
+function statusLabel(status: CatalogItem["status"]) {
+  return status === "completed"
+    ? "Architecture reconstructed"
+    : status === "partial"
+      ? "Partial architecture"
+      : "Artifacts inspected";
+}
 
 export default function Catalog() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeCategory, setActiveCategory] = useState<CategoryFilter>("all");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [offset, setOffset] = useState(0);
 
-  const filteredModels = useMemo(() => {
-    return catalogModels.filter((model) => {
-      const matchesCategory =
-        activeCategory === "all" || model.category === activeCategory;
-      const q = searchQuery.toLowerCase().trim();
-      const matchesSearch =
-        !q ||
-        model.name.toLowerCase().includes(q) ||
-        model.id.toLowerCase().includes(q) ||
-        model.family.toLowerCase().includes(q) ||
-        model.architectureTag.toLowerCase().includes(q) ||
-        model.description.toLowerCase().includes(q);
-      return matchesCategory && matchesSearch;
-    });
-  }, [searchQuery, activeCategory]);
+  useEffect(() => {
+    const timer = window.setTimeout(
+      () => setDebouncedQuery(searchQuery.trim()),
+      300,
+    );
+    return () => window.clearTimeout(timer);
+  }, [searchQuery]);
+  useEffect(() => setOffset(0), [debouncedQuery]);
 
-  const handleCopyId = (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    navigator.clipboard.writeText(id);
+  const catalog = useQuery({
+    queryKey: ["catalog", debouncedQuery, offset],
+    queryFn: ({ signal }) =>
+      api.catalog(debouncedQuery, offset, pageSize, signal),
+    retry: retryQuery,
+    refetchOnWindowFocus: true,
+  });
+  const inspect = useMutation({
+    mutationFn: (id: string) => api.inspectCatalog(id),
+    onSuccess: async (analysis) => {
+      await queryClient.invalidateQueries({ queryKey: ["catalog"] });
+      navigate(`/app/analyses/${encodeURIComponent(analysis.id)}/architecture`);
+    },
+  });
+
+  const copyId = async (id: string) => {
+    await navigator.clipboard.writeText(id);
     setCopiedId(id);
-    setTimeout(() => setCopiedId(null), 2000);
+    window.setTimeout(() => setCopiedId(null), 2000);
   };
-
-  const handleInspect = (modelId: string) => {
-    navigate(`/app?model=${encodeURIComponent(modelId)}`);
+  const response = catalog.data ?? {
+    models: [],
+    total: 0,
+    offset,
+    limit: pageSize,
   };
+  const models = response?.models ?? [];
+  const errorText =
+    catalog.error instanceof ApiError
+      ? catalog.error.message
+      : "Cannot reach the catalog service.";
 
   return (
     <div className="entry-page">
       <DitherBackground />
       <EntryHeader />
-
       <main id="main" tabIndex={-1} className="catalog-page-main">
-        {/* Catalog Hero Banner */}
         <header className="catalog-hero-section">
           <div className="catalog-hero-inner">
             <div className="catalog-eyebrow-badge">
               <span className="entry-badge-dot" />
-              <span>Model Anatomy Architecture Registry</span>
-              <span className="badge-ver">{catalogModels.length} Models Verified</span>
+              <span>Stored Model Inspections</span>
             </div>
             <h1 className="catalog-page-title">
-              Verified Model <span className="hero-highlight-amber">Catalog</span>
+              Model <span className="hero-highlight-amber">Catalog</span>
             </h1>
             <p className="catalog-page-subtitle">
-              Pre-verified open-weight architectures across transformer decoders, sliding-window attention, and bidirectional encoders. Inspect tensor dimensions, layer ASTs, and SafeTensors headers instantly without downloading weights.
+              Models appear here after a real inspection is saved. Listed
+              dimensions and status come from stored inspection records.
             </p>
           </div>
         </header>
 
-        {/* Filters and Search Bar */}
-        <section className="catalog-toolbar-section" aria-label="Catalog filters">
+        <section
+          className="catalog-toolbar-section"
+          aria-label="Catalog search"
+        >
           <div className="catalog-toolbar-inner">
             <div className="catalog-search-box">
               <Search size={16} className="search-icon" aria-hidden="true" />
               <input
-                type="text"
+                type="search"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search by model name, family, or Hugging Face ID..."
+                placeholder="Search stored model IDs..."
                 className="catalog-search-input"
-                aria-label="Filter model catalog"
+                aria-label="Search stored model catalog"
               />
               {searchQuery && (
                 <button
@@ -249,166 +123,213 @@ export default function Catalog() {
                 </button>
               )}
             </div>
-
-            <div className="catalog-filter-tabs" role="tablist" aria-label="Model category">
-              <button
-                type="button"
-                role="tab"
-                aria-selected={activeCategory === "all"}
-                className={`filter-tab ${activeCategory === "all" ? "is-active" : ""}`}
-                onClick={() => setActiveCategory("all")}
-              >
-                All Models ({catalogModels.length})
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={activeCategory === "decoder"}
-                className={`filter-tab ${activeCategory === "decoder" ? "is-active" : ""}`}
-                onClick={() => setActiveCategory("decoder")}
-              >
-                Decoder-Only ({catalogModels.filter((m) => m.category === "decoder").length})
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={activeCategory === "sliding-window"}
-                className={`filter-tab ${activeCategory === "sliding-window" ? "is-active" : ""}`}
-                onClick={() => setActiveCategory("sliding-window")}
-              >
-                Sliding Window ({catalogModels.filter((m) => m.category === "sliding-window").length})
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={activeCategory === "encoder"}
-                className={`filter-tab ${activeCategory === "encoder" ? "is-active" : ""}`}
-                onClick={() => setActiveCategory("encoder")}
-              >
-                Encoder ({catalogModels.filter((m) => m.category === "encoder").length})
-              </button>
-            </div>
           </div>
         </section>
 
-        {/* Model Cards Grid */}
-        <section className="catalog-models-section" aria-labelledby="catalog-list-heading">
+        <section
+          className="catalog-models-section"
+          aria-labelledby="catalog-list-heading"
+        >
           <div className="catalog-models-inner">
             <h2 id="catalog-list-heading" className="sr-only">
-              Verified Model Architectures List
+              Stored model inspections
             </h2>
-
-            {filteredModels.length === 0 ? (
+            {catalog.isPending ? (
+              <div className="catalog-empty-state" role="status">
+                <p>Loading stored inspections…</p>
+              </div>
+            ) : null}
+            {catalog.isError ? (
+              <div className="catalog-empty-state" role="alert">
+                <h3>Could not load the model catalog</h3>
+                <p>{errorText}</p>
+                <button
+                  type="button"
+                  className="catalog-empty-btn"
+                  onClick={() => void catalog.refetch()}
+                >
+                  Retry
+                </button>
+              </div>
+            ) : null}
+            {catalog.isSuccess && models.length === 0 ? (
               <div className="catalog-empty-state">
-                <SlidersHorizontal size={32} className="empty-icon" />
-                <h3>No verified models match &ldquo;{searchQuery}&rdquo;</h3>
+                <SlidersHorizontal
+                  size={32}
+                  className="empty-icon"
+                  aria-hidden="true"
+                />
+                <h3>
+                  {response.total === 0
+                    ? "No inspections are stored yet"
+                    : `No stored models match “${debouncedQuery}”`}
+                </h3>
                 <p>
-                  You can inspect any open-weight model directly by pasting its Hugging Face repository URL on the home inspection page.
+                  {response.total === 0
+                    ? "Inspect a Hugging Face model to save its real artifact facts here."
+                    : "Try another model ID, or inspect a model from the home page."}
                 </p>
                 <Link to="/#submit-title" className="catalog-empty-btn">
-                  <span>Inspect custom repository</span>
+                  <span>Inspect a model</span>
                   <ArrowRight size={14} />
                 </Link>
               </div>
-            ) : (
-              <div className="catalog-cards-grid">
-                {filteredModels.map((item) => (
-                  <article key={item.id} className="catalog-detail-card">
-                    <div className="card-top-row">
-                      <div className="card-tags-left">
-                        <span className="card-family-tag">{item.family}</span>
-                        {item.badge && <span className="card-badge-tag">{item.badge}</span>}
+            ) : null}
+            {models.length > 0 ? (
+              <>
+                <p className="catalog-page-subtitle" aria-live="polite">
+                  Showing {response.offset + 1}–
+                  {response.offset + models.length} of {response.total} stored
+                  inspections
+                </p>
+                <div className="catalog-cards-grid">
+                  {models.map((item) => (
+                    <article key={item.id} className="catalog-detail-card">
+                      <div className="card-top-row">
+                        <span className="card-family-tag">
+                          {statusLabel(item.status)}
+                        </span>
+                        <span className="card-params-tag">
+                          {item.parameter_count == null
+                            ? "Parameter count unknown"
+                            : `${displayed(item.parameter_count)} parameters`}
+                        </span>
                       </div>
-                      <span className="card-params-tag">{item.params}</span>
-                    </div>
-
-                    <div className="card-heading-group">
-                      <h3 className="card-model-title">{item.name}</h3>
-                      <div className="card-id-row">
-                        <code className="card-repo-id">{item.id}</code>
+                      <div className="card-heading-group">
+                        <h3 className="card-model-title">{item.model_id}</h3>
+                        <div className="card-id-row">
+                          <code className="card-repo-id">
+                            Revision {item.revision}
+                          </code>
+                          <button
+                            type="button"
+                            className="copy-id-btn"
+                            onClick={() => void copyId(item.model_id)}
+                            title="Copy repository ID"
+                            aria-label={`Copy repository ID for ${item.model_id}`}
+                          >
+                            {copiedId === item.model_id ? (
+                              <Check size={13} className="copied-check" />
+                            ) : (
+                              <Copy size={13} />
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                      <div className="card-specs-matrix">
+                        <div className="spec-metric">
+                          <span className="metric-label">Layers</span>
+                          <strong className="metric-val">
+                            {displayed(item.dimensions.layers)}
+                          </strong>
+                        </div>
+                        <div className="spec-metric">
+                          <span className="metric-label">Heads</span>
+                          <strong className="metric-val">
+                            {Array.isArray(item.dimensions.heads)
+                              ? item.dimensions.heads.map(displayed).join(" / ")
+                              : displayed(item.dimensions.heads)}
+                          </strong>
+                        </div>
+                        <div className="spec-metric">
+                          <span className="metric-label">Hidden</span>
+                          <strong className="metric-val">
+                            {displayed(item.dimensions.hidden)}
+                          </strong>
+                        </div>
+                        <div className="spec-metric">
+                          <span className="metric-label">Vocabulary</span>
+                          <strong className="metric-val">
+                            {displayed(item.dimensions.vocabulary)}
+                          </strong>
+                        </div>
+                      </div>
+                      <div className="card-technical-details">
+                        <div className="tech-row">
+                          <span className="tech-label">Architecture:</span>
+                          <span className="tech-value">
+                            {item.architecture ?? "Unknown"}
+                          </span>
+                        </div>
+                        <div className="tech-row">
+                          <span className="tech-label">Inspection:</span>
+                          <span className="tech-value">
+                            {new Date(item.inspected_at).toLocaleString()}
+                          </span>
+                        </div>
+                        <div className="tech-row">
+                          <span className="tech-label">Artifact:</span>
+                          <code className="tech-class">
+                            {item.artifact}
+                            {item.explicit_artifact ? " · selected" : ""}
+                          </code>
+                        </div>
+                      </div>
+                      <div className="card-footer-actions">
                         <button
                           type="button"
-                          className="copy-id-btn"
-                          onClick={(e) => handleCopyId(item.id, e)}
-                          title="Copy repository ID"
-                          aria-label={`Copy repository ID for ${item.name}`}
+                          className="card-inspect-btn"
+                          disabled={inspect.isPending}
+                          onClick={() => inspect.mutate(item.id)}
+                          aria-label={`Open stored inspection for ${item.model_id}`}
                         >
-                          {copiedId === item.id ? (
-                            <Check size={13} className="copied-check" />
-                          ) : (
-                            <Copy size={13} />
-                          )}
+                          <span>
+                            {inspect.isPending
+                              ? "Opening inspection…"
+                              : "Open Inspection"}
+                          </span>
+                          <ArrowRight size={14} />
                         </button>
+                        <a
+                          href={`https://huggingface.co/${encodeURIComponent(item.model_id).replaceAll("%2F", "/")}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="card-hf-btn"
+                          title="View repository on Hugging Face"
+                          aria-label={`Open ${item.model_id} on Hugging Face`}
+                        >
+                          <ExternalLink size={14} />
+                        </a>
                       </div>
-                    </div>
-
-                    <p className="card-description">{item.description}</p>
-
-                    <div className="card-specs-matrix">
-                      <div className="spec-metric">
-                        <span className="metric-label">Layers</span>
-                        <strong className="metric-val">{item.layers}</strong>
-                      </div>
-                      <div className="spec-metric">
-                        <span className="metric-label">Heads (Q/KV)</span>
-                        <strong className="metric-val">
-                          {item.heads} {item.kvHeads ? `/ ${item.kvHeads}` : ""}
-                        </strong>
-                      </div>
-                      <div className="spec-metric">
-                        <span className="metric-label">Context</span>
-                        <strong className="metric-val">{item.ctx}</strong>
-                      </div>
-                      <div className="spec-metric">
-                        <span className="metric-label">Hidden Dim</span>
-                        <strong className="metric-val">{item.hiddenDim}</strong>
-                      </div>
-                    </div>
-
-                    <div className="card-technical-details">
-                      <div className="tech-row">
-                        <span className="tech-label">Attention:</span>
-                        <span className="tech-value">{item.attention}</span>
-                      </div>
-                      <div className="tech-row">
-                        <span className="tech-label">Encoding:</span>
-                        <span className="tech-value">{item.posEncoding}</span>
-                      </div>
-                      <div className="tech-row">
-                        <span className="tech-label">AST Class:</span>
-                        <code className="tech-class">{item.architectureTag}</code>
-                      </div>
-                    </div>
-
-                    <div className="card-footer-actions">
-                      <button
-                        type="button"
-                        className="card-inspect-btn"
-                        onClick={() => handleInspect(item.id)}
-                        aria-label={`Inspect ${item.name} architecture`}
-                      >
-                        <span>Inspect Architecture</span>
-                        <ArrowRight size={14} />
-                      </button>
-                      <a
-                        href={`https://huggingface.co/${item.id}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="card-hf-btn"
-                        title="View repository on Hugging Face"
-                        aria-label={`Open ${item.name} on Hugging Face`}
-                      >
-                        <ExternalLink size={14} />
-                      </a>
-                    </div>
-                  </article>
-                ))}
+                    </article>
+                  ))}
+                </div>
+                <div className="catalog-pagination" aria-label="Catalog pages">
+                  <button
+                    type="button"
+                    className="catalog-empty-btn"
+                    disabled={offset === 0}
+                    onClick={() => setOffset(Math.max(0, offset - pageSize))}
+                  >
+                    Previous
+                  </button>
+                  <button
+                    type="button"
+                    className="catalog-empty-btn"
+                    disabled={offset + models.length >= response.total}
+                    onClick={() => setOffset(offset + pageSize)}
+                  >
+                    Next
+                  </button>
+                </div>
+              </>
+            ) : null}
+            {inspect.isError && (
+              <div role="alert" className="catalog-empty-state">
+                <h3>Could not open this stored inspection</h3>
+                <p>{inspect.error.message}</p>
+                <button
+                  type="button"
+                  className="catalog-empty-btn"
+                  onClick={() => inspect.reset()}
+                >
+                  Dismiss
+                </button>
               </div>
             )}
           </div>
         </section>
       </main>
-
       <PageFooter />
     </div>
   );

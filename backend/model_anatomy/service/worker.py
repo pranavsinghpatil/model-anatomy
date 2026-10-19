@@ -72,7 +72,9 @@ def execute_job(service: JobService, job_id: str, owner: str, client, reconstruc
         reference.filename,
         reference.explicit_filename,
     )
-    result = service.cached_result(key)
+    result = None if job.refresh_requested else service.cached_result(
+        key, reference.model_id, revision, reference.filename, reference.explicit_filename
+    )
     if result is not None:
         service.finish(job_id, owner, result, key, cached=True)
         return
@@ -104,6 +106,9 @@ def child_main(settings: Settings, job_id: str, owner: str) -> None:
             return engine_reconstruct(*args, **kwargs, allow_artifact_inspection=True)
 
         with requests.Session() as session:
+            # HF metadata requests are public and must never inherit credentials from
+            # ~/.netrc, proxy environment variables, or a user's global requests config.
+            session.trust_env = False
             execute_job(service, job_id, owner, MetadataClient(session), reconstruct, parse_reference)
     except Exception as exc:  # noqa: BLE001 - record unexpected child failures without leaking secrets
         code, message, status, transient = classify_failure(exc)

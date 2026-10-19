@@ -62,6 +62,7 @@ class Job(Base):
     cancel_requested: Mapped[bool] = mapped_column(Boolean, default=False)
     blob_digest: Mapped[str | None] = mapped_column(String(64), index=True)
     cached: Mapped[bool] = mapped_column(Boolean, default=False)
+    refresh_requested: Mapped[bool] = mapped_column(Boolean, default=False)
     summary: Mapped[dict] = mapped_column(JSON, default=dict)
     error: Mapped[dict | None] = mapped_column(JSON)
 
@@ -71,6 +72,23 @@ class CacheEntry(Base):
     key: Mapped[str] = mapped_column(String(64), primary_key=True)
     blob_digest: Mapped[str] = mapped_column(String(64), index=True)
     expires_at: Mapped[float] = mapped_column(Float, index=True)
+
+
+class ModelReport(Base):
+    """Durable registry identity for a successfully inspected private report blob."""
+    __tablename__ = "model_reports"
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    cache_identity: Mapped[str] = mapped_column(String(64), index=True)
+    model_id: Mapped[str] = mapped_column(String(256), index=True)
+    request_revision: Mapped[str] = mapped_column(String(256), index=True)
+    revision: Mapped[str] = mapped_column(String(40), index=True)
+    engine_version: Mapped[str] = mapped_column(String(128))
+    schema_version: Mapped[str] = mapped_column(String(16))
+    artifact: Mapped[str] = mapped_column(String(512))
+    explicit_artifact: Mapped[bool] = mapped_column(Boolean)
+    blob_digest: Mapped[str] = mapped_column(String(64), index=True)
+    summary: Mapped[dict] = mapped_column(JSON)
+    inspected_at: Mapped[float] = mapped_column(Float, index=True)
 
 
 class Blob(Base):
@@ -100,11 +118,15 @@ class Database:
                 connection.execute("PRAGMA journal_mode=WAL")
 
     def initialize(self, *, create: bool) -> None:
-        if create:
+        if create and self.sqlite:
             Base.metadata.create_all(self.engine)
             # Preserve early local databases created before retention fields were introduced.
             inspector = inspect(self.engine)
             with self.engine.begin() as connection:
+                if "refresh_requested" not in {c["name"] for c in inspector.get_columns("analysis_jobs")}:
+                    connection.execute(
+                        text("ALTER TABLE analysis_jobs ADD COLUMN refresh_requested BOOLEAN NOT NULL DEFAULT FALSE")
+                    )
                 if "last_seen_at" not in {c["name"] for c in inspector.get_columns("guests")}:
                     connection.execute(
                         text("ALTER TABLE guests ADD COLUMN last_seen_at FLOAT NOT NULL DEFAULT 0")

@@ -37,6 +37,7 @@ class CreateAnalysis(BaseModel):
         max_length=512,
         description="Hugging Face repository ID or HTTPS URL to inspect.",
     )
+    refresh: bool = False
 
 
 class Question(BaseModel):
@@ -69,6 +70,28 @@ class Dimensions(BaseModel):
     heads: int | list[int] | None = None
     layers: int | None = None
     vocabulary: int | None = None
+
+
+class CatalogItem(BaseModel):
+    id: str
+    model_id: str
+    revision: str
+    architecture: str | None
+    status: Literal["completed", "partial", "inspected"]
+    parameter_count: int | None
+    dimensions: Dimensions
+    engine_version: str
+    schema_version: str
+    artifact: str
+    explicit_artifact: bool
+    inspected_at: str
+
+
+class CatalogResponse(BaseModel):
+    models: list[CatalogItem]
+    total: int
+    offset: int
+    limit: int
 
 
 class AnalysisQuality(BaseModel):

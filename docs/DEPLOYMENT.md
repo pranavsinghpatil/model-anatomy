@@ -17,6 +17,8 @@ API key is needed for model inspection. Then create the cloud dependencies:
 2. Create a Supabase project and its private storage bucket as described below.
    The database URL and server-only key belong in the private `infra/.env`, not
    in chat, Git or frontend settings.
+   The existing project and local Supabase runtime are verified; see
+   [Supabase setup](SUPABASE_SETUP.md) and [database catalog](DATABASE_CATALOG.md).
 3. Choose an approved hosting budget and HTTPS domain. The CPU VM is the current
    deployment target, but its credit/billing coverage must be checked separately.
 4. Run the build, migration, preflight and end-to-end checks below. A configured

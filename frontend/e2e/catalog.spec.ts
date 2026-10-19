@@ -1,87 +1,168 @@
 import { expect, test } from "@playwright/test";
-import { mockService } from "./service";
+import { analysisFor, mockService } from "./service";
 
-test("catalog page renders model cards, filters, search, and routes to inspection", async ({
+const items = [
+  {
+    id: "registry-smol",
+    model_id: "HuggingFaceTB/SmolLM2-135M",
+    revision: "abc123",
+    architecture: "LlamaForCausalLM",
+    status: "completed" as const,
+    parameter_count: 134515008,
+    dimensions: { hidden: 576, heads: [9, 3], layers: 30, vocabulary: null },
+    engine_version: "engine-1",
+    schema_version: "1",
+    artifact: "model.safetensors",
+    explicit_artifact: false,
+    inspected_at: "2026-10-19T10:00:00Z",
+  },
+  {
+    id: "registry-unknown",
+    model_id: "org/custom-model",
+    revision: "def456",
+    architecture: null,
+    status: "inspected" as const,
+    parameter_count: null,
+    dimensions: { hidden: null, heads: null, layers: null, vocabulary: null },
+    engine_version: "engine-1",
+    schema_version: "1",
+    artifact: "weights.bin",
+    explicit_artifact: true,
+    inspected_at: "2026-10-18T10:00:00Z",
+  },
+];
+
+async function catalogApi(
+  page: import("@playwright/test").Page,
+  options: { empty?: boolean; failOnce?: boolean; paginated?: boolean } = {},
+) {
+  await mockService(page);
+  let failures = options.failOnce ? 50 : 0;
+  const requests: string[] = [];
+  await page.route("**/api/v1/catalog**", async (route) => {
+    const request = route.request();
+    const url = new URL(request.url());
+    requests.push(`${request.method()} ${url.pathname}${url.search}`);
+    if (failures) {
+      failures--;
+      return route.fulfill({
+        status: 503,
+        contentType: "application/json",
+        body: JSON.stringify({
+          error: { code: "unavailable", message: "Try again" },
+        }),
+      });
+    }
+    if (url.pathname.endsWith("/inspect"))
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(analysisFor("saved-analysis")),
+      });
+    const q = url.searchParams.get("q")?.toLowerCase() ?? "";
+    const filtered = (options.empty ? [] : items).filter((item) =>
+      item.model_id.toLowerCase().includes(q),
+    );
+    const offset = Number(url.searchParams.get("offset") ?? 0);
+    const limit = Number(url.searchParams.get("limit") ?? 24);
+    return route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        models: filtered.slice(offset, offset + limit),
+        total: options.paginated && !q ? 30 : filtered.length,
+        offset,
+        limit,
+      }),
+    });
+  });
+  return requests;
+}
+
+test("catalog renders saved API facts and opens the selected registry record", async ({
   page,
 }) => {
-  await mockService(page);
-
-  // 1. Visit catalog page
+  const requests = await catalogApi(page);
   await page.goto("/catalog");
-
-  // Verify page title and header
   await expect(
-    page.getByRole("heading", { name: "Verified Model Catalog" }),
-  ).toBeVisible();
-
-  // Verify navbar highlights Catalog on desktop viewports
-  const isMobile = (page.viewportSize()?.width ?? 1000) <= 820;
-  if (!isMobile) {
-    const catalogNav = page.getByRole("link", { name: "Catalog", exact: true });
-    await expect(catalogNav).toBeVisible();
-    await expect(catalogNav).toHaveAttribute("aria-current", "page");
-  }
-
-  // Verify cards grid renders all initial 8 models
-  const cards = page.locator(".catalog-detail-card");
-  await expect(cards).toHaveCount(8);
-
-  // 2. Test category filtering: Sliding Window
-  const slidingWindowTab = page.getByRole("tab", { name: /Sliding Window/ });
-  await slidingWindowTab.click();
-  await expect(page.locator(".catalog-detail-card")).toHaveCount(1);
-  await expect(page.getByRole("heading", { name: "Mistral · 7B" })).toBeVisible();
-
-  // Test category filtering: Decoder-Only
-  const decoderTab = page.getByRole("tab", { name: /Decoder-Only/ });
-  await decoderTab.click();
-  await expect(page.locator(".catalog-detail-card")).toHaveCount(5);
-
-  // Reset to All Models
-  const allTab = page.getByRole("tab", { name: /All Models/ });
-  await allTab.click();
-  await expect(page.locator(".catalog-detail-card")).toHaveCount(8);
-
-  // 3. Test Search filtering
-  const searchInput = page.getByPlaceholder(
-    "Search by model name, family, or Hugging Face ID...",
-  );
-  await searchInput.fill("bert");
+    page.getByRole("heading", { name: "Model Catalog" }),
+  ).toBeVisible({ timeout: 25_000 });
   await expect(page.locator(".catalog-detail-card")).toHaveCount(2);
-  await expect(page.getByRole("heading", { name: "BERT · Base" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "DistilBERT" })).toBeVisible();
-
-  // Clear search via clear button
-  await page.getByLabel("Clear search query").click();
-  await expect(page.locator(".catalog-detail-card")).toHaveCount(8);
-
-  // 4. Test inspecting a model from catalog
-  const firstCardInspect = page
-    .locator(".catalog-detail-card")
-    .first()
-    .getByRole("button", { name: /Inspect.*architecture/i });
-  await firstCardInspect.click();
-
-  // Should navigate to /app with model parameter in query and pre-filled in input
-  await expect(page).toHaveURL(/\/app\?model=HuggingFaceTB%2FSmolLM2-135M/);
+  await expect(page.getByText("134,515,008 parameters")).toBeVisible();
   await expect(
-    page.getByLabel("Hugging Face model", { exact: true }),
-  ).toHaveValue("HuggingFaceTB/SmolLM2-135M");
+    page.locator(".catalog-detail-card").nth(0).locator(".spec-metric").nth(3),
+  ).toContainText("Unknown");
+  await expect(page.getByText("org/custom-model")).toBeVisible();
 
-  // 5. Test landing page catalog banner link
-  await page.goto("/");
-  const browseCatalogBtn = page.getByRole("link", {
-    name: "Browse Full Catalog",
-  });
-  await expect(browseCatalogBtn).toBeVisible();
-  await browseCatalogBtn.click();
+  await page
+    .getByRole("searchbox", { name: "Search stored model catalog" })
+    .fill("custom");
+  await expect(page.locator(".catalog-detail-card")).toHaveCount(1);
+  await expect(
+    page.getByText("Unknown", { exact: true }).first(),
+  ).toBeVisible();
+  await page
+    .getByRole("button", {
+      name: "Open stored inspection for org/custom-model",
+    })
+    .click();
+  await expect(page).toHaveURL(
+    /\/app\/analyses\/saved-analysis\/architecture$/,
+  );
+  expect(requests).toContain("POST /api/v1/catalog/registry-unknown/inspect");
+});
+
+test("catalog supports server pagination and shows honest empty state", async ({
+  page,
+}) => {
+  const requests = await catalogApi(page, { paginated: true });
+  await page.goto("/catalog");
+  await page.getByRole("button", { name: "Next" }).click();
   await expect(page).toHaveURL(/\/catalog$/);
+  expect(requests.some((request) => request.includes("offset=24"))).toBe(true);
+  await page
+    .getByRole("searchbox", { name: "Search stored model catalog" })
+    .fill("absent");
+  await expect(
+    page.getByRole("heading", { name: /No stored models match/ }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: "Inspect a model" }),
+  ).toBeVisible();
+});
 
-  // 6. Test rich 4-column footer
-  const footer = page.locator(".entry-footer");
-  await expect(footer).toBeVisible();
-  await expect(footer.getByText("Inspection Views")).toBeVisible();
-  await expect(footer.getByRole("heading", { name: "Model Registry" })).toBeVisible();
-  await expect(footer.getByText("Provenance")).toBeVisible();
-  await expect(footer.getByRole("link", { name: "Back to top of page" })).toBeVisible();
+test("catalog retries API errors and explains a truly empty database", async ({
+  page,
+}) => {
+  await catalogApi(page, { failOnce: true });
+  await page.goto("/catalog");
+  await expect(
+    page.getByRole("heading", { name: "Could not load the model catalog" }),
+  ).toBeVisible();
+  await page.unrouteAll();
+  await catalogApi(page);
+  await page.getByRole("button", { name: "Retry" }).click();
+  await expect(page.locator(".catalog-detail-card")).toHaveCount(2);
+
+  await page.unrouteAll();
+  await catalogApi(page, { empty: true });
+  await page.reload();
+  await expect(
+    page.getByRole("heading", { name: "No inspections are stored yet" }),
+  ).toBeVisible();
+});
+
+test("entry links into the database-backed catalog without model count claims", async ({
+  page,
+}) => {
+  await catalogApi(page);
+  await page.goto("/");
+  await expect(
+    page.getByText("Saved inspections", { exact: true }),
+  ).toBeVisible();
+  await expect(page.getByText("8 Pre-verified", { exact: true })).toHaveCount(
+    0,
+  );
+  await page.getByRole("link", { name: "Browse Full Catalog" }).click();
+  await expect(page).toHaveURL(/\/catalog$/);
 });

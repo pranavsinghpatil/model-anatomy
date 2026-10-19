@@ -31,6 +31,28 @@ def document():
     return json.loads((Path(__file__).resolve().parents[2] / "output/gpt2/model.json").read_text())
 
 
+class MemoryStorage:
+    def __init__(self):
+        self.objects = {}
+        self.get_count = 0
+
+    def put(self, data):
+        import hashlib
+        digest = hashlib.sha256(data).hexdigest()
+        self.objects[digest] = data
+        return digest
+
+    def get(self, digest):
+        self.get_count += 1
+        return self.objects[digest]
+
+    def delete(self, digest):
+        self.objects.pop(digest, None)
+
+    def check(self):
+        pass
+
+
 def finish(service, job_id):
     data = document()
     service.resolved(job_id, "worker-a", data["model_id"], data["metadata"]["revision"])
@@ -55,6 +77,94 @@ def test_guests_are_persistent_unforgeable_and_isolated(service):
     assert reopened.guest(token) == (first, None)
     assert reopened.get(detail["id"], first).status == "queued"
     reopened.db.engine.dispose()
+
+
+def test_durable_registry_serves_private_ready_job_without_worker_or_cache_ttl(service):
+    from model_anatomy.service.database import ModelReport
+
+    service.storage = MemoryStorage()
+    guest = visitor(service)
+    job_id = service.create(guest, "gpt2")["id"]
+    service.claim("worker-a")
+    key = finish(service, job_id)
+    service.test_now[0] += service.settings.cache_ttl_seconds + 1
+    service.cleanup()
+    service.release_worker("worker-a")
+    result = service.create(guest, "gpt2")
+    assert result["status"] == "partial"
+    assert result["cached"] is True
+    assert result["revision"] == document()["metadata"]["revision"]
+    with service.db.read() as session:
+        assert session.scalar(select(ModelReport).where(ModelReport.cache_identity == key))
+    with pytest.raises(ServiceError) as exc:
+        service.get(result["id"], visitor(service))
+    assert exc.value.status == 404
+
+
+def test_default_main_does_not_reuse_a_report_requested_from_named_branch(service):
+    service.storage = MemoryStorage()
+    guest = visitor(service)
+    reference = "https://huggingface.co/openai-community/gpt2/resolve/feature-branch/model.safetensors"
+    job_id = service.create(guest, reference)["id"]
+    service.claim("worker-a")
+    finish(service, job_id)
+    service.release_worker("worker-a")
+    with pytest.raises(ServiceError) as exc:
+        service.create(guest, "gpt2")
+    assert exc.value.code == "worker_unavailable"
+
+
+def test_exhausted_visitor_is_rejected_before_private_blob_read(service):
+    from model_anatomy.service.database import RateBucket
+
+    memory = MemoryStorage()
+    service.storage = memory
+    guest = visitor(service)
+    job_id = service.create(guest, "gpt2")["id"]
+    service.claim("worker-a")
+    finish(service, job_id)
+    memory.get_count = 0
+    with service.db.write() as session:
+        bucket = session.get(RateBucket, (f"guest:{guest}:jobs:hour", int(service.clock() // 3600)))
+        bucket.count = 20
+    with pytest.raises(ServiceError) as exc:
+        service.create(guest, "gpt2")
+    assert exc.value.status == 429
+    assert memory.get_count == 0
+
+
+def test_registry_cache_identity_mismatch_is_invalidated(service):
+    from model_anatomy.service.database import ModelReport
+
+    service.storage = MemoryStorage()
+    guest = visitor(service)
+    job_id = service.create(guest, "gpt2")["id"]
+    service.claim("worker-a")
+    key = finish(service, job_id)
+    with service.db.write() as session:
+        report = session.scalar(select(ModelReport).where(ModelReport.cache_identity == key))
+        report.cache_identity = "f" * 64
+    candidates = service._registry_candidates("openai-community/gpt2", "main", "model.safetensors", False)
+    assert service._valid_registry(candidates) is None
+    with service.db.read() as session:
+        assert session.get(ModelReport, report.id) is None
+
+
+def test_existing_local_sqlite_jobs_gain_refresh_flag_without_data_loss(tmp_path):
+    service = JobService(Settings(data_dir=tmp_path))
+    service.initialize()
+    service.acquire_worker("worker")
+    guest = visitor(service)
+    job_id = service.create(guest, "gpt2")["id"]
+    with service.db.engine.begin() as connection:
+        connection.exec_driver_sql("ALTER TABLE analysis_jobs DROP COLUMN refresh_requested")
+    service.db.initialize(create=True)
+    with service.db.read() as session:
+        job = session.get(Job, job_id)
+        assert job is not None
+        assert job.model_id == "openai-community/gpt2"
+        assert job.refresh_requested is False
+    service.db.engine.dispose()
 
 
 def test_legacy_summary_is_reprojected_without_rewriting_saved_job_or_artifact(service, monkeypatch):
@@ -220,6 +330,10 @@ def test_cancel_queued_running_and_completed(service):
 
 
 def test_expiry_is_410_for_owner_404_for_other_and_retention_is_seven_days(service):
+    from model_anatomy.service.database import ModelReport
+
+    memory = MemoryStorage()
+    service.storage = memory
     guest = visitor(service)
     job_id = service.create(guest, "gpt2")["id"]
     service.claim("worker-a")
@@ -235,14 +349,23 @@ def test_expiry_is_410_for_owner_404_for_other_and_retention_is_seven_days(servi
     assert service.recent(guest) == []
     service.cleanup()
     assert service.cached_result(key) is not None
-    assert service.storage.path(digest).is_file()
+    assert digest in memory.objects
     service.test_now[0] += 604800
     service.cleanup()
     assert service.cached_result(key) is None
-    assert not service.storage.path(digest).exists()
+    assert digest in memory.objects
+    with service.db.read() as session:
+        report = session.scalar(select(ModelReport).where(ModelReport.cache_identity == key))
+        assert report is not None
+        assert list(session.scalars(select(CacheEntry))) == []
+        report_id = report.id
+    with service.db.write() as session:
+        session.delete(session.get(ModelReport, report_id))
+    service.cleanup()
+    assert digest not in memory.objects
     with service.db.read() as session:
         assert list(session.scalars(select(Blob))) == []
-        assert list(session.scalars(select(CacheEntry))) == []
+        assert list(session.scalars(select(ModelReport))) == []
 
 
 def test_revision_and_artifact_and_engine_and_schema_are_cache_identity():

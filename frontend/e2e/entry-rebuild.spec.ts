@@ -46,6 +46,13 @@ test("root and app routes open the same immediately usable entry", async ({
       "nowrap",
     );
     await expect(page.getByTestId("graph-canvas")).toHaveCount(0);
+    await expect(
+      page.getByRole("heading", { name: /real inspections/ }),
+    ).toBeVisible();
+    await expect(
+      page.getByText("SafeTensors Verified", { exact: true }),
+    ).toHaveCount(0);
+    await expect(page.getByText("134,515,008", { exact: true })).toHaveCount(0);
   }
   await page.screenshot({
     path: testInfo.outputPath("entry-fixture-preview.png"),

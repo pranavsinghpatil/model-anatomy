@@ -2237,6 +2237,18 @@
   color: #ffffff;
 }
 
+.catalog-pagination {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin: 24px 0;
+}
+
+.catalog-pagination button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 /* Active session analyses table */
 .entry-recent {
   padding-top: 24px;

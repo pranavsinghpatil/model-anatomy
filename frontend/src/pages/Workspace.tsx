@@ -101,12 +101,14 @@ function Workspace({ id }: { id: string }) {
     views.find((v) => v === viewParam) ??
     (artifact ? "artifacts" : "architecture");
   useEffect(() => {
+    if (pending(previousStatus.current) && detail && !pending(detail.status))
+      void client.invalidateQueries({ queryKey: ["catalog"] });
     if (artifact && pending(previousStatus.current))
       setSearch({ view: "artifacts" }, { replace: true });
     else if (detail && !views.some((v) => v === viewParam))
       setSearch({ view }, { replace: true });
     previousStatus.current = detail?.status;
-  }, [detail, artifact, viewParam, view, setSearch]);
+  }, [detail, artifact, viewParam, view, setSearch, client]);
   const graphId = state.path.at(-1)?.id ?? detail?.root_graph_id;
   const graph = useQuery({
     queryKey: ["graph", id, graphId],

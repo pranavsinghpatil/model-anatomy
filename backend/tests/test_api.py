@@ -68,6 +68,17 @@ def test_only_one_health_endpoint_without_fixed_supported_model_list(client):
     assert "supported_models" not in client.get("/health").json()
 
 
+def test_catalog_is_public_and_does_not_allocate_a_visitor(client):
+    from model_anatomy.service.database import Guest
+
+    response = client.get("/api/v1/catalog")
+    assert response.status_code == 200
+    assert response.json() == {"models": [], "total": 0, "offset": 0, "limit": 24}
+    assert "set-cookie" not in response.headers
+    with client.app.state.jobs.db.read() as session:
+        assert session.query(Guest).count() == 0
+
+
 @pytest.mark.parametrize("dependency", ["database", "storage"])
 def test_health_reports_real_dependency_failure_without_leaking_details(client, monkeypatch, dependency):
     from sqlalchemy.exc import SQLAlchemyError

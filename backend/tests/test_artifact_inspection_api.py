@@ -141,16 +141,22 @@ def test_inspection_access_remains_visitor_owned(inspected):
 
 
 def test_inspected_cache_reuses_real_report_without_changing_outcome(inspected):
-    client, _, ir, key = inspected
+    client, original_id, ir, key = inspected
     service = client.app.state.jobs
-    new_job = client.post("/api/v1/analyses", json={"model": ir.model_id}).json()
-    service.claim("worker")
-    service.resolved(new_job["id"], "worker", ir.model_id, ir.metadata["revision"])
-    data = service.cached_result(key)
-    assert data == ir.to_json().encode()
-    service.finish(new_job["id"], "worker", data, key, cached=True)
+    service.release_worker("worker")
+    response = client.post("/api/v1/analyses", json={"model": ir.model_id})
+    assert response.status_code == 202
+    new_job = response.json()
+    assert new_job["id"] != original_id
+    assert new_job["revision"] == ir.metadata["revision"]
+    guest_id, _ = service.guest(client.cookies.get(COOKIE))
+    job = service.get(new_job["id"], guest_id)
+    assert job.attempts == 0
+    assert service.cached_result(key) == ir.to_json().encode()
     detail = client.get(f"/api/v1/analyses/{new_job['id']}").json()
     assert detail["cached"] is True and detail["status"] == "inspected"
+    artifacts = client.get(f"/api/v1/analyses/{new_job['id']}/artifacts").json()
+    assert artifacts["kind"] == "artifact_inspection"
 
 
 def test_markdown_inventory_does_not_interpret_repository_filenames(inspected):

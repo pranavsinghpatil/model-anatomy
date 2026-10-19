@@ -11,7 +11,6 @@ import pytest
 from sqlalchemy import inspect
 
 from model_anatomy.api.settings import Settings
-from model_anatomy.service.database import Job
 from model_anatomy.service.errors import ServiceError
 from model_anatomy.service.jobs import JobService, cache_key
 from model_anatomy.service.views import load_ir
@@ -35,10 +34,31 @@ class MetadataMock:
         return self.revision
 
 
+class MemoryStorage:
+    def __init__(self):
+        self.objects = {}
+
+    def put(self, data):
+        import hashlib
+        digest = hashlib.sha256(data).hexdigest()
+        self.objects[digest] = data
+        return digest
+
+    def get(self, digest):
+        return self.objects[digest]
+
+    def delete(self, digest):
+        self.objects.pop(digest, None)
+
+    def check(self):
+        pass
+
+
 def test_resolve_once_before_extraction_and_cache_hit_skips_engine(tmp_path):
     settings = Settings(data_dir=tmp_path, guest_jobs_per_hour=5)
     service = JobService(settings)
     service.initialize()
+    service.storage = MemoryStorage()
     service.acquire_worker("w")
     guest, _ = service.guest(None)
     ir = load_ir((Path(__file__).resolve().parents[2] / "output/gpt2/model.json").read_bytes())
@@ -58,19 +78,33 @@ def test_resolve_once_before_extraction_and_cache_hit_skips_engine(tmp_path):
     service.claim("w")
     execute_job(service, first, "w", metadata, reconstruct, parse)
     second = service.create(guest, "gpt2")["id"]
-    service.claim("w")
-    execute_job(service, second, "w", metadata, reconstruct, parse)
+    assert service.get(second, guest).status == "partial"
+    assert service.get(second, guest).attempts == 0
     assert len(calls) == 1
-    assert len(metadata.resolved) == 2
+    assert len(metadata.resolved) == 1
     assert service.get(second, guest).cached is True
     assert service.get(first, guest).blob_digest == service.get(second, guest).blob_digest
-    third = service.create(guest, "gpt2")["id"]
+    third = service.create(guest, "gpt2", refresh=True)["id"]
     service.claim("w")
-    with service.db.write() as session:
-        session.get(Job, third).revision = ir.metadata["revision"]
     execute_job(service, third, "w", metadata, reconstruct, parse)
-    assert metadata.resolved[-1].revision == ir.metadata["revision"]
+    assert len(calls) == 2
+    assert len(metadata.resolved) == 2
+    assert metadata.resolved[-1].revision == "main"
+    assert service.get(third, guest).cached is False
     service.db.engine.dispose()
+
+
+def test_worker_requests_ignore_global_netrc_credentials(tmp_path, monkeypatch):
+    import requests
+
+    netrc = tmp_path / "credentials"
+    netrc.parent.mkdir(parents=True, exist_ok=True)
+    netrc.write_text("machine huggingface.co login private-user password private-token\n")
+    monkeypatch.setenv("NETRC", str(netrc))
+    session = requests.Session()
+    session.trust_env = False
+    prepared = session.prepare_request(requests.Request("GET", "https://huggingface.co/api/models/acme/public"))
+    assert "Authorization" not in prepared.headers
 
 
 def sleeping_child(settings, job_id, owner):

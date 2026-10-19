@@ -19,6 +19,8 @@ export type QuestionAnswer = components["schemas"]["QuestionAnswer"];
 export type Health = components["schemas"]["Health"];
 export type AnalysesResponse = components["schemas"]["AnalysesResponse"];
 export type CreateAnalysisRequest = components["schemas"]["CreateAnalysis"];
+export type CatalogItem = components["schemas"]["CatalogItem"];
+export type CatalogResponse = components["schemas"]["CatalogResponse"];
 export type QuestionRequest = components["schemas"]["Question"];
 export type ExportFormat =
   "json" | "mermaid" | "markdown" | "diagnostics" | "audit" | "zip";

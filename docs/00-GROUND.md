@@ -31,7 +31,11 @@ The [hackathon release](https://nebiusglobalaihackathon.devpost.com/) must run o
 
 ## Product boundary
 
-The application serves only visitor-owned, submitted analyses. There is no
+The application serves visitor-owned analyses and a shared catalog of metadata
+from actual saved inspections. A request first checks the durable database
+registry for a compatible report; a miss inspects real artifacts and stores the
+result. Catalog access creates a new visitor-owned analysis for the selected
+pinned report. See [Database catalog](DATABASE_CATALOG.md). There is no
 prepared-example API, seeded graph, static report shortcut or demo fallback.
 Exact-revision caching reuses real inspected reports; it is not mock data.
 Historical CLI outputs may be retained as extraction evidence and test inputs,

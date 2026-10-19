@@ -2,8 +2,11 @@
 
 import logging
 from contextlib import asynccontextmanager
+from pathlib import Path
 from uuid import uuid4
 
+from alembic.config import Config as AlembicConfig
+from alembic.script import ScriptDirectory
 from fastapi import FastAPI, Query, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
@@ -22,6 +25,7 @@ from .schemas import (
     AnalysesResponse,
     AnalysisDetail,
     ArtifactInspectionResponse,
+    CatalogResponse,
     CreateAnalysis,
     ErrorResponse,
     GraphResponse,
@@ -94,10 +98,12 @@ def create_app(settings: Settings | None = None, *, service=None, explanation=No
         )
 
     def verify_migrations():
-        if config.environment == "production":
+        if not jobs.db.sqlite:
             with jobs.db.read() as session:
                 revisions = session.execute(text("SELECT version_num FROM alembic_version")).scalars().all()
-                if revisions != ["0001_durable_jobs"]:
+                migration_config = AlembicConfig(str(Path(__file__).resolve().parents[3] / "alembic.ini"))
+                expected = sorted(ScriptDirectory.from_config(migration_config).get_heads())
+                if sorted(revisions) != expected:
                     raise ServiceError(503, "migrations_required", "Run Alembic upgrade head before serving")
 
     def require_service():
@@ -242,7 +248,16 @@ def create_app(settings: Settings | None = None, *, service=None, explanation=No
         ),
     )
     def create_analysis(body: CreateAnalysis, request: Request):
-        return jobs.create(guest(request), body.model)
+        return jobs.create(guest(request), body.model, refresh=body.refresh)
+
+    @app.get("/api/v1/catalog", response_model=CatalogResponse)
+    def catalog(request: Request, q: str = Query(default="", max_length=128), offset: int = Query(default=0, ge=0), limit: int = Query(default=24, ge=1, le=100)):
+        require_service()
+        return jobs.catalog(q, offset, limit)
+
+    @app.post("/api/v1/catalog/{report_id}/inspect", response_model=AnalysisDetail)
+    def inspect_catalog_item(report_id: str, request: Request):
+        return jobs.inspect_registry(guest(request), report_id)
 
     @app.get("/api/v1/analyses/{analysis_id}", response_model=AnalysisDetail)
     def get_analysis(analysis_id: str, request: Request):
