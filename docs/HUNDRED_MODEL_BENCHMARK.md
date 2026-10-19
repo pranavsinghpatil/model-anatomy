@@ -157,8 +157,10 @@ all static/report checks after the fix. See the
 [post-fix runner smoke](benchmarks/model-matrix-2026-10-19-runner-smoke.json) and
 [PR CI status](https://github.com/pranavsinghpatil/model-anatomy/pull/32).
 
-The 120 baseline and 22 targeted observations retain their original runner hashes
-(source represented by commit `365e7f4`). None of those cases required resource
+The 120 baseline observations use `.2` extraction source from `4a69f7d`; the 22
+targeted observations use `.3` extraction source and runner from `365e7f4`. Each
+run retains its original runner hash; the baseline classifier predates the current
+runner refinements described above. None of those cases required resource
 termination. The subsequent runner-only cleanup change does not alter extraction
 engine `.3` or rewrite the recorded outcomes.
 
