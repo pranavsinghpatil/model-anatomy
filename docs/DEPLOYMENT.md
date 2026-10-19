@@ -99,6 +99,8 @@ cannot reach direct IPv6; avoid the transaction pooler for migrations. Include
 `sslmode=require` at minimum; prefer `verify-full` with the provider's trusted CA.
 See [Supabase connections](https://supabase.com/docs/guides/database/connecting-to-postgres)
 and [private buckets](https://supabase.com/docs/guides/storage/buckets/fundamentals).
+[New-project setup details](SUPABASE_SETUP.md) cover Data API settings and local
+connection checks.
 Never expose the service-role key in Vite environment variables or browser code.
 Do not grant anonymous public bucket access. The backend mediates object access
 after checking guest ownership. Configure provider backups and retention.

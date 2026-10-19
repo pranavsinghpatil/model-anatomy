@@ -8,6 +8,9 @@ The documentation is intentionally small. Each file has one job:
 4. [QUALITY.md](QUALITY.md) — working, benchmark, demo, submission, and branch-protection gates.
 5. [DECISION_LOG.md](DECISION_LOG.md) — permanent record of binding decisions.
 
+For a new Supabase database and private Storage bucket, follow
+[Supabase setup](SUPABASE_SETUP.md).
+
 Read [AGENTS.md](../AGENTS.md) first when performing repository work.
 
 For application users, [Reading Reports](READING_REPORTS.md) explains status,
