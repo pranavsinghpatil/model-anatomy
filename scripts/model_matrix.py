@@ -375,28 +375,32 @@ def _child_entry(case: dict[str, Any], send_conn) -> None:
 
 
 def _terminate_tree(process: mp.Process, *, grace: float = 1.0) -> None:
-    if process.pid is None:
+    if process.pid is None or not process.is_alive():
         return
+    children = []
     try:
-        parent = psutil.Process(process.pid)
-        children = parent.children(recursive=True)
-        for item in reversed(children):
-            try:
-                item.terminate()
-            except (psutil.NoSuchProcess, psutil.AccessDenied):
-                pass
+        children = psutil.Process(process.pid).children(recursive=True)
+    except (psutil.NoSuchProcess, psutil.AccessDenied):
+        pass
+    for item in reversed(children):
         try:
-            parent.terminate()
+            item.terminate()
         except (psutil.NoSuchProcess, psutil.AccessDenied):
             pass
-        _, alive = psutil.wait_procs([*children, parent], timeout=grace)
+    # multiprocessing owns this child's waitpid status. psutil.wait_procs on
+    # the same PID can reap it first on POSIX and strand Process.exitcode=None.
+    process.terminate()
+    process.join(timeout=grace)
+    if process.is_alive():
+        process.kill()
+        process.join(timeout=grace)
+    if children:
+        _, alive = psutil.wait_procs(children, timeout=grace)
         for item in alive:
             try:
                 item.kill()
             except (psutil.NoSuchProcess, psutil.AccessDenied):
                 pass
-    except (psutil.NoSuchProcess, psutil.AccessDenied):
-        pass
 
 
 def run_case(

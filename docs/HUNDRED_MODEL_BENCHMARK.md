@@ -148,6 +148,20 @@ skipped on Windows**, with all eighteen real Hugging Face/HTTP integrations
 enabled. Ruff, Python compilation and diff whitespace checks passed. The existing
 Starlette/httpx deprecation warning remains.
 
+The first Linux CI run subsequently found a benchmark cleanup defect: using
+`psutil.wait_procs` on the multiprocessing-owned child could consume its POSIX
+exit status before `Process.join()`. Cleanup now lets multiprocessing terminate
+and reap its own child, using psutil only for descendants. Nine runner unit tests
+pass, including an ownership regression, and a fresh real SmolLM2 control passes
+all static/report checks after the fix. See the
+[post-fix runner smoke](benchmarks/model-matrix-2026-10-19-runner-smoke.json) and
+[PR CI status](https://github.com/pranavsinghpatil/model-anatomy/pull/32).
+
+The 120 baseline and 22 targeted observations retain their original runner hashes
+(source represented by commit `365e7f4`). None of those cases required resource
+termination. The subsequent runner-only cleanup change does not alter extraction
+engine `.3` or rewrite the recorded outcomes.
+
 The owned API and worker were restarted on port **8000**, preserving existing
 analyses and backing up SQLite first. Fresh uncached HTTP jobs verified Phi-3
 (3,821,079,552 parameters, 195 tensors) and SegFormer B0 (3,752,694 parameters,

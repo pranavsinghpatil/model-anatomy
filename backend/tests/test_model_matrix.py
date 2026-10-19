@@ -170,3 +170,13 @@ def test_nonfinite_resource_budgets_are_rejected_before_starting_a_child():
         run_case(CASE, timeout=float("nan"))
     with pytest.raises(ValueError, match="memory budget"):
         run_case(CASE, memory_bytes=float("nan"))
+
+
+def test_timeout_cleanup_leaves_reaping_of_owned_child_to_multiprocessing(monkeypatch):
+    def no_descendants_to_reap(processes, **kwargs):
+        assert not processes, "psutil must not consume the multiprocessing child's exit status"
+        return [], []
+
+    monkeypatch.setattr("scripts.model_matrix.psutil.wait_procs", no_descendants_to_reap)
+    result = run_case(CASE, timeout=0.2, worker_target=idle_worker)
+    assert result["status"] == "timeout"
