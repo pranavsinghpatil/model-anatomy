@@ -11,11 +11,17 @@ The `model-anatomy` project is created and reports **ACTIVE_HEALTHY** in the
 `kkvpwozxbkimwinffclg`. The selected dashboard estimate was $0/month; confirm
 current billing and limits in the account. [Open the project](https://supabase.com/dashboard/project/kkvpwozxbkimwinffclg).
 
-The project and database schema are provisioned. The canonical Alembic schema
-head is `0001_durable_jobs`; all seven service tables and `alembic_version`
-have RLS enabled, with no browser-role policies or grants. The bucket,
-credentials, and app connectivity are still pending, so no app connection has
-been claimed. Use these links to finish configuration:
+The project and schema are provisioned. The canonical Alembic schema head is
+`0001_durable_jobs`; all seven service tables and `alembic_version` have RLS
+enabled, with no browser-role policies or grants. On October 20, 2026, a
+read-only PostgreSQL check verified TLS connectivity, schema head, and tables;
+a separate read-only storage check verified the private
+`model-anatomy-private` bucket (`public=false`). PostgreSQL and private Storage
+connectivity are verified. The API, worker, and frontend have not been switched
+to Supabase or runtime/E2E tested against it.
+
+Credentials are saved in the ignored local `infra/.env`. Use these links to
+open the project settings:
 
 - [Storage buckets](https://supabase.com/dashboard/project/kkvpwozxbkimwinffclg/storage/buckets)
 - [API keys](https://supabase.com/dashboard/project/kkvpwozxbkimwinffclg/settings/api-keys)
@@ -85,8 +91,8 @@ continues to access them. Do not expose the tables through Data API or invent
 Auth. Do not alter Supabase's own Storage tables. The existing project received
 the canonical schema and hardening together in one transaction through the
 Supabase integration. Its Data API setting was not changed; do not rerun setup. The
-database linter's `rls_enabled_no_policy` INFO finding is expected: absent
-browser policies deliberately denies browser-role access. See the
+database linter's `rls_enabled_no_policy` INFO finding is expected: the absence
+of browser policies deliberately denies browser-role access. See the
 [Supabase linter explanation](https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy).
 
 For a different fresh project, after disabling Data API, apply the current
@@ -117,12 +123,13 @@ for name, check in checks:
 raise SystemExit(1 if failed else 0)"
 ```
 
-The current project has completed the database migration and RLS hardening, but
-the check will remain incomplete until its credentials are added and the private
-bucket is created. `scripts/start-local.ps1` deliberately forces SQLite and
-local file storage; it starts the local app and does not use Supabase. The
-production host is Linux. Follow [Deployment](DEPLOYMENT.md) for API and worker
-startup; full deployment preflight also requires a valid Nebius model and key.
+The database and private bucket checks passed for the current project. Local
+verification also recorded 19 passing tests; two live provider checks (database
+and private Storage) passed. These checks do not establish app runtime behavior.
+`scripts/start-local.ps1` deliberately forces SQLite and local file storage; it
+starts the local app and does not use Supabase. The production host is Linux.
+Follow [Deployment](DEPLOYMENT.md) for API and worker startup; full deployment
+preflight also requires a valid Nebius model and key.
 
 ## Troubleshooting
 
