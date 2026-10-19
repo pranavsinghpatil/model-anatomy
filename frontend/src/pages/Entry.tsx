@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowRight,
+  ArrowUp,
   History,
   Network,
   ShieldCheck,
@@ -23,62 +24,7 @@ const examples = [
   { id: "distilbert/distilbert-base-uncased", label: "DistilBERT", family: "Compact · 6L" },
 ];
 
-const modelCatalog = [
-  {
-    id: "HuggingFaceTB/SmolLM2-135M",
-    name: "SmolLM2 · 135M",
-    family: "Llama 3.2",
-    params: "134.5M",
-    layers: 30,
-    heads: 9,
-    ctx: "2,048",
-  },
-  {
-    id: "meta-llama/Llama-3.2-1B",
-    name: "Llama 3.2 · 1B",
-    family: "Modern Decoder",
-    params: "1.23B",
-    layers: 16,
-    heads: 32,
-    ctx: "8,192",
-  },
-  {
-    id: "mistralai/Mistral-7B-v0.1",
-    name: "Mistral · 7B",
-    family: "Sliding Window",
-    params: "7.24B",
-    layers: 32,
-    heads: 32,
-    ctx: "32,768",
-  },
-  {
-    id: "Qwen/Qwen2.5-0.5B",
-    name: "Qwen 2.5 · 0.5B",
-    family: "Dense Transformer",
-    params: "490M",
-    layers: 24,
-    heads: 14,
-    ctx: "32,768",
-  },
-  {
-    id: "openai-community/gpt2",
-    name: "GPT-2 · Small",
-    family: "Causal Decoder",
-    params: "124.4M",
-    layers: 12,
-    heads: 12,
-    ctx: "1,024",
-  },
-  {
-    id: "google-bert/bert-base-uncased",
-    name: "BERT · Base",
-    family: "Bidirectional Encoder",
-    params: "109.5M",
-    layers: 12,
-    heads: 12,
-    ctx: "512",
-  },
-];
+
 
 type TeaserNode = {
   id: string;
@@ -305,18 +251,95 @@ function Brand() {
   );
 }
 
-function FooterBrand() {
+export function PageFooter() {
   return (
-    <span className="entry-footer-brand">
-      <div className="brand-gem footer-gem" aria-hidden="true">
-        <ModelAnatomyMark size={14} />
+    <footer className="entry-footer" role="contentinfo">
+      <div className="entry-footer-inner">
+        <div className="footer-top-grid">
+          {/* Column 1: Brand & Architecture Mission */}
+          <div className="footer-brand-col">
+            <Link to="/" className="footer-brand" aria-label="Model Anatomy home">
+              <div className="brand-gem footer-gem" aria-hidden="true">
+                <ModelAnatomyMark size={15} />
+              </div>
+              <span className="entry-brand-name">Model Anatomy</span>
+              <span className="brand-tag">STUDIO</span>
+            </Link>
+            <p className="footer-mission">
+              Reconstructing trustworthy, semantic, tensor-aware architecture graphs from open-weight Hugging Face models without downloading weights.
+            </p>
+            <div className="footer-tech-badges">
+              <span className="tech-badge">PyTorch AST</span>
+              <span className="tech-badge">SafeTensors Stream</span>
+              <span className="tech-badge">Deterministic IR</span>
+            </div>
+          </div>
+
+          {/* Column 2: Architecture Views */}
+          <div className="footer-col">
+            <h4 className="footer-col-title">Inspection Views</h4>
+            <ul className="footer-nav-list">
+              <li><a href="/#blueprint">Architecture Graph</a></li>
+              <li><a href="/#blueprint">SafeTensors Headers</a></li>
+              <li><a href="/#blueprint">Parameter &amp; Weight BOM</a></li>
+              <li><a href="/#blueprint">Module AST Hierarchy</a></li>
+            </ul>
+          </div>
+
+          {/* Column 3: Model Registry */}
+          <div className="footer-col">
+            <h4 className="footer-col-title">Model Registry</h4>
+            <ul className="footer-nav-list">
+              <li><Link to="/catalog">Model Catalog</Link></li>
+              <li><Link to="/catalog">SmolLM2 &amp; Llama 3.2</Link></li>
+              <li><Link to="/catalog">Mistral Sliding Window</Link></li>
+              <li><Link to="/catalog">BERT &amp; DistilBERT</Link></li>
+            </ul>
+          </div>
+
+          {/* Column 4: Evidence & Provenance */}
+          <div className="footer-col">
+            <h4 className="footer-col-title">Provenance</h4>
+            <ul className="footer-nav-list">
+              <li><a href="/#recent">Session History</a></li>
+              <li><a href="/#main">Support Boundaries</a></li>
+              <li><span className="footer-static-note">Zero Weight Downloads</span></li>
+              <li><span className="footer-static-note">Pinned Revision Audit</span></li>
+            </ul>
+          </div>
+        </div>
+
+        {/* Footer Bottom Bar */}
+        <div className="footer-bottom-bar">
+          <div className="footer-copyright">
+            <span>&copy; {new Date().getFullYear()} Model Anatomy Studio.</span>
+            <span className="footer-sep">&middot;</span>
+            <span className="footer-evidence-note">Artifact-backed inspection with explicit evidence.</span>
+          </div>
+          <div className="footer-actions">
+            <a
+              href="#main"
+              className="footer-back-to-top"
+              onClick={(e) => {
+                e.preventDefault();
+                window.scrollTo({ top: 0, behavior: "smooth" });
+              }}
+              aria-label="Back to top of page"
+            >
+              <span>Back to top</span>
+              <ArrowUp size={13} aria-hidden="true" />
+            </a>
+          </div>
+        </div>
       </div>
-      <span className="entry-brand-name">Model Anatomy</span>
-    </span>
+    </footer>
   );
 }
 
-function EntryHeader() {
+export function EntryHeader() {
+  const location = useLocation();
+  const isCatalog = location.pathname.startsWith("/catalog");
+
   return (
     <header className="entry-header">
       <div className="entry-header-inner">
@@ -324,26 +347,30 @@ function EntryHeader() {
           <Brand />
           <span className="entry-header-divider" aria-hidden="true" />
           <nav className="entry-nav-links" aria-label="Sections">
-            <a href="#blueprint" className="entry-nav-link">
+            <a href={isCatalog ? "/#blueprint" : "#blueprint"} className="entry-nav-link">
               <span>Blueprint</span>
             </a>
-            <a href="#metrics" className="entry-nav-link">
+            <a href={isCatalog ? "/#metrics" : "#metrics"} className="entry-nav-link">
               <span>Metrics</span>
             </a>
-            <a href="#capabilities" className="entry-nav-link">
+            <a href={isCatalog ? "/#capabilities" : "#capabilities"} className="entry-nav-link">
               <span>Capabilities</span>
             </a>
-            <a href="#catalog" className="entry-nav-link">
+            <Link
+              to="/catalog"
+              className={`entry-nav-link ${isCatalog ? "is-active" : ""}`}
+              aria-current={isCatalog ? "page" : undefined}
+            >
               <span>Catalog</span>
-            </a>
+            </Link>
           </nav>
         </div>
         <nav className="entry-header-actions" aria-label="Page controls">
-          <a className="entry-history-link" href="#recent">
+          <a className="entry-history-link" href={isCatalog ? "/#recent" : "#recent"}>
             <History size={14} />
             <span>Your analyses</span>
           </a>
-          <a className="entry-header-cta" href="#submit-title">
+          <a className="entry-header-cta" href={isCatalog ? "/#submit-title" : "#submit-title"}>
             <span>Start inspection</span>
             <ArrowRight size={13} />
           </a>
@@ -756,46 +783,39 @@ export function Start() {
             </div>
           </div>
 
-          {/* Verified Architectures Matrix */}
-          <section id="catalog" className="entry-catalog-showcase" aria-labelledby="catalog-heading">
-            <div className="catalog-header">
-              <div>
-                <span className="teaser-eyebrow">Supported Model Architectures</span>
-                <h2 id="catalog-heading">Explore verified open models</h2>
-              </div>
-              <span className="catalog-badge">Ready to inspect</span>
-            </div>
-            <div className="catalog-grid">
-              {modelCatalog.map((item) => (
-                <div key={item.id} className="catalog-card">
-                  <div className="catalog-card-head">
-                    <span className="catalog-family-pill">{item.family}</span>
-                    <span className="catalog-params-pill">{item.params}</span>
-                  </div>
-                  <strong className="catalog-name">{item.name}</strong>
-                  <div className="catalog-meta-row">
-                    <span>{item.layers} layers</span>
-                    <span>·</span>
-                    <span>{item.heads} heads</span>
-                    <span>·</span>
-                    <span>{item.ctx} ctx</span>
-                  </div>
-                  <button
-                    type="button"
-                    className="catalog-btn"
-                    onClick={() => {
-                      setModel(item.id);
-                      const input = document.getElementById("model-input");
-                      input?.focus();
-                      window.scrollTo({ top: 0, behavior: "smooth" });
-                    }}
-                    aria-label={`Inspect ${item.name}`}
-                  >
-                    <span>Inspect</span>
-                    <ArrowRight size={13} />
-                  </button>
+          {/* Architecture Catalog Banner */}
+          <section id="catalog" className="entry-catalog-banner" aria-labelledby="catalog-heading">
+            <div className="catalog-banner-glow" aria-hidden="true" />
+            <div className="catalog-banner-content">
+              <div className="catalog-banner-info">
+                <div className="catalog-pill-badge">
+                  <span className="entry-badge-dot" />
+                  <span>Architecture Registry</span>
+                  <span className="catalog-count-tag">8 Pre-verified</span>
                 </div>
-              ))}
+                <h2 id="catalog-heading" className="catalog-banner-title">
+                  Explore verified model architectures
+                </h2>
+                <p className="catalog-banner-desc">
+                  Inspect multi-scale decoders, sliding-window attention networks, and bidirectional encoders. Review tensor shapes, layer counts, and SafeTensors headers with zero weight downloads.
+                </p>
+                <div className="catalog-banner-tags">
+                  <span className="cat-chip">SmolLM2 · 135M / 360M</span>
+                  <span className="cat-chip">Llama 3.2 · 1B</span>
+                  <span className="cat-chip">Mistral · 7B SWA</span>
+                  <span className="cat-chip">Qwen 2.5 · 0.5B</span>
+                  <span className="cat-chip">BERT Base &amp; DistilBERT</span>
+                </div>
+              </div>
+              <div className="catalog-banner-actions">
+                <Link to="/catalog" className="catalog-cta-btn">
+                  <span>Browse Full Catalog</span>
+                  <ArrowRight size={15} />
+                </Link>
+                <span className="catalog-cta-sub">
+                  Instant live inspection &amp; specifications
+                </span>
+              </div>
             </div>
           </section>
         </section>
@@ -918,11 +938,7 @@ export function Start() {
           )}
         </section>
       </main>
-      <footer className="entry-footer">
-        <FooterBrand />
-        <span>Artifact-backed inspection with explicit evidence.</span>
-        <a href="#main">Back to top</a>
-      </footer>
+      <PageFooter />
     </div>
   );
 }

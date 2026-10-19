@@ -711,3 +711,40 @@ Modernize and fix the top navigation bar layout, proportions, and styling:
   - 10/10 Playwright E2E tests (`entry-rebuild.spec.ts` & `graph-rebuild.spec.ts`) passing cleanly in 31.3s across desktop and mobile.
   - Visual verification confirmed via high-resolution Playwright screenshot artifact.
 
+## D-053 - Dedicated Model Catalog page (`/catalog`), landing page streamlining, and modern 4-column engineering footer
+**2026-10-19 - explicit user request**
+
+Create a dedicated, clutter-free model catalog page, declutter the landing page, and redesign the footer into a modern engineering footer:
+- **Dedicated Architecture Catalog Page (`/catalog`)**:
+  - Created `frontend/src/pages/Catalog.tsx` with identical cosmic obsidian & midnight royal sapphire 8×8 Bayer dither background (`<DitherBackground />`).
+  - Pre-verified 8 foundational model architectures across diverse families:
+    - SmolLM2-135M & SmolLM2-360M (Llama 3.2 modern decoders with GQA and high-theta RoPE)
+    - Llama 3.2-1B (Meta's flagship compact decoder with 8k context)
+    - Mistral-7B (Sliding window attention network with 4096-token window)
+    - Qwen 2.5-0.5B (SwiGLU dense transformer with 32k context)
+    - GPT-2 Small (Classic causal decoder baseline)
+    - BERT Base & DistilBERT (Bidirectional encoder architectures)
+  - Interactive toolbar with live multi-field search (filtering name, ID, family, architecture AST, or description) and category filter pills with real-time model counts (`All`, `Decoder-Only`, `Sliding Window`, `Encoder`).
+  - Detailed model architecture cards with parameter counts, layers, query/KV heads, context lengths, hidden dimensions, attention mechanism, positional encoding, and Hugging Face AST class tag.
+  - Direct "Inspect Architecture" action routing into the inspection cockpit (`/app?model=<id>`) and one-click repository ID copy with visual checkmark feedback.
+  - Configured client routing in `App.tsx` with lazy-loading at `/catalog` and redirect from `/app/catalog`.
+- **Landing Page Streamlining**:
+  - Replaced the bulky 6-card `.entry-catalog-showcase` grid on the home page with a sleek, compact `.entry-catalog-banner`.
+  - Highlights verified model architecture families with tagged pills and a clear call-to-action button ("Browse Full Catalog") linking directly to `/catalog`.
+  - Greatly reduces landing page vertical scroll and maintains prominence for the core input and interactive blueprint preview.
+- **Top Navigation Integration**:
+  - Exported `<EntryHeader />` with route awareness (`isCatalog` via `useLocation`):
+    - Highlights `Catalog` tab with active styling and `aria-current="page"` when on `/catalog`.
+    - Handles cross-page routing back to landing page sections (`/#blueprint`, `/#metrics`, `/#capabilities`, `/#recent`, and `/#submit-title`).
+- **Modern 4-Column Engineering Footer (`<PageFooter />`)**:
+  - Redesigned the footer across both pages into a structured, glassmorphic 4-column layout:
+    - Column 1: Brand mark, mission statement, and technical badges (`PyTorch AST`, `SafeTensors Stream`, `Deterministic IR`).
+    - Column 2: Inspection Views (`Architecture Graph`, `SafeTensors Headers`, `Parameter & Weight BOM`, `Module AST Hierarchy`).
+    - Column 3: Model Registry (`Model Catalog`, `SmolLM2 & Llama 3.2`, `Mistral Sliding Window`, `BERT & DistilBERT`).
+    - Column 4: Provenance & Support Boundaries (`Session History`, `Support Boundaries`, `Zero Weight Downloads`, `Pinned Revision Audit`).
+  - Bottom bar with copyright notice, explicit evidence note, and smooth "Back to top" action.
+  - Full responsive reflow into 2 columns on tablets and stacked single column on mobile.
+- **E2E Test Coverage**:
+  - Added `frontend/e2e/catalog.spec.ts` covering page header, desktop/mobile responsive navbar highlighting, category filter tabs, live search filtering, copy ID, "Inspect Architecture" routing, and footer structure.
+  - 100% adherence to existing E2E contracts: 12/12 Playwright tests passing cleanly across desktop and mobile in 46.8s.
+
