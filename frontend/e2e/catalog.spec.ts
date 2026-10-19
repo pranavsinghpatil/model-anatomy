@@ -81,7 +81,7 @@ test("catalog page renders model cards, filters, search, and routes to inspectio
   const footer = page.locator(".entry-footer");
   await expect(footer).toBeVisible();
   await expect(footer.getByText("Inspection Views")).toBeVisible();
-  await expect(footer.getByText("Model Registry")).toBeVisible();
+  await expect(footer.getByRole("heading", { name: "Model Registry" })).toBeVisible();
   await expect(footer.getByText("Provenance")).toBeVisible();
   await expect(footer.getByRole("link", { name: "Back to top of page" })).toBeVisible();
 });

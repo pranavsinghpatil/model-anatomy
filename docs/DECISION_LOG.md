@@ -748,3 +748,21 @@ Create a dedicated, clutter-free model catalog page, declutter the landing page,
   - Added `frontend/e2e/catalog.spec.ts` covering page header, desktop/mobile responsive navbar highlighting, category filter tabs, live search filtering, copy ID, "Inspect Architecture" routing, and footer structure.
   - 100% adherence to existing E2E contracts: 12/12 Playwright tests passing cleanly across desktop and mobile in 46.8s.
 
+## D-054 - Remove redundant recent analyses section from landing page
+**2026-10-19 - explicit user request**
+
+Eliminate the redundant recent analyses component section from the landing page in favor of the dedicated model catalog:
+- **Landing Page Simplification**:
+  - Removed `<section className="entry-recent" id="recent">` and its table/loading/empty-state sub-components from `Entry.tsx`.
+  - Removed unused query hooks (`useRecent`), state variables (`jobs`), and components (`Loading`, `Status`) from the landing page.
+  - Retained `ErrorNotice` for handling model inspection submission errors cleanly.
+- **Header & Footer Navigation Alignment**:
+  - Updated the header history action link (`Your analyses`) in `EntryHeader` to route directly to the catalog (`/catalog`) where all pre-verified foundation models can be explored and inspected.
+  - Updated footer provenance links in `PageFooter` to point to `Verified Models` (`/catalog`).
+- **Dead Code Cleanup in CSS**:
+  - Removed obsolete CSS rules for `.entry-recent`, `.entry-section-heading`, `.entry-recent-count`, `.entry-recent-copy`, `.entry-table-wrap`, `.entry-table`, `.entry-model-link`, `.entry-revision`, `.entry-time`, `.entry-continue`, and `.entry-empty`.
+  - Removed mobile media query rules previously required for the recent analyses table.
+- **Verification**:
+  - `npm run typecheck` passed with 0 TypeScript errors.
+  - 12/12 Playwright E2E tests (`catalog.spec.ts`, `entry-rebuild.spec.ts`, `graph-rebuild.spec.ts`) passing cleanly in 50.5s across desktop and mobile.
+

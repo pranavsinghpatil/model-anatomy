@@ -11,10 +11,10 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { api } from "../api/client";
-import { ErrorNotice, Loading, Status } from "../components/Common";
+import { ErrorNotice } from "../components/Common";
 import { Button, ThemeControl } from "../components/ui";
 import { ModelAnatomyMark } from "../components/Logo";
-import { useRecent, useService } from "../state/queries";
+import { useService } from "../state/queries";
 import { DitherBackground } from "../components/DitherBackground";
 import "./entry.css";
 
@@ -301,7 +301,7 @@ export function PageFooter() {
           <div className="footer-col">
             <h4 className="footer-col-title">Provenance</h4>
             <ul className="footer-nav-list">
-              <li><a href="/#recent">Session History</a></li>
+              <li><Link to="/catalog">Verified Models</Link></li>
               <li><a href="/#main">Support Boundaries</a></li>
               <li><span className="footer-static-note">Zero Weight Downloads</span></li>
               <li><span className="footer-static-note">Pinned Revision Audit</span></li>
@@ -366,10 +366,10 @@ export function EntryHeader() {
           </nav>
         </div>
         <nav className="entry-header-actions" aria-label="Page controls">
-          <a className="entry-history-link" href={isCatalog ? "/#recent" : "#recent"}>
+          <Link className="entry-history-link" to="/catalog">
             <History size={14} />
             <span>Your analyses</span>
-          </a>
+          </Link>
           <a className="entry-header-cta" href={isCatalog ? "/#submit-title" : "#submit-title"}>
             <span>Start inspection</span>
             <ArrowRight size={13} />
@@ -402,10 +402,6 @@ export function Start() {
   const navigate = useNavigate();
   const client = useQueryClient();
   const { health, service, available } = useService();
-  const recent = useRecent();
-  const jobs = [...(recent.data?.analyses ?? [])].sort(
-    (a, b) => Date.parse(b.created_at) - Date.parse(a.created_at),
-  );
   const create = useMutation({
     mutationFn: api.analyze,
     onSuccess: (job) => {
@@ -841,102 +837,6 @@ export function Start() {
             </p>
           </div>
         </details>
-
-        <section
-          className="entry-recent"
-          id="recent"
-          aria-labelledby="recent-title"
-        >
-          <div className="entry-section-heading">
-            <div>
-              <h2 id="recent-title">Recent analyses</h2>
-            </div>
-            <span className="entry-recent-count">
-              {recent.data
-                ? `${jobs.length} ${jobs.length === 1 ? "analysis" : "analyses"}`
-                : "Visitor-owned history"}
-            </span>
-          </div>
-          <p className="entry-recent-copy">
-            Your submitted analyses. Select one to continue.
-          </p>
-          {recent.isPending && <Loading text="Loading your analyses" />}
-          {recent.error && (
-            <ErrorNotice
-              error={recent.error}
-              retry={() => void recent.refetch()}
-            />
-          )}
-          {jobs.length > 0 && (
-            <div className="entry-table-wrap">
-              <table className="entry-table">
-                <thead>
-                  <tr>
-                    <th scope="col">Model</th>
-                    <th scope="col">Revision</th>
-                    <th scope="col">Submitted</th>
-                    <th scope="col">Status</th>
-                    <th scope="col">
-                      <span className="sr-only">Action</span>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {jobs.map((job) => (
-                    <tr key={job.id}>
-                      <td>
-                        <Link
-                          className="entry-model-link"
-                          to={`/app/analyses/${encodeURIComponent(job.id)}?view=${job.status === "inspected" ? "artifacts" : "architecture"}`}
-                        >
-                          <span>
-                            <strong>{job.model_id}</strong>
-                            <small>
-                              {job.architecture ?? "Architecture pending"}
-                            </small>
-                          </span>
-                        </Link>
-                      </td>
-                      <td className="entry-revision">
-                        {job.revision ? job.revision.slice(0, 12) : "Pending"}
-                      </td>
-                      <td className="entry-time">
-                        <time dateTime={job.created_at}>
-                          {new Date(job.created_at).toLocaleString([], {
-                            month: "short",
-                            day: "numeric",
-                            hour: "numeric",
-                            minute: "2-digit",
-                          })}
-                        </time>
-                      </td>
-                      <td>
-                        <Status status={job.status} />
-                      </td>
-                      <td>
-                        <Link
-                          className="entry-continue"
-                          to={`/app/analyses/${encodeURIComponent(job.id)}?view=${job.status === "inspected" ? "artifacts" : "architecture"}`}
-                          aria-label={`Continue analysis of ${job.model_id}`}
-                        >
-                          Continue <ArrowRight size={14} />
-                        </Link>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-          {recent.data && jobs.length === 0 && (
-            <div className="entry-empty">
-              <div>
-                <strong>No analyses in this session yet</strong>
-                <p>Submit a model above and its report will appear here.</p>
-              </div>
-            </div>
-          )}
-        </section>
       </main>
       <PageFooter />
     </div>
