@@ -193,6 +193,8 @@ def selection(spec: TensorSpec, indices: list[dict[str, Any]]) -> ShapeResult:
                 shape.append(len(range(*slice(start, stop, step).indices(extent))))
             elif start in (None, 0) and stop is None and step in (None, 1):
                 shape.append(extent)
+            elif start in (None, 0) and stop == extent and step in (None, 1):
+                shape.append(extent)
             elif start in (None, 0) and type(stop) is str and step in (None, 1) and type(extent) is int:
                 shape.append(stop)
                 conditions.extend([f"0 <= {stop}", f"{stop} <= {extent}"])

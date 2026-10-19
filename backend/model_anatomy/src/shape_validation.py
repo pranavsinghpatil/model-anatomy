@@ -52,7 +52,7 @@ def validate_shapes(root: Graph, model: torch.nn.Module) -> dict[str, Any]:
                     recomputed = matmul(*specs, bmm=check["rule"] == "bmm_contract")
                 elif check["rule"].startswith("elementwise_"):
                     recomputed = broadcast(specs, check["rule"])
-                elif node.kind == "reshape" and node.metadata.get("method") not in {"to", "type_as", "float", "half"} and specs and not node.metadata.get("keyword_arguments"):
+                elif node.kind == "reshape" and node.metadata.get("method") not in {"to", "type", "type_as", "float", "half"} and specs and not node.metadata.get("keyword_arguments"):
                     recomputed = transform(specs[0], node.metadata["method"], node.metadata.get("dimensions", []))
                 elif check["rule"] == "tensor_indexing" and specs:
                     recomputed = selection(specs[0], node.metadata["indexing"]["indices"])
@@ -66,6 +66,15 @@ def validate_shapes(root: Graph, model: torch.nn.Module) -> dict[str, Any]:
                             record(graph, node.id, {"rule": "operation_output_agreement", "status": "invalid",
                                 "reason": "Exported output disagrees with independently checked operation",
                                 "expected_shape": recomputed.spec.shape, "actual_shape": output.shape}, "Operation output")
+                if check["rule"] == "native_tensor_split" and specs and known(specs[0].shape):
+                    axis, sizes = node.metadata["axis"], node.metadata["sizes"]
+                    valid = sum(sizes) == specs[0].shape[axis]
+                    for index, size in enumerate(sizes):
+                        expected = specs[0].shape[:axis] + [size] + specs[0].shape[axis + 1:]
+                        declared = node.metadata["output_ports"].get(str(index), {})
+                        valid = valid and declared.get("shape") == expected and declared.get("dtype") == specs[0].dtype
+                    record(graph, node.id, {"rule": "split_output_agreement", "status": "proven" if valid else "invalid",
+                        "reason": "" if valid else "Split outputs disagree with input extent or sections"}, "Independent split contract")
             elif node.metadata.get("source_proof"):
                 constraints = [item["condition"] for item in node.metadata["source_proof"]["conditions"] if item.get("basis") == "required_input_constraint"]
                 record(graph, node.id, {"rule": "bounded_python_source", "status": "conditional" if constraints else "proven",
@@ -108,8 +117,9 @@ def validate_shapes(root: Graph, model: torch.nn.Module) -> dict[str, Any]:
             if explicit is not None:
                 declared = explicit.get(edge.source_port)
                 if declared is None:
-                    record(graph, source.id, {"rule": "source_port_exists", "status": "invalid",
-                        "reason": "Data edge references an absent typed output port", "port": edge.source_port}, "Typed source return")
+                    unproven = source.metadata.get("output_structure", {}).get("kind") == "unknown"
+                    record(graph, source.id, {"rule": "source_port_exists", "status": "unknown" if unproven else "invalid",
+                        "reason": "Output container is unresolved" if unproven else "Data edge references an absent typed output port", "port": edge.source_port}, "Typed source return")
                 elif edge.tensor is not None and (declared["shape"] != edge.tensor.shape or declared["dtype"] != edge.tensor.dtype):
                     record(graph, source.id, {"rule": "source_port_agreement", "status": "invalid",
                         "reason": "Data edge disagrees with its typed output port", "port": edge.source_port}, "Typed source return")

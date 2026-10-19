@@ -12,7 +12,7 @@ from .inputs import InputResolver
 from .ir import Edge, Evidence, Graph, Node, RepetitionSpec, TensorSpec
 from .patterns import Repetition, SemanticAnalyzer
 from .static_flow import FlowEvent, StaticFlowAnalyzer, StaticValue
-from .shape_rules import module_contract, known
+from .shape_rules import module_contract
 from .shape_values import describe, bind as bind_output, ports as output_ports
 from .source_eval import DTYPES
 
@@ -109,6 +109,8 @@ class HierarchyBuilder:
             "parameter_shapes": {p["name"]: p["shape"] for p in records},
             "attributes": record["attributes"],
             "structural_signature": self.analyzer.signatures[path].digest,
+            "template_equivalence": {"status": self.analyzer.signatures[path].equivalence_status,
+                "proof_path": path, "scope": "Computation template, not learned parameter value equality"},
             "parameter_count_scope": "unique module parameter identities within this component; hierarchy and shared aliases overlap",
         }
         label = LABELS.get(classification.kind, record["type"])
@@ -176,6 +178,10 @@ class HierarchyBuilder:
                 node.metadata["variant_groups"] = [dict(asdict(g), count=g.count) for g in groups]
         node.metadata["invocation_established"] = True
         node.child_graph = event.resolved_graph
+        if node.child_graph and node.child_graph.metadata.get("attention_proof", {}).get("attention_pattern") == "unknown":
+            node.metadata["candidate_kind"] = node.kind
+            node.kind, node.label = "unknown", "Unverified attention pattern"
+            node.confidence = 0.0
         return node
 
     def output_spec(self, node: Node, incoming: TensorSpec | None = None) -> TensorSpec:
@@ -284,28 +290,6 @@ class HierarchyBuilder:
         named = {roles.get(name, name): value for name, value in arguments.items()}
         incoming = next((StaticFlowAnalyzer.tensor_spec(value) for value in arguments.values()
                          if value.domain == "tensor" or value.symbolic is not None), None)
-        if self.analyzer.classifications[path].kind == "rotary_position_embedding":
-            # Preserve the existing semantic boundary while E03 remains deferred.
-            # Container ports come from source; their dimensions remain conditional.
-            flow = StaticFlowAnalyzer(self.model, path, self.analyzer.classifications,
-                                      argument_overrides=named).analyze()
-            structure = describe(flow.outputs)
-            frequency = getattr(module, "inv_freq", None)
-            positions = named.get("position_ids")
-            position_spec = StaticFlowAnalyzer.tensor_spec(positions) if positions is not None else None
-            width = frequency.numel() * 2 if isinstance(frequency, torch.Tensor) and frequency.ndim == 1 else None
-            if structure.get("kind") == "tuple" and position_spec and position_spec.shape is not None and width:
-                for item in structure["items"]:
-                    if item.get("kind") == "tensor":
-                        item.update(shape=[*position_spec.shape, width], dtype=incoming.dtype if incoming else None)
-            event.metadata.update(output_structure=structure, output_ports=output_ports(structure),
-                                  shape_pattern_boundary={"rule": "existing_rotary_semantic_pattern",
-                                      "status": "conditional", "source_equivalence_verified": False,
-                                      "reason": "E03 is deferred; dimensions depend on the existing rotary pattern",
-                                      "source_conditions": flow.branch_conditions,
-                                      "source_analysis_boundaries": flow.unexplained_operations,
-                                      "runtime_verified": False})
-            return bind_output(structure, event.id)
         check = module_contract(module, incoming)
         if check is not None:
             structure = {"kind": "tensor", "shape": check.spec.shape, "dtype": check.spec.dtype}
@@ -427,6 +411,7 @@ class HierarchyBuilder:
                 "input_profile": flow.input_profile,
                 "branch_conditions": flow.branch_conditions,
                 "diagnostics": flow.diagnostics,
+                "forward_wrapper_proof": flow.wrapper_proof,
                 **(
                     {
                         "shape_basis": "native ViT source and config; fixed resolution, unmasked, no interpolation"
@@ -449,6 +434,7 @@ class HierarchyBuilder:
             "resolved_operations": flow.resolved_operations,
             "unknown_inputs": sorted(flow.unknown_inputs),
             "diagnostics": flow.diagnostics,
+            "forward_wrapper_proof": flow.wrapper_proof,
         }
         if not flow.events:
             graph.metadata["topology"] = "structural_only"
@@ -716,36 +702,4 @@ class HierarchyBuilder:
     def attention(self, path: str) -> Graph:
         from .attention import build_attention
 
-        if not known(self.inputs.spec("hidden_states", path).shape):
-            graph = self.source_graph(path)
-            graph.metadata["refinement_failure"] = "Caller input layout is unknown; config dimensions cannot fill it"
-            return graph
-        graph = build_attention(self, path)
-        if "output_structure" in graph.metadata:
-            return graph
-        # Establish the Python return container independently of the existing pattern.
-        flow = StaticFlowAnalyzer(self.model, path, self.analyzer.classifications,
-                                  self.resolve_module, self.call_contexts.get(path)).analyze()
-        structure = describe(flow.outputs)
-        primary = next(iter(output_ports(structure)), None)
-        hidden = self.inputs.spec("hidden_states", path)
-
-        def annotate(tree: dict[str, Any], prefix: str = "") -> None:
-            if tree.get("kind") == "tuple":
-                for index, child in enumerate(tree["items"]):
-                    annotate(child, f"{prefix}.{index}".strip("."))
-            elif tree.get("kind") == "model_output":
-                for name, child in tree["fields"].items():
-                    annotate(child, f"{prefix}.{name}".strip("."))
-            elif ((prefix or "output") == primary and tree.get("kind") != "none" and tree.get("shape") is None
-                  and not any(event.metadata.get("shape_check", {}).get("status") == "invalid" for event in flow.events)):
-                tree.update(kind="tensor", shape=hidden.shape, dtype=hidden.dtype)
-
-        annotate(structure)
-        graph.metadata.update(output_structure=structure, return_contract={
-            "basis": "Source return container with primary shape conditional on existing attention pattern",
-            "status": "conditional", "runtime_verified": False,
-            "source_equivalence_verified": False, "profile_conditions": flow.branch_conditions,
-            "source_analysis_boundaries": flow.unexplained_operations,
-            "limitations": "Attention semantic refinement validation is deferred to E03"})
-        return graph
+        return build_attention(self, path)

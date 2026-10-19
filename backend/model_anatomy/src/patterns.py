@@ -9,6 +9,7 @@ from dataclasses import asdict, dataclass
 from typing import Any
 
 import torch
+from .equivalence import EquivalenceEvidence
 
 
 @dataclass(frozen=True)
@@ -23,6 +24,7 @@ class StructuralSignature:
     digest: str
     module_count: int
     parameter_count: int
+    equivalence_status: str = "unknown"
 
 
 @dataclass
@@ -44,6 +46,9 @@ class SemanticAnalyzer:
         self.classifications: dict[str, SemanticClassification] = {}
         self.signatures: dict[str, StructuralSignature] = {}
         self.repetitions: dict[str, list[Repetition]] = {}
+        collector = EquivalenceEvidence()
+        self.equivalence = {path: collector.inspect(model.get_submodule(path) if path else model)
+                            for path in raw["modules"]}
         for path in reversed(list(raw["modules"])):
             self.classifications[path] = self.classify(path)
         for path in raw["modules"]:
@@ -292,10 +297,13 @@ class SemanticAnalyzer:
         if path in self.signatures:
             return self.signatures[path]
         entries, unique_parameters = [], {}
+        established = True
         prefix = path + "." if path else ""
         for p, module in self.raw["modules"].items():
             if p != path and not p.startswith(prefix):
                 continue
+            proof = self.equivalence[p]
+            established = established and proof["status"] == "established"
             parameters = [
                 (name.rsplit(".", 1)[-1], item["shape"], item["dtype"] or item["module_dtype"])
                 for name in module["parameters"]
@@ -330,10 +338,13 @@ class SemanticAnalyzer:
                     sharing,
                     self.classifications[p].kind,
                     self.raw["source_fingerprints"][p]["sha256"],
+                    proof,
                 ]
             )
-        digest = hashlib.sha256(json.dumps(entries, sort_keys=True).encode()).hexdigest()
-        result = StructuralSignature(digest, len(entries), sum(unique_parameters.values()))
+        # Independent unproven states must never compare equal by omission.
+        digest = hashlib.sha256(json.dumps([entries, None if established else path], sort_keys=True).encode()).hexdigest()
+        result = StructuralSignature(digest, len(entries), sum(unique_parameters.values()),
+                                     "established" if established else "unknown")
         self.signatures[path] = result
         return result
 
@@ -341,6 +352,7 @@ class SemanticAnalyzer:
         return {
             "classifications": {p: asdict(c) for p, c in self.classifications.items()},
             "structural_signatures": {p: asdict(s) for p, s in self.signatures.items()},
+            "template_equivalence": self.equivalence,
             "repetitions": {
                 p: [dict(asdict(r), count=r.count) for r in groups] for p, groups in self.repetitions.items()
             },

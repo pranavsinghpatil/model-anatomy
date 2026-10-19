@@ -20,7 +20,7 @@ from transformers.utils.import_utils import is_torch_fx_proxy, is_torchdynamo_co
 
 from .inputs import InputResolver
 from .ir import TensorSpec
-from .shape_rules import broadcast, selection as indexed_shape, transform, matmul, concatenate
+from .shape_rules import broadcast, selection as indexed_shape, transform, matmul, concatenate, module_contract
 from .source_eval import DTYPES, TORCH_PRIMITIVES, FloatInfo, ModuleState, SourceBoundary, SourceEvaluator, Symbol, Tensor
 
 UNKNOWN = object()
@@ -119,6 +119,7 @@ class StaticFlow:
     resolved_operations: list[dict[str, Any]] = field(default_factory=list)
     unknown_inputs: set[str] = field(default_factory=set)
     diagnostics: list[dict[str, Any]] = field(default_factory=list)
+    wrapper_proof: dict[str, Any] | None = None
 
 
 def combine(values: list[StaticValue]) -> StaticValue:
@@ -164,6 +165,21 @@ class StaticFlowAnalyzer:
         self.argument_overrides = argument_overrides or {}
 
     def analyze(self) -> StaticFlow:
+        if ("forward" in vars(self.module) or self.module._forward_hooks or self.module._forward_pre_hooks
+                or inspect.getattr_static(type(self.module), "__getattribute__", object.__getattribute__) is not object.__getattribute__
+                or inspect.getattr_static(type(self.module), "__getattr__", torch.nn.Module.__getattr__) is not torch.nn.Module.__getattr__):
+            value = self.unsupported(ast.Pass(lineno=0, col_offset=0),
+                "Instance forward overrides, hooks or custom attribute lookup require separate source proof")
+            self.flow.outputs = value
+            return self.flow
+        from .wrapper_proof import forward_wrappers
+        wrappers = forward_wrappers(type(self.module).forward, self.module,
+                                    {name: value.constant for name, value in self.argument_overrides.items()})
+        self.flow.wrapper_proof = wrappers
+        if wrappers["status"] == "unknown":
+            self.flow.outputs = self.unsupported(ast.Pass(lineno=0, col_offset=0),
+                "Forward decorator effects are unproven: " + "; ".join(wrappers["failure_reasons"]))
+            return self.flow
         try:
             method = inspect.unwrap(type(self.module).forward)
             self.source_globals = method.__globals__
@@ -172,7 +188,7 @@ class StaticFlowAnalyzer:
             self.source_hash = hashlib.sha256(source.encode()).hexdigest()
             tree = ast.parse(source)
             function = next(n for n in tree.body if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef)))
-        except (OSError, TypeError, SyntaxError, StopIteration) as exc:
+        except (OSError, TypeError, AttributeError, SyntaxError, StopIteration) as exc:
             self.flow.warnings.append(f"Forward source unavailable: {type(exc).__name__}")
             return self.flow
         self.collect_source_calls(function)
@@ -267,10 +283,15 @@ class StaticFlowAnalyzer:
                 **self.source_location(function.args.vararg),
             })
         if function.args.kwarg:
-            self.env[function.args.kwarg.arg] = StaticValue(fields={})
+            declared = {arg.arg for arg in function.args.posonlyargs + function.args.args + function.args.kwonlyargs}
+            extras = {name: self.local_argument(f"{function.args.kwarg.arg}.{name}", value)
+                      for name, value in self.argument_overrides.items() if name not in declared}
+            value = combine(list(extras.values()))
+            value.fields, value.domain = extras, "container"
+            self.env[function.args.kwarg.arg] = value
             self.flow.input_profile.append({
-                "argument": function.args.kwarg.arg, "value": {},
-                "basis": "Canonical profile supplies no additional keyword arguments",
+                "argument": function.args.kwarg.arg, "argument_names": sorted(extras),
+                "basis": "Actual caller extra keywords" if extras else "Canonical profile supplies no additional keyword arguments",
                 **self.source_location(function.args.kwarg),
             })
         self.statements(function.body)
@@ -393,6 +414,7 @@ class StaticFlowAnalyzer:
         value = StaticValue([(f"input:{name}", "output")], may_be_none=may_be_none)
         if not may_be_none:
             spec = InputResolver(self.model).spec(name, self.path)
+            value.shape_spec, value.domain = spec, "tensor"
             if spec.shape is not None and spec.dtype is not None:
                 value.symbolic = Tensor(tuple(Symbol(d) if isinstance(d, str) else d for d in spec.shape),
                                         spec.dtype, name)
@@ -419,6 +441,10 @@ class StaticFlowAnalyzer:
             return self.module_resolver(event, arguments)
         if path is not None:
             module = self.model.get_submodule(path) if path else self.model
+            spec = next((self.tensor_spec(item) for item in arguments.values() if item.domain == "tensor"), None)
+            check = module_contract(module, spec)
+            if check is not None:
+                return self.attach_shape(value, event, check)
             incoming = next((v.symbolic for v in arguments.values() if v.symbolic is not None), None)
             if type(module) is torch.nn.Embedding and "forward" not in vars(module) and incoming is not None:
                 dtype = DTYPES.get(module.weight.dtype)
@@ -578,6 +604,19 @@ class StaticFlowAnalyzer:
             elif isinstance(node, ast.Pass):
                 continue
             elif isinstance(node, (ast.With, ast.AsyncWith)):
+                if isinstance(node, ast.With) and len(node.items) == 1 and node.items[0].optional_vars is None:
+                    context = node.items[0].context_expr
+                    if isinstance(context, ast.Call) and self.global_symbol(context.func) is torch.autocast:
+                        options = {keyword.arg: self.expression(keyword.value) for keyword in context.keywords}
+                        args = [self.expression(arg) for arg in context.args]
+                        if (options.get("enabled", StaticValue()).constant is False and len(args) <= 1
+                                and options.keys() <= {"enabled", "device_type", "dtype", "cache_enabled"}
+                                and not any(value.refs for value in [*args, *options.values()])):
+                            self.resolved(context, "disabled_native_autocast", enabled=False,
+                                          condition="Valid native device_type; autocast disabled in this source scope")
+                            if self.statements(node.body):
+                                return True
+                            continue
                 self.unsupported(node, "Context manager entry/exit and exception effects are not established")
             elif isinstance(node, (ast.Try, ast.TryStar)):
                 self.unsupported(node, "Try body, handlers, else and finally remain possible; exception flow is unsupported")
@@ -645,6 +684,7 @@ class StaticFlowAnalyzer:
                 ast.Sub: arithmetic.sub,
                 ast.Mult: arithmetic.mul,
                 ast.Div: arithmetic.truediv,
+                ast.FloorDiv: arithmetic.floordiv,
                 ast.Pow: arithmetic.pow,
             }
             if (
@@ -685,7 +725,7 @@ class StaticFlowAnalyzer:
                                    {"operator": type(operator).__name__, "scalar": scalar.constant,
                                     "scalar_side": "right" if tensor is left else "left"})
                 return self.attach_shape(value, self.flow.events[-1], check)
-            return combine([left, right])
+            return self.unsupported(node, "Tensor arithmetic operand or scalar value is unproven", [left, right])
         kind = (
             "residual"
             if isinstance(operator, ast.Add)
@@ -735,6 +775,8 @@ class StaticFlowAnalyzer:
         return value
 
     def attribute(self, value: StaticValue, name: str) -> StaticValue:
+        if isinstance(value.constant, Symbol) and value.constant.expression == "input_device" and name == "type":
+            return StaticValue(constant=Symbol("input_device_type"), domain="device_type")
         if value.fields is not None and name in value.fields:
             return value.fields[name]
         if isinstance(value.constant, FloatInfo):
@@ -751,7 +793,12 @@ class StaticFlowAnalyzer:
             if path in self.classifications:
                 return StaticValue(module_path=path)
             module = self.model.get_submodule(value.module_path) if value.module_path else self.model
-            attribute = getattr(module, name, UNKNOWN)
+            attribute = next((registry[name] for registry in (module._parameters, module._buffers) if name in registry), UNKNOWN)
+            if attribute is UNKNOWN:
+                attribute = vars(module).get(name, inspect.getattr_static(module, name, UNKNOWN))
+            if isinstance(attribute, property):
+                state = self.module_state(module)
+                return StaticValue(constant=state.attributes[name], domain="metadata") if name in state.attributes else StaticValue()
             if isinstance(attribute, torch.Tensor):
                 buffer = name in module._buffers
                 dtype = DTYPES.get(attribute.dtype)
@@ -763,7 +810,12 @@ class StaticFlowAnalyzer:
                 return StaticValue(module_path=value.module_path, method=name)
             return StaticValue(constant=attribute)
         if value.constant is not UNKNOWN and value.constant is not None:
-            return StaticValue(constant=getattr(value.constant, name, UNKNOWN))
+            if isinstance(value.constant, ModuleType):
+                return StaticValue(constant=vars(value.constant).get(name, UNKNOWN))
+            try:
+                return StaticValue(constant=SourceEvaluator().attribute(value.constant, name))
+            except (SourceBoundary, AttributeError, TypeError, ValueError):
+                return StaticValue()
         return StaticValue([(ref, name) for ref, _ in value.refs])
 
     def global_symbol(self, expression: ast.AST) -> Any:
@@ -868,9 +920,18 @@ class StaticFlowAnalyzer:
             elif type(constant) in (int, type(None)):
                 descriptors.append({"kind": "integer" if type(constant) is int else "new_axis", "value": constant})
                 full_slice = False
+            elif constant is Ellipsis:
+                descriptors.append({"kind": "ellipsis"})
             else:
                 descriptors.append({"kind": "unknown"})
                 full_slice = False
+        rank = self.tensor_spec(value).shape
+        if rank is not None and sum(item["kind"] == "ellipsis" for item in descriptors) == 1:
+            consumed = sum(item["kind"] not in {"ellipsis", "new_axis"} for item in descriptors)
+            if consumed <= len(rank):
+                descriptors = [part for item in descriptors for part in
+                    ([{"kind": "slice", "start": None, "stop": None, "step": None}] * (len(rank) - consumed)
+                     if item["kind"] == "ellipsis" else [item])]
         result = self.event(node, None, "selection", "Select tensor elements",
                           {"input": value, "indices": dependencies}, {"indices": [
                               None if item.get("kind") == "slice" and all(item.get(key) is None for key in ("start", "stop", "step"))
@@ -961,7 +1022,12 @@ class StaticFlowAnalyzer:
         if isinstance(node, ast.Constant):
             return StaticValue(constant=node.value)
         if isinstance(node, ast.Name):
-            return self.env.get(node.id, StaticValue())
+            if node.id in self.env:
+                return self.env[node.id]
+            constant = self.global_symbol(node)
+            if inspect.isfunction(constant) or isinstance(constant, ModuleType) or any(constant is item for item in (str, int, float, bool, tuple, list)) or type(constant) in (bool, int, float, str, type(None), torch.dtype):
+                return StaticValue(constant=constant, domain="callable" if inspect.isfunction(constant) else "metadata")
+            return StaticValue()
         if isinstance(node, ast.NamedExpr):
             value = self.expression(node.value)
             self.assign(node.target, value)
@@ -972,7 +1038,16 @@ class StaticFlowAnalyzer:
                 return StaticValue(constant=constant, domain="metadata")
             return self.attribute(self.expression(node.value), node.attr)
         if isinstance(node, (ast.Tuple, ast.List)):
-            values = [self.expression(item) for item in node.elts]
+            values = []
+            for item in node.elts:
+                value = self.expression(item.value if isinstance(item, ast.Starred) else item)
+                if isinstance(item, ast.Starred):
+                    expanded = value.items if value.items is not None else [StaticValue.literal(part) for part in value.constant] if type(value.constant) in (list, tuple) else None
+                    if expanded is None or len(expanded) + len(values) > 128:
+                        return self.unsupported(node, "Tuple unpacking dimensions are unproven", [value])
+                    values.extend(expanded)
+                else:
+                    values.append(value)
             result = combine(values)
             result.items = values
             result.domain = "tuple"
@@ -1058,6 +1133,11 @@ class StaticFlowAnalyzer:
             value = self.expression(node.operand)
             if type(value.constant) in (int, float):
                 return StaticValue(constant=-value.constant if isinstance(node.op, ast.USub) else value.constant)
+            if value.domain == "tensor":
+                result = self.event(node, None, "operation", "Negate" if isinstance(node.op, ast.USub) else "Identity", {"input": value})
+                check = transform(self.tensor_spec(value), "contiguous", [])
+                check.rule = "tensor_unary_sign"
+                return self.attach_shape(result, self.flow.events[-1], check)
             return self.unsupported(node, "Unary operation is not statically established", [self.index_dependencies(value)])
         if isinstance(node, ast.BoolOp):
             value = self.expression(node.values[0])
@@ -1111,6 +1191,7 @@ class StaticFlowAnalyzer:
                     event.metadata.setdefault("branch_evidence", []).append(evidence)
                 return value
             before = dict(self.env)
+            choice_events = len(self.flow.events)
             start = len(self.flow.events)
             left = self.expression(node.body)
             left_env = dict(self.env)
@@ -1126,7 +1207,10 @@ class StaticFlowAnalyzer:
             for name in left_env.keys() | self.env.keys():
                 a, b = left_env.get(name, StaticValue()), self.env.get(name, StaticValue())
                 self.env[name] = a if a == b else combine([a, b])
-            self.flow.warnings.append(f"Conditional source path is unresolved: {ast.unparse(node.test)}")
+            if left.refs or right.refs or len(self.flow.events) > choice_events or left_env != before or self.env != before:
+                self.flow.warnings.append(f"Conditional source path is unresolved: {ast.unparse(node.test)}")
+            else:
+                self.resolved(node, "metadata_only_choice", condition_value_unknown=True)
             return merge_outputs([left, right])
         if isinstance(node, ast.BinOp):
             return self.operation(node, self.expression(node.left), self.expression(node.right), node.op)
@@ -1138,21 +1222,27 @@ class StaticFlowAnalyzer:
                 else self.expression(node.func)
             )
             name = ast.unparse(node.func).rsplit(".", 1)[-1]
-            transparent_methods = {
-                "size", "dim", "numel", "view", "reshape", "contiguous", "to",
-                "type_as", "float", "half", "transpose", "permute", "unsqueeze",
-                "squeeze", "expand", "flatten",
-            }
-            if (
-                isinstance(node.func, ast.Attribute)
-                and name in transparent_methods
-                and (any(isinstance(arg, ast.Starred) for arg in node.args)
-                     or any(keyword.arg is None for keyword in node.keywords))
-            ):
-                return self.unsupported(
-                    node, "Star arguments for this tensor method cannot be safely bound",
-                    [receiver or StaticValue()],
-                )
+            if isinstance(node.func, ast.Attribute) and name == "split" and receiver is not None:
+                parts = [self.expression(arg).constant for arg in node.args]
+                options = {kw.arg: self.expression(kw.value).constant for kw in node.keywords}
+                spec = self.tensor_spec(receiver)
+                axis = options.get("dim", parts[1] if len(parts) == 2 else 0)
+                sections = parts[0] if parts else None
+                if (spec.shape is not None and type(axis) is int and -len(spec.shape) <= axis < len(spec.shape)
+                        and options.keys() <= {"dim"} and len(parts) in {1, 2}
+                        and not (len(parts) == 2 and "dim" in options)):
+                    axis %= len(spec.shape)
+                    extent = spec.shape[axis]
+                    sizes = list(sections) if type(sections) in (list, tuple) else [sections] * (extent // sections) if type(extent) is int and type(sections) is int and sections > 0 and extent % sections == 0 else None
+                    if sizes is not None and len(sizes) <= 128 and all(type(size) is int and size >= 0 for size in sizes) and sum(sizes) == extent:
+                        from .shape_values import bind, ports
+                        structure = {"kind": "tuple", "items": [{"kind": "tensor", "shape": spec.shape[:axis] + [size] + spec.shape[axis + 1:], "dtype": spec.dtype} for size in sizes]}
+                        value = self.event(node, None, "split", "Split tensor", {"input": receiver},
+                            {"output_structure": structure, "output_ports": ports(structure), "source_rule": "native_tensor_split", "axis": axis, "sizes": sizes,
+                             "shape_check": {"rule": "native_tensor_split", "status": "proven" if spec.dtype else "unknown",
+                                             "reason": "" if spec.dtype else "Split dtype is unproven", "constraints": [], "runtime_verified": False}})
+                        return bind(structure, value.refs[0][0])
+                return self.unsupported(node, "Split sections, axis or input layout are unproven", [receiver])
             if (isinstance(node.func, ast.Attribute) and receiver is not None
                     and receiver.domain == "tensor" and name in {"pow", "mean", "cos", "sin"}):
                 args = [self.expression(arg).constant for arg in node.args]
@@ -1187,7 +1277,7 @@ class StaticFlowAnalyzer:
                     check.status, check.reason = "unknown", "Power dtype and exponent compatibility are not established"
                 value = self.event(node, None, "source_operation", name.title(), {"input": receiver})
                 return self.attach_shape(value, self.flow.events[-1], check)
-            if isinstance(node.func, ast.Attribute) and name in {"size", "dim", "numel"}:
+            if isinstance(node.func, ast.Attribute) and receiver is not None and receiver.domain == "tensor" and name in {"size", "dim", "numel"}:
                 if receiver.symbolic is not None and name in {"size", "dim"} and not node.keywords:
                     args = [self.expression(arg).constant for arg in node.args]
                     try:
@@ -1196,11 +1286,12 @@ class StaticFlowAnalyzer:
                     except (SourceBoundary, TypeError, IndexError):
                         pass
                 return StaticValue(domain="shape" if name == "size" and not node.args and not node.keywords else "metadata")
-            if isinstance(node.func, ast.Attribute) and name in {
+            if isinstance(node.func, ast.Attribute) and receiver is not None and receiver.domain == "tensor" and name in {
                 "view",
                 "reshape",
                 "contiguous",
                 "to",
+                "type",
                 "type_as",
                 "float",
                 "half",
@@ -1211,16 +1302,27 @@ class StaticFlowAnalyzer:
                 "expand",
                 "flatten",
             }:
-                values = [self.expression(arg).constant for arg in node.args]
+                values = []
+                for argument in node.args:
+                    value = self.expression(argument.value if isinstance(argument, ast.Starred) else argument)
+                    if isinstance(argument, ast.Starred):
+                        if type(value.constant) not in (tuple, list) or len(value.constant) + len(values) > 128:
+                            return self.unsupported(node, "Star arguments for layout cannot be safely bound", [receiver, value])
+                        values.extend(value.constant)
+                    else:
+                        values.append(value.constant)
+                if any(kw.arg is None for kw in node.keywords):
+                    return self.unsupported(node, "Layout keyword unpacking is unproven", [receiver])
                 options = {kw.arg: self.expression(kw.value).constant for kw in node.keywords}
                 if len(values) == 1 and type(values[0]) in (tuple, list):
                     values = list(values[0])
                 dimensions = [value.expression if isinstance(value, Symbol) else value for value in values]
                 check = transform(self.tensor_spec(receiver), name, dimensions)
-                if name in {"to", "type_as", "float", "half"}:
+                if name in {"to", "type", "type_as", "float", "half"}:
                     try:
                         symbolic = SourceEvaluator().method(receiver.symbolic, name, values, options, node)
                         check.spec = TensorSpec(symbolic.spec()["shape"], symbolic.dtype, "cast_result")
+                        check.status, check.reason, check.constraints = "proven", "", []
                     except (SourceBoundary, AttributeError, TypeError, ValueError):
                         check.spec = TensorSpec(None, None, "unresolved_cast")
                         check.status, check.reason = "unknown", "Cast dtype/device arguments are unproven"
@@ -1231,7 +1333,7 @@ class StaticFlowAnalyzer:
                                    {"method": name, "dimensions": [v if type(v) in (int, str) else "unknown" if v is UNKNOWN else str(v) for v in dimensions],
                                     "keyword_arguments": bool(options)})
                 return self.attach_shape(value, self.flow.events[-1], check)
-            if name in {"enumerate", "iter"} and node.args:
+            if any(self.global_symbol(node.func) is item for item in (enumerate, iter)) and node.args:
                 return self.expression(node.args[0])
             positional = []
             keywords = {}
@@ -1278,14 +1380,30 @@ class StaticFlowAnalyzer:
             if target is math.sqrt and len(positional) == 1 and not keywords and type(positional[0].constant) in (int, float) and positional[0].constant >= 0:
                 self.resolved(node, "scalar_math_sqrt", input=positional[0].constant)
                 return StaticValue.literal(math.sqrt(positional[0].constant))
+            if any(target is conversion for conversion in (float, int, bool)) and len(positional) == 1 and not keywords and type(positional[0].constant) in (int, float, bool):
+                value = target(positional[0].constant)
+                if type(value) is float and not math.isfinite(value):
+                    return StaticValue()
+                self.resolved(node, "native_scalar_conversion", target=target.__name__, value=value)
+                return StaticValue.literal(value)
+            if target is functional.dropout and positional:
+                probability = keywords.get("p", positional[1] if len(positional) > 1 else StaticValue.literal(0.5)).constant
+                training = keywords.get("training", positional[2] if len(positional) > 2 else StaticValue.literal(True)).constant
+                if type(probability) in (int, float) and 0 <= probability <= 1 and type(training) is bool and keywords.keys() <= {"p", "training", "inplace"} and keywords.get("inplace", StaticValue.literal(False)).constant is False:
+                    value = self.event(node, None, "dropout", "Dropout", {"input": positional[0]}, {"probability": probability, "training": training})
+                    check = transform(self.tensor_spec(positional[0]), "contiguous", [])
+                    check.rule = "native_functional_dropout"
+                    return self.attach_shape(value, self.flow.events[-1], check)
             if any(target is primitive for primitive in (functional.gelu, functional.relu, functional.silu,
                                                          torch.tanh, torch.sigmoid, torch.rsqrt, torch.erf,
                                                          torch.pow, functional.softmax)) and positional:
                 value = self.event(node, None, "activation", "Activation", arguments)
+                self.flow.events[-1].metadata["native_callable"] = f"{target.__module__}.{target.__name__}"
                 check = transform(self.tensor_spec(positional[0]), "contiguous", [])
                 check.rule = "native_elementwise_activation"
                 if target is functional.softmax:
                     axis = keywords.get("dim", positional[1] if len(positional) > 1 else StaticValue()).constant
+                    self.flow.events[-1].metadata["normalization_axis"] = axis if type(axis) is int else None
                     if check.spec.shape is None or type(axis) is not int or not -len(check.spec.shape) <= axis < len(check.spec.shape):
                         check.spec.shape = None
                         check.status, check.reason = "unknown", "Softmax axis is unproven"
@@ -1324,13 +1442,16 @@ class StaticFlowAnalyzer:
                                   self.module_argument_roles(function.module_path, arguments))
             if function.method is not None and self.depth < 3:
                 return self.helper(function.module_path, function.method, positional, node, keywords)
-            if name == "apply_chunking_to_forward" and node.args:
+            from transformers.pytorch_utils import apply_chunking_to_forward
+            if target is apply_chunking_to_forward and len(positional) >= 4 and positional[1].constant == 0 and not keywords:
                 helper = arguments["0"]
                 if helper.method:
+                    self.resolved(node, "native_zero_chunk_passthrough", chunk_size=0,
+                        source_sha256=hashlib.sha256(inspect.getsource(apply_chunking_to_forward).encode()).hexdigest())
                     return self.helper(helper.module_path, helper.method, positional[3:], node, keywords)
-            if name == "arange":
+            if target is TORCH_PRIMITIVES["arange"]:
                 result = self.event(node, None, "source_operation", "Position range", arguments)
-                if self.global_symbol(node.func) is TORCH_PRIMITIVES["arange"] and not keywords.keys() - {"device", "dtype"}:
+                if not keywords.keys() - {"device", "dtype"}:
                     bounds = [arg.constant for arg in positional]
                     if len(bounds) == 2 and type(bounds[0]) is int and bounds[0] == 0:
                         bounds = bounds[1:]
@@ -1346,7 +1467,9 @@ class StaticFlowAnalyzer:
                                 "output_dtype": dtype, "runtime_verified": False}
                             self.resolved(node, "symbolic_arange", output=result.symbolic.spec())
                 return result
-            if name in {"matmul", "bmm", "einsum", "cat", "stack"}:
+            native_matrix = next((method for method in ("matmul", "bmm", "einsum", "cat", "stack") if target is getattr(torch, method)), None)
+            if native_matrix is not None:
+                name = native_matrix
                 kind = "matmul" if name in {"matmul", "bmm", "einsum"} else "concatenation"
                 dimension = arguments.get("dim", arguments.get("1", StaticValue(constant=0))).constant
                 metadata = {"method": name}
@@ -1360,18 +1483,26 @@ class StaticFlowAnalyzer:
                     arguments,
                     metadata,
                 )
-                if name in {"matmul", "bmm"} and len(positional) == 2 and self.global_symbol(node.func) is getattr(torch, name):
+                if name in {"matmul", "bmm"} and len(positional) == 2:
                     return self.attach_shape(value, self.flow.events[-1], matmul(self.tensor_spec(positional[0]), self.tensor_spec(positional[1]), bmm=name == "bmm"))
-                if name in {"cat", "stack"} and positional and positional[0].items is not None and self.global_symbol(node.func) is getattr(torch, name):
+                if name in {"cat", "stack"} and positional and positional[0].items is not None:
+                    self.flow.events[-1].arguments = {str(index): item for index, item in enumerate(positional[0].items)}
                     check = concatenate([self.tensor_spec(item) for item in positional[0].items], dimension, stack=name == "stack")
                     return self.attach_shape(value, self.flow.events[-1], check)
                 return value
-            if name in {"hasattr", "isinstance"}:
-                if name == "hasattr" and len(node.args) == 2:
+            if any(target is item for item in (hasattr, isinstance)):
+                if (self.global_symbol(node.func) is isinstance and len(positional) == 2
+                        and positional[0].domain == "device_type" and positional[1].constant is str):
+                    self.resolved(node, "native_device_type_is_string", runtime_value_known=False)
+                    return StaticValue.literal(True)
+                if target is hasattr and len(node.args) == 2:
                     obj, attribute = arguments["0"], arguments["1"].constant
                     if obj.module_path is not None and isinstance(attribute, str):
                         module = self.model.get_submodule(obj.module_path) if obj.module_path else self.model
-                        return StaticValue(constant=hasattr(module, attribute))
+                        if any(attribute in registry for registry in (vars(module), module._modules, module._parameters, module._buffers)):
+                            return StaticValue.literal(True)
+                        known = inspect.getattr_static(module, attribute, UNKNOWN)
+                        return StaticValue() if isinstance(known, property) else StaticValue.literal(known is not UNKNOWN)
                 return StaticValue()
             external = self.external_helper(node, positional, keywords, arguments)
             if external is not None:
@@ -1437,9 +1568,46 @@ class StaticFlowAnalyzer:
                         keywords: dict[str, StaticValue], arguments: dict[str, StaticValue]) -> StaticValue | None:
         """Summarize an external Python helper only after all symbolic source steps are proven."""
         function = self.global_symbol(node.func)
+        if function is UNKNOWN and isinstance(node.func, ast.Name):
+            function = self.env.get(node.func.id, StaticValue()).constant
         if not inspect.isfunction(function) and not any(function is primitive for primitive in TORCH_PRIMITIVES.values()):
             return None
+        if inspect.isfunction(function) and any(value.refs or value.module_path is not None for value in positional):
+            inlined = self.inline_function(function, positional, keywords, node)
+            if inlined is not None:
+                return inlined
         return self.source_summary(node, function, positional, keywords, arguments)
+
+    def inline_function(self, function: Any, positional: list[StaticValue], keywords: dict[str, StaticValue], node: ast.Call) -> StaticValue | None:
+        """Interpret a selected plain Python helper in the same dependency graph."""
+        if self.depth >= 6 or function.__closure__ or hasattr(function, "__wrapped__"):
+            return None
+        try:
+            text = textwrap.dedent(inspect.getsource(function))
+            tree = next(item for item in ast.parse(text).body if isinstance(item, ast.FunctionDef))
+            if tree.decorator_list or len(text) > 131072 or sum(1 for _ in ast.walk(tree)) > 4096 or any(isinstance(item, ast.Raise) for item in ast.walk(tree)):
+                return None
+            bound = self.bind_helper(tree, positional, keywords, skip_self=False)
+            if bound is None:
+                return None
+        except (OSError, TypeError, SyntaxError, StopIteration):
+            return None
+        old = self.env, self.returned, self.source_globals, self.source_name, self.source_hash, self.flow.outputs
+        self.env, self.returned, self.source_globals = bound, [], function.__globals__
+        self.source_name = f"{function.__module__}.{function.__qualname__}"
+        self.source_hash = hashlib.sha256(text.encode()).hexdigest()
+        provenance = self.source_location(tree)
+        self.collect_source_calls(tree)
+        self.depth += 1
+        try:
+            self.statements(tree.body)
+            result = merge_outputs(self.returned)
+        finally:
+            self.depth -= 1
+            self.env, self.returned, self.source_globals, self.source_name, self.source_hash, self.flow.outputs = old
+        self.resolved(node, "selected_python_helper", helper=provenance,
+                      argument_names=sorted(bound), tensor_execution=False)
+        return result
 
     def source_summary(self, node: ast.Call, function: Any, positional: list[StaticValue],
                        keywords: dict[str, StaticValue], arguments: dict[str, StaticValue],
@@ -1592,16 +1760,16 @@ class StaticFlowAnalyzer:
 
     @staticmethod
     def bind_helper(function: ast.FunctionDef, values: list[StaticValue],
-                    keywords: dict[str, StaticValue]) -> dict[str, StaticValue] | None:
+                    keywords: dict[str, StaticValue], skip_self: bool = True) -> dict[str, StaticValue] | None:
         """Bind AST parameter names, defaults and variadics without executing a helper."""
         args = function.args
         positional = args.posonlyargs + args.args
-        if positional and positional[0].arg in {"self", "cls"}:
+        if skip_self and positional and positional[0].arg in {"self", "cls"}:
             positional = positional[1:]
         if len(values) > len(positional) and args.vararg is None:
             return None
         bound = {arg.arg: value for arg, value in zip(positional, values)}
-        allowed = {arg.arg for arg in args.args + args.kwonlyargs} - {"self", "cls"}
+        allowed = {arg.arg for arg in args.args + args.kwonlyargs} - ({"self", "cls"} if skip_self else set())
         extras = {}
         for name, value in keywords.items():
             if name in allowed:

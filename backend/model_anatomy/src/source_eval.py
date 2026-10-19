@@ -98,7 +98,7 @@ def expression(value: Any) -> str:
 
 DTYPES = {torch.float32: "F32", torch.float16: "F16", torch.bfloat16: "BF16",
           torch.float64: "F64", torch.int64: "I64", torch.int32: "I32", torch.bool: "BOOL"}
-TORCH_PRIMITIVES = {name: getattr(torch, name) for name in ("arange", "diff", "vmap", "tensor", "finfo", "where", "ones", "zeros")}
+TORCH_PRIMITIVES = {name: getattr(torch, name) for name in ("arange", "diff", "vmap", "tensor", "finfo", "where", "ones", "zeros", "full")}
 
 
 def dtype_name(value: Any) -> str:
@@ -253,7 +253,7 @@ class SourceEvaluator:
                 return next(k for k, v in DTYPES.items() if v == owner.dtype)
             if name == "device":
                 return Symbol("input_device")
-            if name in {"to", "expand", "cumsum", "new_ones", "size", "dim", "view", "reshape"}:
+            if name in {"to", "type", "float", "half", "expand", "cumsum", "new_ones", "size", "dim", "view", "reshape", "transpose", "permute", "unsqueeze", "squeeze", "flatten", "contiguous"}:
                 return Bound(owner, name)
             raise SourceBoundary(f"Unsupported symbolic tensor attribute: {name}")
         if type(owner) in (list, dict) and name in {"extend", "pop"}:
@@ -455,6 +455,9 @@ class SourceEvaluator:
             if isinstance(op, (ast.In, ast.NotIn)) and type(right) is dict and type(left) in (int, str):
                 result = left in right
                 return not result if isinstance(op, ast.NotIn) else result
+            if isinstance(op, (ast.In, ast.NotIn)) and type(left) is str and type(right) is str:
+                result = left in right
+                return not result if isinstance(op, ast.NotIn) else result
             if type(left) in (type(None), bool, int, float, str) and type(right) in (type(None), bool, int, float, str):
                 operations = {ast.Eq: operator.eq, ast.NotEq: operator.ne, ast.Lt: operator.lt,
                               ast.LtE: operator.le, ast.Gt: operator.gt, ast.GtE: operator.ge}
@@ -508,6 +511,8 @@ class SourceEvaluator:
         raise SourceBoundary(f"Unsupported helper expression: {type(node).__name__}")
 
     def binary(self, left: Any, right: Any, op: ast.AST) -> Any:
+        if isinstance(op, ast.Sub) and isinstance(left, Symbol) and left == right:
+            return 0
         if isinstance(op, ast.Add) and type(left) in (list, tuple) and type(left) is type(right) and len(left) + len(right) <= 128:
             return self.container(left + right)
         if isinstance(op, ast.Mult):
@@ -590,7 +595,7 @@ class SourceEvaluator:
 
     def method(self, owner: Any, name: str, args: list[Any], kwargs: dict[str, Any], node: ast.AST) -> Any:
         if isinstance(owner, Tensor):
-            if name == "to":
+            if name in {"to", "type"}:
                 if any(key not in {"device", "dtype"} for key in kwargs) or len(args) > 1:
                     raise SourceBoundary("Unsupported tensor conversion arguments")
                 if args and type(args[0]) is not torch.dtype and not (isinstance(args[0], Symbol) and args[0].expression == "input_device"):
@@ -705,8 +710,12 @@ class SourceEvaluator:
                 raise SourceBoundary("Unsupported vmap dimensions")
             self.record(node, "symbolic_vmap", in_dims=list(kwargs["in_dims"]), out_dims=0)
             return Mapped(args[0], kwargs["in_dims"])
+        elif function is TORCH_PRIMITIVES["full"]:
+            if len(args) != 2 or type(args[0]) not in (tuple, list) or args[0] or not (type(args[1]) in (int, float) or isinstance(args[1], Symbol)) or set(kwargs) - {"device", "dtype"} or "dtype" not in kwargs:
+                raise SourceBoundary("Only typed scalar full factories are supported")
+            result = Tensor((), dtype_name(kwargs["dtype"]), expression(args[1]))
         elif function is TORCH_PRIMITIVES["tensor"]:
-            if len(args) != 1 or type(args[0]) not in (int, float, bool) or set(kwargs) - {"device", "dtype"} or "dtype" not in kwargs:
+            if len(args) != 1 or not (type(args[0]) in (int, float, bool) or isinstance(args[0], Symbol)) or set(kwargs) - {"device", "dtype"} or "dtype" not in kwargs:
                 raise SourceBoundary("Only typed scalar tensor literals are supported")
             result = Tensor((), dtype_name(kwargs["dtype"]), repr(args[0]))
         elif function is TORCH_PRIMITIVES["finfo"] and len(args) == 1 and not kwargs:
@@ -717,7 +726,7 @@ class SourceEvaluator:
         elif function is TORCH_PRIMITIVES["where"]:
             if len(args) != 3 or kwargs or not isinstance(args[0], Tensor) or args[0].dtype != "BOOL" or not isinstance(args[1], Tensor):
                 raise SourceBoundary("Unsupported typed where signature")
-            if not isinstance(args[2], Symbol) or args[2].expression != f"finfo({args[1].dtype}).min":
+            if not (isinstance(args[2], Tensor) and args[2].dtype == args[1].dtype) and (not isinstance(args[2], Symbol) or args[2].expression != f"finfo({args[1].dtype}).min"):
                 raise SourceBoundary("where scalar dtype compatibility is not established")
             result = Tensor(self.broadcast([v for v in args if isinstance(v, Tensor)]), args[1].dtype,
                             f"where({args[0].expression}, {args[1].expression}, {args[2].expression})")

@@ -73,7 +73,7 @@ def inspect_native_model(
         qualified = f"{type(module).__module__}.{type(module).__name__}"
         attributes = {}
         for name in ATTRIBUTES:
-            value = getattr(module, name, None)
+            value = vars(module).get(name, inspect.getattr_static(module, name, None))
             if type(value) in (int, float, bool, str) or isinstance(value, (tuple, list, torch.Size)):
                 attributes[name] = list(value) if isinstance(value, (tuple, list, torch.Size)) else value
         modules[path] = {
