@@ -6,6 +6,7 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
   return {
     plugins: [react(), tailwindcss()],
+    cacheDir: ".local/vite-cache",
     server: {
       watch: {
         ignored: [
@@ -18,11 +19,11 @@ export default defineConfig(({ mode }) => {
       },
       proxy: {
         "/health": {
-          target: env.API_PROXY_TARGET || "http://127.0.0.1:8001",
+          target: env.API_PROXY_TARGET || "http://127.0.0.1:8000",
           changeOrigin: true,
         },
         "/api": {
-          target: env.API_PROXY_TARGET || "http://127.0.0.1:8001",
+          target: env.API_PROXY_TARGET || "http://127.0.0.1:8000",
           changeOrigin: true,
         },
       },

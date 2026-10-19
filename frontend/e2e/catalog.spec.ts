@@ -84,6 +84,7 @@ test("catalog renders saved API facts and opens the selected registry record", a
 }) => {
   const requests = await catalogApi(page);
   await page.goto("/catalog");
+  await page.getByRole("button", { name: "Stored inspections" }).click();
   await expect(
     page.getByRole("heading", { name: "Model Catalog" }),
   ).toBeVisible({ timeout: 25_000 });
@@ -117,6 +118,7 @@ test("catalog supports server pagination and shows honest empty state", async ({
 }) => {
   const requests = await catalogApi(page, { paginated: true });
   await page.goto("/catalog");
+  await page.getByRole("button", { name: "Stored inspections" }).click();
   await page.getByRole("button", { name: "Next" }).click();
   await expect(page).toHaveURL(/\/catalog$/);
   expect(requests.some((request) => request.includes("offset=24"))).toBe(true);
@@ -136,6 +138,7 @@ test("catalog retries API errors and explains a truly empty database", async ({
 }) => {
   await catalogApi(page, { failOnce: true });
   await page.goto("/catalog");
+  await page.getByRole("button", { name: "Stored inspections" }).click();
   await expect(
     page.getByRole("heading", { name: "Could not load the model catalog" }),
   ).toBeVisible();
@@ -147,6 +150,7 @@ test("catalog retries API errors and explains a truly empty database", async ({
   await page.unrouteAll();
   await catalogApi(page, { empty: true });
   await page.reload();
+  await page.getByRole("button", { name: "Stored inspections" }).click();
   await expect(
     page.getByRole("heading", { name: "No inspections are stored yet" }),
   ).toBeVisible();

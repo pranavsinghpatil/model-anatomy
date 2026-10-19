@@ -838,3 +838,21 @@ unchanged, and the extraction cache identity advances to `2026.10.19.3`.
 Use family-specific source/configuration, tensor-ownership, input/output and graph
 acceptance gates for the remaining scope. A manifest, tensor inventory or task tag
 cannot substitute for an execution graph. See `MODEL_FAMILY_STRATEGIES.md`.
+
+## D-057 - Publish measured 250-repository compatibility evidence
+
+**2026-10-20 - explicit user request**
+
+Expand the pinned metadata/static reconstruction matrix to 250 distinct Hugging
+Face repositories spanning model task families. Preserve the first 120 case
+definitions and collect fresh observations with frozen engine and runner source.
+The catalog defaults to measured case outcomes with search, task/outcome filters,
+pagination, revision links and bounded coverage evidence. The database-backed
+stored-inspection view remains available separately. A benchmark row never
+becomes a saved analysis; its action submits a pinned model normally.
+
+Publication requires all 250 measured outcomes to match the manifest and source
+identities. Failed cases remain visible; artifact inspection is never promoted
+to an architecture graph. Raw exception traces are excluded from the public
+export. Support breadth is an observation, not a promise of universal semantic
+coverage, inference performance or model accuracy.

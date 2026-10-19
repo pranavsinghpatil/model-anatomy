@@ -1,0 +1,1971 @@
+{
+  "schema_version": 1,
+  "discovered_at": "2026-10-19T22:47:49Z",
+  "discovery": {
+    "source": "Hugging Face public model metadata API",
+    "baseline_manifest": "model-matrix-100.json",
+    "baseline_cases_preserved": 120,
+    "new_cases_metadata_verified": 130,
+    "weights_downloaded": false,
+    "new_case_selection": "balanced round-robin by declared pipeline task; specialist pools require trusted repository-name patterns, ignoring author names",
+    "rejections": {
+      "already present in baseline": 76,
+      "author diversity cap": 4,
+      "specialist search lacks matching metadata evidence": 53
+    },
+    "category_counts": {
+      "audio-classification": 4,
+      "audio-to-audio": 4,
+      "automatic-speech-recognition": 4,
+      "causal-lm": 13,
+      "code-lm": 3,
+      "depth-estimation": 6,
+      "document-understanding": 1,
+      "embedding": 9,
+      "extractive-qa": 2,
+      "feature-extraction": 4,
+      "fill-mask": 5,
+      "gguf-quantized": 4,
+      "image-captioning": 1,
+      "image-classification": 11,
+      "image-segmentation": 9,
+      "image-text-embedding": 2,
+      "image-text-to-text": 8,
+      "image-to-image": 4,
+      "image-to-text": 4,
+      "image-to-video": 5,
+      "neural-audio-codec": 1,
+      "object-detection": 8,
+      "peft-adapter": 1,
+      "protein-model": 4,
+      "question-answering": 4,
+      "reranker": 2,
+      "rl-policy": 2,
+      "rl-policy-decision-transformer": 3,
+      "rlhf-reward-model": 2,
+      "rlhf-sft-lm": 2,
+      "robotics-policy": 4,
+      "sentence-similarity": 4,
+      "sentiment-classification": 2,
+      "seq2seq": 2,
+      "seq2seq-instruct": 2,
+      "speech-recognition": 5,
+      "speech-representation": 1,
+      "speech-to-speech-translation": 1,
+      "summarization": 6,
+      "tabular-model": 4,
+      "text-classification": 6,
+      "text-classification-encoder": 2,
+      "text-generation": 5,
+      "text-to-audio": 4,
+      "text-to-image": 12,
+      "text-to-speech": 10,
+      "text-to-video": 8,
+      "time-series-forecasting": 4,
+      "token-classification": 4,
+      "translation": 8,
+      "unconditional-image-generation": 4,
+      "video-classification": 6,
+      "video-text-retrieval": 1,
+      "visual-question-answering": 6,
+      "voice-cloning-tts": 1,
+      "voice-conversion": 2,
+      "zero-shot-image-classification": 4
+    },
+    "curation": {
+      "curated_at": "2026-10-19T22:59:11Z",
+      "baseline_cases_preserved": 120,
+      "new_cases_after_curation": 130,
+      "specialist_case_replacements": 8,
+      "false_specialist_matches_rejected": 6,
+      "provider_diversity_replacements": 2,
+      "manual_rejection_log": [
+        {
+          "model_id": "OpenMed/OpenMed-NER-ProteinDetect-SuperClinical-141M",
+          "category": "protein-model",
+          "reason": "rejected prior NER-ProteinDetect match: token-classification entity detector, not a protein sequence model"
+        },
+        {
+          "model_id": "OpenMed/OpenMed-NER-ProteinDetect-SnowMed-568M",
+          "category": "protein-model",
+          "reason": "rejected prior NER-ProteinDetect match: token-classification entity detector, not a protein sequence model"
+        },
+        {
+          "model_id": "OpenMed/OpenMed-NER-ProteinDetect-TinyMed-135M",
+          "category": "protein-model",
+          "reason": "rejected prior NER-ProteinDetect match: token-classification entity detector, not a protein sequence model"
+        },
+        {
+          "model_id": "OpenMed/OpenMed-NER-ProteinDetect-ElectraMed-560M",
+          "category": "protein-model",
+          "reason": "rejected prior NER-ProteinDetect match: token-classification entity detector, not a protein sequence model"
+        },
+        {
+          "model_id": "tabularisai/multilingual-sentiment-analysis",
+          "category": "tabular-model",
+          "reason": "rejected prior match: repository is a text sentiment classifier"
+        },
+        {
+          "model_id": "tabularisai/ModernFinBERT",
+          "category": "tabular-model",
+          "reason": "rejected prior match: repository is a financial text classification model"
+        },
+        {
+          "model_id": "ibm-granite/granite-timeseries-tspulse-r1",
+          "category": "time-series-forecasting",
+          "reason": "provider diversity: add Amazon Chronos alongside the two retained IBM Granite time-series models"
+        },
+        {
+          "model_id": "ibm-granite/granite-timeseries-patchtst-fm-r2",
+          "category": "time-series-forecasting",
+          "reason": "provider diversity: add Google TimesFM alongside the two retained IBM Granite time-series models"
+        }
+      ],
+      "replacement_api_verification": [
+        {
+          "model_id": "facebook/esm2_t6_8M_UR50D",
+          "revision": "c731040fcd8d73dceaa04b0a8e6329b345b0f5df",
+          "verified_sibling_count": 9,
+          "verified_artifact_files": [
+            "config.json",
+            "model.safetensors",
+            "pytorch_model.bin"
+          ],
+          "verification_source": "Hugging Face model metadata API at the exact pinned revision"
+        },
+        {
+          "model_id": "facebook/esm2_t12_35M_UR50D",
+          "revision": "6fbf070e65b0b7291e7bbcd451118c216cff79d8",
+          "verified_sibling_count": 9,
+          "verified_artifact_files": [
+            "config.json",
+            "model.safetensors",
+            "pytorch_model.bin"
+          ],
+          "verification_source": "Hugging Face model metadata API at the exact pinned revision"
+        },
+        {
+          "model_id": "Rostlab/prot_bert",
+          "revision": "7a894481acdc12202f0a415dd567f6cfdb698908",
+          "verified_sibling_count": 7,
+          "verified_artifact_files": [
+            "config.json",
+            "pytorch_model.bin",
+            "vocab.txt"
+          ],
+          "verification_source": "Hugging Face model metadata API at the exact pinned revision"
+        },
+        {
+          "model_id": "ElnaggarLab/ankh-base",
+          "revision": "d99cb6b966530dfc2ae96bc69d9255c2a07308b0",
+          "verified_sibling_count": 7,
+          "verified_artifact_files": [
+            "config.json",
+            "pytorch_model.bin",
+            "tokenizer.json"
+          ],
+          "verification_source": "Hugging Face model metadata API at the exact pinned revision"
+        },
+        {
+          "model_id": "Prior-Labs/TabPFN-v2-clf",
+          "revision": "f851f2a3c941544733b712d8c0f96dfae9b28862",
+          "verified_sibling_count": 19,
+          "verified_artifact_files": [
+            "config.json",
+            "tabpfn-v2-classifier.ckpt"
+          ],
+          "verification_source": "Hugging Face model metadata API at the exact pinned revision"
+        },
+        {
+          "model_id": "Prior-Labs/TabPFN-v2-reg",
+          "revision": "4972a65a1b30806315c6f92499959ffbfc69a673",
+          "verified_sibling_count": 11,
+          "verified_artifact_files": [
+            "config.json",
+            "tabpfn-v2-regressor.ckpt"
+          ],
+          "verification_source": "Hugging Face model metadata API at the exact pinned revision"
+        },
+        {
+          "model_id": "amazon/chronos-t5-small",
+          "revision": "a971ba21945c4f1796b17a91fe69214b5f4ad472",
+          "verified_sibling_count": 6,
+          "verified_artifact_files": [
+            "config.json",
+            "model.safetensors"
+          ],
+          "verification_source": "Hugging Face model metadata API at the exact pinned revision"
+        },
+        {
+          "model_id": "google/timesfm-2.0-500m-pytorch",
+          "revision": "dc2443792ce5516872b89b37cf1bc058c3bf0c10",
+          "verified_sibling_count": 5,
+          "verified_artifact_files": [
+            "config.json",
+            "model.safetensors",
+            "torch_model.ckpt"
+          ],
+          "verification_source": "Hugging Face model metadata API at the exact pinned revision"
+        }
+      ],
+      "weights_downloaded": false
+    }
+  },
+  "cases": [
+    {
+      "model_id": "HuggingFaceTB/SmolLM2-135M",
+      "category": "causal-lm",
+      "revision": "93efa2f097d58c2a74874c7e644dbc9b0cee75a2",
+      "declared_task": "text-generation",
+      "notes": "API library_name=transformers"
+    },
+    {
+      "model_id": "HuggingFaceTB/SmolLM2-360M-Instruct",
+      "category": "causal-lm",
+      "revision": "a10cc1512eabd3dde888204e902eca88bddb4951",
+      "declared_task": "text-generation",
+      "notes": "API library_name=transformers"
+    },
+    {
+      "model_id": "Qwen/Qwen3-0.6B",
+      "category": "causal-lm",
+      "revision": "c1899de289a04d12100db370d81485cdf75e47ca",
+      "declared_task": "text-generation",
+      "notes": "API library_name=transformers"
+    },
+    {
+      "model_id": "Qwen/Qwen2.5-0.5B-Instruct",
+      "category": "causal-lm",
+      "revision": "7ae557604adf67be50417f59c2c2f167def9a775",
+      "declared_task": "text-generation",
+      "notes": "API library_name=transformers"
+    },
+    {
+      "model_id": "openai-community/gpt2",
+      "category": "causal-lm",
+      "revision": "607a30d783dfa663caf39e06633721c8d4cfcd7e",
+      "declared_task": "text-generation",
+      "notes": "API library_name=transformers"
+    },
+    {
+      "model_id": "EleutherAI/pythia-70m",
+      "category": "causal-lm",
+      "revision": "a39f36b100fe8a5377810d56c3f4789b9c53ac42",
+      "notes": "API library_name=gpt-neox"
+    },
+    {
+      "model_id": "EleutherAI/pythia-160m",
+      "category": "causal-lm",
+      "revision": "50f5173d932e8e61f858120bcb800b97af589f46",
+      "declared_task": "text-generation",
+      "notes": "API library_name=transformers"
+    },
+    {
+      "model_id": "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
+      "category": "causal-lm",
+      "revision": "fe8a4ea1ffedaf415f4da2f062534de366a451e6",
+      "declared_task": "text-generation",
+      "notes": "API library_name=transformers"
+    },
+    {
+      "model_id": "microsoft/phi-2",
+      "category": "causal-lm",
+      "revision": "810d367871c1d460086d9f82db8696f2e0a0fcd0",
+      "declared_task": "text-generation",
+      "notes": "API library_name=transformers"
+    },
+    {
+      "model_id": "microsoft/Phi-3-mini-4k-instruct",
+      "category": "causal-lm",
+      "revision": "f39ac1d28e925b323eae81227eaba4464caced4e",
+      "declared_task": "text-generation",
+      "notes": "API library_name=transformers"
+    },
+    {
+      "model_id": "Qwen/Qwen2.5-Coder-0.5B-Instruct",
+      "category": "code-lm",
+      "revision": "ea3f2471cf1b1f0db85067f1ef93848e38e88c25",
+      "declared_task": "text-generation",
+      "notes": "API library_name=transformers"
+    },
+    {
+      "model_id": "bigcode/starcoder2-3b",
+      "category": "code-lm",
+      "revision": "733247c55e3f73af49ce8e9c7949bf14af205928",
+      "declared_task": "text-generation",
+      "notes": "API library_name=transformers"
+    },
+    {
+      "model_id": "deepseek-ai/deepseek-coder-1.3b-instruct",
+      "category": "code-lm",
+      "revision": "e063262dac8366fc1f28a4da0ff3c50ea66259ca",
+      "declared_task": "text-generation",
+      "notes": "API library_name=transformers"
+    },
+    {
+      "model_id": "HuggingFaceTB/SmolLM2-1.7B-Instruct",
+      "category": "causal-lm",
+      "revision": "31b70e2e869a7173562077fd711b654946d38674",
+      "declared_task": "text-generation",
+      "notes": "API library_name=transformers"
+    },
+    {
+      "model_id": "mistralai/Mistral-7B-Instruct-v0.3",
+      "category": "causal-lm",
+      "revision": "c170c708c41dac9275d15a8fff4eca08d52bab71",
+      "notes": "gated; API metadata is public but artifacts may require access; API library_name=vllm"
+    },
+    {
+      "model_id": "meta-llama/Llama-3.2-1B-Instruct",
+      "category": "causal-lm",
+      "revision": "9213176726f574b556790deb65791e0c5aa438b6",
+      "declared_task": "text-generation",
+      "notes": "gated; API metadata is public but artifacts may require access; API library_name=transformers"
+    },
+    {
+      "model_id": "HuggingFaceH4/zephyr-7b-beta",
+      "category": "rlhf-sft-lm",
+      "revision": "892b3d7a7b1cf10c7a701c60881cd93df615734c",
+      "declared_task": "text-generation",
+      "notes": "SFT/chat checkpoint; RLHF training provenance is a repository declaration; API library_name=transformers"
+    },
+    {
+      "model_id": "OpenAssistant/reward-model-deberta-v3-large",
+      "category": "rlhf-reward-model",
+      "revision": "1f543c01a36316f080ebda150210b64ec14c38f4",
+      "declared_task": "text-classification",
+      "notes": "Reward model, not a serialized RL policy; API library_name=transformers"
+    },
+    {
+      "model_id": "RLHFlow/ArmoRM-Llama3-8B-v0.1",
+      "category": "rlhf-reward-model",
+      "revision": "eb2676d20da2f2d41082289d23c59b9f7427f955",
+      "declared_task": "text-classification",
+      "notes": "Reward model, not a serialized RL policy; API library_name=transformers"
+    },
+    {
+      "model_id": "OpenAssistant/oasst-sft-1-pythia-12b",
+      "category": "rlhf-sft-lm",
+      "revision": "293df535fe7711a5726987fc2f17dfc87de452a1",
+      "declared_task": "text-generation",
+      "notes": "SFT/chat checkpoint; large metadata-only case; API library_name=transformers"
+    },
+    {
+      "model_id": "sentence-transformers/all-MiniLM-L6-v2",
+      "category": "embedding",
+      "revision": "1110a243fdf4706b3f48f1d95db1a4f5529b4d41",
+      "declared_task": "sentence-similarity",
+      "notes": "API library_name=sentence-transformers"
+    },
+    {
+      "model_id": "BAAI/bge-small-en-v1.5",
+      "category": "embedding",
+      "revision": "5c38ec7c405ec4b44b94cc5a9bb96e735b38267a",
+      "declared_task": "feature-extraction",
+      "notes": "API library_name=sentence-transformers"
+    },
+    {
+      "model_id": "intfloat/e5-small-v2",
+      "category": "embedding",
+      "revision": "ffb93f3bd4047442299a41ebb6fa998a38507c52",
+      "declared_task": "sentence-similarity",
+      "notes": "API library_name=sentence-transformers"
+    },
+    {
+      "model_id": "thenlper/gte-small",
+      "category": "embedding",
+      "revision": "17e1f347d17fe144873b1201da91788898c639cd",
+      "declared_task": "sentence-similarity",
+      "notes": "API library_name=sentence-transformers"
+    },
+    {
+      "model_id": "mixedbread-ai/mxbai-embed-xsmall-v1",
+      "category": "embedding",
+      "revision": "e6ac24e5d6efb8782b59de1647b3ececb4ece94e",
+      "declared_task": "feature-extraction",
+      "notes": "API library_name=sentence-transformers"
+    },
+    {
+      "model_id": "BAAI/bge-base-en-v1.5",
+      "category": "embedding",
+      "revision": "a5beb1e3e68b9ab74eb54cfd186867f64f240e1a",
+      "declared_task": "feature-extraction",
+      "notes": "API library_name=sentence-transformers"
+    },
+    {
+      "model_id": "intfloat/e5-base-v2",
+      "category": "embedding",
+      "revision": "f52bf8ec8c7124536f0efb74aca902b2995e5bcd",
+      "declared_task": "sentence-similarity",
+      "notes": "API library_name=sentence-transformers"
+    },
+    {
+      "model_id": "sentence-transformers/paraphrase-MiniLM-L3-v2",
+      "category": "embedding",
+      "revision": "4ca70771034acceecb2e72475f72050fcdde4ddc",
+      "declared_task": "sentence-similarity",
+      "notes": "API library_name=sentence-transformers"
+    },
+    {
+      "model_id": "jinaai/jina-embeddings-v2-small-en",
+      "category": "embedding",
+      "revision": "44e7d1d6caec8c883c2d4b207588504d519788d0",
+      "declared_task": "feature-extraction",
+      "notes": "API library_name=sentence-transformers"
+    },
+    {
+      "model_id": "cross-encoder/ms-marco-MiniLM-L-6-v2",
+      "category": "reranker",
+      "revision": "233902d25c440f23af6f7d6e94d2946bac0bee0a",
+      "declared_task": "text-ranking",
+      "notes": "API library_name=sentence-transformers"
+    },
+    {
+      "model_id": "BAAI/bge-reranker-base",
+      "category": "reranker",
+      "revision": "2cfc18c9415c912f9d8155881c133215df768a70",
+      "declared_task": "text-classification",
+      "notes": "API library_name=sentence-transformers"
+    },
+    {
+      "model_id": "deepset/roberta-base-squad2",
+      "category": "extractive-qa",
+      "revision": "adc3b06f79f797d1c575d5479d6f5efe54a9e3b4",
+      "declared_task": "question-answering",
+      "notes": "API library_name=transformers"
+    },
+    {
+      "model_id": "distilbert/distilbert-base-uncased-distilled-squad",
+      "category": "extractive-qa",
+      "revision": "dfb8fa0e03905f0b6ea92133e56b6fef138015f2",
+      "declared_task": "question-answering",
+      "notes": "API library_name=transformers"
+    },
+    {
+      "model_id": "google-bert/bert-base-uncased",
+      "category": "text-classification-encoder",
+      "revision": "86b5e0934494bd15c9632b12f734a8a67f723594",
+      "declared_task": "fill-mask",
+      "notes": "API library_name=transformers"
+    },
+    {
+      "model_id": "distilbert/distilbert-base-uncased-finetuned-sst-2-english",
+      "category": "sentiment-classification",
+      "revision": "714eb0fa89d2f80546fda750413ed43d93601a13",
+      "declared_task": "text-classification",
+      "notes": "API library_name=transformers"
+    },
+    {
+      "model_id": "SamLowe/roberta-base-go_emotions",
+      "category": "text-classification",
+      "revision": "d75048347613a25d77de8cf6412eaae9fa7b26be",
+      "declared_task": "text-classification",
+      "notes": "API library_name=transformers"
+    },
+    {
+      "model_id": "unitary/toxic-bert",
+      "category": "text-classification",
+      "revision": "4d6c22e74ba2fdd26bc4f7238f50766b045a0d94",
+      "declared_task": "text-classification",
+      "notes": "API library_name=transformers"
+    },
+    {
+      "model_id": "cardiffnlp/twitter-roberta-base-sentiment-latest",
+      "category": "sentiment-classification",
+      "revision": "3216a57f2a0d9c45a2e6c20157c20c49fb4bf9c7",
+      "declared_task": "text-classification",
+      "notes": "API library_name=transformers"
+    },
+    {
+      "model_id": "FacebookAI/roberta-base",
+      "category": "text-classification-encoder",
+      "revision": "e2da8e2f811d1448a5b465c236feacd80ffbac7b",
+      "declared_task": "fill-mask",
+      "notes": "API library_name=transformers"
+    },
+    {
+      "model_id": "google-t5/t5-small",
+      "category": "seq2seq",
+      "revision": "df1b051c49625cf57a3d0d8d3863ed4d13564fe4",
+      "declared_task": "translation",
+      "notes": "API library_name=transformers"
+    },
+    {
+      "model_id": "google/flan-t5-small",
+      "category": "seq2seq-instruct",
+      "revision": "0fc9ddf78a1e988dac52e2dac162b0ede4fd74ab",
+      "notes": "API library_name=transformers"
+    },
+    {
+      "model_id": "google/flan-t5-base",
+      "category": "seq2seq-instruct",
+      "revision": "7bcac572ce56db69c1ea7c8af255c5d7c9672fc2",
+      "notes": "API library_name=transformers"
+    },
+    {
+      "model_id": "sshleifer/distilbart-cnn-12-6",
+      "category": "summarization",
+      "revision": "a4f8f3ea906ed274767e9906dbaede7531d660ff",
+      "declared_task": "summarization",
+      "notes": "API library_name=transformers"
+    },
+    {
+      "model_id": "facebook/bart-base",
+      "category": "seq2seq",
+      "revision": "aadd2ab0ae0c8268c7c9693540e9904811f36177",
+      "declared_task": "feature-extraction",
+      "notes": "API library_name=transformers"
+    },
+    {
+      "model_id": "Helsinki-NLP/opus-mt-en-fr",
+      "category": "translation",
+      "revision": "dd7f6540a7a48a7f4db59e5c0b9c42c8eea67f18",
+      "declared_task": "translation",
+      "notes": "API library_name=transformers"
+    },
+    {
+      "model_id": "Helsinki-NLP/opus-mt-fr-en",
+      "category": "translation",
+      "revision": "c4aed37b318c763fd177aa449b44e3b783cc6c02",
+      "declared_task": "translation",
+      "notes": "API library_name=transformers"
+    },
+    {
+      "model_id": "Helsinki-NLP/opus-mt-en-de",
+      "category": "translation",
+      "revision": "6183067f769a302e3861815543b9f312c71b0ca4",
+      "declared_task": "translation",
+      "notes": "API library_name=transformers"
+    },
+    {
+      "model_id": "facebook/nllb-200-distilled-600M",
+      "category": "translation",
+      "revision": "f8d333a098d19b4fd9a8b18f94170487ad3f821d",
+      "declared_task": "translation",
+      "notes": "API library_name=transformers"
+    },
+    {
+      "model_id": "google/pegasus-xsum",
+      "category": "summarization",
+      "revision": "8d8ffc158a3bee9fbb03afacdfc347c823c5ec8b",
+      "declared_task": "summarization",
+      "notes": "API library_name=transformers"
+    },
+    {
+      "model_id": "google/vit-base-patch16-224",
+      "category": "image-classification",
+      "revision": "3f49326eb077187dfe1c2a2bb15fbd74e6ab91e3",
+      "declared_task": "image-classification",
+      "notes": "API library_name=transformers"
+    },
+    {
+      "model_id": "timm/mobilenetv3_small_100.lamb_in1k",
+      "category": "image-classification",
+      "revision": "1824797e7887cbec1990e4adbd6675960a36c589",
+      "declared_task": "image-classification",
+      "notes": "API library_name=timm"
+    },
+    {
+      "model_id": "microsoft/resnet-50",
+      "category": "image-classification",
+      "revision": "34c2154c194f829b11125337b98c8f5f9965ff19",
+      "declared_task": "image-classification",
+      "notes": "API library_name=transformers"
+    },
+    {
+      "model_id": "facebook/convnext-tiny-224",
+      "category": "image-classification",
+      "revision": "6166b7613034066690a621d8bf25ffdf181a34f0",
+      "declared_task": "image-classification",
+      "notes": "API library_name=transformers"
+    },
+    {
+      "model_id": "google/vit-base-patch16-224-in21k",
+      "category": "image-classification",
+      "revision": "b4569560a39a0f1af58e3ddaf17facf20ab919b0",
+      "declared_task": "image-feature-extraction",
+      "notes": "API library_name=transformers"
+    },
+    {
+      "model_id": "microsoft/swin-tiny-patch4-window7-224",
+      "category": "image-classification",
+      "revision": "d00d478bfaf1f417d34a1186673ad4b4be264c51",
+      "declared_task": "image-classification",
+      "notes": "API library_name=transformers"
+    },
+    {
+      "model_id": "nvidia/mit-b0",
+      "category": "image-classification",
+      "revision": "80983a413c30d36a39c20203974ae7807835e2b4",
+      "declared_task": "image-classification",
+      "notes": "API library_name=transformers"
+    },
+    {
+      "model_id": "facebook/detr-resnet-50",
+      "category": "object-detection",
+      "revision": "1d5f47bd3bdd2c4bbfa585418ffe6da5028b4c0b",
+      "declared_task": "object-detection",
+      "notes": "API library_name=transformers"
+    },
+    {
+      "model_id": "hustvl/yolos-tiny",
+      "category": "object-detection",
+      "revision": "95a90f3c189fbfca3bcfc6d7315b9e84d95dc2de",
+      "declared_task": "object-detection",
+      "notes": "API library_name=transformers"
+    },
+    {
+      "model_id": "microsoft/table-transformer-detection",
+      "category": "object-detection",
+      "revision": "2357cbe2b5a5d1c03e54f32764f06058933b65ab",
+      "declared_task": "object-detection",
+      "notes": "API library_name=transformers"
+    },
+    {
+      "model_id": "microsoft/table-transformer-structure-recognition",
+      "category": "object-detection",
+      "revision": "f4d4bdc85c3fe4b1fa49658882a5d38bbdd0f343",
+      "declared_task": "object-detection",
+      "notes": "API library_name=transformers"
+    },
+    {
+      "model_id": "nvidia/segformer-b0-finetuned-ade-512-512",
+      "category": "image-segmentation",
+      "revision": "489d5cd81a0b59fab9b7ea758d3548ebe99677da",
+      "declared_task": "image-segmentation",
+      "notes": "API library_name=transformers"
+    },
+    {
+      "model_id": "nvidia/segformer-b1-finetuned-ade-512-512",
+      "category": "image-segmentation",
+      "revision": "a775b4f5dcb2179e57006dca0e268281306412ef",
+      "declared_task": "image-segmentation",
+      "notes": "API library_name=transformers"
+    },
+    {
+      "model_id": "facebook/mask2former-swin-tiny-coco-instance",
+      "category": "image-segmentation",
+      "revision": "22c4a2f15dc88149b8b8d9f4d42c54431fbd66f6",
+      "declared_task": "image-segmentation",
+      "notes": "API library_name=transformers"
+    },
+    {
+      "model_id": "CIDAS/clipseg-rd64-refined",
+      "category": "image-segmentation",
+      "revision": "999e0328d9e10b484360c477313983f9afdd7050",
+      "declared_task": "image-segmentation",
+      "notes": "API library_name=transformers"
+    },
+    {
+      "model_id": "depth-anything/Depth-Anything-V2-Small-hf",
+      "category": "depth-estimation",
+      "revision": "5426e4f0f36572d16453bbda7a8389317b1bef99",
+      "declared_task": "depth-estimation",
+      "notes": "API library_name=transformers"
+    },
+    {
+      "model_id": "Intel/dpt-hybrid-midas",
+      "category": "depth-estimation",
+      "revision": "11eaf7a1cf4bd70740697dbc216f98980c0aeb03",
+      "declared_task": "depth-estimation",
+      "notes": "API library_name=transformers"
+    },
+    {
+      "model_id": "facebook/sam-vit-base",
+      "category": "image-segmentation",
+      "revision": "70c1a07f894ebb5b307fd9eaaee97b9dfc16068f",
+      "declared_task": "mask-generation",
+      "notes": "API library_name=transformers"
+    },
+    {
+      "model_id": "openai/clip-vit-base-patch32",
+      "category": "image-text-embedding",
+      "revision": "3d74acf9a28c67741b2f4f2ea7635f0aaf6f0268",
+      "declared_task": "zero-shot-image-classification",
+      "notes": "API library_name=transformers"
+    },
+    {
+      "model_id": "google/siglip-base-patch16-224",
+      "category": "image-text-embedding",
+      "revision": "7fd15f0689c79d79e38b1c2e2e2370a7bf2761ed",
+      "declared_task": "zero-shot-image-classification",
+      "notes": "API library_name=transformers"
+    },
+    {
+      "model_id": "Salesforce/blip-image-captioning-base",
+      "category": "image-captioning",
+      "revision": "82a37760796d32b1411fe092ab5d4e227313294b",
+      "declared_task": "image-to-text",
+      "notes": "API library_name=transformers"
+    },
+    {
+      "model_id": "Salesforce/blip-vqa-base",
+      "category": "visual-question-answering",
+      "revision": "787b3d35d57e49572baabd22884b3d5a05acf072",
+      "declared_task": "visual-question-answering",
+      "notes": "API library_name=transformers"
+    },
+    {
+      "model_id": "dandelin/vilt-b32-finetuned-vqa",
+      "category": "visual-question-answering",
+      "revision": "d0a1f6ab88522427a7ae76ceb6e1e1e7b68a1d08",
+      "declared_task": "visual-question-answering",
+      "notes": "API library_name=transformers"
+    },
+    {
+      "model_id": "HuggingFaceTB/SmolVLM-256M-Instruct",
+      "category": "image-text-to-text",
+      "revision": "7e3e67edbbed1bf9888184d9df282b700a323964",
+      "declared_task": "image-text-to-text",
+      "notes": "API library_name=transformers"
+    },
+    {
+      "model_id": "Qwen/Qwen2-VL-2B-Instruct",
+      "category": "image-text-to-text",
+      "revision": "895c3a49bc3fa70a340399125c650a463535e71c",
+      "declared_task": "image-text-to-text",
+      "notes": "API library_name=transformers"
+    },
+    {
+      "model_id": "llava-hf/llava-1.5-7b-hf",
+      "category": "image-text-to-text",
+      "revision": "b234b804b114d9e37bb655e11cbbb5f5e971b7a9",
+      "declared_task": "image-text-to-text",
+      "notes": "large metadata-only case; API library_name=transformers"
+    },
+    {
+      "model_id": "naver-clova-ix/donut-base-finetuned-cord-v2",
+      "category": "document-understanding",
+      "revision": "8003d433113256b4ce3a0f5bf604b29ff78a7451",
+      "declared_task": "image-to-text",
+      "notes": "API library_name=transformers"
+    },
+    {
+      "model_id": "google/pix2struct-base",
+      "category": "image-text-to-text",
+      "revision": "4605659ec5d82c985955ebdea8210f32fe54a682",
+      "declared_task": "image-to-text",
+      "notes": "API library_name=transformers"
+    },
+    {
+      "model_id": "MCG-NJU/videomae-base",
+      "category": "video-classification",
+      "revision": "dc740ceda42fce44faed2ea03c6d447db72f6af9",
+      "declared_task": "video-classification",
+      "notes": "API library_name=transformers"
+    },
+    {
+      "model_id": "facebook/timesformer-base-finetuned-k400",
+      "category": "video-classification",
+      "revision": "8aaf40ea7d3d282dcb0a5dea01a198320d15d6c0",
+      "declared_task": "video-classification",
+      "notes": "API library_name=transformers"
+    },
+    {
+      "model_id": "microsoft/xclip-base-patch32",
+      "category": "video-text-retrieval",
+      "revision": "a2e27a78a2b5d802e894b8a1ef14f3a8ce490963",
+      "declared_task": "video-classification",
+      "notes": "API library_name=transformers"
+    },
+    {
+      "model_id": "openai/whisper-tiny",
+      "category": "speech-recognition",
+      "revision": "169d4a4341b33bc18d8881c4b69c2e104e1cc0af",
+      "declared_task": "automatic-speech-recognition",
+      "notes": "API library_name=transformers"
+    },
+    {
+      "model_id": "openai/whisper-base",
+      "category": "speech-recognition",
+      "revision": "e37978b90ca9030d5170a5c07aadb050351a65bb",
+      "declared_task": "automatic-speech-recognition",
+      "notes": "API library_name=transformers"
+    },
+    {
+      "model_id": "facebook/wav2vec2-base-960h",
+      "category": "speech-recognition",
+      "revision": "22aad52d435eb6dbaf354bdad9b0da84ce7d6156",
+      "declared_task": "automatic-speech-recognition",
+      "notes": "API library_name=transformers"
+    },
+    {
+      "model_id": "facebook/hubert-base-ls960",
+      "category": "speech-representation",
+      "revision": "dba3bb02fda4248b6e082697eee756de8fe8aa8a",
+      "declared_task": "feature-extraction",
+      "notes": "API library_name=transformers"
+    },
+    {
+      "model_id": "jonatasgrosman/wav2vec2-large-xlsr-53-english",
+      "category": "speech-recognition",
+      "revision": "569a6236e92bd5f7652a0420bfe9bb94c5664080",
+      "declared_task": "automatic-speech-recognition",
+      "notes": "API library_name=transformers"
+    },
+    {
+      "model_id": "facebook/mms-1b-all",
+      "category": "speech-recognition",
+      "revision": "3d33597edbdaaba14a8e858e2c8caa76e3cec0cd",
+      "declared_task": "automatic-speech-recognition",
+      "notes": "API library_name=transformers"
+    },
+    {
+      "model_id": "microsoft/speecht5_tts",
+      "category": "text-to-speech",
+      "revision": "30fcde30f19b87502b8435427b5f5068e401d5f6",
+      "declared_task": "text-to-speech",
+      "notes": "API library_name=transformers"
+    },
+    {
+      "model_id": "microsoft/speecht5_vc",
+      "category": "voice-conversion",
+      "revision": "c418ba2144598f973d0fddc9fd5909a3af83de3d",
+      "declared_task": "audio-to-audio",
+      "notes": "voice conversion component; not an end-to-end duplex assistant; API library_name=transformers"
+    },
+    {
+      "model_id": "myshell-ai/OpenVoice",
+      "category": "voice-conversion",
+      "revision": "c70fc8b939bd1d8213994ff7c88e32be39708271",
+      "declared_task": "text-to-speech",
+      "notes": "voice conversion; distinguish from speech-to-speech translation; API library_name=unspecified"
+    },
+    {
+      "model_id": "coqui/XTTS-v2",
+      "category": "voice-cloning-tts",
+      "revision": "6c2b0d75eae4b7047358e3b6bd9325f857d43f77",
+      "declared_task": "text-to-speech",
+      "notes": "voice-cloning text-to-speech; not speech-to-speech conversion; API library_name=coqui"
+    },
+    {
+      "model_id": "facebook/encodec_24khz",
+      "category": "neural-audio-codec",
+      "revision": "c1dbe2ae3f1de713481a3b3e7c47f357092ee040",
+      "declared_task": "feature-extraction",
+      "notes": "API library_name=transformers"
+    },
+    {
+      "model_id": "facebook/mms-tts-eng",
+      "category": "text-to-speech",
+      "revision": "c71de0fe7204c83f1c10820a7d696d0b450048ba",
+      "declared_task": "text-to-speech",
+      "notes": "API library_name=transformers"
+    },
+    {
+      "model_id": "suno/bark-small",
+      "category": "text-to-speech",
+      "revision": "1dbd7a128513b8ae4a4e2130fed57b7ac9da5bcd",
+      "declared_task": "text-to-speech",
+      "notes": "API library_name=transformers"
+    },
+    {
+      "model_id": "parler-tts/parler-tts-mini-v1",
+      "category": "text-to-speech",
+      "revision": "0392b9451a601e528fd863bbb0598431fee810d9",
+      "declared_task": "text-to-speech",
+      "notes": "API library_name=transformers"
+    },
+    {
+      "model_id": "hexgrad/Kokoro-82M",
+      "category": "text-to-speech",
+      "revision": "f3ff3571791e39611d31c381e3a41a3af07b4987",
+      "declared_task": "text-to-speech",
+      "notes": "API library_name=unspecified"
+    },
+    {
+      "model_id": "kyutai/hibiki-2b-pytorch-bf16",
+      "category": "speech-to-speech-translation",
+      "revision": "bd71144c96f26040612f6414716f5f48ee4fce69",
+      "declared_task": "translation",
+      "notes": "native speech-to-speech translation checkpoint; API library_name=hibiki"
+    },
+    {
+      "model_id": "kyutai/tts-1.6b-en_fr",
+      "category": "text-to-speech",
+      "revision": "f65439609986c392cb12df63938abcc550c3fb15",
+      "declared_task": "text-to-speech",
+      "notes": "API library_name=moshi"
+    },
+    {
+      "model_id": "hf-internal-testing/tiny-stable-diffusion-pipe",
+      "category": "text-to-image",
+      "revision": "3ee6c9f225f088ad5d35b624b6514b091e6a4849",
+      "declared_task": "text-to-image",
+      "notes": "API library_name=diffusers"
+    },
+    {
+      "model_id": "segmind/tiny-sd",
+      "category": "text-to-image",
+      "revision": "cad0bd7495fa6c4bcca01b19a723dc91627fe84f",
+      "declared_task": "text-to-image",
+      "notes": "API library_name=diffusers"
+    },
+    {
+      "model_id": "stabilityai/sd-turbo",
+      "category": "text-to-image",
+      "revision": "b261bac6fd2cf515557d5d0707481eafa0485ec2",
+      "reference": "https://huggingface.co/stabilityai/sd-turbo/blob/b261bac6fd2cf515557d5d0707481eafa0485ec2/unet/diffusion_pytorch_model.safetensors",
+      "declared_task": "text-to-image",
+      "notes": "gated/access restrictions may apply; API library_name=diffusers"
+    },
+    {
+      "model_id": "stabilityai/sdxl-turbo",
+      "category": "text-to-image",
+      "revision": "71153311d3dbb46851df1931d3ca6e939de83304",
+      "reference": "https://huggingface.co/stabilityai/sdxl-turbo/blob/71153311d3dbb46851df1931d3ca6e939de83304/unet/diffusion_pytorch_model.safetensors",
+      "declared_task": "text-to-image",
+      "notes": "large metadata-only case; API library_name=diffusers"
+    },
+    {
+      "model_id": "stabilityai/stable-diffusion-xl-base-1.0",
+      "category": "text-to-image",
+      "revision": "462165984030d82259a11f4367a4eed129e94a7b",
+      "reference": "https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0/blob/462165984030d82259a11f4367a4eed129e94a7b/unet/diffusion_pytorch_model.safetensors",
+      "declared_task": "text-to-image",
+      "notes": "large metadata-only case; gated/access restrictions may apply; API library_name=diffusers"
+    },
+    {
+      "model_id": "black-forest-labs/FLUX.1-schnell",
+      "category": "text-to-image",
+      "revision": "741f7c3ce8b383c54771c7003378a50191e9efe9",
+      "reference": "https://huggingface.co/black-forest-labs/FLUX.1-schnell/blob/741f7c3ce8b383c54771c7003378a50191e9efe9/transformer/diffusion_pytorch_model-00001-of-00003.safetensors",
+      "declared_task": "text-to-image",
+      "notes": "large metadata-only case; gated/access restrictions may apply; API library_name=diffusers"
+    },
+    {
+      "model_id": "PixArt-alpha/PixArt-Sigma-XL-2-1024-MS",
+      "category": "text-to-image",
+      "revision": "e102b3591cc82e97071b8b4cb90d834d0c487207",
+      "reference": "https://huggingface.co/PixArt-alpha/PixArt-Sigma-XL-2-1024-MS/blob/e102b3591cc82e97071b8b4cb90d834d0c487207/transformer/diffusion_pytorch_model.safetensors",
+      "declared_task": "text-to-image",
+      "notes": "large metadata-only case; API library_name=diffusers"
+    },
+    {
+      "model_id": "DeepFloyd/IF-I-XL-v1.0",
+      "category": "text-to-image",
+      "revision": "c03d510e9b75bce9f9db5bb85148c1402ad7e694",
+      "reference": "https://huggingface.co/DeepFloyd/IF-I-XL-v1.0/blob/c03d510e9b75bce9f9db5bb85148c1402ad7e694/unet/diffusion_pytorch_model.safetensors",
+      "declared_task": "text-to-image",
+      "notes": "gated/access restrictions may apply; API library_name=diffusers"
+    },
+    {
+      "model_id": "THUDM/CogVideoX-2b",
+      "category": "text-to-video",
+      "revision": "1137dacfc2c9c012bed6a0793f4ecf2ca8e7ba01",
+      "reference": "https://huggingface.co/THUDM/CogVideoX-2b/blob/1137dacfc2c9c012bed6a0793f4ecf2ca8e7ba01/transformer/diffusion_pytorch_model.safetensors",
+      "declared_task": "text-to-video",
+      "notes": "large metadata-only case; API library_name=diffusers"
+    },
+    {
+      "model_id": "Lightricks/LTX-Video",
+      "category": "text-to-video",
+      "revision": "8984fa25007f376c1a299016d0957a37a2f797bb",
+      "reference": "https://huggingface.co/Lightricks/LTX-Video/blob/8984fa25007f376c1a299016d0957a37a2f797bb/transformer/diffusion_pytorch_model-00001-of-00002.safetensors",
+      "declared_task": "image-to-video",
+      "notes": "large metadata-only case; API library_name=diffusers"
+    },
+    {
+      "model_id": "Wan-AI/Wan2.1-T2V-1.3B",
+      "category": "text-to-video",
+      "revision": "37ec512624d61f7aa208f7ea8140a131f93afc9a",
+      "declared_task": "text-to-video",
+      "notes": "large metadata-only case; API library_name=diffusers"
+    },
+    {
+      "model_id": "cerspense/zeroscope_v2_576w",
+      "category": "text-to-video",
+      "revision": "6963642a64dbefa93663d1ecebb4ceda2d9ecb28",
+      "declared_task": "text-to-video",
+      "notes": "API library_name=diffusers"
+    },
+    {
+      "model_id": "ali-vilab/i2vgen-xl",
+      "category": "image-to-video",
+      "revision": "39e1979ea27be737b0278c06755e321f2b4360d5",
+      "reference": "https://huggingface.co/ali-vilab/i2vgen-xl/blob/39e1979ea27be737b0278c06755e321f2b4360d5/unet/diffusion_pytorch_model.safetensors",
+      "declared_task": "text-to-video",
+      "notes": "large metadata-only case; API library_name=diffusers"
+    },
+    {
+      "model_id": "araffin/ppo-CartPole-v1",
+      "category": "rl-policy",
+      "revision": "48dd7c8aab44c2f84fedb167a8d64aefddbc93cf",
+      "declared_task": "reinforcement-learning",
+      "notes": "serialized Stable-Baselines3 policy; distinct from RLHF/reward-model artifacts; API library_name=stable-baselines3"
+    },
+    {
+      "model_id": "sb3/ddpg-LunarLanderContinuous-v2",
+      "category": "rl-policy",
+      "revision": "b56a46599e75ba67a34f79b83d3a8c921134dedd",
+      "declared_task": "reinforcement-learning",
+      "notes": "serialized Stable-Baselines3 policy; distinct from RLHF/reward-model artifacts; API library_name=stable-baselines3"
+    },
+    {
+      "model_id": "edbeeching/decision-transformer-gym-hopper-medium",
+      "category": "rl-policy-decision-transformer",
+      "revision": "8224ec324200b150f10287b8c8c525224e62f319",
+      "declared_task": "reinforcement-learning",
+      "notes": "offline RL sequence policy; API library_name=transformers"
+    },
+    {
+      "model_id": "edbeeching/decision-transformer-gym-walker2d-medium",
+      "category": "rl-policy-decision-transformer",
+      "revision": "da2238c5041fd7fb197d6305f668880454b2f3d4",
+      "declared_task": "reinforcement-learning",
+      "notes": "offline RL sequence policy; API library_name=transformers"
+    },
+    {
+      "model_id": "edbeeching/decision-transformer-gym-halfcheetah-medium",
+      "category": "rl-policy-decision-transformer",
+      "revision": "bb89518aa176be7e778249a64e0b565a0e488bf5",
+      "declared_task": "reinforcement-learning",
+      "notes": "offline RL sequence policy; API library_name=transformers"
+    },
+    {
+      "model_id": "TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF",
+      "category": "gguf-quantized",
+      "revision": "52e7645ba7c309695bec7ac98f4f005b139cf465",
+      "reference": "https://huggingface.co/TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF/blob/52e7645ba7c309695bec7ac98f4f005b139cf465/tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf",
+      "notes": "API library_name=transformers"
+    },
+    {
+      "model_id": "TheBloke/phi-2-GGUF",
+      "category": "gguf-quantized",
+      "revision": "5a454d977c6438bb9fb2df233c8ca70f21c87420",
+      "reference": "https://huggingface.co/TheBloke/phi-2-GGUF/blob/5a454d977c6438bb9fb2df233c8ca70f21c87420/phi-2.Q4_K_M.gguf",
+      "declared_task": "text-generation",
+      "notes": "API library_name=transformers"
+    },
+    {
+      "model_id": "bartowski/Qwen2.5-Coder-0.5B-Instruct-GGUF",
+      "category": "gguf-quantized",
+      "revision": "69a2c192eed24297fb09a34d8ba948b8624cc3e2",
+      "reference": "https://huggingface.co/bartowski/Qwen2.5-Coder-0.5B-Instruct-GGUF/blob/69a2c192eed24297fb09a34d8ba948b8624cc3e2/Qwen2.5-Coder-0.5B-Instruct-Q4_K_M.gguf",
+      "declared_task": "text-generation",
+      "notes": "API library_name=unspecified"
+    },
+    {
+      "model_id": "microsoft/Phi-3-mini-4k-instruct-gguf",
+      "category": "gguf-quantized",
+      "revision": "a64113399c2f6b8ad3e11c394733a2ddadaa7f33",
+      "reference": "https://huggingface.co/microsoft/Phi-3-mini-4k-instruct-gguf/blob/a64113399c2f6b8ad3e11c394733a2ddadaa7f33/Phi-3-mini-4k-instruct-q4.gguf",
+      "declared_task": "text-generation",
+      "notes": "API library_name=unspecified"
+    },
+    {
+      "model_id": "tloen/alpaca-lora-7b",
+      "category": "peft-adapter",
+      "revision": "12103d6baae1b320aa60631b38acb6ea094a0539",
+      "notes": "adapter repository; classification is based on adapter files/config; API library_name=unspecified"
+    },
+    {
+      "model_id": "Qwen/Qwen3-4B",
+      "category": "text-generation",
+      "revision": "1cfa9a7208912126459214e8b04321603b3df60c",
+      "declared_task": "text-generation",
+      "notes": "HF API verified; library_name=transformers"
+    },
+    {
+      "model_id": "FacebookAI/xlm-roberta-base",
+      "category": "fill-mask",
+      "revision": "e73636d4f797dec63c3081bb6ed5c7b0bb3f2089",
+      "declared_task": "fill-mask",
+      "notes": "HF API verified; library_name=transformers"
+    },
+    {
+      "model_id": "BAAI/bge-reranker-v2-m3",
+      "category": "text-classification",
+      "revision": "953dc6f6f85a1b2dbfca4c34a2796e7dde08d41e",
+      "declared_task": "text-classification",
+      "notes": "HF API verified; library_name=sentence-transformers"
+    },
+    {
+      "model_id": "w11wo/indonesian-roberta-base-posp-tagger",
+      "category": "token-classification",
+      "revision": "5067796360930a7b9c5e1d76e1ab2b8c6b4cd103",
+      "declared_task": "token-classification",
+      "notes": "HF API verified; library_name=transformers"
+    },
+    {
+      "model_id": "deepset/bert-large-uncased-whole-word-masking-squad2",
+      "category": "question-answering",
+      "revision": "0a489d6caaf651c1983e8ecd8a418c7f65993d72",
+      "declared_task": "question-answering",
+      "notes": "HF API verified; library_name=transformers"
+    },
+    {
+      "model_id": "facebook/bart-large-cnn",
+      "category": "summarization",
+      "revision": "37f520fa929c961707657b28798b30c003dd100b",
+      "declared_task": "summarization",
+      "notes": "HF API verified; library_name=transformers"
+    },
+    {
+      "model_id": "google-t5/t5-base",
+      "category": "translation",
+      "revision": "a9723ea7f1b39c1eae772870f3b547bf6ef7e6c1",
+      "declared_task": "translation",
+      "notes": "HF API verified; library_name=transformers"
+    },
+    {
+      "model_id": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+      "category": "sentence-similarity",
+      "revision": "e8f8c211226b894fcb81acc59f3b34ba3efd5f42",
+      "declared_task": "sentence-similarity",
+      "notes": "HF API verified; library_name=sentence-transformers"
+    },
+    {
+      "model_id": "BAAI/bge-large-en-v1.5",
+      "category": "feature-extraction",
+      "revision": "d4aa6901d3a41ba39fb536a557fa166f842b0e09",
+      "declared_task": "feature-extraction",
+      "notes": "HF API verified; library_name=sentence-transformers"
+    },
+    {
+      "model_id": "prithivMLmods/Gender-Classifier-Mini",
+      "category": "image-classification",
+      "revision": "4855356b698e88ba57996836bb35091f81932667",
+      "declared_task": "image-classification",
+      "notes": "HF API verified; library_name=transformers"
+    },
+    {
+      "model_id": "mudler/locate-anything.cpp-gguf",
+      "category": "object-detection",
+      "revision": "4e50db5b836dd876f5e464734ef5484cae754a52",
+      "declared_task": "object-detection",
+      "notes": "HF API verified; library_name=gguf"
+    },
+    {
+      "model_id": "ZhengPeng7/BiRefNet",
+      "category": "image-segmentation",
+      "revision": "e2bf8e4460fc8fa32bba5ea4d94b3233d367b0e4",
+      "declared_task": "image-segmentation",
+      "notes": "HF API verified; library_name=birefnet"
+    },
+    {
+      "model_id": "depth-anything/DA3METRIC-LARGE",
+      "category": "depth-estimation",
+      "revision": "4010e39f3634a45bc60553321fb49fb760bd594e",
+      "declared_task": "depth-estimation",
+      "notes": "HF API verified; library_name=depth-anything-3"
+    },
+    {
+      "model_id": "zai-org/GLM-OCR",
+      "category": "image-to-text",
+      "revision": "2e85a62840ccac27daa451df36c736c4636b8628",
+      "declared_task": "image-to-text",
+      "notes": "HF API verified; library_name=transformers"
+    },
+    {
+      "model_id": "OpenMed/Qwen3.5-2B-MedVL",
+      "category": "visual-question-answering",
+      "revision": "9bfe30c4a41211d382b37249d283972547283ea2",
+      "declared_task": "visual-question-answering",
+      "notes": "HF API verified; library_name=unspecified"
+    },
+    {
+      "model_id": "google/gemma-4-26B-A4B-it",
+      "category": "image-text-to-text",
+      "revision": "4d7ae4984b7db7de8f8457170b3f1a419ee76d52",
+      "declared_task": "image-text-to-text",
+      "notes": "HF API verified; library_name=transformers"
+    },
+    {
+      "model_id": "facebook/vjepa2-vitl-fpc64-256",
+      "category": "video-classification",
+      "revision": "b3c1679b7c34d3255ef3547f27c7b226aefab26f",
+      "declared_task": "video-classification",
+      "notes": "HF API verified; library_name=transformers"
+    },
+    {
+      "model_id": "jonatasgrosman/wav2vec2-large-xlsr-53-japanese",
+      "category": "automatic-speech-recognition",
+      "revision": "cf031e020336460d15a417eba710bbc5bb43be9a",
+      "declared_task": "automatic-speech-recognition",
+      "notes": "HF API verified; library_name=transformers"
+    },
+    {
+      "model_id": "audio-cpp/audio.cpp-gguf",
+      "category": "text-to-speech",
+      "revision": "02f5de92a82339ebb722ea6fdadc14b7bec43a7f",
+      "declared_task": "text-to-speech",
+      "notes": "HF API verified; library_name=audio.cpp"
+    },
+    {
+      "model_id": "laion/clap-htsat-fused",
+      "category": "audio-classification",
+      "revision": "365dea6ef167def6676140ed93bbc43f84dabb28",
+      "declared_task": "audio-classification",
+      "notes": "HF API verified; library_name=transformers"
+    },
+    {
+      "model_id": "nvidia/bigvgan_v2_22khz_80band_256x",
+      "category": "audio-to-audio",
+      "revision": "633ff708ed5b74903e86ff1298cf4a98e921c513",
+      "declared_task": "audio-to-audio",
+      "notes": "HF API verified; library_name=PyTorch"
+    },
+    {
+      "model_id": "facebook/musicgen-medium",
+      "category": "text-to-audio",
+      "revision": "d3bd7b00761b78ad7a8a05145ee31e7832e9916c",
+      "declared_task": "text-to-audio",
+      "notes": "HF API verified; library_name=transformers"
+    },
+    {
+      "model_id": "abenzerps/Qwen-Image-2.1-Uncensored-Quantized",
+      "category": "text-to-image",
+      "revision": "7959e658915f52274897fb573ffeda49de8dc16b",
+      "declared_task": "text-to-image",
+      "notes": "HF API verified; library_name=gguf"
+    },
+    {
+      "model_id": "unsloth/Qwen-Image-Edit-2511-GGUF",
+      "category": "image-to-image",
+      "revision": "0d33d9692b4b26212297240d87b0d4719aa4fd06",
+      "declared_task": "image-to-image",
+      "notes": "HF API verified; library_name=unspecified"
+    },
+    {
+      "model_id": "Comfy-Org/Wan_2.2_ComfyUI_Repackaged",
+      "category": "image-to-video",
+      "revision": "ee6f4a40737a995bf5818954cfce6d59443b0f04",
+      "declared_task": "image-to-video",
+      "notes": "HF API verified; library_name=diffusion-single-file"
+    },
+    {
+      "model_id": "FastVideo/FastVideo-FastH3-4-step-Preview-v1-VSA-DataFree",
+      "category": "text-to-video",
+      "revision": "5ea076f35b84da4c3c82217112fa733d8eea2ae1",
+      "declared_task": "text-to-video",
+      "notes": "HF API verified; library_name=diffusers"
+    },
+    {
+      "model_id": "google/ddpm-cifar10-32",
+      "category": "unconditional-image-generation",
+      "revision": "267b167dc01f0e4e61923ea244e8b988f84deb80",
+      "declared_task": "unconditional-image-generation",
+      "notes": "HF API verified; library_name=diffusers"
+    },
+    {
+      "model_id": "openai/clip-vit-large-patch14",
+      "category": "zero-shot-image-classification",
+      "revision": "32bd64288804d66eefd0ccbe215aa642df71cc41",
+      "declared_task": "zero-shot-image-classification",
+      "notes": "HF API verified; library_name=transformers"
+    },
+    {
+      "model_id": "amazon/chronos-t5-small",
+      "category": "time-series-forecasting",
+      "revision": "a971ba21945c4f1796b17a91fe69214b5f4ad472",
+      "declared_task": "time-series-forecasting",
+      "notes": "HF API verified; library_name=chronos-forecasting; Chronos time-series foundation model"
+    },
+    {
+      "model_id": "facebook/esm2_t6_8M_UR50D",
+      "category": "protein-model",
+      "revision": "c731040fcd8d73dceaa04b0a8e6329b345b0f5df",
+      "declared_task": "fill-mask",
+      "notes": "HF API verified; library_name=transformers; ESM2 protein sequence language model"
+    },
+    {
+      "model_id": "Prior-Labs/TabPFN-v2-clf",
+      "category": "tabular-model",
+      "revision": "f851f2a3c941544733b712d8c0f96dfae9b28862",
+      "declared_task": "tabular-classification",
+      "notes": "HF API verified; library_name=tabpfn; TabPFN tabular classification checkpoint"
+    },
+    {
+      "model_id": "lerobot/pi05_libero_finetuned_v044",
+      "category": "robotics-policy",
+      "revision": "7152f13e34c6c115d808aea0e5d08aca74eac14b",
+      "declared_task": "robotics",
+      "notes": "intended coverage: robotics-policy (HF metadata search evidence); HF API verified; library_name=lerobot"
+    },
+    {
+      "model_id": "Qwen/Qwen3-8B",
+      "category": "text-generation",
+      "revision": "b968826d9c46dd6066d109eabc6255188de91218",
+      "declared_task": "text-generation",
+      "notes": "HF API verified; library_name=transformers"
+    },
+    {
+      "model_id": "distilbert/distilbert-base-uncased",
+      "category": "fill-mask",
+      "revision": "12040accade4e8a0f71eabdb258fecc2e7e948be",
+      "declared_task": "fill-mask",
+      "notes": "HF API verified; library_name=transformers"
+    },
+    {
+      "model_id": "ProsusAI/finbert",
+      "category": "text-classification",
+      "revision": "0bc2ac10dda6929bcb1f77ccc43c7ec5c424f031",
+      "declared_task": "text-classification",
+      "notes": "HF API verified; library_name=transformers"
+    },
+    {
+      "model_id": "StanfordAIMI/stanford-deidentifier-base",
+      "category": "token-classification",
+      "revision": "661b9c1c717d3165512d440abc3700c386aefab6",
+      "declared_task": "token-classification",
+      "notes": "HF API verified; library_name=transformers"
+    },
+    {
+      "model_id": "deepset/tinyroberta-squad2",
+      "category": "question-answering",
+      "revision": "12b287c9df677e28b07f0a023850dba68c997dbf",
+      "declared_task": "question-answering",
+      "notes": "HF API verified; library_name=transformers"
+    },
+    {
+      "model_id": "pszemraj/long-t5-tglobal-base-sci-simplify",
+      "category": "summarization",
+      "revision": "bf86a88089c7199d6dad4dc815ee4821e362070d",
+      "declared_task": "summarization",
+      "notes": "HF API verified; library_name=transformers"
+    },
+    {
+      "model_id": "Helsinki-NLP/opus-mt-nl-en",
+      "category": "translation",
+      "revision": "48af999f2c59b10c05ca6e008dcedc07677a9b15",
+      "declared_task": "translation",
+      "notes": "HF API verified; library_name=transformers"
+    },
+    {
+      "model_id": "BAAI/bge-m3",
+      "category": "sentence-similarity",
+      "revision": "5617a9f61b028005a4858fdac845db406aefb181",
+      "declared_task": "sentence-similarity",
+      "notes": "HF API verified; library_name=sentence-transformers"
+    },
+    {
+      "model_id": "Qwen/Qwen3-Embedding-0.6B",
+      "category": "feature-extraction",
+      "revision": "97b0c614be4d77ee51c0cef4e5f07c00f9eb65b3",
+      "declared_task": "feature-extraction",
+      "notes": "HF API verified; library_name=sentence-transformers"
+    },
+    {
+      "model_id": "timm/resnet18.a1_in1k",
+      "category": "image-classification",
+      "revision": "491b427b45c94c7fb0e78b5474cc919aff584bbf",
+      "declared_task": "image-classification",
+      "notes": "HF API verified; library_name=timm"
+    },
+    {
+      "model_id": "PekingU/rtdetr_r101vd_coco_o365",
+      "category": "object-detection",
+      "revision": "ff44b69152a72cc752677665fb4539507d56a99d",
+      "declared_task": "object-detection",
+      "notes": "HF API verified; library_name=transformers"
+    },
+    {
+      "model_id": "facebook/mask2former-swin-large-ade-semantic",
+      "category": "image-segmentation",
+      "revision": "aa25c92404a40599614215e76514c79b427c7527",
+      "declared_task": "image-segmentation",
+      "notes": "HF API verified; library_name=transformers"
+    },
+    {
+      "model_id": "depth-anything/DA3MONO-LARGE",
+      "category": "depth-estimation",
+      "revision": "f465978e618db8cc79c83b8bbf24964857db1875",
+      "declared_task": "depth-estimation",
+      "notes": "HF API verified; library_name=depth-anything-3"
+    },
+    {
+      "model_id": "kha-white/manga-ocr-base",
+      "category": "image-to-text",
+      "revision": "aa6573bd10b0d446cbf622e29c3e084914df9741",
+      "declared_task": "image-to-text",
+      "notes": "HF API verified; library_name=transformers"
+    },
+    {
+      "model_id": "internlm/internlm-xcomposer2-vl-7b",
+      "category": "visual-question-answering",
+      "revision": "c67bd06390dbe068a582c6561570725b1289a7c5",
+      "declared_task": "visual-question-answering",
+      "notes": "HF API verified; library_name=transformers"
+    },
+    {
+      "model_id": "google/gemma-4-31B-it",
+      "category": "image-text-to-text",
+      "revision": "842da3794eaa0b77d5f08bae87a17459d91ff475",
+      "declared_task": "image-text-to-text",
+      "notes": "HF API verified; library_name=transformers"
+    },
+    {
+      "model_id": "microsoft/xclip-base-patch16-zero-shot",
+      "category": "video-classification",
+      "revision": "6746d6a5202bf24300cd9bf36f457f174483d41b",
+      "declared_task": "video-classification",
+      "notes": "HF API verified; library_name=transformers"
+    },
+    {
+      "model_id": "argmaxinc/whisperkit-coreml",
+      "category": "automatic-speech-recognition",
+      "revision": "0f63a7800b00dd0226abd051b906c246e1907482",
+      "declared_task": "automatic-speech-recognition",
+      "notes": "HF API verified; library_name=whisperkit"
+    },
+    {
+      "model_id": "Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice",
+      "category": "text-to-speech",
+      "revision": "0c0e3051f131929182e2c023b9537f8b1c68adfe",
+      "declared_task": "text-to-speech",
+      "notes": "HF API verified; library_name=unspecified"
+    },
+    {
+      "model_id": "audeering/wav2vec2-large-robust-24-ft-age-gender",
+      "category": "audio-classification",
+      "revision": "bad2737f529168bc3d3fcd97edfaba9583c7d36d",
+      "declared_task": "audio-classification",
+      "notes": "HF API verified; library_name=transformers"
+    },
+    {
+      "model_id": "nvidia/bigvgan_v2_44khz_128band_512x",
+      "category": "audio-to-audio",
+      "revision": "95a9d1dcb12906c03edd938d77b9333d6ded7dfb",
+      "declared_task": "audio-to-audio",
+      "notes": "HF API verified; library_name=PyTorch"
+    },
+    {
+      "model_id": "audio-cpp/MiniMax-Music3-GGUF",
+      "category": "text-to-audio",
+      "revision": "46fe77f8bb395ccdbe797d784225f7b84866e7ce",
+      "declared_task": "text-to-audio",
+      "notes": "HF API verified; library_name=audio.cpp"
+    },
+    {
+      "model_id": "unsloth/Qwen-Image-2.1-GGUF",
+      "category": "text-to-image",
+      "revision": "2c31ccd392b367a6637841a143813320a02dff55",
+      "declared_task": "text-to-image",
+      "notes": "HF API verified; library_name=unspecified"
+    },
+    {
+      "model_id": "black-forest-labs/FLUX.2-klein-base-4B",
+      "category": "image-to-image",
+      "revision": "a3b4f4849157f664bdbc776fd7453c2783562f4d",
+      "declared_task": "image-to-image",
+      "notes": "HF API verified; library_name=diffusers"
+    },
+    {
+      "model_id": "Lightricks/LTX-2.5",
+      "category": "image-to-video",
+      "revision": "49b093a39c19169a8a81721dcc541e07e945232f",
+      "declared_task": "image-to-video",
+      "notes": "HF API verified; library_name=diffusion-single-file"
+    },
+    {
+      "model_id": "QuantStack/Wan2.2-TI2V-5B-GGUF",
+      "category": "text-to-video",
+      "revision": "57437632ddd08bdcbd1508c866aa22e126ed51d2",
+      "declared_task": "text-to-video",
+      "notes": "HF API verified; library_name=gguf"
+    },
+    {
+      "model_id": "akasharidas/ddpm-cifar10-32-dot.in.name",
+      "category": "unconditional-image-generation",
+      "revision": "39fee3d79d5c44c21ca5b58a6363d5bc78bbd8cf",
+      "declared_task": "unconditional-image-generation",
+      "notes": "HF API verified; library_name=diffusers"
+    },
+    {
+      "model_id": "laion/CLIP-ViT-B-32-laion2B-s34B-b79K",
+      "category": "zero-shot-image-classification",
+      "revision": "1a25a446712ba5ee05982a381eed697ef9b435cf",
+      "declared_task": "zero-shot-image-classification",
+      "notes": "HF API verified; library_name=open_clip"
+    },
+    {
+      "model_id": "ibm-granite/granite-timeseries-ttm-r3",
+      "category": "time-series-forecasting",
+      "revision": "ea17cfd2e3edcaea21eb8dcecd18bf88971482fa",
+      "declared_task": "time-series-forecasting",
+      "notes": "intended coverage: time-series-forecasting (HF metadata search evidence); HF API verified; library_name=unspecified"
+    },
+    {
+      "model_id": "facebook/esm2_t12_35M_UR50D",
+      "category": "protein-model",
+      "revision": "6fbf070e65b0b7291e7bbcd451118c216cff79d8",
+      "declared_task": "fill-mask",
+      "notes": "HF API verified; library_name=transformers; ESM2 protein sequence language model"
+    },
+    {
+      "model_id": "LG-AI-Research/EXAONE-Tabular",
+      "category": "tabular-model",
+      "revision": "093ad1c2613e1e95d26df8610451d2e02ed53cbe",
+      "declared_task": "tabular-classification",
+      "notes": "intended coverage: tabular-model (HF metadata search evidence); HF API verified; library_name=unspecified"
+    },
+    {
+      "model_id": "lerobot/pi05_base",
+      "category": "robotics-policy",
+      "revision": "22c30e5b34f9e7ab738b1b34fc2fc5ecfe2d28f0",
+      "declared_task": "robotics",
+      "notes": "intended coverage: robotics-policy (HF metadata search evidence); HF API verified; library_name=lerobot"
+    },
+    {
+      "model_id": "Qwen/Qwen3-14B",
+      "category": "text-generation",
+      "revision": "40c069824f4251a91eefaf281ebe4c544efd3e18",
+      "declared_task": "text-generation",
+      "notes": "HF API verified; library_name=transformers"
+    },
+    {
+      "model_id": "FacebookAI/roberta-large",
+      "category": "fill-mask",
+      "revision": "722cf37b1afa9454edce342e7895e588b6ff1d59",
+      "declared_task": "fill-mask",
+      "notes": "HF API verified; library_name=transformers"
+    },
+    {
+      "model_id": "meta-llama/Prompt-Guard-86M",
+      "category": "text-classification",
+      "revision": "1209add6ca7d9c1d815171b8e5571587fe3e7b03",
+      "declared_task": "text-classification",
+      "notes": "HF API verified; library_name=transformers"
+    },
+    {
+      "model_id": "dslim/bert-base-NER",
+      "category": "token-classification",
+      "revision": "d1a3e8f13f8c3566299d95fcfc9a8d2382a9affc",
+      "declared_task": "token-classification",
+      "notes": "HF API verified; library_name=transformers"
+    },
+    {
+      "model_id": "ahotrod/electra_large_discriminator_squad2_512",
+      "category": "question-answering",
+      "revision": "fe230d41e74248eceb366a91e4f8572f358f201c",
+      "declared_task": "question-answering",
+      "notes": "HF API verified; library_name=transformers"
+    },
+    {
+      "model_id": "philschmid/bart-large-cnn-samsum",
+      "category": "summarization",
+      "revision": "e49b3d60d923f12db22bdd363356f1a4c68532ad",
+      "declared_task": "summarization",
+      "notes": "HF API verified; library_name=transformers"
+    },
+    {
+      "model_id": "facebook/nllb-200-distilled-1.3B",
+      "category": "translation",
+      "revision": "7be3e24664b38ce1cac29b8aeed6911aa0cf0576",
+      "declared_task": "translation",
+      "notes": "HF API verified; library_name=transformers"
+    },
+    {
+      "model_id": "sentence-transformers/all-mpnet-base-v2",
+      "category": "sentence-similarity",
+      "revision": "e8c3b32edf5434bc2275fc9bab85f82640a19130",
+      "declared_task": "sentence-similarity",
+      "notes": "HF API verified; library_name=sentence-transformers"
+    },
+    {
+      "model_id": "intfloat/multilingual-e5-large",
+      "category": "feature-extraction",
+      "revision": "3d7cfbdacd47fdda877c5cd8a79fbcc4f2a574f3",
+      "declared_task": "feature-extraction",
+      "notes": "HF API verified; library_name=sentence-transformers"
+    },
+    {
+      "model_id": "timm/tf_efficientnetv2_s.in21k_ft_in1k",
+      "category": "image-classification",
+      "revision": "ea9abc143ea2b9d8e1ec1de277bce02149b9cf0e",
+      "declared_task": "image-classification",
+      "notes": "HF API verified; library_name=timm"
+    },
+    {
+      "model_id": "PaddlePaddle/PP-DocLayoutV3_safetensors",
+      "category": "object-detection",
+      "revision": "e4f489dc536556fc1be02b973ba06756e0d4a2ac",
+      "declared_task": "object-detection",
+      "notes": "HF API verified; library_name=transformers"
+    },
+    {
+      "model_id": "facebook/mask2former-swin-large-cityscapes-semantic",
+      "category": "image-segmentation",
+      "revision": "062c2c0cf95dd6080a50b56ffc1fe2ad2d63513e",
+      "declared_task": "image-segmentation",
+      "notes": "HF API verified; library_name=transformers"
+    },
+    {
+      "model_id": "LiheYoung/depth-anything-large-hf",
+      "category": "depth-estimation",
+      "revision": "27ccb0920352c0c37b3a96441873c8d37bd52fb6",
+      "declared_task": "depth-estimation",
+      "notes": "HF API verified; library_name=transformers"
+    },
+    {
+      "model_id": "Salesforce/blip-image-captioning-large",
+      "category": "image-to-text",
+      "revision": "353689b859fcf0523410b1806dace5fb46ecdf41",
+      "declared_task": "image-to-text",
+      "notes": "HF API verified; library_name=transformers"
+    },
+    {
+      "model_id": "Salesforce/blip-vqa-capfilt-large",
+      "category": "visual-question-answering",
+      "revision": "270352c30d7166e585cd686c3f2250e04bb509da",
+      "declared_task": "visual-question-answering",
+      "notes": "HF API verified; library_name=transformers"
+    },
+    {
+      "model_id": "Qwen/Qwen3.5-4B",
+      "category": "image-text-to-text",
+      "revision": "851bf6e806efd8d0a36b00ddf55e13ccb7b8cd0a",
+      "declared_task": "image-text-to-text",
+      "notes": "HF API verified; library_name=transformers"
+    },
+    {
+      "model_id": "MCG-NJU/videomae-base-finetuned-kinetics",
+      "category": "video-classification",
+      "revision": "488eb9a0565f257b32866000305c8178965eb9f6",
+      "declared_task": "video-classification",
+      "notes": "HF API verified; library_name=transformers"
+    },
+    {
+      "model_id": "pyannote/speaker-diarization-3.1",
+      "category": "automatic-speech-recognition",
+      "revision": "84fd25912480287da0247647c3d2b4853cb3ee5d",
+      "declared_task": "automatic-speech-recognition",
+      "notes": "HF API verified; library_name=pyannote-audio"
+    },
+    {
+      "model_id": "k2-fsa/OmniVoice",
+      "category": "text-to-speech",
+      "revision": "c5fdb5ccb189668d56333f77ba2629f4cd7535f4",
+      "declared_task": "text-to-speech",
+      "notes": "HF API verified; library_name=omnivoice"
+    },
+    {
+      "model_id": "MIT/ast-finetuned-audioset-10-10-0.4593",
+      "category": "audio-classification",
+      "revision": "f826b80d28226b62986cc218e5cec390b1096902",
+      "declared_task": "audio-classification",
+      "notes": "HF API verified; library_name=transformers"
+    },
+    {
+      "model_id": "Aratako/MioCodec-25Hz-44.1kHz-v2",
+      "category": "audio-to-audio",
+      "revision": "67faba34153fe74e6665991c432a7327e23c5c1c",
+      "declared_task": "audio-to-audio",
+      "notes": "HF API verified; library_name=unspecified"
+    },
+    {
+      "model_id": "audio-cpp/Yue2-3B-GGUF",
+      "category": "text-to-audio",
+      "revision": "cca74d8980c00f30ab8d52248a367c01ad633ec2",
+      "declared_task": "text-to-audio",
+      "notes": "HF API verified; library_name=audio.cpp"
+    },
+    {
+      "model_id": "stable-diffusion-v1-5/stable-diffusion-v1-5",
+      "category": "text-to-image",
+      "revision": "451f4fe16113bff5a5d2269ed5ad43b0592e9a14",
+      "declared_task": "text-to-image",
+      "notes": "HF API verified; library_name=diffusers"
+    },
+    {
+      "model_id": "Qwen/Qwen-Image-Edit-2509",
+      "category": "image-to-image",
+      "revision": "d3968ef930e841f4c73640fb8afa3b306a78167e",
+      "declared_task": "image-to-image",
+      "notes": "HF API verified; library_name=diffusers"
+    },
+    {
+      "model_id": "comfyicu/LTX-2.5",
+      "category": "image-to-video",
+      "revision": "1026e00f808dbd9601911479b22d65b760737dc8",
+      "declared_task": "image-to-video",
+      "notes": "HF API verified; library_name=diffusion-single-file"
+    },
+    {
+      "model_id": "unsloth/Wan2.2-TI2V-5B-GGUF",
+      "category": "text-to-video",
+      "revision": "b5c2a3816e7056e57e200f6be726fb36ce523b49",
+      "declared_task": "text-to-video",
+      "notes": "HF API verified; library_name=gguf"
+    },
+    {
+      "model_id": "google/ddpm-celebahq-256",
+      "category": "unconditional-image-generation",
+      "revision": "cd5c944777ea2668051904ead6cc120739b86c4d",
+      "declared_task": "unconditional-image-generation",
+      "notes": "HF API verified; library_name=diffusers"
+    },
+    {
+      "model_id": "openai/clip-vit-large-patch14-336",
+      "category": "zero-shot-image-classification",
+      "revision": "ce19dc912ca5cd21c8a653c79e251e808ccabcd1",
+      "declared_task": "zero-shot-image-classification",
+      "notes": "HF API verified; library_name=transformers"
+    },
+    {
+      "model_id": "google/timesfm-2.0-500m-pytorch",
+      "category": "time-series-forecasting",
+      "revision": "dc2443792ce5516872b89b37cf1bc058c3bf0c10",
+      "declared_task": "time-series-forecasting",
+      "notes": "HF API verified; library_name=timesfm; TimesFM 2.0 time-series foundation model"
+    },
+    {
+      "model_id": "Rostlab/prot_bert",
+      "category": "protein-model",
+      "revision": "7a894481acdc12202f0a415dd567f6cfdb698908",
+      "declared_task": "fill-mask",
+      "notes": "HF API verified; library_name=transformers; ProtBERT protein sequence language model"
+    },
+    {
+      "model_id": "nvidia/Kumo-Tabular",
+      "category": "tabular-model",
+      "revision": "c5893d418e162b9f841ae179dc767afefff73831",
+      "notes": "intended coverage: tabular-model (HF metadata search evidence); HF API verified; library_name=unspecified"
+    },
+    {
+      "model_id": "lerobot/pi0_base",
+      "category": "robotics-policy",
+      "revision": "6e245399ad403ccf02b8112b73cfdc2633068f38",
+      "declared_task": "robotics",
+      "notes": "intended coverage: robotics-policy (HF metadata search evidence); HF API verified; library_name=lerobot"
+    },
+    {
+      "model_id": "Qwen/Qwen2.5-7B-Instruct",
+      "category": "text-generation",
+      "revision": "a09a35458c702b33eeacc393d103063234e8bc28",
+      "declared_task": "text-generation",
+      "notes": "HF API verified; library_name=transformers"
+    },
+    {
+      "model_id": "microsoft/mdeberta-v3-base",
+      "category": "fill-mask",
+      "revision": "a0484667b22365f84929a935b5e50a51f71f159d",
+      "declared_task": "fill-mask",
+      "notes": "HF API verified; library_name=transformers"
+    },
+    {
+      "model_id": "Arunavaonly/Bangla-twoclass-Sentiment-Analyzer",
+      "category": "text-classification",
+      "revision": "b2b3ca5db5eaf56a8542ee9deff888d5fa1b5cad",
+      "declared_task": "text-classification",
+      "notes": "HF API verified; library_name=transformers"
+    },
+    {
+      "model_id": "dbmdz/bert-large-cased-finetuned-conll03-english",
+      "category": "token-classification",
+      "revision": "4c534963167c08d4b8ff1f88733cf2930f86add0",
+      "declared_task": "token-classification",
+      "notes": "HF API verified; library_name=transformers"
+    },
+    {
+      "model_id": "distilbert/distilbert-base-cased-distilled-squad",
+      "category": "question-answering",
+      "revision": "564e9b582944a57a3e586bbb98fd6f0a4118db7f",
+      "declared_task": "question-answering",
+      "notes": "HF API verified; library_name=transformers"
+    },
+    {
+      "model_id": "sshleifer/distilbart-xsum-12-6",
+      "category": "summarization",
+      "revision": "5b2e376c845c201ddc34ec0e55fd1ad9890ba5ee",
+      "declared_task": "summarization",
+      "notes": "HF API verified; library_name=transformers"
+    },
+    {
+      "model_id": "Helsinki-NLP/opus-mt-zh-en",
+      "category": "translation",
+      "revision": "cf109095479db38d6df799875e34039d4938aaa6",
+      "declared_task": "translation",
+      "notes": "HF API verified; library_name=transformers"
+    },
+    {
+      "model_id": "nomic-ai/nomic-embed-text-v1.5",
+      "category": "sentence-similarity",
+      "revision": "e9b6763023c676ca8431644204f50c2b100d9aab",
+      "declared_task": "sentence-similarity",
+      "notes": "HF API verified; library_name=sentence-transformers"
+    },
+    {
+      "model_id": "ibm-granite/granite-embedding-small-english-r2",
+      "category": "feature-extraction",
+      "revision": "2ab6fa8ea2d674564defd37171ae19079b864b33",
+      "declared_task": "feature-extraction",
+      "notes": "HF API verified; library_name=sentence-transformers"
+    },
+    {
+      "model_id": "Falconsai/nsfw_image_detection",
+      "category": "image-classification",
+      "revision": "96cb0d0342c7afb80cab76ecc58b265fa44da256",
+      "declared_task": "image-classification",
+      "notes": "HF API verified; library_name=transformers"
+    },
+    {
+      "model_id": "hustvl/yolos-small",
+      "category": "object-detection",
+      "revision": "3d8f7130d3ce4907cb206fe1c8485dc8fe8703de",
+      "declared_task": "object-detection",
+      "notes": "HF API verified; library_name=transformers"
+    },
+    {
+      "model_id": "mattmdjaga/segformer_b2_clothes",
+      "category": "image-segmentation",
+      "revision": "584abc1e1d260e23c0fc627c5217a09b2b461046",
+      "declared_task": "image-segmentation",
+      "notes": "HF API verified; library_name=transformers"
+    },
+    {
+      "model_id": "depth-anything/Depth-Anything-V2-Large-hf",
+      "category": "depth-estimation",
+      "revision": "7581137eff8d4e94f6e796d3baea0e9fa79b22d2",
+      "declared_task": "depth-estimation",
+      "notes": "HF API verified; library_name=transformers"
+    },
+    {
+      "model_id": "PaddlePaddle/UVDoc",
+      "category": "image-to-text",
+      "revision": "16c3f0ea9c2f0c6a57e24160f7eeaa7574613fa3",
+      "declared_task": "image-to-text",
+      "notes": "HF API verified; library_name=PaddleOCR"
+    },
+    {
+      "model_id": "openbmb/MiniCPM-V-2",
+      "category": "visual-question-answering",
+      "revision": "b9a02dbfcc87e471b13f8d1c6963747db31427db",
+      "declared_task": "visual-question-answering",
+      "notes": "HF API verified; library_name=transformers"
+    },
+    {
+      "model_id": "zai-org/GLM-5.3-Flash",
+      "category": "image-text-to-text",
+      "revision": "46a050bec13002ad29ee795c16e61cf4fa3c4a9c",
+      "declared_task": "image-text-to-text",
+      "notes": "HF API verified; library_name=transformers"
+    },
+    {
+      "model_id": "facebook/vjepa2-vitg-fpc64-256",
+      "category": "video-classification",
+      "revision": "875c192b7b704b87d1e1d99345769632dd5f739a",
+      "declared_task": "video-classification",
+      "notes": "HF API verified; library_name=transformers"
+    },
+    {
+      "model_id": "openai/whisper-large-v3-turbo",
+      "category": "automatic-speech-recognition",
+      "revision": "41f01f3fe87f28c78e2fbf8b568835947dd65ed9",
+      "declared_task": "automatic-speech-recognition",
+      "notes": "HF API verified; library_name=transformers"
+    },
+    {
+      "model_id": "ResembleAI/chatterbox",
+      "category": "text-to-speech",
+      "revision": "5bb1f6ee58e50c3b8d408bc82a6d3740c2db6e18",
+      "declared_task": "text-to-speech",
+      "notes": "HF API verified; library_name=chatterbox"
+    },
+    {
+      "model_id": "onecxi/open-vakgyata",
+      "category": "audio-classification",
+      "revision": "f2754058e485dfc65cc62589b8d0e21c1d328399",
+      "declared_task": "audio-classification",
+      "notes": "HF API verified; library_name=transformers"
+    },
+    {
+      "model_id": "LiquidAI/LFM2.5-Audio-1.5B-JP-GGUF",
+      "category": "audio-to-audio",
+      "revision": "64b96718b341dbd5650f9e85627cecdcbd4ac61b",
+      "declared_task": "audio-to-audio",
+      "notes": "HF API verified; library_name=llama.cpp"
+    },
+    {
+      "model_id": "facebook/musicgen-small",
+      "category": "text-to-audio",
+      "revision": "4c8334b02c6ec4e8664a91979669a501ec497792",
+      "declared_task": "text-to-audio",
+      "notes": "HF API verified; library_name=transformers"
+    },
+    {
+      "model_id": "unsloth/Z-Image-Turbo-GGUF",
+      "category": "text-to-image",
+      "revision": "6c80814333b7b6a70a2e5b469a7c6437ce65de0f",
+      "declared_task": "text-to-image",
+      "notes": "HF API verified; library_name=ggml"
+    },
+    {
+      "model_id": "black-forest-labs/FLUX.2-klein-4B",
+      "category": "image-to-image",
+      "revision": "e7b7dc27f91deacad38e78976d1f2b499d76a294",
+      "declared_task": "image-to-image",
+      "notes": "HF API verified; library_name=diffusers"
+    },
+    {
+      "model_id": "Lightricks/LTX-2.3",
+      "category": "image-to-video",
+      "revision": "3c6a4e66e5d0a684231950b9c74dd4ded7b6fadc",
+      "declared_task": "image-to-video",
+      "notes": "HF API verified; library_name=diffusers"
+    },
+    {
+      "model_id": "Wan-AI/Wan2.1-T2V-1.3B-Diffusers",
+      "category": "text-to-video",
+      "revision": "0fad780a534b6463e45facd96134c9f345acfa5b",
+      "declared_task": "text-to-video",
+      "notes": "HF API verified; library_name=diffusers"
+    },
+    {
+      "model_id": "google/ddpm-ema-celebahq-256",
+      "category": "unconditional-image-generation",
+      "revision": "4cb6117472e6e4f45c5afe606b101858c27c3802",
+      "declared_task": "unconditional-image-generation",
+      "notes": "HF API verified; library_name=diffusers"
+    },
+    {
+      "model_id": "laion/CLIP-convnext_base_w-laion2B-s13B-b82K-augreg",
+      "category": "zero-shot-image-classification",
+      "revision": "f231e88547aac0dd86ad224432612fcf91aa4226",
+      "declared_task": "zero-shot-image-classification",
+      "notes": "HF API verified; library_name=open_clip"
+    },
+    {
+      "model_id": "ibm-granite/granite-timeseries-ttm-r2",
+      "category": "time-series-forecasting",
+      "revision": "d6a79570cac0f33d526601cd3a0fc7c80a8f9a2f",
+      "declared_task": "time-series-forecasting",
+      "notes": "intended coverage: time-series-forecasting (HF metadata search evidence); HF API verified; library_name=granite-tsfm"
+    },
+    {
+      "model_id": "ElnaggarLab/ankh-base",
+      "category": "protein-model",
+      "revision": "d99cb6b966530dfc2ae96bc69d9255c2a07308b0",
+      "notes": "HF API verified; library_name=transformers; Ankh protein sequence language model"
+    },
+    {
+      "model_id": "Prior-Labs/TabPFN-v2-reg",
+      "category": "tabular-model",
+      "revision": "4972a65a1b30806315c6f92499959ffbfc69a673",
+      "declared_task": "tabular-regression",
+      "notes": "HF API verified; library_name=tabpfn; TabPFN tabular regression checkpoint"
+    },
+    {
+      "model_id": "lerobot/pi05_libero_base",
+      "category": "robotics-policy",
+      "revision": "5fcf06fc42b6717e22ab885fd381a096574b12c7",
+      "declared_task": "robotics",
+      "notes": "intended coverage: robotics-policy (HF metadata search evidence); HF API verified; library_name=lerobot"
+    },
+    {
+      "model_id": "openai/gpt-oss-20b",
+      "category": "text-generation",
+      "revision": "6cee5e81ee83917806bbde320786a8fb61efebee",
+      "declared_task": "text-generation",
+      "notes": "HF API verified; library_name=transformers"
+    },
+    {
+      "model_id": "answerdotai/ModernBERT-base",
+      "category": "fill-mask",
+      "revision": "8949b909ec900327062f0ebf497f51aef5e6f0c8",
+      "declared_task": "fill-mask",
+      "notes": "HF API verified; library_name=transformers"
+    }
+  ]
+}

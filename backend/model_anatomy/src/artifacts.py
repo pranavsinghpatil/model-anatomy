@@ -62,7 +62,9 @@ def parse_reference(value: str) -> ModelReference:
         if url.scheme != "https" or url.netloc != "huggingface.co" or url.query or url.fragment:
             raise ArtifactError("Expected an HTTPS Hugging Face model URL without query or fragment")
         parts = url.path.strip("/").split("/")
-        if len(parts) >= 5 and parts[2] in {"blob", "resolve"}:
+        if len(parts) == 4 and parts[2] == "tree" and re.fullmatch(r"[0-9a-f]{40}", parts[3]):
+            revision = parts[3]
+        elif len(parts) >= 5 and parts[2] in {"blob", "resolve"}:
             revision = unquote(parts[3])
             filename_parts = [unquote(part) for part in parts[4:]]
             if any(

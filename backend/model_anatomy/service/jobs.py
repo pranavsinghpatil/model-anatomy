@@ -37,7 +37,9 @@ def model_reference(value: str) -> tuple[str, str]:
             or url.netloc != "huggingface.co"
             or url.query
             or url.fragment
-            or (len(parts) != 2 and len(parts) < 5)
+            or (len(parts) != 2 and len(parts) < 5 and not (
+                len(parts) == 4 and parts[2] == "tree" and re.fullmatch(r"[0-9a-f]{40}", parts[3])
+            ))
         ):
             raise ServiceError(422, "invalid_model", "Expected a Hugging Face repository ID or HTTPS URL")
         if len(parts) >= 5:
@@ -65,7 +67,9 @@ def request_selector(value: str) -> tuple[str, str, str, bool]:
     revision, artifact, explicit = "main", "model.safetensors", False
     if "://" in value:
         parts = urlsplit(value).path.strip("/").split("/")
-        if len(parts) >= 5:
+        if len(parts) == 4 and parts[2] == "tree":
+            revision = parts[3]
+        elif len(parts) >= 5:
             revision = unquote(parts[3])
             artifact = "/".join(unquote(part) for part in parts[4:])
             explicit = True
