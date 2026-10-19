@@ -4,12 +4,15 @@ import json
 import subprocess
 import sys
 import zipfile
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
+from threading import Event
 from uuid import UUID
 
 import pytest
 from fastapi.testclient import TestClient
 from pydantic import ValidationError
+from sqlalchemy.exc import SQLAlchemyError
 
 from model_anatomy.api.app import COOKIE, create_app
 from model_anatomy.api.settings import Settings
@@ -57,6 +60,78 @@ def test_readiness_requires_initialized_services_and_recent_worker(client):
     assert response.json()["reason"] is None
     client.app.state.jobs.release_worker("worker")
     assert client.get("/health").status_code == 503
+
+
+@pytest.mark.parametrize("dependency", ["database", "storage"])
+def test_startup_outage_recovers_without_restart_and_throttles_initialization(tmp_path, monkeypatch, dependency):
+    import model_anatomy.api.app as api_module
+
+    settings = Settings(data_dir=tmp_path)
+    service = JobService(settings)
+    target = service.db if dependency == "database" else service.storage
+    method = "initialize" if dependency == "database" else "check"
+    original = getattr(target, method)
+    attempts = []
+    now = [100.0]
+
+    def fail_once(*args, **kwargs):
+        attempts.append(now[0])
+        if len(attempts) == 1:
+            error = SQLAlchemyError("SECRET") if dependency == "database" else OSError("SECRET")
+            raise error
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(target, method, fail_once)
+    monkeypatch.setattr(api_module, "monotonic", lambda: now[0])
+    with TestClient(create_app(settings, service=service), base_url="http://127.0.0.1") as client:
+        assert attempts == [100.0]
+        response = client.get("/api/v1/analyses")
+        assert response.status_code == 503
+        assert "SECRET" not in response.text
+        assert attempts == [100.0]
+        now[0] += 5
+        # Health retries initialization, then honestly reports the still-offline worker.
+        response = client.get("/health")
+        assert response.status_code == 503
+        assert response.json()["checks"] == {"database": True, "storage": True, "worker": False}
+        assert response.json()["reason"] == "worker_unavailable"
+        assert service.acquire_worker("worker")
+        assert client.get("/health").status_code == 200
+        assert client.post("/api/v1/analyses", json={"model": "gpt2"}).status_code == 202
+        assert len(client.get("/api/v1/analyses").json()["analyses"]) == 1
+
+
+def test_concurrent_requests_do_not_initialize_dependencies_twice(tmp_path, monkeypatch):
+    import model_anatomy.api.app as api_module
+
+    settings = Settings(data_dir=tmp_path)
+    service = JobService(settings)
+    initialize = service.initialize
+    now = [100.0]
+    entered, release = Event(), Event()
+    attempts = []
+
+    def recover():
+        attempts.append(now[0])
+        if len(attempts) == 1:
+            raise OSError("Temporary outage")
+        entered.set()
+        assert release.wait(timeout=5)
+        initialize()
+
+    monkeypatch.setattr(service, "initialize", recover)
+    monkeypatch.setattr(api_module, "monotonic", lambda: now[0])
+    with TestClient(create_app(settings, service=service), base_url="http://127.0.0.1") as client:
+        now[0] += 5
+        with ThreadPoolExecutor(max_workers=1) as pool:
+            recovery = pool.submit(client.get, "/api/v1/analyses")
+            try:
+                assert entered.wait(timeout=5)
+                assert client.get("/api/v1/analyses").status_code == 503
+                assert attempts == [100.0, 105.0]
+            finally:
+                release.set()
+            assert recovery.result(timeout=5).status_code == 200
 
 
 def test_only_one_health_endpoint_without_fixed_supported_model_list(client):

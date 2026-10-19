@@ -47,6 +47,18 @@ from model_anatomy.src.registry import instantiate_native, load_native_config, s
         ),
         (
             {
+                "model_type": "segformer",
+                "architectures": ["SegformerForImageClassification"],
+                "depths": [1, 1, 1, 1],
+                "num_attention_heads": [1, 2, 5, 8],
+                "hidden_sizes": [8, 10, 10, 16],
+                "num_labels": 2,
+            },
+            "AutoModelForImageClassification",
+            "SegformerForImageClassification",
+        ),
+        (
+            {
                 "model_type": "whisper",
                 "architectures": ["WhisperForConditionalGeneration"],
                 "vocab_size": 32,
@@ -93,7 +105,7 @@ from model_anatomy.src.registry import instantiate_native, load_native_config, s
             "CLIPModel",
         ),
     ],
-    ids=["text-encoder-decoder", "swin-image", "whisper-audio", "clip-multimodal"],
+    ids=["text-encoder-decoder", "swin-image", "segformer-image", "whisper-audio", "clip-multimodal"],
 )
 def test_declared_native_architecture_routes_and_constructs_on_meta(data, auto_name, model_name):
     config = load_native_config(data)
@@ -177,3 +189,140 @@ def test_selection_does_not_probe_top_level_transformers_autoclasses(monkeypatch
     auto_class, _ = select_auto_class(config)
 
     assert auto_class.__name__ == "AutoModel"
+
+
+def _phi3_with_publisher_auto_map(**overrides):
+    data = {
+        "model_type": "phi3",
+        "architectures": ["Phi3ForCausalLM"],
+        "auto_map": {
+            "AutoConfig": "configuration_phi3.Phi3Config",
+            "AutoModelForCausalLM": "modeling_phi3.Phi3ForCausalLM",
+        },
+        "vocab_size": 32,
+        "hidden_size": 16,
+        "intermediate_size": 32,
+        "num_hidden_layers": 1,
+        "num_attention_heads": 2,
+        "num_key_value_heads": 2,
+        "max_position_embeddings": 32,
+        "pad_token_id": 0,
+    }
+    data.update(overrides)
+    return data
+
+
+def test_stale_root_auto_map_uses_only_verified_native_mapping_on_meta(monkeypatch):
+    from transformers.models.auto import auto_factory
+
+    def reject_dynamic_import(*_args, **_kwargs):
+        raise AssertionError("Publisher code must never be imported")
+
+    monkeypatch.setattr(auto_factory, "get_class_from_dynamic_module", reject_dynamic_import)
+    config = load_native_config(_phi3_with_publisher_auto_map())
+
+    assert type(config).__name__ == "Phi3Config"
+    assert not hasattr(config, "auto_map")
+    auto_class, warnings = select_auto_class(config)
+    assert auto_class.__name__ == "AutoModelForCausalLM"
+    assert warnings == [
+        (
+            "Publisher root auto_map was ignored because every declared architecture matched an installed native "
+            "Transformers mapping; equivalence to publisher custom code is unverified, and remote code remains disabled"
+        )
+    ]
+
+    model, selection = instantiate_native(config)
+
+    assert type(model).__name__ == "Phi3ForCausalLM"
+    assert selection["trust_remote_code"] is False
+    assert selection["publisher_auto_map"] == "ignored_native_mapping_selected"
+    assert selection["warnings"] == warnings
+    assert all(tensor.device.type == "meta" for tensor in (*model.parameters(), *model.buffers()))
+
+
+@pytest.mark.parametrize(
+    "overrides",
+    [
+        {"architectures": []},
+        {"architectures": ["Phi3ForCausalLM", "PublisherOnlyModel"]},
+        {"architectures": ["PublisherOnlyModel"]},
+        {"model_type": "publisher_only"},
+        {"architectures": "Phi3ForCausalLM"},
+        {"tokenizer_config": {"auto_map": {"AutoTokenizer": "publisher.Tokenizer"}}},
+    ],
+    ids=[
+        "missing-declaration",
+        "mixed-declarations",
+        "remote-class",
+        "unknown-config",
+        "malformed",
+        "nested-auto-map",
+    ],
+)
+def test_publisher_auto_map_is_rejected_without_exact_native_architecture_match(overrides):
+    with pytest.raises(UnsupportedModelError):
+        load_native_config(_phi3_with_publisher_auto_map(**overrides))
+
+
+def test_remote_only_config_remains_unsupported():
+    with pytest.raises(UnsupportedModelError, match="No native Transformers config"):
+        load_native_config(
+            {
+                "model_type": "publisher_only",
+                "architectures": ["PublisherModel"],
+                "auto_map": {"AutoModel": "publisher.model.PublisherModel"},
+            }
+        )
+
+
+@pytest.mark.parametrize("auto_map", ["publisher.model.Model", []])
+def test_malformed_non_object_root_auto_map_is_rejected(auto_map):
+    with pytest.raises(ArtifactError, match="Invalid publisher auto_map"):
+        load_native_config(_phi3_with_publisher_auto_map(auto_map=auto_map))
+
+
+@pytest.mark.parametrize("auto_map", [{}, None])
+def test_empty_root_auto_map_is_inert_and_cannot_forge_selection_provenance(auto_map):
+    config = load_native_config(
+        {
+            "model_type": "bert",
+            "architectures": ["BertModel"],
+            "auto_map": auto_map,
+            "_model_anatomy_ignored_publisher_auto_map": True,
+        }
+    )
+
+    _, warnings = select_auto_class(config)
+
+    assert warnings == []
+    assert not getattr(config, "_model_anatomy_ignored_publisher_auto_map", False)
+
+
+@pytest.mark.parametrize(
+    ("limit_name", "limit", "message"),
+    [
+        ("MAX_CONFIG_CONTAINER_NODES", 1, "node limit"),
+        ("MAX_CONFIG_NESTING_DEPTH", 0, "depth limit"),
+    ],
+)
+def test_root_auto_map_still_counts_against_configuration_budgets(monkeypatch, limit_name, limit, message):
+    from model_anatomy.src import limits
+
+    monkeypatch.setattr(limits, limit_name, limit)
+
+    with pytest.raises(ArtifactError, match=message):
+        load_native_config(_phi3_with_publisher_auto_map())
+
+
+def test_unsupported_architecture_still_obeys_original_config_budget(monkeypatch):
+    from model_anatomy.src import limits
+
+    monkeypatch.setattr(limits, "MAX_CONFIG_NESTING_DEPTH", 1)
+    with pytest.raises(ArtifactError, match="depth limit"):
+        load_native_config(_phi3_with_publisher_auto_map(architectures=[], nested={"deeper": {}}))
+
+
+def test_foreign_config_does_not_inherit_native_auto_map_schema():
+    with pytest.raises(UnsupportedModelError, match="native Transformers config"):
+        load_native_config({"_class_name": "ForeignComponent", "auto_map": [], "num_attention_heads": None})

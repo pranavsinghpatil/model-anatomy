@@ -274,17 +274,30 @@ class Worker:
     def run_locked(self, *, once=False) -> None:
         if not self.service.acquire_worker(self.owner):
             raise RuntimeError("Another worker holds the global execution lease")
+        cleanup_at = 0.0
+        cleanup_backoff = 1.0
         try:
             while not self.stopping:
+                if time.monotonic() >= cleanup_at:
+                    try:
+                        self.service.cleanup()
+                    except (ServiceError, OSError) as exc:
+                        if isinstance(exc, ServiceError) and exc.code != "storage_unavailable":
+                            raise
+                        logger.warning("retention cleanup deferred; storage unavailable")
+                        cleanup_at = time.monotonic() + cleanup_backoff
+                        cleanup_backoff = min(30.0, cleanup_backoff * 2)
+                    else:
+                        cleanup_at = time.monotonic() + 1
+                        cleanup_backoff = 1.0
                 try:
                     self.service.heartbeat(self.owner)
                 except ServiceError as exc:
-                    # A suspended idle process still holds the lifetime execution lock.
+                    # Idle cleanup or suspension may outlive the lease; the lifetime lock remains held.
                     # Reclaim its expired lease without ever overlapping a live child.
                     if exc.code != "lease_lost" or not self.service.acquire_worker(self.owner):
                         raise
                     logger.warning("idle worker lease recovered")
-                self.service.cleanup()
                 job_id = self.service.claim(self.owner)
                 if job_id:
                     self.run_job(job_id)

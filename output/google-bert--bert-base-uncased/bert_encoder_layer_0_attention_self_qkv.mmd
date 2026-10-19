@@ -1,0 +1,12 @@
+flowchart TD
+    n0["Query input"]
+    n1["Q Projection"]
+    n2["K Projection"]
+    n3["V Projection"]
+    n4["Q / K / V"]
+    n0 -->|"[B, S, 768]"| n1
+    n1 -->|"[unknown shape]"| n4
+    n0 -->|"[B, S, 768]"| n2
+    n2 -->|"[unknown shape]"| n4
+    n0 -->|"[B, S, 768]"| n3
+    n3 -->|"[unknown shape]"| n4

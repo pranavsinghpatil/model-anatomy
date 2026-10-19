@@ -17,6 +17,11 @@ class InputResolver:
             getattr(model.config, "model_type", None) == "vit"
             and type(model).__module__ == "transformers.models.vit.modeling_vit"
         )
+        native_module = type(model).__module__
+        model_type = getattr(model.config, "model_type", None)
+        self.native_image_text = (
+            model_type == "clip" and native_module == "transformers.models.clip.modeling_clip"
+        ) or (model_type == "siglip" and native_module == "transformers.models.siglip.modeling_siglip")
         parameter = next(model.parameters(), None)
         self.activation_dtype = {
             torch.float32: "F32",
@@ -69,7 +74,16 @@ class InputResolver:
         heads = getattr(config, "num_attention_heads", None) or getattr(config, "num_heads", None)
         if name == "position_bias":
             module = self.model.get_submodule(path) if path else self.model
-            cross = "cross" in type(module).__name__.lower() or "encdec" in type(module).__name__.lower()
+            native_t5_cross = (
+                getattr(config, "model_type", None) == "t5"
+                and type(self.model).__module__ == "transformers.models.t5.modeling_t5"
+                and "EncDecAttention" in path.split(".")
+            )
+            cross = (
+                "cross" in type(module).__name__.lower()
+                or "encdec" in type(module).__name__.lower()
+                or native_t5_cross
+            )
             return TensorSpec(
                 [1, heads, sequence, "S" if cross else sequence] if heads else None,
                 self.activation_dtype,
@@ -96,7 +110,7 @@ class InputResolver:
                 return TensorSpec(None, self.activation_dtype, name)
             image_config = config
             if getattr(config, "vision_config", None) is not None:
-                if model_type == "clip" and native_module == "transformers.models.clip.modeling_clip":
+                if self.native_image_text:
                     image_config = config.vision_config
                 else:
                     # Composite models can pack patches rather than use image axes.

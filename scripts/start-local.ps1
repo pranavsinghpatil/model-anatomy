@@ -1,7 +1,8 @@
 param(
     [switch]$Supabase,
     [string]$EnvFile,
-    [int]$ApiPort = 8001,
+    [ValidateRange(1024, 65535)]
+    [int]$ApiPort = 8000,
     [int]$FrontendPort = 5173,
     [string]$PythonPath,
     [Nullable[int]]$GuestJobsPerHour,

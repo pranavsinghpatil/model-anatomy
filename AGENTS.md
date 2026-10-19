@@ -17,6 +17,7 @@ Build Model Anatomy as a serious engineering project, not a collection of discon
 9. Unsupported/custom models fail honestly.
 10. Keep documentation aligned with implementation.
 11. Every work update states: done, evidence, blocked, next.
+12. Start substantial changes on a new topic branch and open a PR. Bundle related minor fixes into that increment instead of opening a PR for every small correction.
 
 ## Current build order
 HF model → artifact resolver → config / AutoConfig → instantiated nn.Module → module tree + graph tracing where possible → Safetensors metadata → Raw Architecture IR → Semantic Architecture IR → interactive graph → tensor / parameter inspection → Model Autopsy

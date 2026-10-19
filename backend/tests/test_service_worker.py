@@ -252,6 +252,87 @@ def test_idle_worker_recovers_expired_lease_after_computer_suspend(tmp_path, mon
     assert not service.worker_available()
 
 
+@pytest.mark.parametrize("error", [ServiceError(503, "storage_unavailable", "SECRET"), OSError("SECRET")])
+def test_cleanup_outage_does_not_stop_queued_work(tmp_path, monkeypatch, caplog, error):
+    service = JobService(Settings(data_dir=tmp_path))
+    service.initialize()
+    worker = Worker(service.settings, service=service)
+    assert service.acquire_worker(worker.owner)
+    guest, _ = service.guest(None)
+    job_id = service.create(guest, "gpt2")["id"]
+    processed = []
+
+    def unavailable():
+        raise error
+
+    def process(claimed):
+        assert service.worker_available()
+        processed.append(claimed)
+        service.fail(claimed, worker.owner, "test_result", "Test result", status="unsupported")
+
+    monkeypatch.setattr(service, "cleanup", unavailable)
+    monkeypatch.setattr(worker, "run_job", process)
+    worker.run(once=True)
+    assert processed == [job_id]
+    assert service.get(job_id, guest).status == "unsupported"
+    assert "retention cleanup deferred" in caplog.text
+    assert "SECRET" not in caplog.text
+    service.db.engine.dispose()
+
+
+def test_cleanup_retries_back_off_and_recover_without_worker_restart(tmp_path, monkeypatch):
+    import model_anatomy.service.worker as worker_module
+
+    service = JobService(Settings(data_dir=tmp_path))
+    worker = Worker(service.settings, service=service)
+    now = [0.0]
+    attempts = []
+    cleanup = service.cleanup
+
+    def retry_cleanup():
+        attempts.append(now[0])
+        if len(attempts) <= 7:
+            raise ServiceError(503, "storage_unavailable", "Temporary outage")
+        cleanup()
+        worker.request_stop()
+
+    def advance(seconds):
+        now[0] += seconds
+
+    monkeypatch.setattr(worker_module.time, "monotonic", lambda: now[0])
+    monkeypatch.setattr(worker_module.time, "sleep", advance)
+    monkeypatch.setattr(service, "cleanup", retry_cleanup)
+    worker.run()
+    assert attempts == [0, 1, 3, 7, 15, 31, 61, 91]
+    assert not service.worker_available()
+
+
+def test_idle_cleanup_can_outlive_lease_without_stopping_worker(tmp_path, monkeypatch):
+    now = [1000.0]
+    service = JobService(Settings(data_dir=tmp_path), clock=lambda: now[0])
+    worker = Worker(service.settings, service=service)
+
+    def slow_cleanup():
+        now[0] += service.settings.lease_seconds + 1
+
+    monkeypatch.setattr(service, "cleanup", slow_cleanup)
+    worker.run(once=True)
+    assert not service.worker_available()
+
+
+def test_cleanup_configuration_errors_are_not_silently_retried(tmp_path, monkeypatch):
+    service = JobService(Settings(data_dir=tmp_path))
+    worker = Worker(service.settings, service=service)
+
+    def invalid_storage():
+        raise ServiceError(503, "private_storage_required", "Invalid storage configuration")
+
+    monkeypatch.setattr(service, "cleanup", invalid_storage)
+    with pytest.raises(ServiceError) as exc:
+        worker.run(once=True)
+    assert exc.value.code == "private_storage_required"
+
+
 def test_idle_worker_does_not_steal_another_live_lease(tmp_path, monkeypatch):
     service = JobService(Settings(data_dir=tmp_path))
     worker = Worker(service.settings, service=service)

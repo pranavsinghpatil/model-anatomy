@@ -166,7 +166,10 @@ def test_checkpoint_shape_mismatch_fails_honestly(tiny_model):
 @pytest.mark.parametrize(
     "change",
     [
-        {"auto_map": {"AutoModel": "custom.Model"}},
+        {
+            "architectures": ["PublisherOnlyModel"],
+            "auto_map": {"AutoModel": "custom.Model"},
+        },
         {"backbone": "other/model"},
         {"use_pretrained_backbone": True},
         {"nested": [{"auto_map": {"AutoModel": "custom.Model"}}]},

@@ -1,0 +1,38 @@
+flowchart TD
+    n0["Q / K / V"]
+    n1["Reshape Q / K / V heads"]
+    n2["Q"]
+    n3["K"]
+    n4["V"]
+    n5["Rotary position: Q"]
+    n6["Rotary position: K"]
+    n7["Repeat K heads"]
+    n8["Repeat V heads"]
+    n9["Q @ K transpose"]
+    n10["Scale attention scores"]
+    n11["Attention mask / position bias"]
+    n12["Softmax"]
+    n13["Attention probabilities @ V"]
+    n14["Transpose sequence and head axes"]
+    n15["Merge heads"]
+    n16["Context"]
+    n0 -->|"[B, S, 576]"| n1
+    n0 -->|"[B, S, 192]"| n1
+    n0 -->|"[B, S, 192]"| n1
+    n1 -->|"[B, 9, S, 64]"| n2
+    n1 -->|"[B, 3, S, 64]"| n3
+    n1 -->|"[B, 3, S, 64]"| n4
+    n2 -->|"[B, 9, S, 64]"| n5
+    n3 -->|"[B, 3, S, 64]"| n6
+    n6 -->|"[B, 3, S, 64]"| n7
+    n4 -->|"[B, 3, S, 64]"| n8
+    n5 -->|"[B, 9, S, 64]"| n9
+    n7 -->|"[B, 9, S, 64]"| n9
+    n9 -->|"[B, 9, S, S]"| n10
+    n10 -->|"[B, 9, S, S]"| n11
+    n11 -->|"[B, 9, S, S]"| n12
+    n12 -->|"[B, 9, S, S]"| n13
+    n8 -->|"[B, 9, S, 64]"| n13
+    n13 -->|"[B, 9, S, 64]"| n14
+    n14 -->|"[B, S, 9, 64]"| n15
+    n15 -->|"[B, S, 576]"| n16

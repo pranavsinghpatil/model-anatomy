@@ -62,7 +62,7 @@ pytestmark = [
             408,
             "zero-shot-image-classification",
             "pixel_values",
-            None,
+            ["B", 3, 224, 224],
         ),
     ],
 )

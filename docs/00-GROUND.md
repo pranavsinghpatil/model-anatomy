@@ -21,6 +21,12 @@ component selection and pinned partial reports across text, image, audio, video
 and image-text. Their remaining semantic gaps are acceptance work, not grounds
 for a universal support claim. See `DYNAMIC_ROUTING_ACCEPTANCE.md`.
 
+The October 19 direction adds measured compatibility attempts across 120 pinned
+repositories, followed by fixes and family-specific acceptance plans. Keep complete
+static graphs, partial anatomy, graph-free artifact inspection and failures
+separate. A broad benchmark does not establish universal model support. See
+`HUNDRED_MODEL_BENCHMARK.md` and `MODEL_FAMILY_STRATEGIES.md`.
+
 The [hackathon release](https://nebiusglobalaihackathon.devpost.com/) must run on Nebius Token Factory or Nebius AI Cloud and use an NVIDIA open-source model. The integration is an optional, evidence-bound explanation layer: it may summarize or answer questions about the completed reconstruction, but must never infer the graph or overwrite evidence.
 
 ## Non-goals for this release

@@ -1,8 +1,10 @@
 """HTTP boundary for metadata jobs; never import or run model extraction here."""
 
 import logging
+import threading
 from contextlib import asynccontextmanager
 from pathlib import Path
+from time import monotonic
 from uuid import uuid4
 
 from alembic.config import Config as AlembicConfig
@@ -45,16 +47,12 @@ def create_app(settings: Settings | None = None, *, service=None, explanation=No
     config = settings if settings is not None else Settings()
     jobs = service or JobService(config)
     ai = explanation or ExplanationService(config)
+    initialization_lock = threading.Lock()
+    retry_initialization_at = 0.0
 
     @asynccontextmanager
     async def lifespan(app):
-        try:
-            jobs.initialize()
-            verify_migrations()
-            app.state.service_ready = True
-        except (ServiceError, SQLAlchemyError, OSError):
-            app.state.service_ready = False
-            logger.error("service initialization unavailable")
+        initialize_service()
         yield
         jobs.db.engine.dispose()
         if explanation is None:
@@ -106,8 +104,31 @@ def create_app(settings: Settings | None = None, *, service=None, explanation=No
                 if sorted(revisions) != expected:
                     raise ServiceError(503, "migrations_required", "Run Alembic upgrade head before serving")
 
+    def initialize_service() -> bool:
+        nonlocal retry_initialization_at
+        if app.state.service_ready:
+            return True
+        if not initialization_lock.acquire(blocking=False):
+            return False
+        try:
+            if app.state.service_ready:
+                return True
+            if monotonic() < retry_initialization_at:
+                return False
+            try:
+                jobs.initialize()
+                verify_migrations()
+            except (ServiceError, SQLAlchemyError, OSError):
+                retry_initialization_at = monotonic() + 5
+                logger.error("service initialization unavailable")
+                return False
+            app.state.service_ready = True
+            return True
+        finally:
+            initialization_lock.release()
+
     def require_service():
-        if not app.state.service_ready:
+        if not initialize_service():
             raise ServiceError(503, "service_unavailable", "Job database or private storage is unavailable")
 
     def guest(request: Request) -> str:

@@ -27,3 +27,7 @@ frontend/dist/
 *.sqlite3
 *.sqlite3-*
 .vercel/
+
+.tmp
+.playground
+notebook
