@@ -78,6 +78,18 @@ def _validate_embedded_config(data: dict[str, Any]) -> None:
             )
         model_type = value.get("model_type")
         stage_type = model_type if isinstance(model_type, str) else inherited_stage_type
+        layer_fields = set(_LAYER_FIELDS)
+        if isinstance(model_type, str):
+            from transformers.models.auto.configuration_auto import CONFIG_MAPPING
+
+            if model_type in CONFIG_MAPPING:
+                # Native configs expose aliases such as DistilBERT's n_layers.
+                # Resolve those names before any AutoConfig/model construction.
+                layer_fields.update(
+                    alias
+                    for canonical, alias in CONFIG_MAPPING[model_type].attribute_map.items()
+                    if canonical in _LAYER_FIELDS
+                )
         if stage_type in _STAGE_DEPTH_MODEL_TYPES and "depths" in value:
             depths = value["depths"]
             if not isinstance(depths, list) or not depths:
@@ -92,13 +104,13 @@ def _validate_embedded_config(data: dict[str, Any]) -> None:
                 raise UnsupportedModelError(
                     f"Model exceeds the supported layer count ({limits.MAX_MODEL_LAYERS})"
                 )
-        for name in _DIMENSION_FIELDS | _LAYER_FIELDS:
+        for name in _DIMENSION_FIELDS | layer_fields:
             if name not in value:
                 continue
             dimension = value[name]
             if type(dimension) is not int or dimension <= 0:
                 raise ArtifactError(f"Invalid configuration dimension: {name}")
-            if name in _LAYER_FIELDS and dimension > limits.MAX_MODEL_LAYERS:
+            if name in layer_fields and dimension > limits.MAX_MODEL_LAYERS:
                 raise UnsupportedModelError(
                     f"Model exceeds the supported layer count ({limits.MAX_MODEL_LAYERS})"
                 )

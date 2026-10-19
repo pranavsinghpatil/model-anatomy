@@ -1,4 +1,6 @@
 param(
+    [ValidateRange(1024, 65535)]
+    [int]$ApiPort = 8000,
     [int]$GuestJobsPerHour = 100,
     [int]$GlobalJobsPerDay = 500,
     [int]$GuestQuestionsPerHour = 100,
@@ -6,6 +8,7 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+$apiBaseUrl = "http://127.0.0.1:$ApiPort"
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $dataDir = Join-Path $repoRoot '.local/app-v1'
 $runDir = Join-Path $dataDir 'local-testing'
@@ -40,8 +43,8 @@ $node = Get-Command node.exe -ErrorAction SilentlyContinue
 if (-not $node -or -not (Test-Path -LiteralPath $viteCli -PathType Leaf)) {
     throw 'Frontend dependencies are unavailable. Install Node.js and run npm ci in frontend.'
 }
-if (Get-NetTCPConnection -State Listen -LocalPort 8001 -ErrorAction SilentlyContinue) {
-    throw 'Port 8001 already has a listener. Stop the existing API, then run this script to apply the local profile.'
+if (Get-NetTCPConnection -State Listen -LocalPort $ApiPort -ErrorAction SilentlyContinue) {
+    throw "Port $ApiPort already has a listener. Stop the existing API, then run this script to apply the local profile."
 }
 if (Get-NetTCPConnection -State Listen -LocalPort 5173 -ErrorAction SilentlyContinue) {
     throw 'Port 5173 already has a listener. Stop the existing frontend, then run this script to start all three local services.'
@@ -49,7 +52,8 @@ if (Get-NetTCPConnection -State Listen -LocalPort 5173 -ErrorAction SilentlyCont
 
 $settings = @{
     MODEL_ANATOMY_ENVIRONMENT = 'local'
-    MODEL_ANATOMY_PORT = '8001'
+    MODEL_ANATOMY_PORT = "$ApiPort"
+    API_PROXY_TARGET = $apiBaseUrl
     MODEL_ANATOMY_DATA_DIR = $dataDir
     MODEL_ANATOMY_DATABASE_URL = $databaseUrl
     DATABASE_URL = $databaseUrl
@@ -75,7 +79,7 @@ try {
         throw 'A worker already owns the configured local database. Stop the identified old worker before starting this profile; existing workers are never reused.'
     }
 
-    $processes.Api = Start-Process -FilePath $python -ArgumentList @('-m', 'uvicorn', 'model_anatomy.api.app:create_app', '--factory', '--host', '127.0.0.1', '--port', '8001', '--no-access-log') -WorkingDirectory $repoRoot -WindowStyle Hidden -PassThru -RedirectStandardOutput (Join-Path $runDir 'api.log') -RedirectStandardError (Join-Path $runDir 'api-error.log')
+    $processes.Api = Start-Process -FilePath $python -ArgumentList @('-m', 'uvicorn', 'model_anatomy.api.app:create_app', '--factory', '--host', '127.0.0.1', '--port', "$ApiPort", '--no-access-log') -WorkingDirectory $repoRoot -WindowStyle Hidden -PassThru -RedirectStandardOutput (Join-Path $runDir 'api.log') -RedirectStandardError (Join-Path $runDir 'api-error.log')
     $processes.Worker = Start-Process -FilePath $python -ArgumentList @('-m', 'model_anatomy.service.worker') -WorkingDirectory $repoRoot -WindowStyle Hidden -PassThru -RedirectStandardOutput (Join-Path $runDir 'worker.log') -RedirectStandardError (Join-Path $runDir 'worker-error.log')
 
     $deadline = [DateTime]::UtcNow.AddSeconds(30)
@@ -88,7 +92,7 @@ try {
             }
         }
         try {
-            $health = Invoke-RestMethod -Uri 'http://127.0.0.1:8001/health' -TimeoutSec 2
+            $health = Invoke-RestMethod -Uri "$apiBaseUrl/health" -TimeoutSec 2
             if ($health.analysis_available -and $health.checks.database -and $health.checks.storage -and $health.checks.worker) {
                 $ready = $true
                 break
@@ -143,6 +147,6 @@ finally {
 }
 
 Write-Output 'Local app: http://127.0.0.1:5173/'
-Write-Output 'API docs:  http://127.0.0.1:8001/docs'
+Write-Output "API docs:  $apiBaseUrl/docs"
 Write-Output "Process IDs: $(($processes.GetEnumerator() | ForEach-Object { "$($_.Key)=$($_.Value.Id)" }) -join ', ')"
 Write-Output "Logs:      $runDir"

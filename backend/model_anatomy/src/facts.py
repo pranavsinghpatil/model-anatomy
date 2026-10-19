@@ -121,17 +121,42 @@ def inspect_native_model(
         renamings = [rule for rule in get_model_conversion_mapping(model) if isinstance(rule, WeightRenaming)]
     except ImportError:
         pass
+    legacy_converter = None
+    legacy_source = None
+    legacy_source_sha256 = None
+    try:
+        # Transformers 4.x exposes its canonical loader normalization here. Call the
+        # base implementation directly; model-specific overrides are not trusted hooks.
+        from transformers.modeling_utils import PreTrainedModel
+
+        legacy_converter = PreTrainedModel._fix_state_dict_key_on_load
+        legacy_source = f"{PreTrainedModel.__module__}.{PreTrainedModel.__name__}._fix_state_dict_key_on_load"
+        legacy_source_sha256 = hashlib.sha256(inspect.getsource(legacy_converter).encode()).hexdigest()
+    except (ImportError, AttributeError, OSError, TypeError):
+        pass
     checkpoint_names: dict[str, str] = {}
     name_conversions = {}
     for name in checkpoint.tensors:
         converted = name
+        conversion_steps = []
         for rule in renamings:
             converted, _ = rule.rename_source_key(converted)
         if converted != name:
-            name_conversions[name] = {
-                "target": converted,
-                "source": "native Transformers checkpoint conversion mappings",
-            }
+            conversion_steps.append({"source": "native Transformers checkpoint conversion mappings"})
+        if legacy_converter is not None:
+            legacy_key, changed = legacy_converter(converted)
+            if changed and legacy_key != converted:
+                converted = legacy_key
+                conversion_steps.append(
+                    {
+                        "source": legacy_source,
+                        "source_sha256": legacy_source_sha256,
+                    }
+                )
+        if converted != name:
+            name_conversions[name] = {"target": converted, **conversion_steps[-1]}
+            if len(conversion_steps) > 1:
+                name_conversions[name]["steps"] = conversion_steps
         candidates = {converted, prefix + converted, converted.removeprefix(prefix)} & named.keys()
         # Shared embedding paths can legitimately provide more than one candidate.
         if len(candidates) > 1 and len({id(named[p]) for p in candidates}) > 1:

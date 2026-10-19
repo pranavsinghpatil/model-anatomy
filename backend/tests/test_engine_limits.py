@@ -73,6 +73,34 @@ def test_embedded_layer_count_rejected_before_autoconfig(monkeypatch):
     assert called is False
 
 
+@pytest.mark.parametrize("model_type", ["distilbert", "xlm"])
+@pytest.mark.parametrize("value", [513, 0, -1, True, "6", [6]])
+def test_native_layer_aliases_are_bounded_before_autoconfig(monkeypatch, model_type, value):
+    monkeypatch.setattr(
+        registry.AutoConfig,
+        "for_model",
+        lambda *args, **kwargs: pytest.fail("AutoConfig must not run for an invalid native layer alias"),
+    )
+    error = UnsupportedModelError if type(value) is int and value > 512 else ArtifactError
+    with pytest.raises(error, match="layer count|dimension"):
+        registry.load_native_config({"model_type": model_type, "n_layers": value})
+
+
+def test_nested_native_layer_alias_is_bounded_before_autoconfig(monkeypatch):
+    monkeypatch.setattr(
+        registry.AutoConfig,
+        "for_model",
+        lambda *args, **kwargs: pytest.fail("AutoConfig must not run for an excessive nested layer alias"),
+    )
+    with pytest.raises(UnsupportedModelError, match="layer count"):
+        registry.load_native_config(tiny_config(text_config={"model_type": "distilbert", "n_layers": 513}))
+
+
+def test_native_layer_alias_retains_valid_nondefault_count():
+    config = registry.load_native_config({"model_type": "distilbert", "n_layers": 2})
+    assert config.n_layers == config.num_hidden_layers == 2
+
+
 @pytest.mark.parametrize("value", [True, False, "2", 0, -1])
 def test_embedded_layer_type_rejected_before_autoconfig(monkeypatch, value):
     monkeypatch.setattr(

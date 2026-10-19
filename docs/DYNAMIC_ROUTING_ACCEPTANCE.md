@@ -25,7 +25,7 @@ Detail/list regressions cover this 503 failure.
   nested vision config. Native blocker reasons are retained in the profile.
 
 No endpoint, remote-code execution, weight-loading fallback, prepared report or
-LLM graph inference was added. Cache engine is `2026.10.12.8`; old reports remain
+LLM graph inference was added. Cache engine is `2026.10.19.2`; old reports remain
 immutable. These changes do not establish universal support.
 
 ## Pinned Evidence
@@ -39,7 +39,9 @@ full checkpoint parameter mapping, graph/IR validation and zero payload reads.
 | `microsoft/swin-tiny-patch4-window7-224` | `d00d478bfaf1f417d34a1186673ad4b4be264c51` | 233 | Shifted windows, padding, classification and shapes. |
 | `openai/whisper-tiny` | `169d4a4341b33bc18d8881c4b69c2e104e1cc0af` | 167 | Augmentation, functional operations and some shapes. |
 | `MCG-NJU/videomae-base-finetuned-kinetics` | `488eb9a0565f257b32866000305c8178965eb9f6` | 186 | Input `[B,16,3,224,224]` established; pooling/position semantics incomplete. |
-| `google/siglip-base-patch16-224` | `7fd15f0689c79d79e38b1c2e2e2370a7bf2761ed` | 408 | Image-text semantics and composite pixel layout. |
+| `google/siglip-base-patch16-224` | `7fd15f0689c79d79e38b1c2e2e2370a7bf2761ed` | 408 | Canonical pixel axes established; image-text semantic relationships remain partial. |
+| `google-bert/bert-base-uncased` | `86b5e0934494bd15c9632b12f734a8a67f723594` | 206 | Legacy LayerNorm names map through the native loader; four extra pretraining tensors remain outside the declared masked-LM wrapper. |
+| `distilbert/distilbert-base-uncased` | `12040accade4e8a0f71eabdb258fecc2e7e948be` | 105 | Full native parameter mapping; attention/feed-forward classifications and some connection shapes remain partial. |
 
 Diffusion acceptance pins `stable-diffusion-v1-5/stable-diffusion-v1-5` to
 `451f4fe16113bff5a5d2269ed5ad43b0592e9a14`. The manifest and selected
@@ -63,6 +65,45 @@ the sibling config and native blocker. Selections pin the exact inspected commit
 Arbitrary sizes, universal semantic completeness, more formats/custom code,
 native Diffusers and hosted cloud operation remain open. Metadata stays bounded.
 Next semantic changes must close the explicit matrix gaps without hiding warnings.
+
+## October 19 Model-Family Validation
+
+Engine `2026.10.19.2` adds source-grounded canonical SigLIP pixel axes
+`[B,3,224,224]`; the exact native implementation passes those pixels through a
+Conv2d patch embedding using its nested vision config. Custom/composite packing
+and other unverified video layouts stay unknown. Image-text semantics remain
+partial beyond this established pixel layout.
+
+Native T5 `EncDecAttention` uses the same `T5Attention` class as self-attention.
+Its module path now distinguishes cross-attention position-bias axes
+`[1,heads,T,S]` from decoder self-attention `[1,heads,T,T]` and encoder
+self-attention `[1,heads,S,S]`, with no forward execution.
+
+Native configuration aliases now participate in pre-construction layer limits.
+For example, DistilBERT/XLM `n_layers` cannot bypass the existing positive-integer
+and 512-layer checks. This does not remove the separate native-record, graph,
+memory or wall-clock limits, or establish arbitrary-size support.
+
+Legacy checkpoint normalization follows the installed native Transformers
+loader's base key-conversion function, preserving the original checkpoint key,
+converted module locator and conversion provenance. BERT LayerNorm `gamma`/`beta`
+keys map to `weight`/`bias` with shape and collision checks. Extra task-head
+tensors are still retained explicitly rather than dropped to improve coverage.
+
+Eight deterministic meta-model fixtures cover BERT, DistilBERT, GPT-2, Llama,
+T5, Whisper, VideoMAE and CLIP through reconstruction, IR round-trip, tensor
+ownership and public API response schemas. These fixtures contain no checkpoint
+payloads and are test-only; their exact small configurations do not replace real
+pinned model acceptance or establish complete family support.
+
+Final October 19 verification: **383 backend/infrastructure tests passed** with
+both `RUN_HF_INTEGRATION=1` and `RUN_HTTP_INTEGRATION=1`, including all **18 real
+integration cases** and the eight tiny native fixtures. One Linux-only resource
+check was skipped on Windows; the existing Starlette/httpx deprecation warning
+remains. Ruff, Python compilation, whitespace checks, and the PowerShell launcher
+syntax/default/override/invalid-port checks passed. Hosted storage/inference,
+larger-model capacity and complete semantics for the partial families remain
+separate acceptance work.
 
 ## Verification - October 12
 - Final backend/infra suite: **314 passed, 17 skipped**, one existing

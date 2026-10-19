@@ -53,7 +53,7 @@ artifact audit, and Markdown preview. Use `--revision` to pin the model and
 
 ```powershell
 uv sync --frozen --extra api --extra engine --extra dev
-uv run --no-sync uvicorn model_anatomy.api.app:create_app --factory --host 127.0.0.1 --port 8001 --no-access-log
+uv run --no-sync uvicorn model_anatomy.api.app:create_app --factory --host 127.0.0.1 --port 8000 --no-access-log
 ```
 
 Run the worker in a second terminal:
@@ -67,6 +67,7 @@ Run the browser application in a third terminal:
 ```powershell
 cd frontend
 npm ci
+$env:API_PROXY_TARGET = 'http://127.0.0.1:8000'
 npm run dev
 ```
 
@@ -78,10 +79,12 @@ local profile allows up to 100 jobs per visitor/hour, 500 jobs globally/day,
 100 AI questions per visitor/hour, and 500 AI questions globally/day. Each
 limit can be lowered or raised up to 1,000 with the script parameters. This
 does not change the normal 2/20 job and 10/100 AI defaults. The script refuses
-to reuse listeners on ports 8001/5173 or an active worker lease, since those processes would
+to reuse listeners on ports 8000/5173 or an active worker lease, since those processes would
 keep their current settings; it does not stop processes or clear quota records.
+The launcher defaults to API port 8000 and passes that address to the frontend
+proxy. Use `-ApiPort` to choose another local port.
 
-Open [the application](http://127.0.0.1:5173) or [API docs](http://127.0.0.1:8001/docs).
+Open [the application](http://127.0.0.1:5173) or [API docs](http://127.0.0.1:8000/docs).
 No sign-in is required. There are no prepared reports or demo endpoints: paste
 a model ID or URL to create a real analysis. New models require Hugging Face network access.
 `/health` checks the actual database, storage and worker and reports configured
@@ -92,7 +95,7 @@ not a fixed model. These commands bind only to loopback.
 Configuration uses `MODEL_ANATOMY_` environment variables. For example:
 
 ```powershell
-$env:MODEL_ANATOMY_PORT = '8001'
+$env:MODEL_ANATOMY_PORT = '8000'
 $env:MODEL_ANATOMY_CORS_ORIGINS = '["http://localhost:5173"]'
 ```
 

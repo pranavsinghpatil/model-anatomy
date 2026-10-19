@@ -5,6 +5,28 @@ in this repository as of 2026-10-12. "Tested" means there is a pinned real-model
 engine or live HTTP acceptance path; a generic code path or fixture is not proof
 that a model family works end to end.
 
+## October 19 Model-Family Validation
+
+Engine `2026.10.19.2` validates a wider matrix while keeping partial support
+explicit. Native SigLIP has canonical image axes from its own vision source and
+config; T5 cross-attention distinguishes source and target sequence lengths.
+Native layer aliases, including DistilBERT/XLM `n_layers`, receive the existing
+pre-construction type and layer-count limits. BERT legacy LayerNorm keys follow
+the native loader's conversion with recorded provenance; unrelated checkpoint
+heads remain unmapped. See [family acceptance](DYNAMIC_ROUTING_ACCEPTANCE.md).
+
+Eight tiny native fixtures cover encoder, causal decoder, encoder-decoder,
+audio, video and image-text reconstruction plus public API schema/view contracts.
+Real pinned BERT and DistilBERT cases supplement the previous matrix. Their
+remaining extraction gaps still produce partial reports. No fixture is served by
+the application, and these checks do not establish universal or arbitrary-size
+model support.
+
+The final all-enabled run passed 383 backend/infrastructure tests, including
+18 real integrations. The Linux-only resource check was skipped on Windows.
+Ruff, compilation and scoped diff checks passed. The local API uses port 8000;
+the launcher defaults and frontend proxy target now agree on that port.
+
 ## October 19 Backend Reliability
 
 Engine `2026.10.19.1` closes the bounded issues found in the backend review:
