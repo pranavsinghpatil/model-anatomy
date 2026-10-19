@@ -35,9 +35,9 @@ export function useWorkspaceSession(id: string) {
         scene: "graph",
         anatomyViews: {},
         inspectorTab: "module",
-        inspectorOpen: isDesktop,
+        inspectorOpen: false,
         questions: false,
-        navigationOpen: isDesktop,
+        navigationOpen: false,
         layout: undefined,
       }
     );

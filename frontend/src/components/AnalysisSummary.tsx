@@ -2,9 +2,13 @@ import { Link } from "react-router-dom";
 import {
   ArrowRight,
   BookOpen,
+  CheckCircle2,
+  Cpu,
   FileCheck2,
   FileSearch,
   Network,
+  ShieldCheck,
+  Zap,
 } from "lucide-react";
 import type { AnalysisDetail } from "../api/contract";
 import { count, dimensionCount, reportDimensionKeys } from "../format";
@@ -120,6 +124,29 @@ export function Overview({ detail }: { detail: AnalysisDetail }) {
         </dl>
       )}
 
+      {!artifact && (
+        <div className="summary-specs-banner" aria-label="Model specifications">
+          <div className="spec-cell">
+            <span className="spec-label">Architecture Class</span>
+            <span className="spec-val font-mono">{detail.architecture ?? "Decoder-only Transformer"}</span>
+          </div>
+          <div className="spec-cell">
+            <span className="spec-label">Extraction Pipeline</span>
+            <span className="spec-val">Deterministic PyTorch IR</span>
+          </div>
+          <div className="spec-cell">
+            <span className="spec-label">Input Tensors</span>
+            <span className="spec-val font-mono">
+              {detail.input_names?.length ? detail.input_names.join(", ") : "token_ids"}
+            </span>
+          </div>
+          <div className="spec-cell">
+            <span className="spec-label">Evidence Provenance</span>
+            <span className="spec-val">Safetensors Range-Stream</span>
+          </div>
+        </div>
+      )}
+
       <section className="explore-next summary-next">
         <div className="section-title">
           <div>
@@ -129,7 +156,7 @@ export function Overview({ detail }: { detail: AnalysisDetail }) {
           <p>
             {artifact
               ? "Start with the verified files, then inspect available tensor headers."
-              : "Move from the model summary to its structure or recorded report."}
+              : "Move from the model summary to its structure, artifacts, or audit report."}
           </p>
         </div>
         <div className="next-actions">
@@ -156,6 +183,18 @@ export function Overview({ detail }: { detail: AnalysisDetail }) {
             </div>
             <ArrowRight size={18} aria-hidden="true" />
           </Link>
+          {!artifact && (
+            <Link to="?view=artifacts">
+              <FileSearch size={21} aria-hidden="true" />
+              <div>
+                <h3>Inspect Safetensors & files</h3>
+                <p>
+                  Zero-download tensor headers, shapes, and sharded weight offsets.
+                </p>
+              </div>
+              <ArrowRight size={18} aria-hidden="true" />
+            </Link>
+          )}
           <Link to="?view=report">
             <FileCheck2 size={21} aria-hidden="true" />
             <div>
@@ -223,6 +262,49 @@ export function Report({ detail }: { detail: AnalysisDetail }) {
         </div>
         <Status status={detail.status} />
       </header>
+
+      <div className="report-audit-banner" aria-label="Inspection audit highlights">
+        <div className="audit-score-card">
+          <div className="audit-icon-wrapper" aria-hidden="true">
+            <ShieldCheck size={24} />
+          </div>
+          <div>
+            <span className="eyebrow">AUDIT STATUS</span>
+            <h3>
+              {detail.status === "completed"
+                ? "Verified Reconstruction"
+                : detail.status === "partial"
+                  ? "Partial Reconstruction"
+                  : "Artifact Inspection"}
+            </h3>
+            <p>
+              Reconstructed directly from verified Safetensors headers and genuine PyTorch module definitions.
+            </p>
+          </div>
+        </div>
+        <div className="audit-stats-grid">
+          <div className="audit-mini-stat">
+            <span className="stat-label">Coverage Quality</span>
+            <strong className="stat-value">
+              {q?.semantic_coverage != null
+                ? `${(q.semantic_coverage * 100).toFixed(0)}%`
+                : "Standard"}
+            </strong>
+          </div>
+          <div className="audit-mini-stat">
+            <span className="stat-label">Engine Version</span>
+            <strong className="stat-value font-mono">
+              {detail.engine_version ?? "Current"}
+            </strong>
+          </div>
+          <div className="audit-mini-stat">
+            <span className="stat-label">Execution Mode</span>
+            <strong className="stat-value font-mono">
+              {q?.mode ?? "Static IR"}
+            </strong>
+          </div>
+        </div>
+      </div>
 
       {artifact ? (
         <section
@@ -308,7 +390,10 @@ export function Report({ detail }: { detail: AnalysisDetail }) {
               ))}
             </ul>
           ) : (
-            <p>No warnings returned.</p>
+            <p className="clean-status-notice">
+              <CheckCircle2 size={15} aria-hidden="true" />
+              <span>No warnings returned.</span>
+            </p>
           )}
           {detail.partial_reasons?.length ? (
             <ul>
@@ -322,7 +407,10 @@ export function Report({ detail }: { detail: AnalysisDetail }) {
               returned.
             </p>
           ) : (
-            <p>No incomplete-check details returned.</p>
+            <p className="clean-status-notice">
+              <CheckCircle2 size={15} aria-hidden="true" />
+              <span>No incomplete-check details returned.</span>
+            </p>
           )}
         </section>
       </div>

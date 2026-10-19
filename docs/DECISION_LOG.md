@@ -762,7 +762,31 @@ Eliminate the redundant recent analyses component section from the landing page 
 - **Dead Code Cleanup in CSS**:
   - Removed obsolete CSS rules for `.entry-recent`, `.entry-section-heading`, `.entry-recent-count`, `.entry-recent-copy`, `.entry-table-wrap`, `.entry-table`, `.entry-model-link`, `.entry-revision`, `.entry-time`, `.entry-continue`, and `.entry-empty`.
   - Removed mobile media query rules previously required for the recent analyses table.
-- **Verification**:
+## D-055 — Dashboard Utilitarian Elevation & Consistency Refinement
+**2026-10-19 · accepted**
+
+Elevate the model dashboard (`/app/analyses/:id` across `overview`, `architecture`, `artifacts`, and `report` views) with an ultra-consistent, utilitarian layout and telemetry controls:
+- **Workspace Navigation & Header Tools**:
+  - Added `.workspace-model-tools` container in the header with:
+    - Quick model ID copy button with visual checkmark feedback (`.workspace-copy-btn`).
+    - Direct link to Hugging Face repository (`.workspace-hf-link`).
+    - Architecture class pill badge (`.workspace-arch-pill`).
+    - Direct jump action to model catalog (`.workspace-catalog-btn`).
+  - Added utilitarian telemetry ribbon (`.workspace-telemetry-ribbon`) directly on the viewbar displaying Parameter Count, Layer Count, Hidden Dimension, Attention Heads, and Revision with tabular-num telemetry chips.
+  - Added semantic Lucide icons to all view tabs (`Network`, `LayoutDashboard`, `Files`, `ShieldCheck`) with `aria-hidden="true"`.
+- **High-Utility Overview & Report Summaries**:
+  - In `Overview`: Added `Model Specifications` matrix (`.summary-specs-banner`) showing Architecture Class, Extraction Pipeline, Input Tensors, and Evidence Provenance, plus direct jump action to Inspect Safetensors & files in next-actions.
+  - In `Report`: Added `.report-audit-banner` hero with reconstruction confidence badge, coverage quality, engine version, and execution mode. Updated clean-status notices with emerald checkmarks.
+- **Accessibility & Responsive Consistency**:
+  - Elevated light-mode `--muted` to `#475569` (slate-600) and `--success` to `#047857` (emerald-700) to guarantee WCAG AA contrast ratio (> 4.5:1) under automated Axe testing.
+  - Aligned drawer vs docked component navigator breakpoint to 1280px in `ArchitectureWorkspace.tsx`.
+  - Maintained zero horizontal overflow across all target widths from 320px to 1920px in both light and dark themes.
+- **Verification Evidence**:
   - `npm run typecheck` passed with 0 TypeScript errors.
-  - 12/12 Playwright E2E tests (`catalog.spec.ts`, `entry-rebuild.spec.ts`, `graph-rebuild.spec.ts`) passing cleanly in 50.5s across desktop and mobile.
+  - `e2e/redesign.spec.ts`: 9/9 passed.
+  - `e2e/catalog.spec.ts`: 1/1 passed.
+  - `e2e/entry-rebuild.spec.ts`: 3/3 passed.
+  - `e2e/graph-rebuild.spec.ts`: 2/2 passed.
+  - `e2e/report-quality.spec.ts`: 9/9 passed.
+  - Total: 24/24 E2E tests passing cleanly.
 

@@ -12,6 +12,14 @@ import {
   Plus,
   Network,
   ChevronRight,
+  LayoutDashboard,
+  Files,
+  ShieldCheck,
+  ExternalLink,
+  Compass,
+  Cpu,
+  Check,
+  Copy,
 } from "lucide-react";
 import { api, graphReady, pending } from "../api/client";
 import type { Citation, ExportFormat } from "../api/contract";
@@ -53,6 +61,7 @@ function Workspace({ id }: { id: string }) {
   const recent = useRecent();
   const [state, setState] = useWorkspaceSession(id);
   const [citation, setCitation] = useState<Citation | null>(null);
+  const [copiedModelId, setCopiedModelId] = useState(false);
   const [exporting, setExporting] = useState<ExportFormat | null>(null);
   const [exportError, setExportError] = useState<Error | null>(null);
   const viewNav = useRef<HTMLElement>(null);
@@ -255,8 +264,59 @@ function Workspace({ id }: { id: string }) {
             </MenuItem>
           </Menu>
         </div>
+        {detail?.model_id && (
+          <div className="workspace-model-tools" aria-label="Model quick tools">
+            <button
+              type="button"
+              className="button button-ghost button-icon-only workspace-copy-btn"
+              onClick={() => {
+                void navigator.clipboard.writeText(detail.model_id);
+                setCopiedModelId(true);
+                setTimeout(() => setCopiedModelId(false), 2000);
+              }}
+              title={copiedModelId ? "Copied model ID" : "Copy model ID"}
+              aria-label="Copy model ID"
+            >
+              {copiedModelId ? (
+                <Check size={13} aria-hidden="true" />
+              ) : (
+                <Copy size={13} aria-hidden="true" />
+              )}
+            </button>
+            {detail.model_id.includes("/") && (
+              <a
+                href={`https://huggingface.co/${detail.model_id}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="button button-ghost button-icon-only workspace-hf-link"
+                title="Open repository on Hugging Face"
+                aria-label="Open repository on Hugging Face"
+              >
+                <ExternalLink size={13} aria-hidden="true" />
+              </a>
+            )}
+            {detail.architecture && (
+              <span
+                className="workspace-arch-pill"
+                title={`Detected architecture: ${detail.architecture}`}
+              >
+                <Cpu size={12} aria-hidden="true" />
+                <span>{detail.architecture}</span>
+              </span>
+            )}
+          </div>
+        )}
         {detail && <Status status={detail.status} />}
         <div className="workspace-header-actions">
+          <Link
+            className="button button-ghost workspace-catalog-btn"
+            to="/catalog"
+            aria-label="Browse catalog"
+            title="Browse Model Catalog"
+          >
+            <Compass size={15} aria-hidden="true" />
+            <span className="wide-label">Catalog</span>
+          </Link>
           <ThemeControl />
           <Link
             className="button button-secondary"
@@ -303,77 +363,136 @@ function Workspace({ id }: { id: string }) {
           }}
         >
           <FluidHoverHighlight rect={highlight} />
-          {views.map((item) => (
-            <Link
-              key={item}
-              onPointerEnter={(event) => highlightView(event.currentTarget)}
-              onFocus={(event) => highlightView(event.currentTarget)}
-              to={`?view=${item}`}
-              aria-current={view === item ? "page" : undefined}
-              aria-disabled={!ready && !artifact ? true : undefined}
-              tabIndex={!ready && !artifact ? -1 : undefined}
-              onClick={(event) => {
-                if (!ready && !artifact) event.preventDefault();
-              }}
-              title={
-                item === "architecture" && artifact
-                  ? "No architecture was reconstructed; see available artifacts"
-                  : undefined
-              }
-            >
-              {item[0].toUpperCase() + item.slice(1)}
-            </Link>
-          ))}
+          {views.map((item) => {
+            const Icon =
+              item === "architecture"
+                ? Network
+                : item === "overview"
+                  ? LayoutDashboard
+                  : item === "artifacts"
+                    ? Files
+                    : ShieldCheck;
+            return (
+              <Link
+                key={item}
+                onPointerEnter={(event) => highlightView(event.currentTarget)}
+                onFocus={(event) => highlightView(event.currentTarget)}
+                to={`?view=${item}`}
+                aria-current={view === item ? "page" : undefined}
+                aria-disabled={!ready && !artifact ? true : undefined}
+                tabIndex={!ready && !artifact ? -1 : undefined}
+                onClick={(event) => {
+                  if (!ready && !artifact) event.preventDefault();
+                }}
+                title={
+                  item === "architecture" && artifact
+                    ? "No architecture was reconstructed; see available artifacts"
+                    : undefined
+                }
+              >
+                <Icon size={14} className="view-tab-icon" aria-hidden="true" />
+                <span>{item[0].toUpperCase() + item.slice(1)}</span>
+              </Link>
+            );
+          })}
         </nav>
         <div className="workspace-view-options">
           {detail && ready && !artifact && (
-            <details
-              key={view}
-              className="model-facts"
-              onKeyDown={(event) => {
-                if (event.key === "Escape") {
-                  event.currentTarget.open = false;
-                  event.currentTarget.querySelector("summary")?.focus();
-                }
-              }}
-            >
-              <summary>
-                Model details <ChevronDown size={13} aria-hidden="true" />
-              </summary>
+            <>
               <div
-                className="model-context"
-                role="region"
-                aria-label="Model context"
+                className="workspace-telemetry-ribbon"
+                aria-label="Model telemetry summary"
               >
-                <strong className="context-architecture">
-                  {detail.architecture ?? "Architecture unknown"}
-                </strong>
-                <dl>
-                  <div>
-                    <dt>Parameters</dt>
-                    <dd>{count(detail.parameter_count, true)}</dd>
+                <div className="telemetry-chip" title="Total Parameters">
+                  <span className="telemetry-label">Params</span>
+                  <span className="telemetry-val">
+                    {count(detail.parameter_count, true)}
+                  </span>
+                </div>
+                {detail.dimensions.layers != null && (
+                  <div className="telemetry-chip" title="Layer count">
+                    <span className="telemetry-label">Layers</span>
+                    <span className="telemetry-val">
+                      {dimensionCount(detail.dimensions.layers)}
+                    </span>
                   </div>
-                  {detail.dimensions.layers != null && (
-                    <div>
-                      <dt>Layers</dt>
-                      <dd>{dimensionCount(detail.dimensions.layers)}</dd>
-                    </div>
-                  )}
-                  {detail.dimensions.hidden != null && (
-                    <div>
-                      <dt>Hidden size</dt>
-                      <dd>{dimensionCount(detail.dimensions.hidden)}</dd>
-                    </div>
-                  )}
-                </dl>
-                <Link to="?view=report" className="context-report">
-                  {detail.status === "partial"
-                    ? "Partial reconstruction · view findings"
-                    : "Inspection findings"}
-                  <ChevronRight size={13} aria-hidden="true" />
-                </Link>
+                )}
+                {detail.dimensions.hidden != null && (
+                  <div className="telemetry-chip" title="Hidden dimension">
+                    <span className="telemetry-label">Hidden</span>
+                    <span className="telemetry-val">
+                      {dimensionCount(detail.dimensions.hidden)}
+                    </span>
+                  </div>
+                )}
+                {detail.dimensions.heads != null && (
+                  <div className="telemetry-chip" title="Attention heads">
+                    <span className="telemetry-label">Heads</span>
+                    <span className="telemetry-val">
+                      {dimensionCount(detail.dimensions.heads)}
+                    </span>
+                  </div>
+                )}
+                {detail.revision && (
+                  <div
+                    className="telemetry-chip telemetry-revision"
+                    title={`Verified revision: ${detail.revision}`}
+                  >
+                    <span className="telemetry-label">Rev</span>
+                    <span className="telemetry-val font-mono">
+                      {detail.revision.slice(0, 7)}
+                    </span>
+                  </div>
+                )}
               </div>
-            </details>
+              <details
+                key={view}
+                className="model-facts"
+                onKeyDown={(event) => {
+                  if (event.key === "Escape") {
+                    event.currentTarget.open = false;
+                    event.currentTarget.querySelector("summary")?.focus();
+                  }
+                }}
+              >
+                <summary>
+                  Model details <ChevronDown size={13} aria-hidden="true" />
+                </summary>
+                <div
+                  className="model-context"
+                  role="region"
+                  aria-label="Model context"
+                >
+                  <strong className="context-architecture">
+                    {detail.architecture ?? "Architecture unknown"}
+                  </strong>
+                  <dl>
+                    <div>
+                      <dt>Parameters</dt>
+                      <dd>{count(detail.parameter_count, true)}</dd>
+                    </div>
+                    {detail.dimensions.layers != null && (
+                      <div>
+                        <dt>Layers</dt>
+                        <dd>{dimensionCount(detail.dimensions.layers)}</dd>
+                      </div>
+                    )}
+                    {detail.dimensions.hidden != null && (
+                      <div>
+                        <dt>Hidden size</dt>
+                        <dd>{dimensionCount(detail.dimensions.hidden)}</dd>
+                      </div>
+                    )}
+                  </dl>
+                  <Link to="?view=report" className="context-report">
+                    {detail.status === "partial"
+                      ? "Partial reconstruction · view findings"
+                      : "Inspection findings"}
+                    <ChevronRight size={13} aria-hidden="true" />
+                  </Link>
+                </div>
+              </details>
+            </>
           )}
         </div>
       </div>

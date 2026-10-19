@@ -71,7 +71,7 @@ export function ArchitectureWorkspace({
   onCitation,
   ai,
 }: Props) {
-  const desktop = useMedia("(min-width: 1024px)");
+  const desktop = useMedia("(min-width: 1280px)");
   const docked = useMedia("(min-width: 1024px)");
   const [drawer, setDrawer] = useState(false);
   const [edge, setEdge] = useState<GraphEdge | null>(null);
