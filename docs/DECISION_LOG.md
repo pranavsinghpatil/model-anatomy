@@ -932,3 +932,30 @@ XTTS artifact still failed. Seven partial reports have fewer warnings, while all
 outcome classifications remain. Preserve the original baseline and eight earlier
 repair observations alongside the new run. See `MODEL_COVERAGE_REPAIRS.md` for
 exact pins, source identities, measured warning reductions and verification.
+
+## D-061 - Diagnose evidence closure before expanding reconstruction routes
+
+**2026-10-20 - user request to debug partial graphs and draft a dynamic approach**
+
+Inspect integrity-verified full reports rather than only process stderr or
+truncated benchmark warnings. The latest saved 250-case set contains 20 partial
+reports whose four recorded coverage ratios equal one and whose unknown-node/
+unmapped-tensor counts are zero; source warnings still prevent completion. Another
+67 partial reports have coverage or tensor-ownership gaps. Existing ratios describe
+emitted/classified structure and cannot establish every source operation or branch.
+
+Adopt the proposal in `DYNAMIC_RECONSTRUCTION_PLAN.md` as an implementation draft:
+artifact-based capability selection, explicit task/component/execution profiles,
+identity-checked operator contracts, conservative branch/shape propagation and
+full checkpoint disposition. Require explicit closure and scope before promoting
+completion. Do not drop warnings, guess dispatch targets or attach unowned tensors
+merely to improve a metric. New profiles will require deliberate cache/registry
+identity changes and compatible historical-report reads.
+
+The diagnostic tool verifies report digest, pin, engine, warning count and coverage,
+and exports stable blocker counts without raw provider/warning prose. Its saved
+inventory contains 17 `.3` and 228 `.2` reports; rerun older cohorts before treating
+their already-repaired operator warnings as current defects. Fresh bounded probes
+confirm the same four gated access failures and invalid XTTS config/missing checkpoint.
+This increment drafts the approach and adds debugging evidence/tooling; extraction
+behavior, report labels, engine identity and the running service remain unchanged.

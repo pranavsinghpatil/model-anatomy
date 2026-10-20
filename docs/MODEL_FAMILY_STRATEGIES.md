@@ -38,6 +38,13 @@ the engine's recorded static profile and supported analysis subset.
 
 ## Choosing the next increment
 
+The [dynamic reconstruction draft](DYNAMIC_RECONSTRUCTION_PLAN.md) traces current
+report blockers to native source, separates source-warning closure from coverage
+gaps, and specifies artifact routing, execution profiles, operator contracts and
+acceptance gates. Its [250-case diagnosis](benchmarks/dynamic-reconstruction-diagnosis.json)
+retains report engine versions and digests; most saved reports are historical
+`.2` observations and need a current-engine recheck before new implementation.
+
 Group matrix outcomes by actual blocker: access/transport, invalid artifact,
 resource/storage budget, native construction, checkpoint mapping, API serialization,
 and incomplete semantics. Fix reproducible general correctness defects first.
