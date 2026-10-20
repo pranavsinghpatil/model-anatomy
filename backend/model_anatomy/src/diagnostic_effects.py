@@ -10,6 +10,7 @@ import textwrap
 from typing import Any
 
 from transformers.utils import logging as native_logging
+from transformers.utils import import_utils
 from transformers.utils.import_utils import is_torch_fx_proxy, is_torchdynamo_compiling
 import torch
 
@@ -70,9 +71,9 @@ def diagnostic_effects(function: Any, owner: ModuleState, arguments: dict[str, A
                 return "<diagnostic string>"
             if isinstance(node, ast.Call):
                 target = evaluator.eval(node.func, env, globals)
-                if not any(target is predicate for predicate in (is_torch_fx_proxy, torch.jit.is_tracing, is_torchdynamo_compiling)):
+                if not any(target is predicate for predicate in (is_torch_fx_proxy, torch.jit.is_tracing, is_torchdynamo_compiling, getattr(import_utils, "is_tracing", None))):
                     raise SourceBoundary("Diagnostic guard contains an unverified call")
-                if len(node.args) != (1 if target is is_torch_fx_proxy else 0):
+                if len(node.args) != (1 if target is is_torch_fx_proxy or target is getattr(import_utils, "is_tracing", None) else 0):
                     raise SourceBoundary("Diagnostic predicate signature is invalid")
                 for argument in node.args:
                     value(argument)

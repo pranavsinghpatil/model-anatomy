@@ -62,10 +62,20 @@ def write_outputs(
         raise ValueError("IR round-trip changed the model representation")
     contents = {model_path: serialized}
     config_path = config_directory / "config.json"
-    contents[config_path] = json.dumps(ir.metadata["source_config"], indent=2, sort_keys=True) + "\n"
+    if isinstance(ir.metadata.get("source_config"), dict):
+        contents[config_path] = json.dumps(ir.metadata["source_config"], indent=2, sort_keys=True) + "\n"
+    component_paths = []
+    for filename, data in ir.metadata.get("component_configs", {}).items():
+        if (not isinstance(filename, str) or not isinstance(data, dict)
+                or any(not part or part in {".", ".."} or any(char in part for char in "\\:\x00") for part in filename.split("/"))
+                or filename.split("/")[-1] != "config.json"):
+            raise ArtifactError("Invalid component configuration output path")
+        component_path = config_directory / filename
+        contents[component_path] = json.dumps(data, indent=2, sort_keys=True) + "\n"
+        component_paths.append(component_path)
     audit_path = output_directory / "artifact_audit.json"
     contents[audit_path] = json.dumps(ir.metadata["artifacts"], indent=2, sort_keys=True) + "\n"
-    paths = [model_path, config_path, audit_path]
+    paths = [model_path, *([config_path] if config_path in contents else []), *component_paths, audit_path]
     diagnostics_path = output_directory / "diagnostics.json"
     contents[diagnostics_path] = (
         json.dumps(

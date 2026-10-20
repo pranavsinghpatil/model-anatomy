@@ -8,7 +8,7 @@ from typing import Any
 import torch
 
 from .ir import Evidence, Graph
-from .shape_rules import known, module_contract, broadcast, matmul, transform, selection, concatenate
+from .shape_rules import known, module_contract, broadcast, matmul, transform, selection, concatenate, tensor_compare, tensor_mask_method
 
 
 def validate_shapes(root: Graph, model: torch.nn.Module) -> dict[str, Any]:
@@ -52,10 +52,34 @@ def validate_shapes(root: Graph, model: torch.nn.Module) -> dict[str, Any]:
                     recomputed = matmul(*specs, bmm=check["rule"] == "bmm_contract")
                 elif check["rule"].startswith("elementwise_"):
                     recomputed = broadcast(specs, check["rule"])
-                elif node.kind == "reshape" and node.metadata.get("method") not in {"to", "type", "type_as", "float", "half"} and specs and not node.metadata.get("keyword_arguments"):
+                elif check["rule"] == "native_gather":
+                    source = [edge.tensor for edge in incoming[node.id] if edge.target_port == "input" and edge.tensor]
+                    indices = [edge.tensor for edge in incoming[node.id] if edge.target_port == "indices" and edge.tensor]
+                    if len(source) == len(indices) == 1:
+                        from .shape_rules import gather
+                        recomputed = gather(source[0], indices[0], node.metadata.get("axis"))
+                elif check["rule"].startswith("tensor_scalar_") and len(specs) == 1:
+                    from .shape_rules import tensor_scalar
+                    recomputed = tensor_scalar(specs[0], node.metadata["operator"], node.metadata["scalar"],
+                                               node.metadata["scalar_side"])
+                elif check["rule"] == "tensor_comparison" and specs:
+                    recomputed = tensor_compare(specs)
+                elif check["rule"] in {"tensor_expand_as", "tensor_masked_fill"} and len(specs) >= 2:
+                    recomputed = tensor_mask_method(specs[0], node.metadata["method"], specs[1],
+                                                   specs[2] if node.metadata.get("fill_is_tensor") and len(specs) == 3 else None)
+                elif node.kind == "reshape" and node.metadata.get("method") not in {"to", "type", "type_as", "float", "half", "expand_as"} and specs and not node.metadata.get("keyword_arguments"):
                     recomputed = transform(specs[0], node.metadata["method"], node.metadata.get("dimensions", []))
                 elif check["rule"] == "tensor_indexing" and specs:
-                    recomputed = selection(specs[0], node.metadata["indexing"]["indices"])
+                    descriptors = node.metadata["indexing"]["indices"]
+                    if len(descriptors) == 1 and descriptors[0].get("kind") == "integer_tensor":
+                        indexed = [edge.tensor for edge in incoming[node.id] if edge.target_port == "input" and edge.tensor is not None]
+                        indices = [edge.tensor for edge in incoming[node.id] if edge.target_port == "indices" and edge.tensor is not None]
+                        if len(indexed) == len(indices) == 1:
+                            recomputed = selection(indexed[0], [{"kind": "integer_tensor", "shape": indices[0].shape, "dtype": indices[0].dtype}])
+                        else:
+                            recomputed = selection(specs[0], [{"kind": "unknown"}])
+                    else:
+                        recomputed = selection(specs[0], descriptors)
                 elif check["rule"] in {"concatenate_dimensions", "stack_dimensions"}:
                     recomputed = concatenate(specs, node.metadata.get("dimension"), stack=check["rule"] == "stack_dimensions")
                 if recomputed is not None:
@@ -105,10 +129,18 @@ def validate_shapes(root: Graph, model: torch.nn.Module) -> dict[str, Any]:
                     if child is not None and child.outputs and edge.tensor is not None:
                         expected, actual = child.outputs[0], edge.tensor
                         established = known(expected.shape) and known(actual.shape)
-                        same = expected.shape == actual.shape and expected.dtype == actual.dtype
-                        record(graph, node.id, {"rule": "module_input_boundary", "status": "proven" if established and same else "invalid" if established else "unknown",
+                        actual_shape = list(actual.shape) if actual.shape is not None else None
+                        constraints = []
+                        for proof in child.metadata.get("input_constraints", []):
+                            if (actual_shape is not None and proof.get("rule") == "normal_path_input_precondition"
+                                    and type(proof.get("axis")) is int and -len(actual_shape) <= proof["axis"] < len(actual_shape)
+                                    and actual_shape[proof["axis"]] == proof.get("symbol")):
+                                actual_shape = [proof["value"] if dimension == proof["symbol"] else dimension for dimension in actual_shape]
+                                constraints.append(proof["constraint"])
+                        same = expected.shape == actual_shape and expected.dtype == actual.dtype
+                        record(graph, node.id, {"rule": "module_input_boundary", "status": "conditional" if established and same and constraints else "proven" if established and same else "invalid" if established else "unknown",
                             "reason": "" if same else "Child input contract differs from caller input or is unproven",
-                            "argument": role, "caller_shape": actual.shape, "child_shape": expected.shape}, "Caller-to-child boundary")
+                            "constraints": constraints, "argument": role, "caller_shape": actual.shape, "child_shape": expected.shape}, "Caller-to-child boundary")
         for edge in graph.edges:
             if edge.relation != "dataflow":
                 continue

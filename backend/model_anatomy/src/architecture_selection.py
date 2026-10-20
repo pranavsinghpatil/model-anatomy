@@ -56,6 +56,8 @@ def compatibility(model: torch.nn.Module, raw: dict[str, Any]) -> dict[str, Any]
     return {
         "status": "exact_metadata_match" if not (missing or unowned or missing_buffers or alias_conflicts or dtype_conflicts or raw["warnings"]) else "incompatible",
         "missing_parameters": missing, "unowned_checkpoint_tensors": unowned,
+        "native_ignored_checkpoint_tensors": [name for name, item in raw["checkpoint_extras"].items()
+                                               if item["kind"] == "legacy_checkpoint_tensor"],
         "missing_persistent_buffers": missing_buffers, "unverified_tied_values": alias_conflicts,
         "parameter_alias_groups": raw["parameter_alias_groups"],
         "key_conversions": raw["checkpoint_name_conversions"],
@@ -86,6 +88,17 @@ def select_checkpoint_architecture(
     selection = dict(selection, architecture_selection=proof)
     if initial["status"] == "exact_metadata_match":
         proof["matching_candidates"] = [declared_class]
+        return model, selection, raw
+
+    ignored = initial["native_ignored_checkpoint_tensors"]
+    active_failures = any(initial[key] for key in (
+        "missing_parameters", "missing_persistent_buffers", "unverified_tied_values", "dtype_conflicts"))
+    if (config.architectures and ignored and not active_failures and not raw["warnings"]
+            and set(initial["unowned_checkpoint_tensors"]) == set(ignored)):
+        proof.update(status="declared_native_with_ignored_tensors", native_state_covered=True,
+                     checkpoint_ownership_complete=False, native_ignored_checkpoint_tensors=ignored,
+                     scope="Declared native implementation with complete active state; ignored checkpoint keys remain ownerless inventory")
+        # Ignored keys never make a candidate an exact match or establish a unique alternative.
         return model, selection, raw
 
     # Multiple Auto task aliases may point at the same concrete implementation.

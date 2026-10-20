@@ -98,6 +98,9 @@ def child_main(settings: Settings, job_id: str, owner: str) -> None:
         import requests
 
         from model_anatomy.src.artifacts import MetadataClient, parse_reference
+        from model_anatomy.src.native_provider import require_supported_provider
+
+        require_supported_provider()
 
         def reconstruct(*args, **kwargs):
             from model_anatomy.src.pipeline import reconstruct as engine_reconstruct
@@ -139,6 +142,10 @@ def classify_failure(exc: BaseException) -> tuple[str, str, str, bool]:
             "failed",
             status in {429, 502, 503, 504},
         )
+    from model_anatomy.src.native_provider import NativeResolutionError
+
+    if isinstance(exc, NativeResolutionError) and exc.diagnostic.get("code") == "provider_version_mismatch":
+        return "provider_version_mismatch", str(exc), "failed", False
     if isinstance(exc, UnsupportedModelError):
         return (
             "unsupported_model",

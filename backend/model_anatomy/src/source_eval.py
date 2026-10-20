@@ -14,51 +14,29 @@ from types import BuiltinFunctionType, FunctionType, MethodType, ModuleType
 from typing import Any
 
 import torch
+from transformers.modeling_utils import AttentionInterface as NativeAttentionInterface
+from transformers.utils import import_utils as native_import_utils
+
+_NATIVE_ATTENTION_SELECTOR = getattr(NativeAttentionInterface, "get_interface", None)
+_NATIVE_TENSOR_PREDICATES = tuple(
+    getattr(native_import_utils, name) for name in ("is_torch_fx_proxy", "is_fake_tensor", "is_jax_jitting")
+    if hasattr(native_import_utils, name)
+)
+_NATIVE_STATIC_PREDICATES = (torch.jit.is_tracing, torch.compiler.is_compiling, *(
+    getattr(native_import_utils, name) for name in ("is_torchdynamo_compiling", "is_torchdynamo_exporting",
+                                                   "is_jit_tracing", "is_cuda_stream_capturing")
+    if hasattr(native_import_utils, name)
+))
 
 
-class SourceBoundary(Exception):
-    """A source dependency could not be established without executing publisher code."""
-
-
-class MissingAttribute(SourceBoundary):
-    """Ordinary static attribute absence, distinct from unsupported dynamic lookup."""
+from .abstract_semantics import (SourceBoundary, MissingAttribute, Symbol, Tensor, Closure,
+                                 bind_arguments, scalar_binary, metadata_primitive)
 
 
 @dataclass(frozen=True)
-class Symbol:
-    expression: str
-
-    def __post_init__(self) -> None:
-        if len(self.expression) > 2048:
-            raise SourceBoundary("Symbol exceeds its expression budget")
-
-
-@dataclass(frozen=True)
-class Tensor:
-    shape: tuple[Any, ...]
-    dtype: str
-    expression: str
-
-    def __post_init__(self) -> None:
-        if len(self.shape) > 16 or len(self.expression) > 16384:
-            raise SourceBoundary("Symbolic tensor exceeds its rank or expression budget")
-        if self.dtype not in {"F16", "BF16", "F32", "F64", "BOOL", "I32", "I64"}:
-            raise SourceBoundary("Symbolic tensor dtype is unsupported")
-        if any(not isinstance(d, Symbol) and (type(d) is not int or d < 0) for d in self.shape):
-            raise SourceBoundary("Tensor dimensions are not nonnegative integers or symbolic extents")
-
-    def spec(self) -> dict[str, Any]:
-        return {"shape": [render(d) for d in self.shape], "dtype": self.dtype,
-                "expression": self.expression}
-
-
-@dataclass
-class Closure:
-    tree: ast.FunctionDef
-    env: dict[str, Any]
-    globals: dict[str, Any]
-    source: dict[str, Any]
-    defaults: dict[str, Any] = field(default_factory=dict)
+class Alternatives:
+    """Bounded return alternatives retained until the caller can prove a common contract."""
+    values: tuple[Any, ...]
 
 
 @dataclass(frozen=True)
@@ -152,8 +130,9 @@ class SourceEvaluator:
             tree = next(n for n in ast.parse(text).body if isinstance(n, ast.FunctionDef))
         except (OSError, TypeError, SyntaxError, StopIteration) as exc:
             raise SourceBoundary("Helper source is unavailable") from exc
-        if ((tree.decorator_list and id(function) not in self.property_getters)
-                or function.__closure__ or "__wrapped__" in vars(function)):
+        if (function.__closure__ or "__wrapped__" in vars(function)
+                or tree.decorator_list and id(function) not in self.property_getters
+                and not self.identity_decorators(function, tree)):
             raise SourceBoundary("Decorated functions and runtime closure state are unsupported")
         if sum(1 for _ in ast.walk(tree)) > 4096:
             raise SourceBoundary("Helper source exceeds the AST budget")
@@ -167,31 +146,20 @@ class SourceEvaluator:
         bound_defaults.update(function.__kwdefaults__ or {})
         return Closure(tree, {}, function.__globals__, source, bound_defaults)
 
+    def identity_decorators(self, function: FunctionType, tree: ast.FunctionDef) -> bool:
+        """Prove bounded decorator factories return the exact supplied callable unchanged."""
+        for decorator in reversed(tree.decorator_list):
+            target = self.eval(decorator, {}, function.__globals__)
+            result = self.invoke(target, [function], {}, decorator)
+            if result is not function:
+                return False
+            self.record(decorator, "source_proven_identity_decorator", expression=ast.unparse(decorator))
+        return True
+
     def bind(self, fn: Closure, args: list[Any], kwargs: dict[str, Any]) -> dict[str, Any]:
-        params = fn.tree.args
-        positional = params.posonlyargs + params.args
-        if len(args) > len(positional) and params.vararg is None:
-            raise SourceBoundary("Too many positional helper arguments")
-        names = [p.arg for p in positional]
-        bound = dict(zip(names, args))
-        kwargs = dict(kwargs)
-        for p in positional[len(args):] + params.kwonlyargs:
-            if p.arg in kwargs and p not in params.posonlyargs:
-                bound[p.arg] = kwargs.pop(p.arg)
-        positional_only = {p.arg for p in params.posonlyargs}
-        if any(name in kwargs for name in names[:len(args)] if name not in positional_only):
-            raise SourceBoundary("Helper argument supplied more than once")
-        for p in positional + params.kwonlyargs:
-            if p.arg not in bound:
-                if p.arg not in fn.defaults:
-                    raise SourceBoundary(f"Required helper argument is unresolved: {p.arg}")
-                bound[p.arg] = fn.defaults[p.arg]
-        if params.vararg:
-            bound[params.vararg.arg] = tuple(args[len(positional):])
-        if kwargs and params.kwarg is None:
-            raise SourceBoundary("Unexpected helper keyword arguments")
-        if params.kwarg:
-            bound[params.kwarg.arg] = self.container(kwargs)
+        bound = bind_arguments(fn.tree, args, kwargs, fn.defaults)
+        if fn.tree.args.kwarg:
+            self.container(bound[fn.tree.args.kwarg.arg])
         return {**fn.env, **bound}
 
     def invoke(self, function: Any, args: list[Any], kwargs: dict[str, Any], node: ast.AST) -> Any:
@@ -234,7 +202,11 @@ class SourceEvaluator:
         if ((type(left) in (type(None), bool, int, str) and type(right) is type(left) and left == right)
                 or isinstance(left, Symbol) and isinstance(right, Symbol) and left == right):
             return left
-        raise SourceBoundary("Symbolic branches have incompatible helper return types")
+        values = (*(left.values if isinstance(left, Alternatives) else (left,)),
+                  *(right.values if isinstance(right, Alternatives) else (right,)))
+        if len(values) > self.max_paths:
+            raise SourceBoundary("Helper return alternatives exceed the path budget")
+        return Alternatives(tuple(values))
 
     def attribute(self, owner: Any, name: str) -> Any:
         if isinstance(owner, ModuleState):
@@ -243,7 +215,7 @@ class SourceEvaluator:
             self.record(ast.Constant(value=None), "native_module_attribute", name=name, evidence=owner.evidence)
             return owner.attributes[name]
         if isinstance(owner, FloatInfo) and name == "min":
-            return Symbol(f"finfo({owner.dtype}).min")
+            return Symbol(f"finfo({owner.dtype}).min", scalar_type="float")
         if isinstance(owner, Tensor):
             if name == "shape":
                 return owner.shape
@@ -253,7 +225,7 @@ class SourceEvaluator:
                 return next(k for k, v in DTYPES.items() if v == owner.dtype)
             if name == "device":
                 return Symbol("input_device")
-            if name in {"to", "type", "float", "half", "expand", "cumsum", "new_ones", "size", "dim", "view", "reshape", "transpose", "permute", "unsqueeze", "squeeze", "flatten", "contiguous"}:
+            if name in {"to", "type", "float", "half", "expand", "repeat", "cumsum", "all", "new_ones", "size", "dim", "view", "reshape", "transpose", "permute", "unsqueeze", "squeeze", "flatten", "contiguous"}:
                 return Bound(owner, name)
             raise SourceBoundary(f"Unsupported symbolic tensor attribute: {name}")
         if type(owner) in (list, dict) and name in {"extend", "pop"}:
@@ -319,6 +291,29 @@ class SourceEvaluator:
         for index, node in enumerate(nodes):
             self.last_node = node
             self.tick()
+            alternative = next(((name, value) for name, value in env.items() if isinstance(value, Alternatives)), None)
+            if alternative is not None:
+                name, value = alternative
+                self.paths += len(value.values)
+                if self.paths > self.max_paths:
+                    raise SourceBoundary("Caller alternatives exceed the path budget")
+                outcomes = []
+                for choice in value.values:
+                    # Branch-local mutable containers cannot alias another speculative path.
+                    def clone(item: Any) -> Any:
+                        if type(item) is dict:
+                            return self.container({key: clone(part) for key, part in item.items()})
+                        if type(item) is list:
+                            return self.container([clone(part) for part in item])
+                        if type(item) is tuple:
+                            return tuple(clone(part) for part in item)
+                        if isinstance(item, Closure):
+                            raise SourceBoundary("Caller alternatives with captured mutable environments are unsupported")
+                        return item
+                    state = {key: clone(part) for key, part in env.items() if key != name}
+                    state[name] = choice
+                    outcomes.extend(self.block(nodes[index:], state, globals))
+                return outcomes
             if isinstance(node, ast.Return):
                 return [(self.eval(node.value, env, globals) if node.value else None, True, env)]
             if isinstance(node, ast.Assign):
@@ -471,7 +466,14 @@ class SourceEvaluator:
             expr = f"({expression(left)} {symbols[type(op)]} {expression(right)})"
             self.record(node, "symbolic_comparison", expression=expr)
             tensors = [value for value in (left, right) if isinstance(value, Tensor)]
-            return Tensor(self.broadcast(tensors), "BOOL", expr) if tensors else Symbol(expr)
+            if tensors:
+                from .ir import TensorSpec
+                from .shape_rules import tensor_compare
+                check = tensor_compare([TensorSpec([render(d) for d in value.shape], value.dtype, "comparison") for value in tensors])
+                if check.status not in {"proven", "conditional"}:
+                    raise SourceBoundary(check.reason)
+                return Tensor(tuple(Symbol(d) if type(d) is str else d for d in check.spec.shape), "BOOL", expr)
+            return Symbol(expr)
         if isinstance(node, ast.IfExp):
             condition = self.eval(node.test, env, globals)
             if type(condition) is not bool:
@@ -511,6 +513,8 @@ class SourceEvaluator:
         raise SourceBoundary(f"Unsupported helper expression: {type(node).__name__}")
 
     def binary(self, left: Any, right: Any, op: ast.AST) -> Any:
+        if type(left) in (int, float, bool) and type(right) in (int, float, bool):
+            return scalar_binary(left, right, op)
         if isinstance(op, ast.Sub) and isinstance(left, Symbol) and left == right:
             return 0
         if isinstance(op, ast.Add) and type(left) in (list, tuple) and type(left) is type(right) and len(left) + len(right) <= 128:
@@ -524,17 +528,14 @@ class SourceEvaluator:
                 return left ^ right
             raise SourceBoundary("Only proven Python booleans support static XOR")
         operations = {ast.Add: (operator.add, "+"), ast.Sub: (operator.sub, "-"), ast.Mult: (operator.mul, "*"),
-                      ast.FloorDiv: (operator.floordiv, "//"), ast.BitAnd: (operator.and_, "&"), ast.BitOr: (operator.or_, "|")}
+                      ast.Div: (operator.truediv, "/"), ast.Pow: (operator.pow, "**"), ast.FloorDiv: (operator.floordiv, "//"), ast.BitAnd: (operator.and_, "&"), ast.BitOr: (operator.or_, "|")}
         if type(op) not in operations:
             raise SourceBoundary("Unsupported helper arithmetic")
         function, symbol = operations[type(op)]
         if isinstance(op, ast.FloorDiv) and type(right) in (int, float) and right == 0:
             raise SourceBoundary("Symbolic division by zero is invalid")
         if type(left) in (int, float, bool) and type(right) in (int, float, bool):
-            result = function(left, right)
-            if type(result) is int and result.bit_length() > 64:
-                raise SourceBoundary("Static arithmetic exceeds the integer budget")
-            return result
+            return scalar_binary(left, right, op)
         if not all(isinstance(value, (Tensor, Symbol)) or type(value) in (int, float, bool) for value in (left, right)):
             raise SourceBoundary("Helper arithmetic operands are unsupported")
         expr = f"({expression(left)} {symbol} {expression(right)})"
@@ -566,7 +567,34 @@ class SourceEvaluator:
         return result
 
     def index(self, tensor: Tensor, key: Any, node: ast.AST) -> Tensor:
+        if type(key) is tuple and len(key) == 1 and isinstance(key[0], Tensor):
+            key = key[0]
+        if isinstance(key, Tensor):
+            from .ir import TensorSpec
+            from .shape_rules import selection
+
+            check = selection(TensorSpec(tensor.spec()["shape"], tensor.dtype, "indexed"),
+                              [{"kind": "integer_tensor", "shape": key.spec()["shape"], "dtype": key.dtype}])
+            if check.status not in {"proven", "conditional"}:
+                raise SourceBoundary(check.reason)
+            result = Tensor(tuple(Symbol(d) if type(d) is str else d for d in check.spec.shape), tensor.dtype, f"index({tensor.expression})")
+            for condition in check.constraints:
+                self.conditions.append({"condition": condition, "resolved": False, "value": None,
+                                        "basis": "required_input_constraint", **self.current})
+            self.record(node, "symbolic_tensor_index", output=result.spec(), constraints=check.constraints)
+            return result
         keys = key if type(key) is tuple else (key,)
+        if keys and all(isinstance(part, Tensor) for part in keys):
+            if len(keys) > len(tensor.shape) or any(part.dtype not in {"I32", "I64"} for part in keys):
+                raise SourceBoundary("Advanced index rank or integer dtype is unproven")
+            shape = self.broadcast(list(keys)) + tensor.shape[len(keys):]
+            result = Tensor(shape, tensor.dtype, f"index({tensor.expression})")
+            constraints = [f"-{expression(extent)} <= index[{axis}] < {expression(extent)}"
+                           for axis, extent in enumerate(tensor.shape[:len(keys)])]
+            self.conditions.extend({"condition": condition, "resolved": False, "value": None,
+                "basis": "required_input_constraint", **self.current} for condition in constraints)
+            self.record(node, "consecutive_integer_tensor_indices", output=result.spec(), constraints=constraints)
+            return result
         shape, consumed = [], 0
         for part in keys:
             if part is None:
@@ -585,7 +613,7 @@ class SourceEvaluator:
                 else:
                     raise SourceBoundary("Symbolic slice length is not established")
             elif isinstance(part, Tensor):
-                if part.shape:
+                if part.shape or part.dtype not in {"I32", "I64"}:
                     raise SourceBoundary("Advanced vector indexing is unsupported")
             elif type(part) is not int:
                 raise SourceBoundary("Tensor index type is not established")
@@ -595,7 +623,20 @@ class SourceEvaluator:
 
     def method(self, owner: Any, name: str, args: list[Any], kwargs: dict[str, Any], node: ast.AST) -> Any:
         if isinstance(owner, Tensor):
-            if name in {"to", "type"}:
+            if name in {"expand_as", "masked_fill"}:
+                from .ir import TensorSpec
+                from .shape_rules import tensor_mask_method
+                if kwargs or len(args) != (1 if name == "expand_as" else 2) or not isinstance(args[0], Tensor):
+                    raise SourceBoundary("Tensor mask/layout signature is unproven")
+                fill = args[1] if name == "masked_fill" else None
+                if fill is not None and not isinstance(fill, Tensor) and type(fill) not in (int, float, bool):
+                    raise SourceBoundary("Mask fill scalar is unproven")
+                spec = lambda value: TensorSpec([render(d) for d in value.shape], value.dtype, "helper_tensor")
+                check = tensor_mask_method(spec(owner), name, spec(args[0]), spec(fill) if isinstance(fill, Tensor) else None)
+                if check.status not in {"proven", "conditional"}:
+                    raise SourceBoundary(check.reason)
+                result = Tensor(tuple(Symbol(d) if type(d) is str else d for d in check.spec.shape), check.spec.dtype, f"{name}({owner.expression})")
+            elif name in {"to", "type"}:
                 if any(key not in {"device", "dtype"} for key in kwargs) or len(args) > 1:
                     raise SourceBoundary("Unsupported tensor conversion arguments")
                 if args and type(args[0]) is not torch.dtype and not (isinstance(args[0], Symbol) and args[0].expression == "input_device"):
@@ -604,7 +645,7 @@ class SourceEvaluator:
                 result = Tensor(owner.shape, dtype_name(dtype) if dtype is not None else owner.dtype, owner.expression)
             elif name in {"float", "half"} and not args and not kwargs:
                 result = Tensor(owner.shape, "F32" if name == "float" else "F16", owner.expression)
-            elif name in {"expand", "view", "reshape", "transpose", "permute", "unsqueeze", "squeeze", "flatten", "contiguous"}:
+            elif name in {"expand", "repeat", "view", "reshape", "transpose", "permute", "unsqueeze", "squeeze", "flatten", "contiguous"}:
                 from .ir import TensorSpec
                 from .shape_rules import transform
 
@@ -621,6 +662,10 @@ class SourceEvaluator:
                 self.record(node, "tensor_layout_contract", shape_check=check.record())
                 result = Tensor(tuple(Symbol(d) if type(d) is str else d for d in check.spec.shape),
                                 owner.dtype, f"{name}({owner.expression})")
+            elif name == "all" and not args and not kwargs:
+                self.record(node, "symbolic_boolean_all", value_known=False,
+                            constraint="Scalar truth is evaluated on both possible source paths")
+                return Symbol(f"all({owner.expression})", scalar_type="bool")
             elif name == "cumsum" and len(args) == 1 and type(args[0]) is int and not kwargs:
                 result = Tensor(owner.shape, "I64" if owner.dtype in {"BOOL", "I32", "I64"} else owner.dtype, f"cumsum({owner.expression}, {args[0]})")
             elif name == "new_ones" and args == [()] and set(kwargs) <= {"dtype"}:
@@ -632,6 +677,25 @@ class SourceEvaluator:
             else:
                 raise SourceBoundary(f"Unsupported tensor method: {name}")
             self.record(node, f"tensor_{name}", output=result.spec())
+            return result
+        if (type(owner) is NativeAttentionInterface and name == "get_interface"
+                and inspect.getattr_static(type(owner), name, None) is _NATIVE_ATTENTION_SELECTOR):
+            if len(args) != 2 or kwargs or type(args[0]) is not str or not inspect.isfunction(args[1]):
+                raise SourceBoundary("Attention registry selection arguments are unproven")
+            local, shared = vars(owner).get("_local_mapping", {}), NativeAttentionInterface._global_mapping
+            if type(local) is not dict or type(shared) is not dict:
+                raise SourceBoundary("Attention registry is not a plain native mapping")
+            key, default = args
+            if key != "eager" and key not in local and key not in shared:
+                raise SourceBoundary("Attention implementation is absent from native registry")
+            result = local.get(key, shared.get(key, default))
+            if not inspect.isfunction(result):
+                raise SourceBoundary("Attention implementation requires inspectable Python source")
+            self.record(node, "native_attention_registry_selection", key=key,
+                        default_selected=key not in local and key not in shared,
+                        selected=f"{result.__module__}.{result.__qualname__}",
+                        selector_source_sha256=hashlib.sha256(inspect.getsource(_NATIVE_ATTENTION_SELECTOR).encode()).hexdigest(),
+                        selected_source_sha256=hashlib.sha256(inspect.getsource(result).encode()).hexdigest())
             return result
         if type(owner) in (dict, list) and id(owner) in self.owned:
             if name == "pop" and type(owner) is dict and 1 <= len(args) <= 2 and type(args[0]) is str and not kwargs:
@@ -645,6 +709,22 @@ class SourceEvaluator:
         raise SourceBoundary(f"Unsupported helper method or mutation: {name}")
 
     def primitive(self, function: Any, args: list[Any], kwargs: dict[str, Any], node: ast.AST) -> Any:
+        if any(function is predicate for predicate in _NATIVE_TENSOR_PREDICATES) and len(args) == 1 and not kwargs:
+            if isinstance(args[0], Tensor) or type(args[0]) in (type(None), bool, int, float, str, tuple, list, dict):
+                self.record(node, "canonical_tensor_not_fx_proxy", value=False,
+                            predicate=f"{function.__module__}.{function.__qualname__}",
+                            source_sha256=hashlib.sha256(inspect.getsource(function).encode()).hexdigest())
+                return False
+            raise SourceBoundary("Proxy status requires an established abstract value")
+        if any(function is predicate for predicate in _NATIVE_STATIC_PREDICATES) and not args and not kwargs:
+            self.record(node, "canonical_non_compiled_profile", value=False,
+                        predicate=f"{function.__module__}.{function.__qualname__}",
+                        source_sha256=hashlib.sha256(inspect.getsource(function).encode()).hexdigest(),
+                        basis="Explicit static profile excludes tracing, compilation and export")
+            return False
+        metadata = metadata_primitive(function, args, kwargs)
+        if metadata is not NotImplemented:
+            return metadata
         if function is callable and len(args) == 1 and not kwargs:
             if isinstance(args[0], (Closure, Mapped, Bound)) or type(args[0]) in (FunctionType, BuiltinFunctionType, MethodType):
                 return True
@@ -679,7 +759,7 @@ class SourceEvaluator:
             return any(any(target is base for base in mro) for target in targets)
         if function is TORCH_PRIMITIVES["ones"] or function is TORCH_PRIMITIVES["zeros"]:
             dims = tuple(args[0]) if len(args) == 1 and type(args[0]) in (list, tuple) else tuple(args)
-            if not dims or set(kwargs) - {"device", "dtype"}:
+            if (not args or set(kwargs) - {"device", "dtype"}):
                 raise SourceBoundary("Tensor factory arguments are unresolved")
             dtype = dtype_name(kwargs["dtype"]) if "dtype" in kwargs else dtype_name(torch.get_default_dtype())
             result = Tensor(dims, dtype, f"{function.__name__}({', '.join(expression(d) for d in dims)})")
@@ -715,9 +795,17 @@ class SourceEvaluator:
                 raise SourceBoundary("Only typed scalar full factories are supported")
             result = Tensor((), dtype_name(kwargs["dtype"]), expression(args[1]))
         elif function is TORCH_PRIMITIVES["tensor"]:
-            if len(args) != 1 or not (type(args[0]) in (int, float, bool) or isinstance(args[0], Symbol)) or set(kwargs) - {"device", "dtype"} or "dtype" not in kwargs:
-                raise SourceBoundary("Only typed scalar tensor literals are supported")
-            result = Tensor((), dtype_name(kwargs["dtype"]), repr(args[0]))
+            if len(args) != 1 or not (type(args[0]) in (int, float, bool) or isinstance(args[0], Symbol)) or set(kwargs) - {"device", "dtype"}:
+                raise SourceBoundary("Only scalar tensor metadata literals are supported")
+            if "dtype" in kwargs:
+                dtype = dtype_name(kwargs["dtype"])
+            elif type(args[0]) is float or isinstance(args[0], Symbol) and args[0].scalar_type == "float":
+                dtype = dtype_name(torch.get_default_dtype())
+            elif type(args[0]) in (int, bool):
+                dtype = "BOOL" if type(args[0]) is bool else "I64"
+            else:
+                raise SourceBoundary("Scalar tensor dtype is not established")
+            result = Tensor((), dtype, expression(args[0]))
         elif function is TORCH_PRIMITIVES["finfo"] and len(args) == 1 and not kwargs:
             dtype = dtype_name(args[0])
             if dtype not in {"F16", "BF16", "F32", "F64"}:

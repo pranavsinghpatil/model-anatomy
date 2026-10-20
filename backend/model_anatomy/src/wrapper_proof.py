@@ -29,9 +29,16 @@ def forward_wrappers(function: Any, module: torch.nn.Module,
                      supplied_keywords: dict[str, Any]) -> dict[str, Any]:
     """Prove safe native profile wrappers or an unchanged tail-call with static guards."""
     from transformers.utils.deprecation import deprecate_kwarg
+    from transformers.utils import generic
     from transformers.utils.generic import can_return_tuple, check_model_inputs
+    try:
+        from transformers.utils.output_capturing import capture_outputs
+    except ImportError:
+        capture_outputs = None
 
     records, failures = [], []
+    keyword_updates: dict[str, Any] = {}
+    consumed_keywords: set[str] = set()
     for _ in range(8):
         target = getattr(function, "__wrapped__", None)
         if target is None:
@@ -41,7 +48,8 @@ def forward_wrappers(function: Any, module: torch.nn.Module,
             tree = next(item for item in ast.parse(text).body if isinstance(item, ast.FunctionDef))
             closure = inspect.getclosurevars(function).nonlocals
             record: dict[str, Any] = {"source": f"{function.__module__}.{function.__qualname__}",
-                "source_sha256": hashlib.sha256(text.encode()).hexdigest(), "conditions": [],
+                "source_sha256": hashlib.sha256(text.encode()).hexdigest(),
+                "wrapper_implementation": f"{function.__globals__.get('__name__')}.{function.__code__.co_qualname}", "conditions": [],
                 "status": "unknown", "forward_executed": False}
             if nested_code(deprecate_kwarg, function.__code__):
                 old_name = closure.get("old_name")
@@ -49,6 +57,46 @@ def forward_wrappers(function: Any, module: torch.nn.Module,
                     raise SourceBoundary("Deprecated keyword translation is outside this recorded call profile")
                 record.update(status="established", rule="native_keyword_alias_absent",
                               conditions=[{"keyword": old_name, "supplied": False}])
+            elif _static_rope_wrapper(function, module, supplied_keywords, record):
+                pass
+            elif (getattr(generic, "merge_with_config_defaults", None) is not None
+                  and nested_code(generic.merge_with_config_defaults, function.__code__)):
+                if module.training or supplied_keywords.get("debug_io", False) is not False:
+                    raise SourceBoundary("Config-default wrapper requires evaluation without debug I/O")
+                fields = ("use_cache", "vision_feature_layer", "vision_feature_select_strategy", "vision_aspect_ratio")
+                for name in fields:
+                    value = supplied_keywords.get(name)
+                    if value is None:
+                        value = getattr(module.config, name, None)
+                    if name == "use_cache" and name not in supplied_keywords:
+                        value = False
+                    if value is not None:
+                        if type(value) not in (bool, int, str):
+                            raise SourceBoundary(f"Config-default wrapper value requires proof: {name}")
+                        if name == "vision_feature_select_strategy" and value not in ("default", "full"):
+                            raise SourceBoundary("Invalid vision feature selection strategy")
+                        keyword_updates[name] = value
+                causal = supplied_keywords.get("is_causal", getattr(module.config, "is_causal", None))
+                if causal is not None:
+                    if type(causal) is not bool or causal != getattr(module.config, "is_causal", None):
+                        raise SourceBoundary("Temporary causal config override requires separate source proof")
+                    keyword_updates["is_causal"] = causal
+                record.update(status="conditional", rule="native_config_defaults",
+                    conditions=[{"training": False, "debug_io": False, "effective_keywords": dict(keyword_updates)}],
+                    scope="Native config defaults and explicit canonical no-cache profile; causal config is unchanged")
+            elif capture_outputs is not None and nested_code(capture_outputs, function.__code__):
+                from transformers.utils.output_capturing import _CAN_RECORD_REGISTRY
+                flags = _CAN_RECORD_REGISTRY.get(str(type(module))) or {}
+                disabled = {f"output_{key}": False for key in flags}
+                disabled.update(output_attentions=False, output_hidden_states=False, output_cross_attentions=False)
+                if module.training or any(name in supplied_keywords and supplied_keywords[name] is not value
+                                           for name, value in {**disabled, "return_dict": True}.items()):
+                    raise SourceBoundary("Output capture requires the canonical capture-disabled profile")
+                keyword_updates.update(disabled)
+                consumed_keywords.add("return_dict")
+                record.update(status="conditional", rule="native_empty_output_collector",
+                    conditions=[{**disabled, "return_dict": True, "training": False}],
+                    scope="Empty collector adds no output fields; collector context is restored by finally")
             elif nested_code(can_return_tuple, function.__code__) or nested_code(check_model_inputs, function.__code__):
                 expected = {"use_cache": False, "output_attentions": False, "output_hidden_states": False, "return_dict": True}
                 if module.training or any(name in supplied_keywords and supplied_keywords[name] is not value for name, value in expected.items()):
@@ -112,4 +160,27 @@ def forward_wrappers(function: Any, module: torch.nn.Module,
     else:
         failures.append("Decorator chain exceeds the analysis budget")
     return {"status": "unknown" if failures else "established", "wrappers": records,
-            "failure_reasons": failures, "forward_executed": False}
+            "failure_reasons": failures, "forward_executed": False,
+            "keyword_updates": keyword_updates, "consumed_keywords": sorted(consumed_keywords)}
+
+
+def _static_rope_wrapper(function: Any, module: torch.nn.Module, supplied: dict[str, Any],
+                         record: dict[str, Any]) -> bool:
+    """Prove the native frequency-update decorator takes no update branch."""
+    from transformers.modeling_rope_utils import dynamic_rope_update
+
+    if not nested_code(dynamic_rope_update, function.__code__):
+        return False
+    layer_type = supplied.get("layer_type")
+    rope_type = vars(module).get("rope_type")
+    if layer_type is not None:
+        if type(layer_type) is not str or type(rope_type) is not dict:
+            raise SourceBoundary("RoPE layer selection is unproven")
+        rope_type = rope_type.get(layer_type)
+    if type(rope_type) is not str or "dynamic" in rope_type or rope_type == "longrope":
+        raise SourceBoundary("Dynamic RoPE frequency updates require separate mutation proof")
+    record.update(status="conditional", rule="native_rope_no_frequency_update",
+        conditions=[{"layer_type": layer_type, "rope_type": rope_type,
+                     "dynamic_branch": False, "longrope_branch": False}],
+        scope="Actual native rope_type selects the unchanged buffer path; no frequency update is assumed")
+    return True

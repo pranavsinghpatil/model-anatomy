@@ -140,9 +140,13 @@ def ir_summary(data: dict) -> dict:
             },
         }
     report = metadata.get("analysis_report", {})
+    completion = report.get("completion")
+    scoped = isinstance(completion, dict) and type(completion.get("version")) is int and completion["version"] == 1
     warnings = list(dict.fromkeys(report.get("warnings", [])))
     quality = {}
     reasons = []
+    if completion is not None and not scoped:
+        reasons.append("Profile computation contract version was not established.")
     for key, label in (
         ("semantic_coverage", "Graph component classification"),
         ("module_semantic_coverage", "Native module classification"),
@@ -154,7 +158,7 @@ def ir_summary(data: dict) -> dict:
         quality[key] = value if valid else None
         if not valid:
             reasons.append(f"{label}: coverage was not established.")
-        elif value < 1:
+        elif value < 1 and (not scoped or key not in {"semantic_coverage", "module_semantic_coverage"}):
             reasons.append(f"{label}: coverage is incomplete.")
     for key in ("unknown_nodes", "unmapped_checkpoint_tensors"):
         value = report.get(key)
@@ -168,7 +172,7 @@ def ir_summary(data: dict) -> dict:
                 else "Unmapped tensor count"
             )
             reasons.append(f"{label}: check was not established.")
-        elif quality[key]:
+        elif quality[key] and (not scoped or key != "unknown_nodes"):
             label = (
                 "unclassified graph component"
                 if key == "unknown_nodes"
@@ -177,6 +181,23 @@ def ir_summary(data: dict) -> dict:
             if value != 1:
                 label += "s"
             reasons.append(f"{value} {label}.")
+    if scoped:
+        required = {"parameter_mapping", "source_interpretation", "source_invocations", "operation_shapes", "profile_recorded"}
+        checks = completion.get("checks")
+        valid_checks = isinstance(checks, dict) and required <= checks.keys() and all(type(checks[key]) is bool for key in required)
+        if not valid_checks or completion.get("status") not in {"complete", "partial"} or type(completion.get("scope")) is not str:
+            reasons.append("Profile computation completeness was not established.")
+        elif completion["status"] != "complete" or not all(checks[key] for key in required):
+            reasons.append("Profile computation checks are incomplete.")
+        quality["computation_scope"] = completion.get("scope")
+        annotations = completion.get("semantic_annotations", {})
+        if isinstance(annotations, dict):
+            quality["semantic_annotations"] = {
+                "active_coverage": annotations.get("active_coverage"),
+                "registered_unknown_count": len(annotations["registered_unknown_paths"]) if isinstance(annotations.get("registered_unknown_paths"), list) else None,
+                "active_unknown_count": len(annotations["active_unknown_paths"]) if isinstance(annotations.get("active_unknown_paths"), list) else None,
+                "scope": annotations.get("scope"),
+            }
     for key in ("forward_executed", "runtime_trace_available"):
         value = report.get(key)
         quality[key] = value if type(value) is bool else None

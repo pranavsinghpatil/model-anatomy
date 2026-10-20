@@ -11,10 +11,10 @@ if TYPE_CHECKING:
     from .hierarchy import HierarchyBuilder
 
 
-def build_attention(builder: HierarchyBuilder, path: str) -> Graph:
+def build_attention(builder: HierarchyBuilder, path: str, graph: Graph | None = None) -> Graph:
     """Retain source dataflow instead of asserting an unproved attention template."""
-    graph = builder.source_graph(path)
-    report = builder.flow_reports.get(path, {})
+    graph = graph if graph is not None else builder.source_graph(path)
+    report = builder.flow_reports.get(graph.metadata.get("flow_report_key", path), {})
     failures = [item['reason'] for item in report.get('unexplained_operations', [])]
     nodes = [node for child in graph.walk() for node in child.nodes]
     contracts = [node.metadata['shape_check'] for node in nodes if node.metadata.get('shape_check')]

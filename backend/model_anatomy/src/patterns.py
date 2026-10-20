@@ -152,149 +152,10 @@ class SemanticAnalyzer:
             )
         ):
             return result("activation", 0.99, "activation implementation namespace and primitive type")
-        if {"gate_proj", "up_proj", "down_proj"}.issubset(child_names) or {"wi_0", "wi_1", "wo"}.issubset(
-            child_names
-        ):
-            return result("gated_mlp", 0.99, "gate/expansion/contraction projection topology")
-        qkv = any(
-            names.issubset(child_names)
-            for names in ({"q_proj", "k_proj", "v_proj"}, {"query", "key", "value"}, {"q", "k", "v"})
-        )
-        fused = "c_attn" in child_names and "c_proj" in child_names
-        if qkv or fused:
-            cross = record["attributes"].get("is_cross_attention") or "cross" in name or "encdec" in name
-            return result(
-                "cross_attention" if cross else "self_attention",
-                0.99,
-                "Q/K/V or fused-QKV parameter topology, with attention role context",
-            )
-        if any(names.issubset(child_names) for names in ({"c_fc", "c_proj"}, {"fc1", "fc2"}, {"wi", "wo"})):
-            return result("feed_forward", 0.97, "expansion/contraction projections with activation subtree")
-        if "projection" in descendant_kinds and "activation" in descendant_kinds and "intermediate" in name:
-            return result(
-                "feed_forward",
-                0.85,
-                "intermediate expansion projection plus activation, within a feed-forward stage",
-            )
-        attention = bool(descendant_kinds & {"self_attention", "cross_attention", "attention"})
-        feed_forward = bool(descendant_kinds & {"feed_forward", "gated_mlp"})
-        if (
-            attention
-            and feed_forward
-            and ("block" in class_name or "layer" in class_name)
-            and not record["container"]
-        ):
-            decoder = (
-                record["attributes"].get("is_decoder") or "decoder" in path.lower() or "decoder" in class_name
-            )
-            if not decoder and "encoder" not in path.lower():
-                decoder = any(
-                    "causallm" in a.lower() or "lmheadmodel" in a.lower()
-                    for a in (self.model.config.architectures or [])
-                )
-            return result(
-                "decoder_block" if decoder else "encoder_block",
-                0.96,
-                "normalization + attention + feed-forward subtree, with encoder/decoder context",
-            )
-        if "patch" in class_name and "convolution" in descendant_kinds:
-            return result("patch_embedding", 0.98, "patch ownership plus convolutional projection")
-        if "embedding" in class_name and (
-            "embedding" in descendant_kinds or "patch_embedding" in descendant_kinds
-        ):
-            return result("embeddings", 0.97, "composite embedding subtree")
-        if "rotary" in class_name and hasattr(module, "inv_freq"):
-            return result("rotary_position_embedding", 0.98, "rotary class and frequency buffer topology")
-        if "convolution" in descendant_kinds and "batch_norm" in descendant_kinds and "layer" in class_name:
-            try:
-                source = inspect.getsource(type(module).forward)
-            except (OSError, TypeError):
-                source = ""
-            if "residual" in source and ("+=" in source or " + " in source):
-                return result(
-                    "residual_block",
-                    0.97,
-                    "convolution/normalization subtree and explicit residual addition in source",
-                )
-        if (
-            children
-            and "convolution" in descendant_kinds
-            and "batch_norm" in descendant_kinds
-            and not attention
-            and all(
-                self.classifications[p].kind in {"convolution", "batch_norm", "activation", "identity"}
-                for p in children
-            )
-        ):
-            return result(
-                "convolution_block",
-                0.98,
-                "direct convolution + normalization + optional activation composition",
-            )
-        if (
-            children
-            and "projection" in descendant_kinds
-            and "layer_norm" in descendant_kinds
-            and not attention
-            and all(
-                self.classifications[p].kind in {"projection", "layer_norm", "dropout", "activation"}
-                for p in children
-            )
-        ):
-            return result(
-                "projection_block", 0.94, "direct affine projection + normalization/activation composition"
-            )
-        if (
-            type(module).__module__ == "transformers.models.vit.modeling_vit"
-            and record["type"] in {"ViTSelfOutput", "ViTOutput"}
-            and child_names == {"dense", "dropout"}
-            and isinstance(module.dense, torch.nn.Linear)
-            and isinstance(module.dropout, torch.nn.Dropout)
-        ):
-            return result(
-                "projection_block",
-                0.99,
-                "native ViT output projection/dropout; residual connectivity comes from forward source",
-            )
-        if attention and "attention" in class_name:
-            return result(
-                "cross_attention" if "cross" in class_name else "self_attention",
-                0.91,
-                "attention wrapper containing classified Q/K/V subtree",
-            )
-        if feed_forward and any(token in class_name for token in ("ff", "mlp", "feedforward")):
-            return result(
-                "feed_forward", 0.92, "feed-forward wrapper containing classified projection pattern"
-            )
-        if "encoder" in name or "encoder" in class_name:
-            return result("encoder", 0.88, "encoder context and contained computation")
-        if "decoder" in name or record["attributes"].get("is_decoder"):
-            return result("decoder", 0.9, "decoder context or native is_decoder attribute")
-        if "model" in class_name and any(
-            self.classifications.get(p, SemanticClassification("unknown", 0, [])).kind
-            in {"decoder_block", "transformer_block"}
-            for p in self.raw["modules"]
-            if p.startswith(path + ".")
-        ):
-            return result("decoder", 0.94, "embedding + repeated decoder-block backbone")
-        if "expert" in name or "expert" in class_name:
-            return result(
-                "expert" if not record["container"] else "expert_group",
-                0.8,
-                "expert ownership context; routing remains separately reported",
-            )
-        if "stage" in class_name and "convolution" in descendant_kinds:
-            return result("residual_stage", 0.93, "stage boundary containing convolutional residual blocks")
-        if "stem" in name or ("embedder" in name and "convolution" in descendant_kinds):
-            return result("stem", 0.9, "input stem context with convolutional subtree")
         if record["container"]:
             return result("container", 1.0, "native module container; no execution topology assumed")
         if path == self.raw["base_model_prefix"] and children:
             return result("backbone", 0.99, "native base_model_prefix identifies backbone ownership")
-        from .source_composition import source_composition
-        composition = source_composition(module) if children else None
-        if composition is not None:
-            return result(composition[0], 0.98, composition[1])
         return result("unknown", 0.0, "No sufficiently supported semantic rule; preserve raw module facts")
 
     def signature(self, path: str) -> StructuralSignature:
@@ -340,7 +201,6 @@ class SemanticAnalyzer:
                     parameters,
                     buffers,
                     sharing,
-                    self.classifications[p].kind,
                     self.raw["source_fingerprints"][p]["sha256"],
                     proof,
                 ]

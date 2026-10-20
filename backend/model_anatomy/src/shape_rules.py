@@ -119,6 +119,31 @@ def reshape(spec: TensorSpec, dimensions: list[Any]) -> ShapeResult:
                   reason=f"Element counts differ or are unproven: {a}, {b}")
 
 
+def tensor_compare(specs: list[TensorSpec]) -> ShapeResult:
+    check = broadcast(specs, "tensor_comparison")
+    if check.status in {"proven", "conditional"}:
+        check.spec.dtype = "BOOL"
+    return check
+
+
+def tensor_mask_method(spec: TensorSpec, method: str, other: TensorSpec,
+                       fill: TensorSpec | None = None) -> ShapeResult:
+    if method == "expand_as":
+        if not known(other.shape):
+            return result(None, spec.dtype, "tensor_expand_as", status="unknown", reason="Target shape is unproven")
+        check = transform(spec, "expand", other.shape)
+        check.rule = "tensor_expand_as"
+        return check
+    if other.dtype != "BOOL":
+        return result(None, spec.dtype, "tensor_masked_fill", status="invalid" if other.dtype else "unknown", reason="Mask must have BOOL dtype")
+    check = broadcast([spec, TensorSpec(other.shape, spec.dtype, "mask")], "tensor_masked_fill")
+    if check.status in {"proven", "conditional"} and check.spec.shape != spec.shape:
+        return result(None, spec.dtype, "tensor_masked_fill", status="invalid", reason="Mask broadcasting would expand the input")
+    if fill is not None and (fill.shape != [] or fill.dtype != spec.dtype):
+        return result(None, spec.dtype, "tensor_masked_fill", status="unknown", reason="Fill tensor must be a scalar of the input dtype")
+    return check
+
+
 def transform(spec: TensorSpec, method: str, dimensions: list[Any]) -> ShapeResult:
     rule = f"tensor_{method}"
     if not known(spec.shape):
@@ -158,6 +183,12 @@ def transform(spec: TensorSpec, method: str, dimensions: list[Any]) -> ShapeResu
                 return result(None, spec.dtype, rule, status="invalid" if equal(a, b) is False else "unknown", reason="Non-unit expand dimension is incompatible")
             candidate.append(b)
         shape = candidate
+    elif method == "repeat" and dimensions and len(dimensions) >= rank:
+        if any(type(d) is not int and not (type(d) is str and d.isidentifier()) or type(d) is int and d < 0 for d in dimensions):
+            return result(None, spec.dtype, rule, status="unknown", reason="Repeat counts must be nonnegative integer metadata")
+        shape = [product([extent, count]) for extent, count in zip([1] * (len(dimensions) - rank) + shape, dimensions)]
+        constraints = [f"{count} >= 0" for count in dimensions if type(count) is str]
+        return result(shape, spec.dtype, rule, status="conditional" if constraints else "proven", constraints=constraints)
     elif method in {"contiguous", "to", "type_as", "float", "half"}:
         pass
     else:
@@ -169,6 +200,12 @@ def selection(spec: TensorSpec, indices: list[dict[str, Any]]) -> ShapeResult:
     rule = "tensor_indexing"
     if not known(spec.shape):
         return result(None, spec.dtype, rule, status="unknown", reason="Indexed input shape is unknown")
+    if len(indices) == 1 and indices[0].get("kind") == "integer_tensor":
+        index = indices[0]
+        if not spec.shape or not known(index.get("shape")) or index.get("dtype") not in {"I32", "I64"}:
+            return result(None, spec.dtype, rule, status="unknown", reason="Single tensor indexing requires an established integer index shape")
+        return result(index["shape"] + spec.shape[1:], spec.dtype, rule, status="conditional",
+                      constraints=[f"-{spec.shape[0]} <= index_values < {spec.shape[0]}"])
     shape, axis, conditions = [], 0, []
     for index in indices:
         kind = index.get("kind")
@@ -295,7 +332,7 @@ def module_contract(module: torch.nn.Module, incoming: TensorSpec | None) -> Sha
             return result(None, dtype, "native_convolution", status="invalid" if same is False else "unknown", reason="Convolution channel count is incompatible or unproven")
         if isinstance(module.padding, str):
             return result(None, dtype, "native_convolution", status="unknown", reason="String convolution padding is not yet supported")
-        spatial = []
+        spatial, constraints = [], []
         for size, pad, dilation, kernel, stride in zip(shape[-dimensions:], module.padding, module.dilation, module.kernel_size, module.stride):
             offset = 2 * pad - dilation * (kernel - 1) - 1
             if type(size) is int:
@@ -304,8 +341,11 @@ def module_contract(module: torch.nn.Module, incoming: TensorSpec | None) -> Sha
                     return result(None, dtype, "native_convolution", status="invalid", reason="Convolution output extent is not positive")
                 spatial.append(value)
             else:
-                return result(None, dtype, "native_convolution", status="unknown", reason="Symbolic convolution extent requires unresolved floor/bound constraints")
-        return result(shape[:channel_axis] + [module.out_channels] + spatial, dtype, "native_convolution")
+                value = size if stride == 1 and offset == -1 else f"({size} + {offset + 1})" if stride == 1 else f"floor(({size} + {offset}) / {stride}) + 1"
+                spatial.append(value)
+                constraints.extend([f"{size} >= 0", f"{value} > 0"])
+        return result(shape[:channel_axis] + [module.out_channels] + spatial, dtype, "native_convolution",
+                      status="conditional" if constraints else "proven", constraints=constraints)
     if module_type is torch.nn.LayerNorm:
         if dtype not in {"F16", "BF16", "F32", "F64"}:
             return result(None, None, "layer_norm_dtype", status="unknown", reason="LayerNorm dtype compatibility is not established")
@@ -319,3 +359,38 @@ def module_contract(module: torch.nn.Module, incoming: TensorSpec | None) -> Sha
             return result(None, None, "native_activation_dtype", status="unknown", reason="Activation dtype compatibility is not established")
         return result(shape, dtype, "native_elementwise_shape")
     return None
+
+
+def tensor_scalar(spec: TensorSpec, operator: str, scalar: Any, side: str = "right") -> ShapeResult:
+    """Check wrapped Python scalar arithmetic without evaluating tensor values."""
+    check = transform(spec, "contiguous", [])
+    check.rule = "tensor_scalar_" + operator
+    floating = spec.dtype in {"F16", "BF16", "F32", "F64"}
+    integer = (spec.dtype in {"I32", "I64"} and type(scalar) is int
+               and -(2 ** 31 if spec.dtype == "I32" else 2 ** 63) <= scalar
+               < (2 ** 31 if spec.dtype == "I32" else 2 ** 63)
+               and operator in {"Add", "Sub", "Mult"})
+    if (type(scalar) not in (int, float) or operator not in {"Add", "Sub", "Mult", "Div", "Pow"}
+            or not (floating or integer) or operator == "Div" and side == "right" and scalar == 0):
+        check.spec = TensorSpec(None, None, "unresolved_scalar_promotion")
+        check.status, check.reason = "unknown", "Scalar promotion or division domain is unproven"
+    return check
+
+
+def gather(source: TensorSpec, index: TensorSpec, axis: Any) -> ShapeResult:
+    """Check torch.gather ranks, extents and the conditional index-value domain."""
+    if (not known(source.shape) or not known(index.shape) or type(axis) is not int
+            or len(source.shape) != len(index.shape) or not -len(source.shape) <= axis < len(source.shape)
+            or index.dtype != "I64"):
+        return result(None, None, "native_gather", status="unknown", reason="Gather rank, axis or int64 index is unproven")
+    axis %= len(source.shape)
+    constraints = [f"0 <= index < {source.shape[axis]}"]
+    for dimension, (left, right) in enumerate(zip(index.shape, source.shape)):
+        if dimension == axis or left == right:
+            continue
+        if type(left) is int and type(right) is int:
+            if left > right:
+                return result(None, source.dtype, "native_gather", status="invalid", reason="Gather index extent exceeds the input")
+        else:
+            constraints.append(f"{left} <= {right}")
+    return result(list(index.shape), source.dtype, "native_gather", status="conditional", constraints=constraints)

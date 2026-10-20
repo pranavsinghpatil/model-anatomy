@@ -11,6 +11,7 @@ from transformers import AutoConfig, PretrainedConfig
 
 from . import limits
 from .errors import ArtifactError, UnsupportedModelError
+from .native_provider import NativeResolutionError, config_class, implementation_evidence, model_candidates
 
 _CONSTRUCTING = ContextVar("model_anatomy_meta_construction", default=False)
 
@@ -67,8 +68,6 @@ def _validate_embedded_config(data: dict[str, Any]) -> None:
             pending.extend((item, depth + 1, None) for item in value if isinstance(item, (dict, list)))
             continue
 
-        if value.get("auto_map"):
-            raise UnsupportedModelError("Native configuration is required; remote code is disabled")
         if value.get("use_pretrained_backbone") or value.get("pretrained"):
             raise UnsupportedModelError(
                 "Pretrained backbone initialization is disabled; weights must not be loaded"
@@ -122,14 +121,21 @@ def _validate_embedded_config(data: dict[str, Any]) -> None:
 def load_native_config(data: dict[str, Any]) -> PretrainedConfig:
     _validate_embedded_config(data)
     model_type = data.get("model_type")
-    if not isinstance(model_type, str) or data.get("auto_map"):
+    if not isinstance(model_type, str):
         raise UnsupportedModelError("A native Transformers config is required; remote code is disabled")
-    from transformers.models.auto.configuration_auto import CONFIG_MAPPING
-
-    if model_type not in CONFIG_MAPPING:
-        raise UnsupportedModelError(f"No native Transformers config for model_type={model_type}")
+    implementation = config_class(model_type)
+    pending = [(implementation, data, "config")]
+    while pending:
+        parent_class, values, path = pending.pop()
+        for name in getattr(parent_class, "sub_configs", {}):
+            nested = values.get(name)
+            if isinstance(nested, dict) and isinstance(nested.get("model_type"), str):
+                child = config_class(nested["model_type"], f"{path}.{name}")
+                pending.append((child, nested, f"{path}.{name}"))
     try:
         config = AutoConfig.for_model(model_type, **{k: v for k, v in data.items() if k != "model_type"})
+    except ImportError as exc:
+        raise NativeResolutionError("native_dependency_missing", "config_resolution", str(exc)) from exc
     except (KeyError, ValueError, TypeError) as exc:
         raise ArtifactError(f"Invalid native configuration: {exc}") from exc
     except RecursionError as exc:
@@ -163,7 +169,9 @@ def select_auto_class(config: PretrainedConfig) -> tuple[type, list[str]]:
 
     if architectures:
         declared = ", ".join(architectures)
-        raise UnsupportedModelError(f"No native AutoModel mapping for declared architecture(s): {declared}")
+        raise NativeResolutionError("native_model_missing", "model_resolution",
+            f"No native AutoModel mapping for declared architecture(s): {declared}",
+            declared_architectures=list(architectures), model_type=config.model_type)
 
     hint = _task_routing_hint(config)
     if hint is not None:
@@ -180,29 +188,7 @@ def select_auto_class(config: PretrainedConfig) -> tuple[type, list[str]]:
 
 
 def _auto_model_candidates(config: PretrainedConfig) -> list[tuple[str, type, str]]:
-    """Read upstream Auto mappings as names without resolving model implementations."""
-    from transformers.models.auto import modeling_auto
-
-    model_type = getattr(config, "model_type", None)
-    if not isinstance(model_type, str):
-        return []
-
-    candidates = []
-    for name, auto_class in vars(modeling_auto).items():
-        if not name.startswith("AutoModel") or not isinstance(auto_class, type):
-            continue
-        mapping = auto_class.__dict__.get("_model_mapping")
-        mapping_names = getattr(mapping, "_model_mapping", None)
-        if not isinstance(mapping_names, dict):
-            continue
-        model_names = mapping_names.get(model_type)
-        if isinstance(model_names, str):
-            candidates.append((name, auto_class, model_names))
-        elif isinstance(model_names, (list, tuple)) and all(
-            isinstance(model_name, str) for model_name in model_names
-        ):
-            candidates.extend((name, auto_class, model_name) for model_name in model_names)
-    return candidates
+    return model_candidates(config)
 
 
 def _task_routing_hint(config: PretrainedConfig) -> str | None:
@@ -216,7 +202,10 @@ def _task_routing_hint(config: PretrainedConfig) -> str | None:
 
 def instantiate_native(config: PretrainedConfig) -> tuple[torch.nn.Module, dict[str, Any]]:
     auto_class, warnings = select_auto_class(config)
-    return _construct_native(config, auto_class.from_config, auto_class.__name__, warnings)
+    try:
+        return _construct_native(config, auto_class.from_config, auto_class.__name__, warnings)
+    except ImportError as exc:
+        raise NativeResolutionError("native_dependency_missing", "model_resolution", str(exc)) from exc
 
 
 def instantiate_candidate(
@@ -246,17 +235,22 @@ def _construct_native(
     config._attn_implementation = "eager"
     token = _CONSTRUCTING.set(True)
     handle = torch.nn.modules.module.register_module_forward_pre_hook(_forbid_forward)
+    from .construction_guards import construction_guards
+
     try:
-        with torch.device("meta"):
+        with construction_guards(), torch.device("meta"):
             model = factory(config) if concrete else factory(config, trust_remote_code=False)
             model.tie_weights()
             model.eval()
+    except UnsupportedModelError:
+        raise
     except (ValueError, TypeError) as exc:
         raise ArtifactError(f"Invalid native model configuration for {config.model_type}: {exc}") from exc
     except (ImportError, RuntimeError, NotImplementedError) as exc:
-        raise UnsupportedModelError(
-            f"Native meta construction failed for {config.model_type}: {exc}"
-        ) from exc
+        code = "native_dependency_missing" if isinstance(exc, ImportError) else "native_meta_construction_failed"
+        raise NativeResolutionError(code, "meta_construction",
+            f"Native meta construction failed for {config.model_type}: {exc}",
+            model_type=config.model_type, missing_package=getattr(exc, "name", None)) from exc
     finally:
         handle.remove()
         _CONSTRUCTING.reset(token)
@@ -272,4 +266,5 @@ def _construct_native(
         "trust_remote_code": False,
         "device": "meta",
         "warnings": warnings,
+        "native_resolution": implementation_evidence(model),
     }

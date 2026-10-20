@@ -5,9 +5,11 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+from collections import Counter
 from collections.abc import Callable
 from dataclasses import replace
 from functools import partial
+from typing import Any
 
 import requests
 
@@ -28,6 +30,9 @@ def reconstruct(
     allow_artifact_inspection: bool = False,
 ) -> ModelIR:
     """Construct metadata and a semantic hierarchy; never execute forward or load weights."""
+    from .native_provider import require_supported_provider
+
+    require_supported_provider()
     reference = parse_reference(value)
     if client is None:
         with requests.Session() as session:
@@ -115,6 +120,8 @@ def reconstruct(
                 raise
             native_error = exc
             profile["architecture_blockers"].append(str(exc)[:1024])
+            profile["native_resolution"] = getattr(exc, "diagnostic", {
+                "status": "blocked", "stage": "config_resolution", "code": "native_config_unavailable", "message": str(exc)[:1024]})
 
     if not has_safetensors:
         if not allow_artifact_inspection:
@@ -252,7 +259,21 @@ def reconstruct(
             if native_error is not None
             else None
         )
-    if reason is not None:
+    def inspect_unavailable(reason: str) -> ModelIR:
+        if reason in {"native_architecture_unavailable", "architecture_config_unavailable"} and not reference.explicit_filename:
+            from .components import build_component_report, discover_components
+
+            records, verified = discover_components(reference, revision, files, checkpoint, client)
+            profile["component_discovery"] = records
+            if verified:
+                inventory = inspect_artifacts(
+                    reference, revision, files, client.audit, audit_start=audit_start,
+                    config_data=config_data, checkpoint=checkpoint, reason_code=reason,
+                )
+                return build_component_report(
+                    inventory, verified, reference=reference, revision=revision, files=files,
+                    client=client, audit_start=audit_start, profile=profile, progress=progress,
+                )
         return inspect_artifacts(
             reference,
             revision,
@@ -264,6 +285,9 @@ def reconstruct(
             reason_code=reason,
         )
 
+    if reason is not None:
+        return inspect_unavailable(reason)
+
     progress("building_structure")
     try:
         from .registry import instantiate_native
@@ -273,16 +297,23 @@ def reconstruct(
         if not allow_artifact_inspection:
             raise
         profile["architecture_blockers"].append(str(exc)[:1024])
-        return inspect_artifacts(
-            reference,
-            revision,
-            files,
-            client.audit,
-            audit_start=audit_start,
-            config_data=config_data,
-            checkpoint=checkpoint,
-            reason_code="native_architecture_unavailable",
-        )
+        profile["native_resolution"] = getattr(exc, "diagnostic", {
+            "status": "blocked", "stage": "meta_construction", "code": "native_construction_unavailable", "message": str(exc)[:1024]})
+        return inspect_unavailable("native_architecture_unavailable")
+    return build_native_report(
+        reference=reference, revision=revision, files=files, client=client, audit_start=audit_start,
+        config_file=config_file, config_data=config_data, config=config, checkpoint=checkpoint,
+        model=model, selection=selection, profile=profile, progress=progress,
+    )
+
+
+def build_native_report(
+    *, reference: Any, revision: str, files: set[str], client: MetadataClient, audit_start: int,
+    config_file: str, config_data: dict[str, Any], config: Any, checkpoint: Any,
+    model: Any, selection: dict[str, Any], profile: dict[str, Any],
+    progress: Callable[[str], None],
+) -> ModelIR:
+    """Use one source/ownership/shape path for native whole models and scoped components."""
     from .facts import inspect_native_model
     from .coverage import source_completeness
     from .hierarchy import HierarchyBuilder
@@ -294,10 +325,13 @@ def reconstruct(
     from .architecture_selection import select_checkpoint_architecture
 
     model, selection, raw = select_checkpoint_architecture(config, checkpoint, model, selection, raw)
+    profile["native_resolution"] = selection.get("native_resolution")
     analyzer = SemanticAnalyzer(model, raw)
     progress("analyzing_components")
     builder = HierarchyBuilder(model, raw, analyzer)
     root = builder.build()
+    from .source_semantics import annotate_graphs
+    interpretation = annotate_graphs(builder, root)
     raw["semantic_diagnostics"] = analyzer.diagnostics()
     raw["static_flow_reports"] = builder.flow_reports
     raw["model_selection"] = selection
@@ -361,6 +395,8 @@ def reconstruct(
     from .shape_validation import validate_shapes
     from .shape_rules import known as known_shape
     shape_validation = validate_shapes(root, model)
+    from .completion import completion_report
+    completion = completion_report(root, raw, interpretation, completeness, shape_validation)
     warnings = list(selection["warnings"]) + list(raw["warnings"]) + completeness["warnings"] + shape_validation["warnings"]
     for path, report in builder.flow_reports.items():
         warnings.extend(f"{path or '<root>'}: {w}" for w in report["warnings"])
@@ -376,6 +412,7 @@ def reconstruct(
         if node.kind not in {"input", "output", "parameter"}
     ]
     unknown = [node for node in all_nodes if node.kind == "unknown"]
+    unknown_categories = Counter(node.metadata.get("unknown_category", "unsupported_source") for node in unknown)
     edges = [edge for graph in root.walk() for edge in graph.edges if edge.relation == "dataflow"]
     unknown_modules = raw["semantic_diagnostics"]["unknown_components"]
     metadata = {
@@ -399,12 +436,16 @@ def reconstruct(
         "parameter_count_policy": "Model parameter object identity is unique; checkpoint duplicates and hierarchy references are reported separately",
         "analysis_report": {
             "architecture_selection": selection["architecture_selection"],
+            "source_interpretation": interpretation,
+            "completion": completion,
             "mode": "static",
             "forward_executed": False,
             "runtime_trace_available": False,
             "semantic_coverage": 1 - len(unknown) / len(all_nodes) if all_nodes else 0,
             "classified_nodes": len(all_nodes) - len(unknown),
             "unknown_nodes": len(unknown),
+            "unparsed_nodes": unknown_categories.get("unsupported_source", 0),
+            "unknown_node_categories": dict(unknown_categories),
             "module_semantic_coverage": 1 - len(unknown_modules) / len(raw["modules"]),
             "unknown_module_paths": unknown_modules,
             "unmapped_checkpoint_tensors": unknown_tensors,
@@ -442,6 +483,16 @@ def reconstruct(
             f"Native architecture {type(model).__name__} is a unique checkpoint-compatible interpretation; "
             f"the publisher config declares {selection['architecture_selection']['declared_architectures']}. "
             "Metadata compatibility does not prove publisher task intent or runtime numerical equivalence"
+        )
+    if selection.get("native_resolution", {}).get("publisher_auto_map"):
+        metadata["limitations"].append(
+            "Publisher declares custom code; this graph describes the installed native implementation. "
+            "Checkpoint metadata agreement does not prove equivalence to the publisher's implementation"
+        )
+    if selection["architecture_selection"]["status"] == "declared_native_with_ignored_tensors":
+        metadata["limitations"].append(
+            "Native loading rules ignore recorded checkpoint keys without module owners; computation completeness "
+            "covers the declared native implementation, not complete checkpoint ownership or publisher equivalence"
         )
     evidence = [
         Evidence("hf_config", "direct", config_url, {"revision": revision}),

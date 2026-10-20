@@ -211,6 +211,8 @@ class ModelProfile(BaseModel):
     selected_config: str | None
     components: list[ModelComponent]
     architecture_blockers: list[str]
+    native_resolution: dict[str, Any] | None = None
+    component_discovery: list[dict[str, Any]] = Field(default_factory=list)
     metadata_basis: str
 
 

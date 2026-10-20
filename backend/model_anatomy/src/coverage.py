@@ -15,18 +15,18 @@ def source_completeness(root: Graph, reports: dict[str, dict[str, Any]]) -> dict
     operations: list[dict[str, Any]] = []
     warnings: list[str] = []
 
-    def key(call: dict[str, Any]) -> tuple:
-        return (call.get("source"), call.get("source_sha256"), call.get("line"), call.get("column"))
+    def key(call: dict[str, Any], context: str) -> tuple:
+        return (context, call.get("module_path"), call.get("source"), call.get("source_sha256"), call.get("line"), call.get("column"))
 
     for path, report in reports.items():
         for call in report.get("source_call_sites", []):
             if call.get("excluded_by_profile"):
                 excluded.append(call)
             else:
-                expected[key(call)] = call
+                expected[key(call, path)] = call
         for call in report.get("call_sites", []):
-            expected[key(call)] = call
-            established.add(key(call))
+            expected[key(call, path)] = call
+            established.add(key(call, path))
         operations.extend(dict(item, owner_path=path) for item in report.get("unexplained_operations", []))
     missing = [call for identifier, call in expected.items() if identifier not in established]
     reachable = {call["module_path"] for call in expected.values()}
@@ -39,7 +39,7 @@ def source_completeness(root: Graph, reports: dict[str, dict[str, Any]]) -> dict
             messages.append(graph.metadata["warning"])
         warnings.extend(f"{context}: {message}" for message in messages)
         for node in graph.nodes:
-            if node.metadata.get("invocation_not_established") and not node.metadata.get("excluded_by_profile"):
+            if node.metadata.get("invocation_not_established") and not node.metadata.get("excluded_by_profile") and not node.metadata.get("inventory_only"):
                 missing_invocations.append({"graph_id": graph.id, "node_id": node.id,
                                             "module_path": node.module_path,
                                             "reason": "Registered structure has no established invocation in this source graph"})
@@ -52,7 +52,7 @@ def source_completeness(root: Graph, reports: dict[str, dict[str, Any]]) -> dict
     return {
         "scope": "Unique module call sites in inspected source under the recorded profile; unresolved paths remain possible",
         "runtime_verified": False,
-        "representative_only": True,
+        "representative_only": any(node.repeat > 1 for graph in root.walk() for node in graph.nodes),
         "limitations": [
             "Source unavailable or opaque dispatch may hide additional calls; these ratios do not prove whole-model execution coverage",
             "Collapsed instances are represented by inspected templates; semantic equivalence is a separate check",

@@ -166,13 +166,11 @@ def test_checkpoint_shape_mismatch_fails_honestly(tiny_model):
 @pytest.mark.parametrize(
     "change",
     [
-        {"auto_map": {"AutoModel": "custom.Model"}},
         {"backbone": "other/model"},
         {"use_pretrained_backbone": True},
-        {"nested": [{"auto_map": {"AutoModel": "custom.Model"}}]},
     ],
 )
-def test_custom_code_or_implicit_weight_loading_is_rejected(change):
+def test_implicit_weight_loading_is_rejected(change):
     with pytest.raises(UnsupportedModelError):
         load_native_config({**CONFIG, **change})
 
