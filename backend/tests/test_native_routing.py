@@ -5,6 +5,7 @@ from __future__ import annotations
 import pytest
 
 from model_anatomy.src.errors import ArtifactError, UnsupportedModelError
+from model_anatomy.src.ir import Graph, ModelIR
 from model_anatomy.src.registry import instantiate_native, load_native_config, select_auto_class
 
 
@@ -119,6 +120,51 @@ def test_declared_native_architecture_routes_and_constructs_on_meta(data, auto_n
     assert selection["auto_class"] == auto_name
     assert selection["device"] == "meta"
     assert all(tensor.device.type == "meta" for tensor in (*model.parameters(), *model.buffers()))
+
+
+@pytest.mark.parametrize("model_type", ["clip", "xclip"])
+def test_nested_clip_native_config_construction_preserves_source_json_and_roundtrips(model_type):
+    source = {
+        "model_type": model_type,
+        "text_config": {
+            "model_type": "clip_text_model",
+            "vocab_size": 32,
+            "hidden_size": 16,
+            "intermediate_size": 32,
+            "num_hidden_layers": 1,
+            "num_attention_heads": 2,
+            "max_position_embeddings": 16,
+            "id2label": {"0": "LABEL_0", "1": "LABEL_1"},
+        },
+        "vision_config": {
+            "model_type": "clip_vision_model",
+            "hidden_size": 16,
+            "intermediate_size": 32,
+            "num_hidden_layers": 1,
+            "num_attention_heads": 2,
+            "image_size": 32,
+            "patch_size": 16,
+        },
+    }
+
+    native = load_native_config(source)
+
+    assert native.text_config.id2label == {0: "LABEL_0", 1: "LABEL_1"}
+    assert source["text_config"]["id2label"] == {"0": "LABEL_0", "1": "LABEL_1"}
+    report = ModelIR(
+        model_id=f"openai/{model_type}-nested-config",
+        architecture=f"{model_type.upper()}Model",
+        root_graph=Graph(id="root", nodes=[], edges=[]),
+        metadata={"source_config": source},
+    )
+
+    roundtripped = ModelIR.from_json(report.to_json())
+
+    assert roundtripped == report
+    assert roundtripped.metadata["source_config"]["text_config"]["id2label"] == {
+        "0": "LABEL_0",
+        "1": "LABEL_1",
+    }
 
 
 def test_encoder_decoder_hint_routes_when_architecture_is_not_declared():

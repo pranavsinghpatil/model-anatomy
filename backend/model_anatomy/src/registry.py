@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from contextvars import ContextVar
+from copy import deepcopy
 from typing import Any
 
 import torch
@@ -51,6 +52,19 @@ _IGNORED_AUTO_MAP_WARNING = (
     "Transformers mapping; equivalence to publisher custom code is unverified, and remote code remains disabled"
 )
 _IGNORED_AUTO_MAP_MARKER = "_model_anatomy_ignored_publisher_auto_map"
+
+
+def _clap_audio_schedule_defaults() -> dict[str, Any]:
+    """Read schedule defaults from the installed native config without constructing it."""
+    from inspect import signature
+
+    from transformers.models.clap.configuration_clap import ClapAudioConfig
+
+    parameters = signature(ClapAudioConfig.__init__).parameters
+    return {
+        name: parameters[name].default
+        for name in ("depths", "num_hidden_layers", "num_attention_heads")
+    }
 
 
 def _validate_embedded_config(
@@ -133,10 +147,39 @@ def _validate_embedded_config(
                 or any(type(head) is not int or head <= 0 for head in heads)
             ):
                 raise ArtifactError("Invalid SegFormer stage schedule: num_attention_heads")
+        if stage_type == "clap_audio_model":
+            defaults = _clap_audio_schedule_defaults()
+            depths = value.get("depths", defaults["depths"])
+            if not isinstance(depths, list) or not depths or any(type(n) is not int or n <= 0 for n in depths):
+                raise ArtifactError("Invalid CLAP audio stage schedule: depths")
+            if sum(depths) > limits.MAX_MODEL_LAYERS:
+                raise UnsupportedModelError(
+                    f"Model exceeds the supported layer count ({limits.MAX_MODEL_LAYERS})"
+                )
+            stage_count = value.get("num_hidden_layers", defaults["num_hidden_layers"])
+            if (
+                type(stage_count) is not int
+                or stage_count <= 0
+                or stage_count != len(depths)
+            ):
+                raise ArtifactError("Invalid CLAP audio stage schedule: num_hidden_layers")
+            if stage_count > limits.MAX_MODEL_LAYERS:
+                raise UnsupportedModelError(
+                    f"Model exceeds the supported layer count ({limits.MAX_MODEL_LAYERS})"
+                )
+            heads = value.get("num_attention_heads", defaults["num_attention_heads"])
+            if (
+                not isinstance(heads, list)
+                or len(heads) != len(depths)
+                or any(type(n) is not int or n <= 0 or n > limits.MAX_MODEL_LAYERS for n in heads)
+            ):
+                raise ArtifactError("Invalid CLAP audio stage schedule: num_attention_heads")
         for name in _DIMENSION_FIELDS | layer_fields:
             if name not in value:
                 continue
             if name == "num_attention_heads" and stage_type == "segformer" and isinstance(value[name], list):
+                continue
+            if name == "num_attention_heads" and stage_type == "clap_audio_model":
                 continue
             dimension = value[name]
             if type(dimension) is not int or dimension <= 0:
@@ -209,6 +252,8 @@ def load_native_config(data: dict[str, Any]) -> PretrainedConfig:
     if model_type not in CONFIG_MAPPING:
         raise UnsupportedModelError(f"No native Transformers config for model_type={model_type}")
     try:
+        # Transformers may normalize nested values in place; keep caller-owned artifact JSON intact.
+        native_data = deepcopy(native_data)
         config = AutoConfig.for_model(
             model_type, **{key: value for key, value in native_data.items() if key != "model_type"}
         )
