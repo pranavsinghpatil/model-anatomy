@@ -296,10 +296,9 @@ class BenchmarkCatalogService:
                 for case in cases
             ]
             reports = session.scalars(select(ModelReport).where(
-                ModelReport.engine_version == self.jobs.settings.engine_version,
                 ModelReport.schema_version == self.jobs.settings.schema_version,
                 ModelReport.model_id.in_([row["model_id"] for row in rows]),
-            )).all()
+            ).order_by(ModelReport.inspected_at.desc(), ModelReport.id.desc())).all()
             by_model = {}
             for report in reports:
                 by_model.setdefault(report.model_id, []).append(report)
@@ -310,9 +309,15 @@ class BenchmarkCatalogService:
                         _, _, artifact, explicit = request_selector(row["reference"])
                     else:
                         artifact, explicit = "model.safetensors", False
-                    compatible = next((report for report in by_model.get(row["model_id"], []) if
+                    compatible_reports = [report for report in by_model.get(row["model_id"], []) if
                         report.revision == row["revision"] and report.artifact == artifact and
-                        report.explicit_artifact is explicit), None)
+                        report.explicit_artifact is explicit]
+                    compatible = next((
+                        report for report in compatible_reports
+                        if report.engine_version == self.jobs.settings.engine_version
+                    ), None)
+                    if compatible is None and compatible_reports:
+                        compatible = compatible_reports[0]
                     if compatible:
                         row["stored_report_id"] = compatible.id
                 except ServiceError:

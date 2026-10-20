@@ -895,3 +895,40 @@ through the visitor-owned registry flow; preserve the exact pin/artifact match.
 The live port-8000 backend and port-5176 preview now share Supabase; prior local
 visitor analyses are preserved. See `SUPABASE_CATALOG_ALIGNMENT.md` for evidence
 and the explicit optional-AI/deployment boundaries.
+
+## D-060 - Preserve supported historical reports and measure semantic coverage
+
+**2026-10-20 - user-directed coverage repair and engine `.3` transition**
+
+Keep stored `.2` reports that use the currently supported report schema available
+through explicit catalog-report opening. Validate the report digest, model,
+revision, schema, engine identity and cache identity against the registry and the
+stored document. Persist the historical report's own engine version on the new
+visitor-owned job. Automatic submitted-model cache lookup remains strict to the
+current engine and schema; historical extractions must never be represented as
+current-engine results.
+
+The shared inspection catalog may list all stored reports for the supported
+schema and shows each report's original engine version. Benchmark rows attach a
+stored report only for an exact model, immutable revision, artifact selection
+and supported schema. Prefer a current-engine match, then the newest compatible
+inspection. This preserves old benchmark evidence without weakening report
+validation or visitor ownership.
+
+The `.2` report-backed audit measured 250 pinned repositories: 16 completed,
+87 partial, 142 artifacts inspected and 5 failed attempts. Partial warning and
+coverage cohorts overlap. Unresolved source branches appeared in 67 reports and
+opaque calls in 64; artifact-only results most often reflected unavailable
+Safetensors (49), unavailable native architectures (49), or required checkpoint
+(20) and pipeline-component (12) selection. These counts direct subsequent
+family work but do not authorize suppressing uncertainty or widening completion
+criteria. Four failures were confirmed as gated HTTP 401 responses. The XTTS-v2
+pin contained non-finite JSON constants and lacked the requested Safetensors
+artifact. Keep these external blockers distinct from reconstruction support.
+
+The final frozen-source 22-case `.3` recheck validated 4 complete static reports,
+12 partial graphs and 1 artifact inspection; four gated requests and the invalid
+XTTS artifact still failed. Seven partial reports have fewer warnings, while all
+outcome classifications remain. Preserve the original baseline and eight earlier
+repair observations alongside the new run. See `MODEL_COVERAGE_REPAIRS.md` for
+exact pins, source identities, measured warning reductions and verification.

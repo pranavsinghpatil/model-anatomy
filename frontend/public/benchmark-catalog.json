@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-10-20T00:29:35.769651+00:00",
-  "engine_version": "2026.10.20.1 + 2026.10.20.2",
+  "generated_at": "2026-10-20T12:21:55.691078+00:00",
+  "engine_version": "2026.10.20.1 + 2026.10.20.2 + 2026.10.20.3",
   "manifest_sha256": "8d68ccb4b925220634a37b855d86074847ca8878c754420c55349b5e941a6814",
   "manifest_hash_encoding": "canonical-json-v1",
   "method": "Pinned metadata and bounded static reconstruction; no inference quality or speed measurement.",
@@ -19,27 +19,27 @@
       "revision": "93efa2f097d58c2a74874c7e644dbc9b0cee75a2",
       "status": "completed",
       "architecture": "LlamaForCausalLM",
-      "engine_version": "2026.10.20.2",
-      "started_at": "2026-10-20T00:23:24.742996+00:00",
-      "finished_at": "2026-10-20T00:24:06.707200+00:00",
+      "engine_version": "2026.10.20.3",
+      "started_at": "2026-10-20T12:16:59.641766+00:00",
+      "finished_at": "2026-10-20T12:17:13.632382+00:00",
       "warning_count": 0,
       "graph_count": 6,
       "node_count": 50,
       "tensor_count": 272,
       "parameter_counts": {
-        "checkpoint_tensor_elements": 134515008,
+        "unique": 134515008,
         "logical": 162826560,
-        "unique": 134515008
+        "checkpoint_tensor_elements": 134515008
       },
       "coverage": {
-        "checkpoint_parameter_coverage": 1.0,
-        "module_semantic_coverage": 1.0,
         "semantic_coverage": 1.0,
+        "module_semantic_coverage": 1.0,
+        "checkpoint_parameter_coverage": 1.0,
         "tensor_shape_coverage": 1.0
       },
-      "wall_seconds": 41.941,
+      "wall_seconds": 13.988,
       "service_contract_valid": true,
-      "case_identity": "a3e4e27b009e3ff7f8a452e798748fb6b4c46f2d2160c2235ebf087fe6efbec8",
+      "case_identity": "13626ce28882ab35072a3ab1c74adbfec2ee90cc877f6efe02ddbd31180f5843",
       "warnings": [],
       "reason_codes": [],
       "diagnostic_notes": [],
@@ -51,6 +51,12 @@
           "engine_version": "2026.10.20.1",
           "finished_at": "2026-10-19T23:05:10.621325+00:00",
           "case_identity": "f36ce2de182a4239de78bdd6a85db1eec38a4ca156960a4e62b88e9f03b276da"
+        },
+        {
+          "status": "completed",
+          "engine_version": "2026.10.20.2",
+          "finished_at": "2026-10-20T00:24:06.707200+00:00",
+          "case_identity": "a3e4e27b009e3ff7f8a452e798748fb6b4c46f2d2160c2235ebf087fe6efbec8"
         }
       ],
       "run_kind": "recheck"
@@ -131,33 +137,41 @@
       "revision": "7ae557604adf67be50417f59c2c2f167def9a775",
       "status": "completed",
       "architecture": "Qwen2ForCausalLM",
-      "engine_version": "2026.10.20.1",
-      "started_at": "2026-10-19T23:05:42.546983+00:00",
-      "finished_at": "2026-10-19T23:05:58.191560+00:00",
+      "engine_version": "2026.10.20.3",
+      "started_at": "2026-10-20T12:17:13.635425+00:00",
+      "finished_at": "2026-10-20T12:17:28.803718+00:00",
       "warning_count": 0,
       "graph_count": 6,
       "node_count": 50,
       "tensor_count": 290,
       "parameter_counts": {
-        "checkpoint_tensor_elements": 494032768,
+        "unique": 494032768,
         "logical": 630167424,
-        "unique": 494032768
+        "checkpoint_tensor_elements": 494032768
       },
       "coverage": {
-        "checkpoint_parameter_coverage": 1.0,
-        "module_semantic_coverage": 1.0,
         "semantic_coverage": 1.0,
+        "module_semantic_coverage": 1.0,
+        "checkpoint_parameter_coverage": 1.0,
         "tensor_shape_coverage": 1.0
       },
-      "wall_seconds": 15.644,
+      "wall_seconds": 15.168,
       "service_contract_valid": true,
-      "case_identity": "eb246082b2618fd5295f3ab281534fa94518c2d6eed6a0c96fb178ab4e4f42f6",
+      "case_identity": "e592b44305ab97d634df678c403ac593aebbaffcbf4cafda9fa41e543c6442c9",
       "warnings": [],
       "reason_codes": [],
       "diagnostic_notes": [],
       "reference": null,
       "declared_task": "text-generation",
-      "run_kind": "baseline"
+      "previous_observations": [
+        {
+          "status": "completed",
+          "engine_version": "2026.10.20.1",
+          "finished_at": "2026-10-19T23:05:58.191560+00:00",
+          "case_identity": "eb246082b2618fd5295f3ab281534fa94518c2d6eed6a0c96fb178ab4e4f42f6"
+        }
+      ],
+      "run_kind": "recheck"
     },
     {
       "model_id": "openai-community/gpt2",
@@ -165,33 +179,41 @@
       "revision": "607a30d783dfa663caf39e06633721c8d4cfcd7e",
       "status": "completed",
       "architecture": "GPT2LMHeadModel",
-      "engine_version": "2026.10.20.1",
-      "started_at": "2026-10-19T23:05:58.195070+00:00",
-      "finished_at": "2026-10-19T23:06:13.456483+00:00",
+      "engine_version": "2026.10.20.3",
+      "started_at": "2026-10-20T12:17:28.805725+00:00",
+      "finished_at": "2026-10-20T12:17:40.980443+00:00",
       "warning_count": 0,
       "graph_count": 5,
       "node_count": 44,
       "tensor_count": 160,
       "parameter_counts": {
-        "checkpoint_tensor_elements": 137022720,
+        "unique": 124439808,
         "logical": 163037184,
-        "unique": 124439808
+        "checkpoint_tensor_elements": 137022720
       },
       "coverage": {
-        "checkpoint_parameter_coverage": 1.0,
-        "module_semantic_coverage": 1.0,
         "semantic_coverage": 1.0,
+        "module_semantic_coverage": 1.0,
+        "checkpoint_parameter_coverage": 1.0,
         "tensor_shape_coverage": 1.0
       },
-      "wall_seconds": 15.261,
+      "wall_seconds": 12.173,
       "service_contract_valid": true,
-      "case_identity": "67224846410b6a1d4f5fe2ac3d2c293f4b067b8df3ea6070ba1871ffc6e2d161",
+      "case_identity": "684c1b7ebf629cb7638a8fc8afe2b5dc44ee3a2176863e53a6a1cdf6577fc53e",
       "warnings": [],
       "reason_codes": [],
       "diagnostic_notes": [],
       "reference": null,
       "declared_task": "text-generation",
-      "run_kind": "baseline"
+      "previous_observations": [
+        {
+          "status": "completed",
+          "engine_version": "2026.10.20.1",
+          "finished_at": "2026-10-19T23:06:13.456483+00:00",
+          "case_identity": "67224846410b6a1d4f5fe2ac3d2c293f4b067b8df3ea6070ba1871ffc6e2d161"
+        }
+      ],
+      "run_kind": "recheck"
     },
     {
       "model_id": "EleutherAI/pythia-70m",
@@ -199,38 +221,44 @@
       "revision": "a39f36b100fe8a5377810d56c3f4789b9c53ac42",
       "status": "partial",
       "architecture": "GPTNeoXForCausalLM",
-      "engine_version": "2026.10.20.1",
-      "started_at": "2026-10-19T23:06:13.460470+00:00",
-      "finished_at": "2026-10-19T23:06:31.709965+00:00",
+      "engine_version": "2026.10.20.3",
+      "started_at": "2026-10-20T12:17:40.983058+00:00",
+      "finished_at": "2026-10-20T12:17:53.377437+00:00",
       "warning_count": 4,
       "graph_count": 5,
       "node_count": 31,
       "tensor_count": 94,
       "parameter_counts": {
-        "checkpoint_tensor_elements": 95592502,
+        "unique": 70426624,
         "logical": 70426624,
-        "unique": 70426624
+        "checkpoint_tensor_elements": 95592502
       },
       "coverage": {
-        "checkpoint_parameter_coverage": 1.0,
-        "module_semantic_coverage": 0.775,
         "semantic_coverage": 0.85,
+        "module_semantic_coverage": 0.775,
+        "checkpoint_parameter_coverage": 1.0,
         "tensor_shape_coverage": 0.9705882352941176
       },
-      "wall_seconds": 18.248,
+      "wall_seconds": 12.395,
       "service_contract_valid": true,
-      "case_identity": "56e006bdf2990627bab51425285548e34f7bacf2c719a401ff08ec855287f163",
+      "case_identity": "50148dd8d23d2680599de72d28beae4c3791c5e0db35f24eb833302f5a2c03d8",
       "warnings": [],
-      "reason_codes": [
-        "coverage_not_complete"
-      ],
+      "reason_codes": ["coverage_not_complete"],
       "diagnostic_notes": [
         "The recorded static coverage is incomplete.",
         "Static-analysis warnings were recorded. Run a pinned inspection for full diagnostics."
       ],
       "reference": null,
       "declared_task": null,
-      "run_kind": "baseline"
+      "previous_observations": [
+        {
+          "status": "partial",
+          "engine_version": "2026.10.20.1",
+          "finished_at": "2026-10-19T23:06:31.709965+00:00",
+          "case_identity": "56e006bdf2990627bab51425285548e34f7bacf2c719a401ff08ec855287f163"
+        }
+      ],
+      "run_kind": "recheck"
     },
     {
       "model_id": "EleutherAI/pythia-160m",
@@ -260,9 +288,7 @@
       "service_contract_valid": true,
       "case_identity": "0d8a24dfac5bf666a0f602af3061dd3022496f0596f5c2fbb29e9156a4bfb755",
       "warnings": [],
-      "reason_codes": [
-        "coverage_not_complete"
-      ],
+      "reason_codes": ["coverage_not_complete"],
       "diagnostic_notes": [
         "The recorded static coverage is incomplete.",
         "Static-analysis warnings were recorded. Run a pinned inspection for full diagnostics."
@@ -367,13 +393,10 @@
       "service_contract_valid": true,
       "case_identity": "f67e79ce840703ae9cf5a876411c8272a869f1774f33eb9377fe323a8769edc0",
       "warnings": [],
-      "reason_codes": [
-        "coverage_not_complete"
-      ],
+      "reason_codes": ["coverage_not_complete"],
       "diagnostic_notes": [
         "The recorded static coverage is incomplete.",
-        "Static-analysis warnings were recorded. Run a pinned inspection for full diagnostics.",
-        "Publisher custom-code equivalence is unverified; the installed native implementation was used."
+        "Static-analysis warnings were recorded. Run a pinned inspection for full diagnostics."
       ],
       "reference": null,
       "declared_task": "text-generation",
@@ -419,27 +442,27 @@
       "revision": "733247c55e3f73af49ce8e9c7949bf14af205928",
       "status": "partial",
       "architecture": "Starcoder2ForCausalLM",
-      "engine_version": "2026.10.20.1",
-      "started_at": "2026-10-19T23:09:10.520035+00:00",
-      "finished_at": "2026-10-19T23:09:30.828405+00:00",
-      "warning_count": 3,
+      "engine_version": "2026.10.20.3",
+      "started_at": "2026-10-20T12:17:53.380511+00:00",
+      "finished_at": "2026-10-20T12:18:06.449114+00:00",
+      "warning_count": 1,
       "graph_count": 6,
-      "node_count": 48,
+      "node_count": 50,
       "tensor_count": 483,
       "parameter_counts": {
-        "checkpoint_tensor_elements": 3030371328,
+        "unique": 3030371328,
         "logical": 3181366272,
-        "unique": 3030371328
+        "checkpoint_tensor_elements": 3030371328
       },
       "coverage": {
-        "checkpoint_parameter_coverage": 1.0,
-        "module_semantic_coverage": 1.0,
         "semantic_coverage": 1.0,
+        "module_semantic_coverage": 1.0,
+        "checkpoint_parameter_coverage": 1.0,
         "tensor_shape_coverage": 1.0
       },
-      "wall_seconds": 20.308,
+      "wall_seconds": 13.068,
       "service_contract_valid": true,
-      "case_identity": "1d8c521c5d79dfa63bd475d9589052d640e6a9a517e8e7d50b8efc6cf448f83c",
+      "case_identity": "0d2e52a322bf9441751ddc4cf7c3412d079acb9fa218768df48207a6e07f91b2",
       "warnings": [],
       "reason_codes": [],
       "diagnostic_notes": [
@@ -447,7 +470,15 @@
       ],
       "reference": null,
       "declared_task": "text-generation",
-      "run_kind": "baseline"
+      "previous_observations": [
+        {
+          "status": "partial",
+          "engine_version": "2026.10.20.1",
+          "finished_at": "2026-10-19T23:09:30.828405+00:00",
+          "case_identity": "1d8c521c5d79dfa63bd475d9589052d640e6a9a517e8e7d50b8efc6cf448f83c"
+        }
+      ],
+      "run_kind": "recheck"
     },
     {
       "model_id": "deepseek-ai/deepseek-coder-1.3b-instruct",
@@ -558,22 +589,28 @@
       "category": "causal-lm",
       "revision": "9213176726f574b556790deb65791e0c5aa438b6",
       "status": "http_access",
-      "started_at": "2026-10-19T23:11:20.796298+00:00",
-      "finished_at": "2026-10-19T23:11:23.519565+00:00",
-      "wall_seconds": 2.723,
-      "case_identity": "c0d42946f079665879faac2035c0613027f78ea7af029e45b8c8814c13d98371",
+      "started_at": "2026-10-20T12:18:06.451126+00:00",
+      "finished_at": "2026-10-20T12:18:07.673269+00:00",
+      "wall_seconds": 1.221,
+      "case_identity": "0c671f1aa4f6e584b193f109944d8c5e7c814e903dc7f2d380991c8d3819cc0a",
       "warnings": [],
       "reason_codes": [],
-      "diagnostic_notes": [
-        "This attempt did not produce a validated report."
-      ],
-      "engine_version": "2026.10.20.1",
+      "diagnostic_notes": ["This attempt did not produce a validated report."],
+      "engine_version": "2026.10.20.3",
       "reference": null,
       "declared_task": "text-generation",
       "error": {
         "message": "http_access during reconstruction"
       },
-      "run_kind": "baseline"
+      "previous_observations": [
+        {
+          "status": "http_access",
+          "engine_version": "2026.10.20.1",
+          "finished_at": "2026-10-19T23:11:23.519565+00:00",
+          "case_identity": "c0d42946f079665879faac2035c0613027f78ea7af029e45b8c8814c13d98371"
+        }
+      ],
+      "run_kind": "recheck"
     },
     {
       "model_id": "HuggingFaceH4/zephyr-7b-beta",
@@ -639,10 +676,7 @@
       "service_contract_valid": true,
       "case_identity": "62b79b6f3516a4133212f40692e2e170a38a53d59a61fe02996991c7ba63eb12",
       "warnings": [],
-      "reason_codes": [
-        "safetensors_unavailable",
-        "coverage_not_complete"
-      ],
+      "reason_codes": ["safetensors_unavailable", "coverage_not_complete"],
       "diagnostic_notes": [
         "This repository has no Safetensors checkpoint. Only the pinned repository file inventory is available; no architecture graph was inferred.",
         "The recorded static coverage is incomplete."
@@ -719,10 +753,7 @@
       "service_contract_valid": true,
       "case_identity": "4218d8b5e75149d3b08c2df711e8f47d30b62cfc5bbceaa281174add33533592",
       "warnings": [],
-      "reason_codes": [
-        "safetensors_unavailable",
-        "coverage_not_complete"
-      ],
+      "reason_codes": ["safetensors_unavailable", "coverage_not_complete"],
       "diagnostic_notes": [
         "This repository has no Safetensors checkpoint. Only the pinned repository file inventory is available; no architecture graph was inferred.",
         "The recorded static coverage is incomplete."
@@ -737,38 +768,44 @@
       "revision": "1110a243fdf4706b3f48f1d95db1a4f5529b4d41",
       "status": "partial",
       "architecture": "BertModel",
-      "engine_version": "2026.10.20.1",
-      "started_at": "2026-10-19T23:12:34.361357+00:00",
-      "finished_at": "2026-10-19T23:12:53.216127+00:00",
-      "warning_count": 4,
+      "engine_version": "2026.10.20.3",
+      "started_at": "2026-10-20T12:18:07.674778+00:00",
+      "finished_at": "2026-10-20T12:18:18.826022+00:00",
+      "warning_count": 3,
       "graph_count": 12,
       "node_count": 73,
       "tensor_count": 104,
       "parameter_counts": {
-        "checkpoint_tensor_elements": 22713728,
+        "unique": 22713216,
         "logical": 22713216,
-        "unique": 22713216
+        "checkpoint_tensor_elements": 22713728
       },
       "coverage": {
-        "checkpoint_parameter_coverage": 1.0,
-        "module_semantic_coverage": 0.9916666666666667,
         "semantic_coverage": 0.9787234042553191,
+        "module_semantic_coverage": 0.9916666666666667,
+        "checkpoint_parameter_coverage": 1.0,
         "tensor_shape_coverage": 1.0
       },
-      "wall_seconds": 18.854,
+      "wall_seconds": 11.15,
       "service_contract_valid": true,
-      "case_identity": "632925149a0f18486f2f0f789114c845683507acbf62f504ccc774f715f64a1f",
+      "case_identity": "cbfac9f5eaf4fb86b241ead935d045cf91a52d54125eae032aaea4d1f57a28d9",
       "warnings": [],
-      "reason_codes": [
-        "coverage_not_complete"
-      ],
+      "reason_codes": ["coverage_not_complete"],
       "diagnostic_notes": [
         "The recorded static coverage is incomplete.",
         "Static-analysis warnings were recorded. Run a pinned inspection for full diagnostics."
       ],
       "reference": null,
       "declared_task": "sentence-similarity",
-      "run_kind": "baseline"
+      "previous_observations": [
+        {
+          "status": "partial",
+          "engine_version": "2026.10.20.1",
+          "finished_at": "2026-10-19T23:12:53.216127+00:00",
+          "case_identity": "632925149a0f18486f2f0f789114c845683507acbf62f504ccc774f715f64a1f"
+        }
+      ],
+      "run_kind": "recheck"
     },
     {
       "model_id": "BAAI/bge-small-en-v1.5",
@@ -798,9 +835,7 @@
       "service_contract_valid": true,
       "case_identity": "02851eba64f734dabdd66666b7f504f457daaec802ced4b3c1b09b3d89b69d8c",
       "warnings": [],
-      "reason_codes": [
-        "coverage_not_complete"
-      ],
+      "reason_codes": ["coverage_not_complete"],
       "diagnostic_notes": [
         "The recorded static coverage is incomplete.",
         "Static-analysis warnings were recorded. Run a pinned inspection for full diagnostics."
@@ -837,9 +872,7 @@
       "service_contract_valid": true,
       "case_identity": "a57db28a67ebcf96aa5d1b42fb4b0485da798c3289850784e6df96a041d354d3",
       "warnings": [],
-      "reason_codes": [
-        "coverage_not_complete"
-      ],
+      "reason_codes": ["coverage_not_complete"],
       "diagnostic_notes": [
         "The recorded static coverage is incomplete.",
         "Static-analysis warnings were recorded. Run a pinned inspection for full diagnostics."
@@ -876,9 +909,7 @@
       "service_contract_valid": true,
       "case_identity": "fee2a0fd1b005af2d2926f1955e6bb8f2b0290964e1db38438255916ce9875ca",
       "warnings": [],
-      "reason_codes": [
-        "coverage_not_complete"
-      ],
+      "reason_codes": ["coverage_not_complete"],
       "diagnostic_notes": [
         "The recorded static coverage is incomplete.",
         "Static-analysis warnings were recorded. Run a pinned inspection for full diagnostics."
@@ -915,9 +946,7 @@
       "service_contract_valid": true,
       "case_identity": "eaa4dc21fa5ff0935ca61221745ad0394496fb264d8dde12b9ae445aa32a5060",
       "warnings": [],
-      "reason_codes": [
-        "coverage_not_complete"
-      ],
+      "reason_codes": ["coverage_not_complete"],
       "diagnostic_notes": [
         "The recorded static coverage is incomplete.",
         "Static-analysis warnings were recorded. Run a pinned inspection for full diagnostics."
@@ -954,9 +983,7 @@
       "service_contract_valid": true,
       "case_identity": "94caf89dbe01970d4d8023156d3fed8491b6e5cb9fd1dc9498db77dbd5c7ea94",
       "warnings": [],
-      "reason_codes": [
-        "coverage_not_complete"
-      ],
+      "reason_codes": ["coverage_not_complete"],
       "diagnostic_notes": [
         "The recorded static coverage is incomplete.",
         "Static-analysis warnings were recorded. Run a pinned inspection for full diagnostics."
@@ -993,9 +1020,7 @@
       "service_contract_valid": true,
       "case_identity": "56973701184f8846b5ad6ab751bb909636702e597b4d65e02f992dabf66378c9",
       "warnings": [],
-      "reason_codes": [
-        "coverage_not_complete"
-      ],
+      "reason_codes": ["coverage_not_complete"],
       "diagnostic_notes": [
         "The recorded static coverage is incomplete.",
         "Static-analysis warnings were recorded. Run a pinned inspection for full diagnostics."
@@ -1032,9 +1057,7 @@
       "service_contract_valid": true,
       "case_identity": "1d6b57646241cb3511debcdf034fea74b294364315d4655a49c85e77ed6245a2",
       "warnings": [],
-      "reason_codes": [
-        "coverage_not_complete"
-      ],
+      "reason_codes": ["coverage_not_complete"],
       "diagnostic_notes": [
         "The recorded static coverage is incomplete.",
         "Static-analysis warnings were recorded. Run a pinned inspection for full diagnostics."
@@ -1111,9 +1134,7 @@
       "service_contract_valid": true,
       "case_identity": "a8ef97d4d1f2f1c0f43a1482e6a6b5fac4f39ccea453bd4dda425c38ebc11648",
       "warnings": [],
-      "reason_codes": [
-        "coverage_not_complete"
-      ],
+      "reason_codes": ["coverage_not_complete"],
       "diagnostic_notes": [
         "The recorded static coverage is incomplete.",
         "Static-analysis warnings were recorded. Run a pinned inspection for full diagnostics."
@@ -1186,9 +1207,7 @@
       "service_contract_valid": true,
       "case_identity": "e21d239f581a61a99d03dd3d70abf9baa03b5b62a1af4e2bf5e884f4e152d337",
       "warnings": [],
-      "reason_codes": [
-        "coverage_not_complete"
-      ],
+      "reason_codes": ["coverage_not_complete"],
       "diagnostic_notes": [
         "The recorded static coverage is incomplete.",
         "Static-analysis warnings were recorded. Run a pinned inspection for full diagnostics."
@@ -1225,9 +1244,7 @@
       "service_contract_valid": true,
       "case_identity": "1c6ab1751ae5de708aaaea45156ce122cdde88ecb3ad7c3c926d6266aa1d5cf6",
       "warnings": [],
-      "reason_codes": [
-        "coverage_not_complete"
-      ],
+      "reason_codes": ["coverage_not_complete"],
       "diagnostic_notes": [
         "The recorded static coverage is incomplete.",
         "Static-analysis warnings were recorded. Run a pinned inspection for full diagnostics."
@@ -1242,27 +1259,27 @@
       "revision": "86b5e0934494bd15c9632b12f734a8a67f723594",
       "status": "partial",
       "architecture": "BertForMaskedLM",
-      "engine_version": "2026.10.20.1",
-      "started_at": "2026-10-19T23:17:18.402541+00:00",
-      "finished_at": "2026-10-19T23:17:33.094298+00:00",
-      "warning_count": 5,
+      "engine_version": "2026.10.20.3",
+      "started_at": "2026-10-20T12:18:18.829111+00:00",
+      "finished_at": "2026-10-20T12:18:31.538580+00:00",
+      "warning_count": 4,
       "graph_count": 15,
       "node_count": 83,
       "tensor_count": 206,
       "parameter_counts": {
-        "checkpoint_tensor_elements": 110106428,
+        "unique": 109514298,
         "logical": 132985716,
-        "unique": 109514298
+        "checkpoint_tensor_elements": 110106428
       },
       "coverage": {
-        "checkpoint_parameter_coverage": 1.0,
-        "module_semantic_coverage": 1.0,
         "semantic_coverage": 1.0,
+        "module_semantic_coverage": 1.0,
+        "checkpoint_parameter_coverage": 1.0,
         "tensor_shape_coverage": 1.0
       },
-      "wall_seconds": 14.692,
+      "wall_seconds": 12.708,
       "service_contract_valid": true,
-      "case_identity": "42fd99009f6fa9d22add8c68490767fa530abe47a618493e20b055fdb29cb780",
+      "case_identity": "3c516bdc8b3e74f5216ffc7f7d7a094437e2c11c2579b0055aaf82fa704f5125",
       "warnings": [],
       "reason_codes": [],
       "diagnostic_notes": [
@@ -1270,7 +1287,15 @@
       ],
       "reference": null,
       "declared_task": "fill-mask",
-      "run_kind": "baseline"
+      "previous_observations": [
+        {
+          "status": "partial",
+          "engine_version": "2026.10.20.1",
+          "finished_at": "2026-10-19T23:17:33.094298+00:00",
+          "case_identity": "42fd99009f6fa9d22add8c68490767fa530abe47a618493e20b055fdb29cb780"
+        }
+      ],
+      "run_kind": "recheck"
     },
     {
       "model_id": "distilbert/distilbert-base-uncased-finetuned-sst-2-english",
@@ -1300,9 +1325,7 @@
       "service_contract_valid": true,
       "case_identity": "983e184f7cab5a2790510b626d1efc9294e3c27ca80317d9498c2d999f69759b",
       "warnings": [],
-      "reason_codes": [
-        "coverage_not_complete"
-      ],
+      "reason_codes": ["coverage_not_complete"],
       "diagnostic_notes": [
         "The recorded static coverage is incomplete.",
         "Static-analysis warnings were recorded. Run a pinned inspection for full diagnostics."
@@ -1375,9 +1398,7 @@
       "service_contract_valid": true,
       "case_identity": "729838e698aa455bb28dd65fbe0d657afe0e472a81e81604272b0fdd23a876d1",
       "warnings": [],
-      "reason_codes": [
-        "coverage_not_complete"
-      ],
+      "reason_codes": ["coverage_not_complete"],
       "diagnostic_notes": [
         "The recorded static coverage is incomplete.",
         "Static-analysis warnings were recorded. Run a pinned inspection for full diagnostics."
@@ -1414,10 +1435,7 @@
       "service_contract_valid": true,
       "case_identity": "aedba8087f36125c8865488ec796d510aad7998b56fc3a980e2297283b46a2c3",
       "warnings": [],
-      "reason_codes": [
-        "safetensors_unavailable",
-        "coverage_not_complete"
-      ],
+      "reason_codes": ["safetensors_unavailable", "coverage_not_complete"],
       "diagnostic_notes": [
         "This repository has no Safetensors checkpoint. Only the pinned repository file inventory is available; no architecture graph was inferred.",
         "The recorded static coverage is incomplete."
@@ -1432,27 +1450,27 @@
       "revision": "e2da8e2f811d1448a5b465c236feacd80ffbac7b",
       "status": "partial",
       "architecture": "RobertaForMaskedLM",
-      "engine_version": "2026.10.20.1",
-      "started_at": "2026-10-19T23:19:23.586565+00:00",
-      "finished_at": "2026-10-19T23:19:44.283411+00:00",
-      "warning_count": 6,
+      "engine_version": "2026.10.20.3",
+      "started_at": "2026-10-20T12:18:31.539624+00:00",
+      "finished_at": "2026-10-20T12:18:43.368688+00:00",
+      "warning_count": 5,
       "graph_count": 13,
       "node_count": 76,
       "tensor_count": 203,
       "parameter_counts": {
-        "checkpoint_tensor_elements": 124697947,
+        "unique": 124697433,
         "logical": 163351218,
-        "unique": 124697433
+        "checkpoint_tensor_elements": 124697947
       },
       "coverage": {
-        "checkpoint_parameter_coverage": 1.0,
-        "module_semantic_coverage": 1.0,
         "semantic_coverage": 1.0,
+        "module_semantic_coverage": 1.0,
+        "checkpoint_parameter_coverage": 1.0,
         "tensor_shape_coverage": 1.0
       },
-      "wall_seconds": 20.695,
+      "wall_seconds": 11.829,
       "service_contract_valid": true,
-      "case_identity": "2570c2d2379602ac404ca11c141843586d4c3d2a7d381179e32bc536c1a0be65",
+      "case_identity": "d0c118a096eb0bf589fd4c310d574567ed2991810218d9d9b52c89a757c79360",
       "warnings": [],
       "reason_codes": [],
       "diagnostic_notes": [
@@ -1460,7 +1478,15 @@
       ],
       "reference": null,
       "declared_task": "fill-mask",
-      "run_kind": "baseline"
+      "previous_observations": [
+        {
+          "status": "partial",
+          "engine_version": "2026.10.20.1",
+          "finished_at": "2026-10-19T23:19:44.283411+00:00",
+          "case_identity": "2570c2d2379602ac404ca11c141843586d4c3d2a7d381179e32bc536c1a0be65"
+        }
+      ],
+      "run_kind": "recheck"
     },
     {
       "model_id": "google-t5/t5-small",
@@ -1468,27 +1494,27 @@
       "revision": "df1b051c49625cf57a3d0d8d3863ed4d13564fe4",
       "status": "partial",
       "architecture": "T5ForConditionalGeneration",
-      "engine_version": "2026.10.20.1",
-      "started_at": "2026-10-19T23:19:44.286418+00:00",
-      "finished_at": "2026-10-19T23:20:03.012836+00:00",
+      "engine_version": "2026.10.20.3",
+      "started_at": "2026-10-20T12:18:43.370675+00:00",
+      "finished_at": "2026-10-20T12:18:55.183109+00:00",
       "warning_count": 25,
       "graph_count": 41,
       "node_count": 305,
       "tensor_count": 132,
       "parameter_counts": {
-        "checkpoint_tensor_elements": 60506880,
+        "unique": 60506624,
         "logical": 109855232,
-        "unique": 60506624
+        "checkpoint_tensor_elements": 60506880
       },
       "coverage": {
-        "checkpoint_parameter_coverage": 1.0,
-        "module_semantic_coverage": 1.0,
         "semantic_coverage": 1.0,
+        "module_semantic_coverage": 1.0,
+        "checkpoint_parameter_coverage": 1.0,
         "tensor_shape_coverage": 1.0
       },
-      "wall_seconds": 18.726,
+      "wall_seconds": 11.812,
       "service_contract_valid": true,
-      "case_identity": "35a49be9d7f4d6066e6a0c09773ce7a7f51b4baccda6039df203cd0ca9ba3062",
+      "case_identity": "f437ffdad139a7ff7da5ed839a798d63b1c890aabb8766af29c2ca4e89c8ec69",
       "warnings": [],
       "reason_codes": [],
       "diagnostic_notes": [
@@ -1496,7 +1522,15 @@
       ],
       "reference": null,
       "declared_task": "translation",
-      "run_kind": "baseline"
+      "previous_observations": [
+        {
+          "status": "partial",
+          "engine_version": "2026.10.20.1",
+          "finished_at": "2026-10-19T23:20:03.012836+00:00",
+          "case_identity": "35a49be9d7f4d6066e6a0c09773ce7a7f51b4baccda6039df203cd0ca9ba3062"
+        }
+      ],
+      "run_kind": "recheck"
     },
     {
       "model_id": "google/flan-t5-small",
@@ -1504,27 +1538,27 @@
       "revision": "0fc9ddf78a1e988dac52e2dac162b0ede4fd74ab",
       "status": "partial",
       "architecture": "T5ForConditionalGeneration",
-      "engine_version": "2026.10.20.1",
-      "started_at": "2026-10-19T23:20:03.240577+00:00",
-      "finished_at": "2026-10-19T23:20:35.225751+00:00",
+      "engine_version": "2026.10.20.3",
+      "started_at": "2026-10-20T12:18:55.185107+00:00",
+      "finished_at": "2026-10-20T12:19:10.526935+00:00",
       "warning_count": 25,
       "graph_count": 41,
       "node_count": 312,
       "tensor_count": 190,
       "parameter_counts": {
-        "checkpoint_tensor_elements": 76961152,
+        "unique": 76961152,
         "logical": 109860224,
-        "unique": 76961152
+        "checkpoint_tensor_elements": 76961152
       },
       "coverage": {
-        "checkpoint_parameter_coverage": 1.0,
-        "module_semantic_coverage": 1.0,
         "semantic_coverage": 1.0,
+        "module_semantic_coverage": 1.0,
+        "checkpoint_parameter_coverage": 1.0,
         "tensor_shape_coverage": 1.0
       },
-      "wall_seconds": 31.983,
+      "wall_seconds": 15.341,
       "service_contract_valid": true,
-      "case_identity": "244997b9f665db3765b3c88bb7a58bad99f930b4bc01c6588e95c2f7efcd1dcb",
+      "case_identity": "ed5fb94f339f3d27fb96ff97a6041d9688b497d302a992024282ea6c9b7a1dfd",
       "warnings": [],
       "reason_codes": [],
       "diagnostic_notes": [
@@ -1532,7 +1566,15 @@
       ],
       "reference": null,
       "declared_task": null,
-      "run_kind": "baseline"
+      "previous_observations": [
+        {
+          "status": "partial",
+          "engine_version": "2026.10.20.1",
+          "finished_at": "2026-10-19T23:20:35.225751+00:00",
+          "case_identity": "244997b9f665db3765b3c88bb7a58bad99f930b4bc01c6588e95c2f7efcd1dcb"
+        }
+      ],
+      "run_kind": "recheck"
     },
     {
       "model_id": "google/flan-t5-base",
@@ -1598,10 +1640,7 @@
       "service_contract_valid": true,
       "case_identity": "fade720f6cec230ab29943fb111133e1760f4689bec5824869b2de12e90d3afd",
       "warnings": [],
-      "reason_codes": [
-        "safetensors_unavailable",
-        "coverage_not_complete"
-      ],
+      "reason_codes": ["safetensors_unavailable", "coverage_not_complete"],
       "diagnostic_notes": [
         "This repository has no Safetensors checkpoint. Only the pinned repository file inventory is available; no architecture graph was inferred.",
         "The recorded static coverage is incomplete."
@@ -1674,10 +1713,7 @@
       "service_contract_valid": true,
       "case_identity": "cc2f7268a04b32043a188e31cb13db97a7c6e50bf7b885bcf0964dac98f914ff",
       "warnings": [],
-      "reason_codes": [
-        "safetensors_unavailable",
-        "coverage_not_complete"
-      ],
+      "reason_codes": ["safetensors_unavailable", "coverage_not_complete"],
       "diagnostic_notes": [
         "This repository has no Safetensors checkpoint. Only the pinned repository file inventory is available; no architecture graph was inferred.",
         "The recorded static coverage is incomplete."
@@ -1750,10 +1786,7 @@
       "service_contract_valid": true,
       "case_identity": "e81a3a06f0db3afaff5273c087fa434588ca799a38f71dd602074fdaeecd7bad",
       "warnings": [],
-      "reason_codes": [
-        "safetensors_unavailable",
-        "coverage_not_complete"
-      ],
+      "reason_codes": ["safetensors_unavailable", "coverage_not_complete"],
       "diagnostic_notes": [
         "This repository has no Safetensors checkpoint. Only the pinned repository file inventory is available; no architecture graph was inferred.",
         "The recorded static coverage is incomplete."
@@ -1790,10 +1823,7 @@
       "service_contract_valid": true,
       "case_identity": "9eeccc10846c569d7688f30c8e89c2f8db360e4fb0e797d2688740dcc2b62548",
       "warnings": [],
-      "reason_codes": [
-        "safetensors_unavailable",
-        "coverage_not_complete"
-      ],
+      "reason_codes": ["safetensors_unavailable", "coverage_not_complete"],
       "diagnostic_notes": [
         "This repository has no Safetensors checkpoint. Only the pinned repository file inventory is available; no architecture graph was inferred.",
         "The recorded static coverage is incomplete."
@@ -1830,10 +1860,7 @@
       "service_contract_valid": true,
       "case_identity": "38755829ab9b52f1a114f635bce5b5d2e4a544a05a57e2ea9b21d1747e544dce",
       "warnings": [],
-      "reason_codes": [
-        "safetensors_unavailable",
-        "coverage_not_complete"
-      ],
+      "reason_codes": ["safetensors_unavailable", "coverage_not_complete"],
       "diagnostic_notes": [
         "This repository has no Safetensors checkpoint. Only the pinned repository file inventory is available; no architecture graph was inferred.",
         "The recorded static coverage is incomplete."
@@ -1848,33 +1875,41 @@
       "revision": "3f49326eb077187dfe1c2a2bb15fbd74e6ab91e3",
       "status": "completed",
       "architecture": "ViTForImageClassification",
-      "engine_version": "2026.10.20.1",
-      "started_at": "2026-10-19T23:22:39.364336+00:00",
-      "finished_at": "2026-10-19T23:22:54.677248+00:00",
+      "engine_version": "2026.10.20.3",
+      "started_at": "2026-10-20T12:19:10.538577+00:00",
+      "finished_at": "2026-10-20T12:19:26.889049+00:00",
       "warning_count": 0,
       "graph_count": 13,
       "node_count": 75,
       "tensor_count": 200,
       "parameter_counts": {
-        "checkpoint_tensor_elements": 86567656,
+        "unique": 86567656,
         "logical": 86567656,
-        "unique": 86567656
+        "checkpoint_tensor_elements": 86567656
       },
       "coverage": {
-        "checkpoint_parameter_coverage": 1.0,
-        "module_semantic_coverage": 1.0,
         "semantic_coverage": 1.0,
+        "module_semantic_coverage": 1.0,
+        "checkpoint_parameter_coverage": 1.0,
         "tensor_shape_coverage": 1.0
       },
-      "wall_seconds": 15.312,
+      "wall_seconds": 16.348,
       "service_contract_valid": true,
-      "case_identity": "d74a9b4f81be489aabe0dadb03eca8a0d881167955a0a12726b164f4035144ed",
+      "case_identity": "8d4a5f7a60d104cc7ed52384f888ed3991464af9bdd5c6a0764fd8e034523302",
       "warnings": [],
       "reason_codes": [],
       "diagnostic_notes": [],
       "reference": null,
       "declared_task": "image-classification",
-      "run_kind": "baseline"
+      "previous_observations": [
+        {
+          "status": "completed",
+          "engine_version": "2026.10.20.1",
+          "finished_at": "2026-10-19T23:22:54.677248+00:00",
+          "case_identity": "d74a9b4f81be489aabe0dadb03eca8a0d881167955a0a12726b164f4035144ed"
+        }
+      ],
+      "run_kind": "recheck"
     },
     {
       "model_id": "timm/mobilenetv3_small_100.lamb_in1k",
@@ -1944,12 +1979,8 @@
       "service_contract_valid": true,
       "case_identity": "d0ed1286ab9de67dcc07b72137786fee7a88663c2234c27066f47802bb4bc437",
       "warnings": [],
-      "reason_codes": [
-        "coverage_not_complete"
-      ],
-      "diagnostic_notes": [
-        "The recorded static coverage is incomplete."
-      ],
+      "reason_codes": ["coverage_not_complete"],
+      "diagnostic_notes": ["The recorded static coverage is incomplete."],
       "reference": null,
       "declared_task": "image-classification",
       "run_kind": "baseline"
@@ -1982,10 +2013,7 @@
       "service_contract_valid": true,
       "case_identity": "1218b782745a6226f52c2323a854538bc386c699d1ce059c30b02560b39135e7",
       "warnings": [],
-      "reason_codes": [
-        "safetensors_unavailable",
-        "coverage_not_complete"
-      ],
+      "reason_codes": ["safetensors_unavailable", "coverage_not_complete"],
       "diagnostic_notes": [
         "This repository has no Safetensors checkpoint. Only the pinned repository file inventory is available; no architecture graph was inferred.",
         "The recorded static coverage is incomplete."
@@ -2022,12 +2050,8 @@
       "service_contract_valid": true,
       "case_identity": "d7c57113302382f20555247ec0adbb1ee9882ce3a545b7a7db0ddba84b008cf7",
       "warnings": [],
-      "reason_codes": [
-        "coverage_not_complete"
-      ],
-      "diagnostic_notes": [
-        "The recorded static coverage is incomplete."
-      ],
+      "reason_codes": ["coverage_not_complete"],
+      "diagnostic_notes": ["The recorded static coverage is incomplete."],
       "reference": null,
       "declared_task": "image-feature-extraction",
       "run_kind": "baseline"
@@ -2060,9 +2084,7 @@
       "service_contract_valid": true,
       "case_identity": "9372143fa9a37ba9f8953f5aa59784d5b623286f50706b1b6415923700c34c78",
       "warnings": [],
-      "reason_codes": [
-        "coverage_not_complete"
-      ],
+      "reason_codes": ["coverage_not_complete"],
       "diagnostic_notes": [
         "The recorded static coverage is incomplete.",
         "Static-analysis warnings were recorded. Run a pinned inspection for full diagnostics."
@@ -2099,10 +2121,7 @@
       "service_contract_valid": true,
       "case_identity": "5ddc1946bddb22e4cc5b29dfb6c5e59b1e73f434e9f735a7d7bf78637065fda2",
       "warnings": [],
-      "reason_codes": [
-        "safetensors_unavailable",
-        "coverage_not_complete"
-      ],
+      "reason_codes": ["safetensors_unavailable", "coverage_not_complete"],
       "diagnostic_notes": [
         "This repository has no Safetensors checkpoint. Only the pinned repository file inventory is available; no architecture graph was inferred.",
         "The recorded static coverage is incomplete."
@@ -2179,9 +2198,7 @@
       "service_contract_valid": true,
       "case_identity": "63d8dc473dc7daf245514c84316a55d9873afefe097eacc75075d3923cb9effe",
       "warnings": [],
-      "reason_codes": [
-        "coverage_not_complete"
-      ],
+      "reason_codes": ["coverage_not_complete"],
       "diagnostic_notes": [
         "The recorded static coverage is incomplete.",
         "Static-analysis warnings were recorded. Run a pinned inspection for full diagnostics."
@@ -2276,31 +2293,29 @@
       "revision": "489d5cd81a0b59fab9b7ea758d3548ebe99677da",
       "status": "partial",
       "architecture": "SegformerForSemanticSegmentation",
-      "engine_version": "2026.10.20.2",
-      "started_at": "2026-10-20T00:24:06.717318+00:00",
-      "finished_at": "2026-10-20T00:24:59.846829+00:00",
+      "engine_version": "2026.10.20.3",
+      "started_at": "2026-10-20T12:19:26.926722+00:00",
+      "finished_at": "2026-10-20T12:19:46.857868+00:00",
       "warning_count": 2,
       "graph_count": 55,
       "node_count": 334,
       "tensor_count": 208,
       "parameter_counts": {
-        "checkpoint_tensor_elements": 3753207,
+        "unique": 3752694,
         "logical": 3752694,
-        "unique": 3752694
+        "checkpoint_tensor_elements": 3753207
       },
       "coverage": {
-        "checkpoint_parameter_coverage": 1.0,
-        "module_semantic_coverage": 0.7934272300469484,
         "semantic_coverage": 0.8722466960352423,
+        "module_semantic_coverage": 0.7934272300469484,
+        "checkpoint_parameter_coverage": 1.0,
         "tensor_shape_coverage": 0.49056603773584906
       },
-      "wall_seconds": 53.127,
+      "wall_seconds": 19.927,
       "service_contract_valid": true,
-      "case_identity": "5fc6eb6b8b7681385254ba0110b211873c4e38b4a3543e3870d9b735b96e7483",
+      "case_identity": "f3a9bbeac44c784f57c752f5d4f0050bb20d0eb2ddca89799e56949a800c75c1",
       "warnings": [],
-      "reason_codes": [
-        "coverage_not_complete"
-      ],
+      "reason_codes": ["coverage_not_complete"],
       "diagnostic_notes": [
         "The recorded static coverage is incomplete.",
         "Static-analysis warnings were recorded. Run a pinned inspection for full diagnostics."
@@ -2313,6 +2328,12 @@
           "engine_version": "2026.10.20.1",
           "finished_at": "2026-10-19T23:25:13.224566+00:00",
           "case_identity": "c83891ee9167644570f0e844679c3983186c250cb68c396b20994ea8a5c97b21"
+        },
+        {
+          "status": "partial",
+          "engine_version": "2026.10.20.2",
+          "finished_at": "2026-10-20T00:24:59.846829+00:00",
+          "case_identity": "5fc6eb6b8b7681385254ba0110b211873c4e38b4a3543e3870d9b735b96e7483"
         }
       ],
       "run_kind": "recheck"
@@ -2345,10 +2366,7 @@
       "service_contract_valid": true,
       "case_identity": "c5c0ba1ac3edb9258c0631223dfe8369eaf3c29ac5fc9cb7bf46b56fed0abdea",
       "warnings": [],
-      "reason_codes": [
-        "safetensors_unavailable",
-        "coverage_not_complete"
-      ],
+      "reason_codes": ["safetensors_unavailable", "coverage_not_complete"],
       "diagnostic_notes": [
         "This repository has no Safetensors checkpoint. Only the pinned repository file inventory is available; no architecture graph was inferred.",
         "The recorded static coverage is incomplete."
@@ -2465,9 +2483,7 @@
       "service_contract_valid": true,
       "case_identity": "bc04d214898492dbdf4e0abdaf36fa43a94c89ed368f6b80c8549060ffe0042c",
       "warnings": [],
-      "reason_codes": [
-        "coverage_not_complete"
-      ],
+      "reason_codes": ["coverage_not_complete"],
       "diagnostic_notes": [
         "The recorded static coverage is incomplete.",
         "Static-analysis warnings were recorded. Run a pinned inspection for full diagnostics."
@@ -2504,10 +2520,7 @@
       "service_contract_valid": true,
       "case_identity": "befc6cda9f8c0081d798f74ecb45efc0acb35d3e7de65e498ca91b49b6a90688",
       "warnings": [],
-      "reason_codes": [
-        "safetensors_unavailable",
-        "coverage_not_complete"
-      ],
+      "reason_codes": ["safetensors_unavailable", "coverage_not_complete"],
       "diagnostic_notes": [
         "This repository has no Safetensors checkpoint. Only the pinned repository file inventory is available; no architecture graph was inferred.",
         "The recorded static coverage is incomplete."
@@ -2544,9 +2557,7 @@
       "service_contract_valid": true,
       "case_identity": "2995965279e47c0cfa383ffa1663b830cfdb5a686dc278cf5c7fd7ceb99582e9",
       "warnings": [],
-      "reason_codes": [
-        "coverage_not_complete"
-      ],
+      "reason_codes": ["coverage_not_complete"],
       "diagnostic_notes": [
         "The recorded static coverage is incomplete.",
         "Static-analysis warnings were recorded. Run a pinned inspection for full diagnostics."
@@ -2583,10 +2594,7 @@
       "service_contract_valid": true,
       "case_identity": "7a2644788df1a231093efc97f1f50eeffc840345fd99c3abe44218ba6dd9d37e",
       "warnings": [],
-      "reason_codes": [
-        "safetensors_unavailable",
-        "coverage_not_complete"
-      ],
+      "reason_codes": ["safetensors_unavailable", "coverage_not_complete"],
       "diagnostic_notes": [
         "This repository has no Safetensors checkpoint. Only the pinned repository file inventory is available; no architecture graph was inferred.",
         "The recorded static coverage is incomplete."
@@ -2631,9 +2639,7 @@
       "service_contract_valid": true,
       "case_identity": "d1aee2fda2711f1d1d0169bb0410e08d070aab2ef82fd751c8220c92f43fb3c5",
       "warnings": [],
-      "reason_codes": [
-        "coverage_not_complete"
-      ],
+      "reason_codes": ["coverage_not_complete"],
       "diagnostic_notes": [
         "The recorded static coverage is incomplete.",
         "Static-analysis warnings were recorded. Run a pinned inspection for full diagnostics."
@@ -2670,10 +2676,7 @@
       "service_contract_valid": true,
       "case_identity": "ac89d77d0bb12935866f34e15db4ef783a0cbe4cdecc1b9e17c774e3170f8214",
       "warnings": [],
-      "reason_codes": [
-        "safetensors_unavailable",
-        "coverage_not_complete"
-      ],
+      "reason_codes": ["safetensors_unavailable", "coverage_not_complete"],
       "diagnostic_notes": [
         "This repository has no Safetensors checkpoint. Only the pinned repository file inventory is available; no architecture graph was inferred.",
         "The recorded static coverage is incomplete."
@@ -2710,9 +2713,7 @@
       "service_contract_valid": true,
       "case_identity": "304bcbc45797e16883c4d1625d174e3c26b153c4e50e6de7cff450e9c672e731",
       "warnings": [],
-      "reason_codes": [
-        "coverage_not_complete"
-      ],
+      "reason_codes": ["coverage_not_complete"],
       "diagnostic_notes": [
         "The recorded static coverage is incomplete.",
         "Static-analysis warnings were recorded. Run a pinned inspection for full diagnostics."
@@ -2749,10 +2750,7 @@
       "service_contract_valid": true,
       "case_identity": "27a2df3a87152666f8677d4a9c26d90497bd3f5354cf1def7ab2d7911ca3ed57",
       "warnings": [],
-      "reason_codes": [
-        "safetensors_unavailable",
-        "coverage_not_complete"
-      ],
+      "reason_codes": ["safetensors_unavailable", "coverage_not_complete"],
       "diagnostic_notes": [
         "This repository has no Safetensors checkpoint. Only the pinned repository file inventory is available; no architecture graph was inferred.",
         "The recorded static coverage is incomplete."
@@ -2789,9 +2787,7 @@
       "service_contract_valid": true,
       "case_identity": "de42c676824c9b383371eef7a90ae480517a79f23d6ff766cb6819562df5b2d5",
       "warnings": [],
-      "reason_codes": [
-        "coverage_not_complete"
-      ],
+      "reason_codes": ["coverage_not_complete"],
       "diagnostic_notes": [
         "The recorded static coverage is incomplete.",
         "Static-analysis warnings were recorded. Run a pinned inspection for full diagnostics."
@@ -2828,9 +2824,7 @@
       "service_contract_valid": true,
       "case_identity": "edda38c2ab994da1e9750563c549a4ec415deb36ad56dc1058011533e83c8dc0",
       "warnings": [],
-      "reason_codes": [
-        "coverage_not_complete"
-      ],
+      "reason_codes": ["coverage_not_complete"],
       "diagnostic_notes": [
         "The recorded static coverage is incomplete.",
         "Static-analysis warnings were recorded. Run a pinned inspection for full diagnostics."
@@ -2867,9 +2861,7 @@
       "service_contract_valid": true,
       "case_identity": "3c2b6709357181cbe4f0c483e9354acc3c6a695bf5730349f65f617752928acd",
       "warnings": [],
-      "reason_codes": [
-        "coverage_not_complete"
-      ],
+      "reason_codes": ["coverage_not_complete"],
       "diagnostic_notes": [
         "The recorded static coverage is incomplete.",
         "Static-analysis warnings were recorded. Run a pinned inspection for full diagnostics."
@@ -2906,10 +2898,7 @@
       "service_contract_valid": true,
       "case_identity": "da0d967d782e278502ae7c959d108084575a48aa71304b6df9ebefc53a37e5b1",
       "warnings": [],
-      "reason_codes": [
-        "safetensors_unavailable",
-        "coverage_not_complete"
-      ],
+      "reason_codes": ["safetensors_unavailable", "coverage_not_complete"],
       "diagnostic_notes": [
         "This repository has no Safetensors checkpoint. Only the pinned repository file inventory is available; no architecture graph was inferred.",
         "The recorded static coverage is incomplete."
@@ -2946,9 +2935,7 @@
       "service_contract_valid": true,
       "case_identity": "9ce75a8747862575654ea60e34bed27551564a4b1dafc7041ef1138ef9dc85bc",
       "warnings": [],
-      "reason_codes": [
-        "coverage_not_complete"
-      ],
+      "reason_codes": ["coverage_not_complete"],
       "diagnostic_notes": [
         "The recorded static coverage is incomplete.",
         "Static-analysis warnings were recorded. Run a pinned inspection for full diagnostics."
@@ -2963,38 +2950,44 @@
       "revision": "dc740ceda42fce44faed2ea03c6d447db72f6af9",
       "status": "partial",
       "architecture": "VideoMAEForPreTraining",
-      "engine_version": "2026.10.20.1",
-      "started_at": "2026-10-19T23:28:43.150973+00:00",
-      "finished_at": "2026-10-19T23:29:02.401439+00:00",
+      "engine_version": "2026.10.20.3",
+      "started_at": "2026-10-20T12:19:46.860392+00:00",
+      "finished_at": "2026-10-20T12:20:12.110980+00:00",
       "warning_count": 6,
       "graph_count": 22,
       "node_count": 127,
       "tensor_count": 250,
       "parameter_counts": {
-        "checkpoint_tensor_elements": 94210944,
+        "unique": 94210944,
         "logical": 94210944,
-        "unique": 94210944
+        "checkpoint_tensor_elements": 94210944
       },
       "coverage": {
-        "checkpoint_parameter_coverage": 1.0,
-        "module_semantic_coverage": 0.887719298245614,
         "semantic_coverage": 0.95,
+        "module_semantic_coverage": 0.887719298245614,
+        "checkpoint_parameter_coverage": 1.0,
         "tensor_shape_coverage": 0.8992248062015504
       },
-      "wall_seconds": 19.25,
+      "wall_seconds": 25.249,
       "service_contract_valid": true,
-      "case_identity": "b7cc08810d821cc9d1a0902aea22bd46f7c814e6070469c3a863d6e7b4e52a08",
+      "case_identity": "aecae67553f68f5b2674bac4d1b946b938a2339cd51d0adf074b230e94eff99c",
       "warnings": [],
-      "reason_codes": [
-        "coverage_not_complete"
-      ],
+      "reason_codes": ["coverage_not_complete"],
       "diagnostic_notes": [
         "The recorded static coverage is incomplete.",
         "Static-analysis warnings were recorded. Run a pinned inspection for full diagnostics."
       ],
       "reference": null,
       "declared_task": "video-classification",
-      "run_kind": "baseline"
+      "previous_observations": [
+        {
+          "status": "partial",
+          "engine_version": "2026.10.20.1",
+          "finished_at": "2026-10-19T23:29:02.401439+00:00",
+          "case_identity": "b7cc08810d821cc9d1a0902aea22bd46f7c814e6070469c3a863d6e7b4e52a08"
+        }
+      ],
+      "run_kind": "recheck"
     },
     {
       "model_id": "facebook/timesformer-base-finetuned-k400",
@@ -3024,10 +3017,7 @@
       "service_contract_valid": true,
       "case_identity": "4d765a72522a95b5a93e5f7c4f08f2225e3e95d68554958360b16e73c59c3d12",
       "warnings": [],
-      "reason_codes": [
-        "safetensors_unavailable",
-        "coverage_not_complete"
-      ],
+      "reason_codes": ["safetensors_unavailable", "coverage_not_complete"],
       "diagnostic_notes": [
         "This repository has no Safetensors checkpoint. Only the pinned repository file inventory is available; no architecture graph was inferred.",
         "The recorded static coverage is incomplete."
@@ -3042,27 +3032,27 @@
       "revision": "a2e27a78a2b5d802e894b8a1ef14f3a8ce490963",
       "status": "inspected",
       "architecture": null,
-      "engine_version": "2026.10.20.1",
-      "started_at": "2026-10-19T23:29:12.934083+00:00",
-      "finished_at": "2026-10-19T23:29:26.359805+00:00",
+      "engine_version": "2026.10.20.3",
+      "started_at": "2026-10-20T12:20:12.113002+00:00",
+      "finished_at": "2026-10-20T12:20:29.269518+00:00",
       "warning_count": 0,
       "graph_count": 0,
       "node_count": 0,
       "tensor_count": 593,
       "parameter_counts": {
-        "checkpoint_tensor_elements": 196585856,
+        "unique": null,
         "logical": null,
-        "unique": null
+        "checkpoint_tensor_elements": 196585856
       },
       "coverage": {
-        "checkpoint_parameter_coverage": null,
-        "module_semantic_coverage": null,
         "semantic_coverage": null,
+        "module_semantic_coverage": null,
+        "checkpoint_parameter_coverage": null,
         "tensor_shape_coverage": null
       },
-      "wall_seconds": 13.424,
+      "wall_seconds": 17.156,
       "service_contract_valid": true,
-      "case_identity": "49b4c28729897ebf76cdf6f5f1f5998eb306169a8b74fc9e193ee01b2937cce9",
+      "case_identity": "2580d8f250a69da6af65e25c5ae1a195d6a1c888a01e3c43c8d5f8d50105fa2f",
       "warnings": [],
       "reason_codes": [
         "native_architecture_unavailable",
@@ -3074,7 +3064,15 @@
       ],
       "reference": null,
       "declared_task": "video-classification",
-      "run_kind": "baseline"
+      "previous_observations": [
+        {
+          "status": "inspected",
+          "engine_version": "2026.10.20.1",
+          "finished_at": "2026-10-19T23:29:26.359805+00:00",
+          "case_identity": "49b4c28729897ebf76cdf6f5f1f5998eb306169a8b74fc9e193ee01b2937cce9"
+        }
+      ],
+      "run_kind": "recheck"
     },
     {
       "model_id": "openai/whisper-tiny",
@@ -3082,38 +3080,44 @@
       "revision": "169d4a4341b33bc18d8881c4b69c2e104e1cc0af",
       "status": "partial",
       "architecture": "WhisperForConditionalGeneration",
-      "engine_version": "2026.10.20.1",
-      "started_at": "2026-10-19T23:29:26.360805+00:00",
-      "finished_at": "2026-10-19T23:29:39.947573+00:00",
-      "warning_count": 9,
+      "engine_version": "2026.10.20.3",
+      "started_at": "2026-10-20T12:20:29.270519+00:00",
+      "finished_at": "2026-10-20T12:21:11.131956+00:00",
+      "warning_count": 4,
       "graph_count": 12,
-      "node_count": 94,
+      "node_count": 104,
       "tensor_count": 167,
       "parameter_counts": {
-        "checkpoint_tensor_elements": 37760640,
+        "unique": 37760640,
         "logical": 57676800,
-        "unique": 37760640
+        "checkpoint_tensor_elements": 37760640
       },
       "coverage": {
-        "checkpoint_parameter_coverage": 1.0,
-        "module_semantic_coverage": 1.0,
         "semantic_coverage": 1.0,
-        "tensor_shape_coverage": 0.9619047619047619
+        "module_semantic_coverage": 1.0,
+        "checkpoint_parameter_coverage": 1.0,
+        "tensor_shape_coverage": 0.9391304347826087
       },
-      "wall_seconds": 13.586,
+      "wall_seconds": 41.859,
       "service_contract_valid": true,
-      "case_identity": "8ac275875edb51306ec5294828bff10e33a027821ea856b2cbb59315ea1318bd",
+      "case_identity": "e178f7067a4a1401e307ce843cd7eea00059b8b9a3528d253beac64ae4800822",
       "warnings": [],
-      "reason_codes": [
-        "coverage_not_complete"
-      ],
+      "reason_codes": ["coverage_not_complete"],
       "diagnostic_notes": [
         "The recorded static coverage is incomplete.",
         "Static-analysis warnings were recorded. Run a pinned inspection for full diagnostics."
       ],
       "reference": null,
       "declared_task": "automatic-speech-recognition",
-      "run_kind": "baseline"
+      "previous_observations": [
+        {
+          "status": "partial",
+          "engine_version": "2026.10.20.1",
+          "finished_at": "2026-10-19T23:29:39.947573+00:00",
+          "case_identity": "8ac275875edb51306ec5294828bff10e33a027821ea856b2cbb59315ea1318bd"
+        }
+      ],
+      "run_kind": "recheck"
     },
     {
       "model_id": "openai/whisper-base",
@@ -3143,9 +3147,7 @@
       "service_contract_valid": true,
       "case_identity": "8c69e2819552080ec26b6fa9c0e2341e92ad6cf24f165bccf47bceb351f6c445",
       "warnings": [],
-      "reason_codes": [
-        "coverage_not_complete"
-      ],
+      "reason_codes": ["coverage_not_complete"],
       "diagnostic_notes": [
         "The recorded static coverage is incomplete.",
         "Static-analysis warnings were recorded. Run a pinned inspection for full diagnostics."
@@ -3222,10 +3224,7 @@
       "service_contract_valid": true,
       "case_identity": "f7aab98ef03c3ed5ce03d4d363e08f91f481d7e422a4bc4a61fd50857c4b6983",
       "warnings": [],
-      "reason_codes": [
-        "safetensors_unavailable",
-        "coverage_not_complete"
-      ],
+      "reason_codes": ["safetensors_unavailable", "coverage_not_complete"],
       "diagnostic_notes": [
         "This repository has no Safetensors checkpoint. Only the pinned repository file inventory is available; no architecture graph was inferred.",
         "The recorded static coverage is incomplete."
@@ -3342,10 +3341,7 @@
       "service_contract_valid": true,
       "case_identity": "74bd5e1f30280d434800792f9df3325b165fa529e479b589bcf24a6e999fa8b2",
       "warnings": [],
-      "reason_codes": [
-        "safetensors_unavailable",
-        "coverage_not_complete"
-      ],
+      "reason_codes": ["safetensors_unavailable", "coverage_not_complete"],
       "diagnostic_notes": [
         "This repository has no Safetensors checkpoint. Only the pinned repository file inventory is available; no architecture graph was inferred.",
         "The recorded static coverage is incomplete."
@@ -3382,10 +3378,7 @@
       "service_contract_valid": true,
       "case_identity": "9c4cb6aad304068da53be1d5bd107b23a47e20fc9f2432fddef4008808ba43e4",
       "warnings": [],
-      "reason_codes": [
-        "safetensors_unavailable",
-        "coverage_not_complete"
-      ],
+      "reason_codes": ["safetensors_unavailable", "coverage_not_complete"],
       "diagnostic_notes": [
         "This repository has no Safetensors checkpoint. Only the pinned repository file inventory is available; no architecture graph was inferred.",
         "The recorded static coverage is incomplete."
@@ -3439,22 +3432,28 @@
       "category": "voice-cloning-tts",
       "revision": "6c2b0d75eae4b7047358e3b6bd9325f857d43f77",
       "status": "artifact_error",
-      "started_at": "2026-10-19T23:31:05.262432+00:00",
-      "finished_at": "2026-10-19T23:31:06.742138+00:00",
-      "wall_seconds": 1.479,
-      "case_identity": "e6a88f993c69581d63d4866e04df6379498735c498eecceb2d1a2f9222560dd5",
+      "started_at": "2026-10-20T12:21:11.135910+00:00",
+      "finished_at": "2026-10-20T12:21:12.505359+00:00",
+      "wall_seconds": 1.369,
+      "case_identity": "f1b1ddbdac9949276efb71ceaaa23158fe1e91c4dc9c7739470cdf5e9ccab7e9",
       "warnings": [],
       "reason_codes": [],
-      "diagnostic_notes": [
-        "This attempt did not produce a validated report."
-      ],
-      "engine_version": "2026.10.20.1",
+      "diagnostic_notes": ["This attempt did not produce a validated report."],
+      "engine_version": "2026.10.20.3",
       "reference": null,
       "declared_task": "text-to-speech",
       "error": {
         "message": "artifact_error during reconstruction"
       },
-      "run_kind": "baseline"
+      "previous_observations": [
+        {
+          "status": "artifact_error",
+          "engine_version": "2026.10.20.1",
+          "finished_at": "2026-10-19T23:31:06.742138+00:00",
+          "case_identity": "e6a88f993c69581d63d4866e04df6379498735c498eecceb2d1a2f9222560dd5"
+        }
+      ],
+      "run_kind": "recheck"
     },
     {
       "model_id": "facebook/encodec_24khz",
@@ -3564,10 +3563,7 @@
       "service_contract_valid": true,
       "case_identity": "353ca23d3a051374e94995ba4c28df1e544084861b59f4a57a045ab2f8012cb5",
       "warnings": [],
-      "reason_codes": [
-        "safetensors_unavailable",
-        "coverage_not_complete"
-      ],
+      "reason_codes": ["safetensors_unavailable", "coverage_not_complete"],
       "diagnostic_notes": [
         "This repository has no Safetensors checkpoint. Only the pinned repository file inventory is available; no architecture graph was inferred.",
         "The recorded static coverage is incomplete."
@@ -3644,10 +3640,7 @@
       "service_contract_valid": true,
       "case_identity": "a800cb3bbb9065c1e178fd0cf583562e45d785fd0c15c9bd8c7551607503b9e5",
       "warnings": [],
-      "reason_codes": [
-        "safetensors_unavailable",
-        "coverage_not_complete"
-      ],
+      "reason_codes": ["safetensors_unavailable", "coverage_not_complete"],
       "diagnostic_notes": [
         "This repository has no Safetensors checkpoint. Only the pinned repository file inventory is available; no architecture graph was inferred.",
         "The recorded static coverage is incomplete."
@@ -3941,22 +3934,28 @@
       "category": "text-to-image",
       "revision": "741f7c3ce8b383c54771c7003378a50191e9efe9",
       "status": "http_access",
-      "started_at": "2026-10-19T23:33:20.676808+00:00",
-      "finished_at": "2026-10-19T23:33:22.128440+00:00",
-      "wall_seconds": 1.451,
-      "case_identity": "e0f60003b4b59ab2fb2bd0e684253bf1a92deb1d7d377e233df317c02cc5d921",
+      "started_at": "2026-10-20T12:21:12.507529+00:00",
+      "finished_at": "2026-10-20T12:21:13.788722+00:00",
+      "wall_seconds": 1.28,
+      "case_identity": "da036d0ac97d339f295b1ec5edaac26f2569ce1042d5d6a129ccd895aceb4304",
       "warnings": [],
       "reason_codes": [],
-      "diagnostic_notes": [
-        "This attempt did not produce a validated report."
-      ],
-      "engine_version": "2026.10.20.1",
+      "diagnostic_notes": ["This attempt did not produce a validated report."],
+      "engine_version": "2026.10.20.3",
       "reference": "https://huggingface.co/black-forest-labs/FLUX.1-schnell/blob/741f7c3ce8b383c54771c7003378a50191e9efe9/transformer/diffusion_pytorch_model-00001-of-00003.safetensors",
       "declared_task": "text-to-image",
       "error": {
         "message": "http_access during reconstruction"
       },
-      "run_kind": "baseline"
+      "previous_observations": [
+        {
+          "status": "http_access",
+          "engine_version": "2026.10.20.1",
+          "finished_at": "2026-10-19T23:33:22.128440+00:00",
+          "case_identity": "e0f60003b4b59ab2fb2bd0e684253bf1a92deb1d7d377e233df317c02cc5d921"
+        }
+      ],
+      "run_kind": "recheck"
     },
     {
       "model_id": "PixArt-alpha/PixArt-Sigma-XL-2-1024-MS",
@@ -4003,22 +4002,28 @@
       "category": "text-to-image",
       "revision": "c03d510e9b75bce9f9db5bb85148c1402ad7e694",
       "status": "http_access",
-      "started_at": "2026-10-19T23:33:33.922825+00:00",
-      "finished_at": "2026-10-19T23:33:35.267749+00:00",
-      "wall_seconds": 1.344,
-      "case_identity": "b7316e2dfaccce856703e68a6c7b83c3854aa842bc77cfa872ff28a7e8c561ec",
+      "started_at": "2026-10-20T12:21:13.790231+00:00",
+      "finished_at": "2026-10-20T12:21:15.638548+00:00",
+      "wall_seconds": 1.848,
+      "case_identity": "f1aab094c3d827a82b8b4c56701919737a8ab66b50678cb26c34bc06de0b188c",
       "warnings": [],
       "reason_codes": [],
-      "diagnostic_notes": [
-        "This attempt did not produce a validated report."
-      ],
-      "engine_version": "2026.10.20.1",
+      "diagnostic_notes": ["This attempt did not produce a validated report."],
+      "engine_version": "2026.10.20.3",
       "reference": "https://huggingface.co/DeepFloyd/IF-I-XL-v1.0/blob/c03d510e9b75bce9f9db5bb85148c1402ad7e694/unet/diffusion_pytorch_model.safetensors",
       "declared_task": "text-to-image",
       "error": {
         "message": "http_access during reconstruction"
       },
-      "run_kind": "baseline"
+      "previous_observations": [
+        {
+          "status": "http_access",
+          "engine_version": "2026.10.20.1",
+          "finished_at": "2026-10-19T23:33:35.267749+00:00",
+          "case_identity": "b7316e2dfaccce856703e68a6c7b83c3854aa842bc77cfa872ff28a7e8c561ec"
+        }
+      ],
+      "run_kind": "recheck"
     },
     {
       "model_id": "THUDM/CogVideoX-2b",
@@ -4328,10 +4333,7 @@
       "service_contract_valid": true,
       "case_identity": "bc3263281cfda101b6f363d104f8172c00b1363c84e3e9315d7a76b815461f28",
       "warnings": [],
-      "reason_codes": [
-        "safetensors_unavailable",
-        "coverage_not_complete"
-      ],
+      "reason_codes": ["safetensors_unavailable", "coverage_not_complete"],
       "diagnostic_notes": [
         "This repository has no Safetensors checkpoint. Only the pinned repository file inventory is available; no architecture graph was inferred.",
         "The recorded static coverage is incomplete."
@@ -4368,10 +4370,7 @@
       "service_contract_valid": true,
       "case_identity": "1ac4651802c179afa55c35307786665b51cb231477dc430b1f9a8b3db6b5d366",
       "warnings": [],
-      "reason_codes": [
-        "safetensors_unavailable",
-        "coverage_not_complete"
-      ],
+      "reason_codes": ["safetensors_unavailable", "coverage_not_complete"],
       "diagnostic_notes": [
         "This repository has no Safetensors checkpoint. Only the pinned repository file inventory is available; no architecture graph was inferred.",
         "The recorded static coverage is incomplete."
@@ -4408,10 +4407,7 @@
       "service_contract_valid": true,
       "case_identity": "07268c5be7ca967ffe0600e202cfdc0325e41e4a2f12441f23d4365bafccd43e",
       "warnings": [],
-      "reason_codes": [
-        "safetensors_unavailable",
-        "coverage_not_complete"
-      ],
+      "reason_codes": ["safetensors_unavailable", "coverage_not_complete"],
       "diagnostic_notes": [
         "This repository has no Safetensors checkpoint. Only the pinned repository file inventory is available; no architecture graph was inferred.",
         "The recorded static coverage is incomplete."
@@ -4448,10 +4444,7 @@
       "service_contract_valid": true,
       "case_identity": "5ae1088ad23e1bb720baec3f99cb406ed7f4a593e6abd584f2f99fc535fb84aa",
       "warnings": [],
-      "reason_codes": [
-        "gguf_header_only",
-        "coverage_not_complete"
-      ],
+      "reason_codes": ["gguf_header_only", "coverage_not_complete"],
       "diagnostic_notes": [
         "GGUF tensor metadata was read from the pinned file header only. No architecture graph or tensor payload was inferred.",
         "The recorded static coverage is incomplete."
@@ -4488,10 +4481,7 @@
       "service_contract_valid": true,
       "case_identity": "bbe2eb1c444ee141b9a460e99f2942069bf372f8a2184f1274032cf7a10bd6d7",
       "warnings": [],
-      "reason_codes": [
-        "gguf_header_only",
-        "coverage_not_complete"
-      ],
+      "reason_codes": ["gguf_header_only", "coverage_not_complete"],
       "diagnostic_notes": [
         "GGUF tensor metadata was read from the pinned file header only. No architecture graph or tensor payload was inferred.",
         "The recorded static coverage is incomplete."
@@ -4528,10 +4518,7 @@
       "service_contract_valid": true,
       "case_identity": "bc8667caba6c1d7f66161d9e31f79646e88cbc1247e15cf8f871dac208234905",
       "warnings": [],
-      "reason_codes": [
-        "gguf_header_only",
-        "coverage_not_complete"
-      ],
+      "reason_codes": ["gguf_header_only", "coverage_not_complete"],
       "diagnostic_notes": [
         "GGUF tensor metadata was read from the pinned file header only. No architecture graph or tensor payload was inferred.",
         "The recorded static coverage is incomplete."
@@ -4568,10 +4555,7 @@
       "service_contract_valid": true,
       "case_identity": "7930a20a7c779e30f0e6f2759ecc18f79ff2de0c6240fa9f10b8bd012539efcf",
       "warnings": [],
-      "reason_codes": [
-        "gguf_header_only",
-        "coverage_not_complete"
-      ],
+      "reason_codes": ["gguf_header_only", "coverage_not_complete"],
       "diagnostic_notes": [
         "GGUF tensor metadata was read from the pinned file header only. No architecture graph or tensor payload was inferred.",
         "The recorded static coverage is incomplete."
@@ -4608,10 +4592,7 @@
       "service_contract_valid": true,
       "case_identity": "47417d5befef115fbb79267612f1f149f7baa8d3b89ab93e7140c1a68b9f5f22",
       "warnings": [],
-      "reason_codes": [
-        "adapter_requires_base_model",
-        "coverage_not_complete"
-      ],
+      "reason_codes": ["adapter_requires_base_model", "coverage_not_complete"],
       "diagnostic_notes": [
         "This repository contains adapter artifacts without an inspected base-model architecture. Only verified artifact inventory is available; no architecture graph was inferred.",
         "The recorded static coverage is incomplete."
@@ -4790,9 +4771,7 @@
       "service_contract_valid": true,
       "case_identity": "b33f431eccdece0d75b5beb6abd1b2d471951c860043343db2d97e82fd511ea0",
       "warnings": [],
-      "reason_codes": [
-        "coverage_not_complete"
-      ],
+      "reason_codes": ["coverage_not_complete"],
       "diagnostic_notes": [
         "The recorded static coverage is incomplete.",
         "Static-analysis warnings were recorded. Run a pinned inspection for full diagnostics."
@@ -4901,9 +4880,7 @@
       "service_contract_valid": true,
       "case_identity": "332cead4f61ae35af333b0773f13ebbc8fe0262f8ee1beb36905abcbb135be46",
       "warnings": [],
-      "reason_codes": [
-        "coverage_not_complete"
-      ],
+      "reason_codes": ["coverage_not_complete"],
       "diagnostic_notes": [
         "The recorded static coverage is incomplete.",
         "Static-analysis warnings were recorded. Run a pinned inspection for full diagnostics."
@@ -4940,9 +4917,7 @@
       "service_contract_valid": true,
       "case_identity": "7a55f017976d1f5e66a533ff6902c670aab5f8bd49c1462c0a5a568e8a1d087f",
       "warnings": [],
-      "reason_codes": [
-        "coverage_not_complete"
-      ],
+      "reason_codes": ["coverage_not_complete"],
       "diagnostic_notes": [
         "The recorded static coverage is incomplete.",
         "Static-analysis warnings were recorded. Run a pinned inspection for full diagnostics."
@@ -4979,9 +4954,7 @@
       "service_contract_valid": true,
       "case_identity": "e3f06e4362f9bf41fd4be835b2268061e4e2110b2911167f2ec7dcc0cde70f1d",
       "warnings": [],
-      "reason_codes": [
-        "coverage_not_complete"
-      ],
+      "reason_codes": ["coverage_not_complete"],
       "diagnostic_notes": [
         "The recorded static coverage is incomplete.",
         "Static-analysis warnings were recorded. Run a pinned inspection for full diagnostics."
@@ -5258,9 +5231,7 @@
       "service_contract_valid": true,
       "case_identity": "afce9c20a616bf1328732fc36657691860ea9d691a4e24a2fc2c33263be3746f",
       "warnings": [],
-      "reason_codes": [
-        "coverage_not_complete"
-      ],
+      "reason_codes": ["coverage_not_complete"],
       "diagnostic_notes": [
         "The recorded static coverage is incomplete.",
         "Static-analysis warnings were recorded. Run a pinned inspection for full diagnostics."
@@ -5297,10 +5268,7 @@
       "service_contract_valid": true,
       "case_identity": "53c335bb3b8dc3ac6e2cc8c6befaaae40a75adbda7198d4f44d7af988156b139",
       "warnings": [],
-      "reason_codes": [
-        "safetensors_unavailable",
-        "coverage_not_complete"
-      ],
+      "reason_codes": ["safetensors_unavailable", "coverage_not_complete"],
       "diagnostic_notes": [
         "This repository has no Safetensors checkpoint. Only the pinned repository file inventory is available; no architecture graph was inferred.",
         "The recorded static coverage is incomplete."
@@ -5355,31 +5323,29 @@
       "revision": "365dea6ef167def6676140ed93bbc43f84dabb28",
       "status": "partial",
       "architecture": "ClapModel",
-      "engine_version": "2026.10.20.2",
-      "started_at": "2026-10-20T00:25:34.863686+00:00",
-      "finished_at": "2026-10-20T00:26:17.363922+00:00",
-      "warning_count": 41,
+      "engine_version": "2026.10.20.3",
+      "started_at": "2026-10-20T12:21:15.640559+00:00",
+      "finished_at": "2026-10-20T12:21:35.054963+00:00",
+      "warning_count": 40,
       "graph_count": 61,
       "node_count": 370,
       "tensor_count": 477,
       "parameter_counts": {
-        "checkpoint_tensor_elements": 153558323,
+        "unique": 153507530,
         "logical": 153507530,
-        "unique": 153507530
+        "checkpoint_tensor_elements": 153558323
       },
       "coverage": {
-        "checkpoint_parameter_coverage": 1.0,
-        "module_semantic_coverage": 0.9329388560157791,
         "semantic_coverage": 0.926829268292683,
+        "module_semantic_coverage": 0.9329388560157791,
+        "checkpoint_parameter_coverage": 1.0,
         "tensor_shape_coverage": 0.8608923884514436
       },
-      "wall_seconds": 42.496,
+      "wall_seconds": 19.413,
       "service_contract_valid": true,
-      "case_identity": "81cf240776c4c1c1ba89bc0fd68b01b32ddb657e04d68a69fb3c32267cf85622",
+      "case_identity": "a91e9bebd2412173de52fa6566ba14b8da39b2b7011adfa36843b29b8f70bc8b",
       "warnings": [],
-      "reason_codes": [
-        "coverage_not_complete"
-      ],
+      "reason_codes": ["coverage_not_complete"],
       "diagnostic_notes": [
         "The recorded static coverage is incomplete.",
         "Static-analysis warnings were recorded. Run a pinned inspection for full diagnostics."
@@ -5392,6 +5358,12 @@
           "engine_version": "2026.10.20.1",
           "finished_at": "2026-10-19T23:42:21.664981+00:00",
           "case_identity": "0a3cb127ce7c4f2087ae3c0f31e3e840176ebaa2307128ed7306c99dabcd5259"
+        },
+        {
+          "status": "partial",
+          "engine_version": "2026.10.20.2",
+          "finished_at": "2026-10-20T00:26:17.363922+00:00",
+          "case_identity": "81cf240776c4c1c1ba89bc0fd68b01b32ddb657e04d68a69fb3c32267cf85622"
         }
       ],
       "run_kind": "recheck"
@@ -5424,10 +5396,7 @@
       "service_contract_valid": true,
       "case_identity": "fb4d15c03064a8923ed86d64e2df894283c3842265bcc18704cfb32c572d1a28",
       "warnings": [],
-      "reason_codes": [
-        "safetensors_unavailable",
-        "coverage_not_complete"
-      ],
+      "reason_codes": ["safetensors_unavailable", "coverage_not_complete"],
       "diagnostic_notes": [
         "This repository has no Safetensors checkpoint. Only the pinned repository file inventory is available; no architecture graph was inferred.",
         "The recorded static coverage is incomplete."
@@ -5464,10 +5433,7 @@
       "service_contract_valid": true,
       "case_identity": "6c9b33fd12e3f4db072f725f6c56cccd6bc2d264952db9e02a5e9d71e8bac26d",
       "warnings": [],
-      "reason_codes": [
-        "safetensors_unavailable",
-        "coverage_not_complete"
-      ],
+      "reason_codes": ["safetensors_unavailable", "coverage_not_complete"],
       "diagnostic_notes": [
         "This repository has no Safetensors checkpoint. Only the pinned repository file inventory is available; no architecture graph was inferred.",
         "The recorded static coverage is incomplete."
@@ -5704,9 +5670,7 @@
       "service_contract_valid": true,
       "case_identity": "fdd6ff96454e88de69a3d30cb3daa2ef8c5b8c759f621c97656867a5f4dd0d6a",
       "warnings": [],
-      "reason_codes": [
-        "coverage_not_complete"
-      ],
+      "reason_codes": ["coverage_not_complete"],
       "diagnostic_notes": [
         "The recorded static coverage is incomplete.",
         "Static-analysis warnings were recorded. Run a pinned inspection for full diagnostics."
@@ -5787,9 +5751,7 @@
       "service_contract_valid": true,
       "case_identity": "1ab2409a774248f9416e9fe90b7aa32456502cad614e3aad5eec1878b60894b7",
       "warnings": [],
-      "reason_codes": [
-        "coverage_not_complete"
-      ],
+      "reason_codes": ["coverage_not_complete"],
       "diagnostic_notes": [
         "The recorded static coverage is incomplete.",
         "Static-analysis warnings were recorded. Run a pinned inspection for full diagnostics."
@@ -5826,10 +5788,7 @@
       "service_contract_valid": true,
       "case_identity": "29963340511c09a8a635c5a6d674524c546e3097aed9b042108b90b9a3a9df9f",
       "warnings": [],
-      "reason_codes": [
-        "safetensors_unavailable",
-        "coverage_not_complete"
-      ],
+      "reason_codes": ["safetensors_unavailable", "coverage_not_complete"],
       "diagnostic_notes": [
         "This repository has no Safetensors checkpoint. Only the pinned repository file inventory is available; no architecture graph was inferred.",
         "The recorded static coverage is incomplete."
@@ -5940,9 +5899,7 @@
       "service_contract_valid": true,
       "case_identity": "7d647ac1f6175dc84df6c977c850f7f8acb155568491d0117a5f905096ba0f2f",
       "warnings": [],
-      "reason_codes": [
-        "coverage_not_complete"
-      ],
+      "reason_codes": ["coverage_not_complete"],
       "diagnostic_notes": [
         "The recorded static coverage is incomplete.",
         "Static-analysis warnings were recorded. Run a pinned inspection for full diagnostics."
@@ -5979,9 +5936,7 @@
       "service_contract_valid": true,
       "case_identity": "2027ce4a7d084dab8413342f47c87d9d2f32af9850e03227b2ef1d990e849a53",
       "warnings": [],
-      "reason_codes": [
-        "coverage_not_complete"
-      ],
+      "reason_codes": ["coverage_not_complete"],
       "diagnostic_notes": [
         "The recorded static coverage is incomplete.",
         "Static-analysis warnings were recorded. Run a pinned inspection for full diagnostics."
@@ -6018,10 +5973,7 @@
       "service_contract_valid": true,
       "case_identity": "af3233f0f6c7276666d58dbbf32fe59a8854a76933feb196e7893c12c0073cd2",
       "warnings": [],
-      "reason_codes": [
-        "safetensors_unavailable",
-        "coverage_not_complete"
-      ],
+      "reason_codes": ["safetensors_unavailable", "coverage_not_complete"],
       "diagnostic_notes": [
         "This repository has no Safetensors checkpoint. Only the pinned repository file inventory is available; no architecture graph was inferred.",
         "The recorded static coverage is incomplete."
@@ -6058,9 +6010,7 @@
       "service_contract_valid": true,
       "case_identity": "6275c3201b2132fa9864add49415d939f041c8535a3d489b67bfde42c4d44dd2",
       "warnings": [],
-      "reason_codes": [
-        "coverage_not_complete"
-      ],
+      "reason_codes": ["coverage_not_complete"],
       "diagnostic_notes": [
         "The recorded static coverage is incomplete.",
         "Static-analysis warnings were recorded. Run a pinned inspection for full diagnostics."
@@ -6133,10 +6083,7 @@
       "service_contract_valid": true,
       "case_identity": "4fea4139ce1261f8045f177dc2d1e08ad4d9e4f6440849f3f926070b4ddd8c4a",
       "warnings": [],
-      "reason_codes": [
-        "safetensors_unavailable",
-        "coverage_not_complete"
-      ],
+      "reason_codes": ["safetensors_unavailable", "coverage_not_complete"],
       "diagnostic_notes": [
         "This repository has no Safetensors checkpoint. Only the pinned repository file inventory is available; no architecture graph was inferred.",
         "The recorded static coverage is incomplete."
@@ -6173,10 +6120,7 @@
       "service_contract_valid": true,
       "case_identity": "e4b7943bf83959e0cc55dbe95afe7869ddfcd2a99bcfbc7a5cd0118107b732d5",
       "warnings": [],
-      "reason_codes": [
-        "safetensors_unavailable",
-        "coverage_not_complete"
-      ],
+      "reason_codes": ["safetensors_unavailable", "coverage_not_complete"],
       "diagnostic_notes": [
         "This repository has no Safetensors checkpoint. Only the pinned repository file inventory is available; no architecture graph was inferred.",
         "The recorded static coverage is incomplete."
@@ -6287,9 +6231,7 @@
       "service_contract_valid": true,
       "case_identity": "7ecb7865e3cba77bc9e57de31e4d6933c43269c5e30c02adababfaeea02fb1a6",
       "warnings": [],
-      "reason_codes": [
-        "coverage_not_complete"
-      ],
+      "reason_codes": ["coverage_not_complete"],
       "diagnostic_notes": [
         "The recorded static coverage is incomplete.",
         "Static-analysis warnings were recorded. Run a pinned inspection for full diagnostics."
@@ -6406,10 +6348,7 @@
       "service_contract_valid": true,
       "case_identity": "e26471639291c0b5867a8b2c5f03868e360eced2969c781b81059201831f1975",
       "warnings": [],
-      "reason_codes": [
-        "safetensors_unavailable",
-        "coverage_not_complete"
-      ],
+      "reason_codes": ["safetensors_unavailable", "coverage_not_complete"],
       "diagnostic_notes": [
         "This repository has no Safetensors checkpoint. Only the pinned repository file inventory is available; no architecture graph was inferred.",
         "The recorded static coverage is incomplete."
@@ -6446,10 +6385,7 @@
       "service_contract_valid": true,
       "case_identity": "6ff6e3475828e3786b9286a3f9ed43d687cb516a71ef4d21507c6a721d1dece9",
       "warnings": [],
-      "reason_codes": [
-        "safetensors_unavailable",
-        "coverage_not_complete"
-      ],
+      "reason_codes": ["safetensors_unavailable", "coverage_not_complete"],
       "diagnostic_notes": [
         "This repository has no Safetensors checkpoint. Only the pinned repository file inventory is available; no architecture graph was inferred.",
         "The recorded static coverage is incomplete."
@@ -6526,9 +6462,7 @@
       "service_contract_valid": true,
       "case_identity": "658c537640338e65a2d84809315561236a1982aaa0bebf21a07321d523b16863",
       "warnings": [],
-      "reason_codes": [
-        "coverage_not_complete"
-      ],
+      "reason_codes": ["coverage_not_complete"],
       "diagnostic_notes": [
         "The recorded static coverage is incomplete.",
         "Static-analysis warnings were recorded. Run a pinned inspection for full diagnostics."
@@ -6573,10 +6507,7 @@
       "service_contract_valid": true,
       "case_identity": "8f88e4f807db1fd932f16abd6b8abcb4bb6c2c1ddc2cb697ca815795b7776f75",
       "warnings": [],
-      "reason_codes": [
-        "safetensors_unavailable",
-        "coverage_not_complete"
-      ],
+      "reason_codes": ["safetensors_unavailable", "coverage_not_complete"],
       "diagnostic_notes": [
         "This repository has no Safetensors checkpoint. Only the pinned repository file inventory is available; no architecture graph was inferred.",
         "The recorded static coverage is incomplete."
@@ -6693,10 +6624,7 @@
       "service_contract_valid": true,
       "case_identity": "0e3bc6884a7395835b447afde9d0b89065d9b320b3fb23f4140cd9b4f8b06988",
       "warnings": [],
-      "reason_codes": [
-        "safetensors_unavailable",
-        "coverage_not_complete"
-      ],
+      "reason_codes": ["safetensors_unavailable", "coverage_not_complete"],
       "diagnostic_notes": [
         "This repository has no Safetensors checkpoint. Only the pinned repository file inventory is available; no architecture graph was inferred.",
         "The recorded static coverage is incomplete."
@@ -6973,9 +6901,7 @@
       "service_contract_valid": true,
       "case_identity": "dc7e8e8eeeb2e29dc7191d7615e39193d81773a0adb625588d483110937a0fd5",
       "warnings": [],
-      "reason_codes": [
-        "coverage_not_complete"
-      ],
+      "reason_codes": ["coverage_not_complete"],
       "diagnostic_notes": [
         "The recorded static coverage is incomplete.",
         "Static-analysis warnings were recorded. Run a pinned inspection for full diagnostics."
@@ -7060,9 +6986,7 @@
       "service_contract_valid": true,
       "case_identity": "b43b16ab36c7d1516eccd23eba2001eb8c0d44457a32eabb6f5039af46aa0df8",
       "warnings": [],
-      "reason_codes": [
-        "coverage_not_complete"
-      ],
+      "reason_codes": ["coverage_not_complete"],
       "diagnostic_notes": [
         "The recorded static coverage is incomplete.",
         "Static-analysis warnings were recorded. Run a pinned inspection for full diagnostics."
@@ -7226,22 +7150,28 @@
       "category": "text-classification",
       "revision": "1209add6ca7d9c1d815171b8e5571587fe3e7b03",
       "status": "http_access",
-      "started_at": "2026-10-20T00:01:02.441120+00:00",
-      "finished_at": "2026-10-20T00:01:05.144293+00:00",
-      "wall_seconds": 2.703,
-      "case_identity": "7bf5bb67a406a340cc1267a633a4664cbb5ae8709db6c4b9664026d9ace6ea91",
+      "started_at": "2026-10-20T12:21:35.056961+00:00",
+      "finished_at": "2026-10-20T12:21:36.413568+00:00",
+      "wall_seconds": 1.356,
+      "case_identity": "29f65529b0a42cbf5b975a000762a06dd7026a735846cf33a1046082359409b8",
       "warnings": [],
       "reason_codes": [],
-      "diagnostic_notes": [
-        "This attempt did not produce a validated report."
-      ],
-      "engine_version": "2026.10.20.1",
+      "diagnostic_notes": ["This attempt did not produce a validated report."],
+      "engine_version": "2026.10.20.3",
       "reference": null,
       "declared_task": "text-classification",
       "error": {
         "message": "http_access during reconstruction"
       },
-      "run_kind": "baseline"
+      "previous_observations": [
+        {
+          "status": "http_access",
+          "engine_version": "2026.10.20.1",
+          "finished_at": "2026-10-20T00:01:05.144293+00:00",
+          "case_identity": "7bf5bb67a406a340cc1267a633a4664cbb5ae8709db6c4b9664026d9ace6ea91"
+        }
+      ],
+      "run_kind": "recheck"
     },
     {
       "model_id": "dslim/bert-base-NER",
@@ -7307,10 +7237,7 @@
       "service_contract_valid": true,
       "case_identity": "474495ac1d994a3ddc21848559e87fce03bf58861c19cc31fe53e41e3a6b1761",
       "warnings": [],
-      "reason_codes": [
-        "safetensors_unavailable",
-        "coverage_not_complete"
-      ],
+      "reason_codes": ["safetensors_unavailable", "coverage_not_complete"],
       "diagnostic_notes": [
         "This repository has no Safetensors checkpoint. Only the pinned repository file inventory is available; no architecture graph was inferred.",
         "The recorded static coverage is incomplete."
@@ -7347,10 +7274,7 @@
       "service_contract_valid": true,
       "case_identity": "edac46132c7d1cb70414ce4e8515ddf5f84830aa3a01ca36253d1291b884f8b7",
       "warnings": [],
-      "reason_codes": [
-        "safetensors_unavailable",
-        "coverage_not_complete"
-      ],
+      "reason_codes": ["safetensors_unavailable", "coverage_not_complete"],
       "diagnostic_notes": [
         "This repository has no Safetensors checkpoint. Only the pinned repository file inventory is available; no architecture graph was inferred.",
         "The recorded static coverage is incomplete."
@@ -7387,10 +7311,7 @@
       "service_contract_valid": true,
       "case_identity": "76a3312ce6d6f88a9398981aa22b952051ff601b3307444f01ae53e11752a64c",
       "warnings": [],
-      "reason_codes": [
-        "safetensors_unavailable",
-        "coverage_not_complete"
-      ],
+      "reason_codes": ["safetensors_unavailable", "coverage_not_complete"],
       "diagnostic_notes": [
         "This repository has no Safetensors checkpoint. Only the pinned repository file inventory is available; no architecture graph was inferred.",
         "The recorded static coverage is incomplete."
@@ -7427,9 +7348,7 @@
       "service_contract_valid": true,
       "case_identity": "2b9599c4d348b8e769f5671c89d941263ab7f609a6abc85c63defc7d3d8e79fd",
       "warnings": [],
-      "reason_codes": [
-        "coverage_not_complete"
-      ],
+      "reason_codes": ["coverage_not_complete"],
       "diagnostic_notes": [
         "The recorded static coverage is incomplete.",
         "Static-analysis warnings were recorded. Run a pinned inspection for full diagnostics."
@@ -7466,9 +7385,7 @@
       "service_contract_valid": true,
       "case_identity": "6eb04e5a673bdf562a47fe1c05d326a6c33c94d45d0d246ff5cb89ae59ae8abe",
       "warnings": [],
-      "reason_codes": [
-        "coverage_not_complete"
-      ],
+      "reason_codes": ["coverage_not_complete"],
       "diagnostic_notes": [
         "The recorded static coverage is incomplete.",
         "Static-analysis warnings were recorded. Run a pinned inspection for full diagnostics."
@@ -7625,9 +7542,7 @@
       "service_contract_valid": true,
       "case_identity": "8485f541515ceb6332697be1c4fffa7fcaa52a888b2fac384ed823cbbd324a86",
       "warnings": [],
-      "reason_codes": [
-        "coverage_not_complete"
-      ],
+      "reason_codes": ["coverage_not_complete"],
       "diagnostic_notes": [
         "The recorded static coverage is incomplete.",
         "Static-analysis warnings were recorded. Run a pinned inspection for full diagnostics."
@@ -7664,9 +7579,7 @@
       "service_contract_valid": true,
       "case_identity": "6adb25a2a6573d3cd2b644f81840f8dd83c4613b7facac08f37095b7026a7dc0",
       "warnings": [],
-      "reason_codes": [
-        "coverage_not_complete"
-      ],
+      "reason_codes": ["coverage_not_complete"],
       "diagnostic_notes": [
         "The recorded static coverage is incomplete.",
         "Static-analysis warnings were recorded. Run a pinned inspection for full diagnostics."
@@ -7703,10 +7616,7 @@
       "service_contract_valid": true,
       "case_identity": "b93d43368cac844e42a9f3a9ce0815f1ce89f9f536c0ed2ab7f0aff862e11f05",
       "warnings": [],
-      "reason_codes": [
-        "safetensors_unavailable",
-        "coverage_not_complete"
-      ],
+      "reason_codes": ["safetensors_unavailable", "coverage_not_complete"],
       "diagnostic_notes": [
         "This repository has no Safetensors checkpoint. Only the pinned repository file inventory is available; no architecture graph was inferred.",
         "The recorded static coverage is incomplete."
@@ -7783,9 +7693,7 @@
       "service_contract_valid": true,
       "case_identity": "6d42d270940a91daf2b8f878e8150810757756a607172764acff722fc24afbd3",
       "warnings": [],
-      "reason_codes": [
-        "coverage_not_complete"
-      ],
+      "reason_codes": ["coverage_not_complete"],
       "diagnostic_notes": [
         "The recorded static coverage is incomplete.",
         "Static-analysis warnings were recorded. Run a pinned inspection for full diagnostics."
@@ -7902,12 +7810,8 @@
       "service_contract_valid": true,
       "case_identity": "15226e00e936746879629509ab92ee2fcfd7c351c46821666261a9c4f389065e",
       "warnings": [],
-      "reason_codes": [
-        "coverage_not_complete"
-      ],
-      "diagnostic_notes": [
-        "The recorded static coverage is incomplete."
-      ],
+      "reason_codes": ["coverage_not_complete"],
+      "diagnostic_notes": ["The recorded static coverage is incomplete."],
       "reference": null,
       "declared_task": "audio-classification",
       "run_kind": "baseline"
@@ -8220,10 +8124,7 @@
       "service_contract_valid": true,
       "case_identity": "79996f27541396f4b64a881cf76d5cb42313488bb8bb9f12032da5fc75e60ab7",
       "warnings": [],
-      "reason_codes": [
-        "safetensors_unavailable",
-        "coverage_not_complete"
-      ],
+      "reason_codes": ["safetensors_unavailable", "coverage_not_complete"],
       "diagnostic_notes": [
         "This repository has no Safetensors checkpoint. Only the pinned repository file inventory is available; no architecture graph was inferred.",
         "The recorded static coverage is incomplete."
@@ -8268,9 +8169,7 @@
       "service_contract_valid": true,
       "case_identity": "a259cff83ad457ecf051331b76410eae668b563a019a6b11fbab6cbaf37b21fe",
       "warnings": [],
-      "reason_codes": [
-        "coverage_not_complete"
-      ],
+      "reason_codes": ["coverage_not_complete"],
       "diagnostic_notes": [
         "The recorded static coverage is incomplete.",
         "Static-analysis warnings were recorded. Run a pinned inspection for full diagnostics."
@@ -8307,10 +8206,7 @@
       "service_contract_valid": true,
       "case_identity": "dd10009ee9dd133c3a5ba7b08dc9c61d77b61a43b81913a21d3ef5167d404792",
       "warnings": [],
-      "reason_codes": [
-        "safetensors_unavailable",
-        "coverage_not_complete"
-      ],
+      "reason_codes": ["safetensors_unavailable", "coverage_not_complete"],
       "diagnostic_notes": [
         "This repository has no Safetensors checkpoint. Only the pinned repository file inventory is available; no architecture graph was inferred.",
         "The recorded static coverage is incomplete."
@@ -8347,10 +8243,7 @@
       "service_contract_valid": true,
       "case_identity": "5e852fd20f161ba52b8034d3734b2307618b3d93e07996ff1b1665d10051dcbf",
       "warnings": [],
-      "reason_codes": [
-        "safetensors_unavailable",
-        "coverage_not_complete"
-      ],
+      "reason_codes": ["safetensors_unavailable", "coverage_not_complete"],
       "diagnostic_notes": [
         "This repository has no Safetensors checkpoint. Only the pinned repository file inventory is available; no architecture graph was inferred.",
         "The recorded static coverage is incomplete."
@@ -8461,10 +8354,7 @@
       "service_contract_valid": true,
       "case_identity": "d72328abf513af6816faa391387c37e5b4105b0331de68243fdeed9592bb26c7",
       "warnings": [],
-      "reason_codes": [
-        "safetensors_unavailable",
-        "coverage_not_complete"
-      ],
+      "reason_codes": ["safetensors_unavailable", "coverage_not_complete"],
       "diagnostic_notes": [
         "This repository has no Safetensors checkpoint. Only the pinned repository file inventory is available; no architecture graph was inferred.",
         "The recorded static coverage is incomplete."
@@ -8573,9 +8463,7 @@
       "service_contract_valid": true,
       "case_identity": "2579ccce6746a2a02071fedf6848798c631baf2adb121297b55e16a04654fc84",
       "warnings": [],
-      "reason_codes": [
-        "coverage_not_complete"
-      ],
+      "reason_codes": ["coverage_not_complete"],
       "diagnostic_notes": [
         "The recorded static coverage is incomplete.",
         "Static-analysis warnings were recorded. Run a pinned inspection for full diagnostics."
@@ -8612,10 +8500,7 @@
       "service_contract_valid": true,
       "case_identity": "d16c8c71c54f19725df31d7fe3cc0cfe30013876c8ec374c3d7bb6920562ede0",
       "warnings": [],
-      "reason_codes": [
-        "safetensors_unavailable",
-        "coverage_not_complete"
-      ],
+      "reason_codes": ["safetensors_unavailable", "coverage_not_complete"],
       "diagnostic_notes": [
         "This repository has no Safetensors checkpoint. Only the pinned repository file inventory is available; no architecture graph was inferred.",
         "The recorded static coverage is incomplete."
@@ -8652,10 +8537,7 @@
       "service_contract_valid": true,
       "case_identity": "8bf870ba13b42e8f24dc47e10c436bbf0d5ae3c856afe8a5929dce112f1f775b",
       "warnings": [],
-      "reason_codes": [
-        "safetensors_unavailable",
-        "coverage_not_complete"
-      ],
+      "reason_codes": ["safetensors_unavailable", "coverage_not_complete"],
       "diagnostic_notes": [
         "This repository has no Safetensors checkpoint. Only the pinned repository file inventory is available; no architecture graph was inferred.",
         "The recorded static coverage is incomplete."
@@ -8732,9 +8614,7 @@
       "service_contract_valid": true,
       "case_identity": "d212927bb116f184875d22679e5588510d070270e0fa4a8ec0e973feffac7677",
       "warnings": [],
-      "reason_codes": [
-        "coverage_not_complete"
-      ],
+      "reason_codes": ["coverage_not_complete"],
       "diagnostic_notes": [
         "The recorded static coverage is incomplete.",
         "Static-analysis warnings were recorded. Run a pinned inspection for full diagnostics."
@@ -8805,9 +8685,7 @@
       "service_contract_valid": true,
       "case_identity": "cddbf2247910631729724e97523254b58b6a7c4e00bdd41b0a2bed20aad1e41b",
       "warnings": [],
-      "reason_codes": [
-        "coverage_not_complete"
-      ],
+      "reason_codes": ["coverage_not_complete"],
       "diagnostic_notes": [
         "The recorded static coverage is incomplete.",
         "Static-analysis warnings were recorded. Run a pinned inspection for full diagnostics."
@@ -8844,9 +8722,7 @@
       "service_contract_valid": true,
       "case_identity": "69775ddc8bbfc2ba935e904ba1665a7338836926713cfe88cdfecdceb0d77174",
       "warnings": [],
-      "reason_codes": [
-        "coverage_not_complete"
-      ],
+      "reason_codes": ["coverage_not_complete"],
       "diagnostic_notes": [
         "The recorded static coverage is incomplete.",
         "Static-analysis warnings were recorded. Run a pinned inspection for full diagnostics."
@@ -8883,9 +8759,7 @@
       "service_contract_valid": true,
       "case_identity": "3c10802f25133c7d725b2a47dfd789d1c8d57339523194a2a5446cc52eee131e",
       "warnings": [],
-      "reason_codes": [
-        "coverage_not_complete"
-      ],
+      "reason_codes": ["coverage_not_complete"],
       "diagnostic_notes": [
         "The recorded static coverage is incomplete.",
         "Static-analysis warnings were recorded. Run a pinned inspection for full diagnostics."
@@ -8922,10 +8796,7 @@
       "service_contract_valid": true,
       "case_identity": "b35e2657b06ff374eb108f51b88f6ccb4c9569f0a6b8372c6ff9520eaace9ae1",
       "warnings": [],
-      "reason_codes": [
-        "safetensors_unavailable",
-        "coverage_not_complete"
-      ],
+      "reason_codes": ["safetensors_unavailable", "coverage_not_complete"],
       "diagnostic_notes": [
         "This repository has no Safetensors checkpoint. Only the pinned repository file inventory is available; no architecture graph was inferred.",
         "The recorded static coverage is incomplete."
@@ -9002,10 +8873,7 @@
       "service_contract_valid": true,
       "case_identity": "ac16277c67f87432c299018f75412e23bbf2e1a7e3dbd07706b128bf42b711c0",
       "warnings": [],
-      "reason_codes": [
-        "metadata_budget_exceeded",
-        "coverage_not_complete"
-      ],
+      "reason_codes": ["metadata_budget_exceeded", "coverage_not_complete"],
       "diagnostic_notes": [
         "Checkpoint metadata exceeds the configured inspection budget. The pinned repository and available configuration are shown without tensor or architecture claims.",
         "The recorded static coverage is incomplete."
@@ -9042,9 +8910,7 @@
       "service_contract_valid": true,
       "case_identity": "2e6dbc4047bb3ba5cfb8c7b59db51afc7ebb5c0e09c32c5f15a7e81bbc04956c",
       "warnings": [],
-      "reason_codes": [
-        "coverage_not_complete"
-      ],
+      "reason_codes": ["coverage_not_complete"],
       "diagnostic_notes": [
         "The recorded static coverage is incomplete.",
         "Static-analysis warnings were recorded. Run a pinned inspection for full diagnostics."
@@ -9081,9 +8947,7 @@
       "service_contract_valid": true,
       "case_identity": "a360c8795285d9ff06f704fea87c9e6b03dff26014b21817d9ab6f3426982d24",
       "warnings": [],
-      "reason_codes": [
-        "coverage_not_complete"
-      ],
+      "reason_codes": ["coverage_not_complete"],
       "diagnostic_notes": [
         "The recorded static coverage is incomplete.",
         "Static-analysis warnings were recorded. Run a pinned inspection for full diagnostics."
@@ -9560,10 +9424,7 @@
       "service_contract_valid": true,
       "case_identity": "775759cff66d4e5a9c9de15b0547f2c7ef75ad4b900a3c94428d66fea4b9a7ed",
       "warnings": [],
-      "reason_codes": [
-        "safetensors_unavailable",
-        "coverage_not_complete"
-      ],
+      "reason_codes": ["safetensors_unavailable", "coverage_not_complete"],
       "diagnostic_notes": [
         "This repository has no Safetensors checkpoint. Only the pinned repository file inventory is available; no architecture graph was inferred.",
         "The recorded static coverage is incomplete."
@@ -9600,10 +9461,7 @@
       "service_contract_valid": true,
       "case_identity": "a132dbcd5e6d5129f0f001207d0e936e9dd5b9896f8efbbb7bc7a8124db10cda",
       "warnings": [],
-      "reason_codes": [
-        "safetensors_unavailable",
-        "coverage_not_complete"
-      ],
+      "reason_codes": ["safetensors_unavailable", "coverage_not_complete"],
       "diagnostic_notes": [
         "This repository has no Safetensors checkpoint. Only the pinned repository file inventory is available; no architecture graph was inferred.",
         "The recorded static coverage is incomplete."
@@ -9680,9 +9538,7 @@
       "service_contract_valid": true,
       "case_identity": "6d33fb0ccf59c445b81e8cfb7e993004ab493ca830560dea1c976b1e1bab5213",
       "warnings": [],
-      "reason_codes": [
-        "coverage_not_complete"
-      ],
+      "reason_codes": ["coverage_not_complete"],
       "diagnostic_notes": [
         "The recorded static coverage is incomplete.",
         "Static-analysis warnings were recorded. Run a pinned inspection for full diagnostics."
@@ -9697,10 +9553,10 @@
       "revision": "8949b909ec900327062f0ebf497f51aef5e6f0c8",
       "status": "partial",
       "architecture": "ModernBertForMaskedLM",
-      "engine_version": "2026.10.20.1",
-      "started_at": "2026-10-20T00:42:58.500285+00:00",
-      "finished_at": "2026-10-20T00:43:41.939753+00:00",
-      "warning_count": 9,
+      "engine_version": "2026.10.20.3",
+      "started_at": "2026-10-20T12:21:36.415556+00:00",
+      "finished_at": "2026-10-20T12:21:55.689067+00:00",
+      "warning_count": 7,
       "graph_count": 11,
       "node_count": 70,
       "tensor_count": 137,
@@ -9715,20 +9571,26 @@
         "checkpoint_parameter_coverage": 1.0,
         "tensor_shape_coverage": 0.6
       },
-      "wall_seconds": 43.438,
+      "wall_seconds": 19.273,
       "service_contract_valid": true,
-      "case_identity": "75a85e4b78c11620a0bc2c450c4796b1d7de18d139e92f1ccf860afd75cb82ac",
+      "case_identity": "47c5ab0411bd922085151dbc495401f177c74a92efb6635fe29cd5762dbb55db",
       "warnings": [],
-      "reason_codes": [
-        "coverage_not_complete"
-      ],
+      "reason_codes": ["coverage_not_complete"],
       "diagnostic_notes": [
         "The recorded static coverage is incomplete.",
         "Static-analysis warnings were recorded. Run a pinned inspection for full diagnostics."
       ],
       "reference": null,
       "declared_task": "fill-mask",
-      "run_kind": "baseline"
+      "previous_observations": [
+        {
+          "status": "partial",
+          "engine_version": "2026.10.20.1",
+          "finished_at": "2026-10-20T00:43:41.939753+00:00",
+          "case_identity": "75a85e4b78c11620a0bc2c450c4796b1d7de18d139e92f1ccf860afd75cb82ac"
+        }
+      ],
+      "run_kind": "recheck"
     }
   ],
   "runs": [
@@ -9760,14 +9622,26 @@
         "partial": 5,
         "inspected": 2
       }
+    },
+    {
+      "kind": "recheck",
+      "cases": 22,
+      "generated_at": "2026-10-20T12:21:55.691078+00:00",
+      "engine_version": "2026.10.20.3",
+      "runner_sha256": "aee78cfe31bd8c776246a66d9aeda50b3e6052d255e387dee768ffb171a5295b",
+      "engine_source_sha256": "089c5510d693159c49baddd9dd2be1b7f194287bdcfe86def2e1652cf1a818e8",
+      "status_counts": {
+        "completed": 4,
+        "partial": 12,
+        "http_access": 4,
+        "inspected": 1,
+        "artifact_error": 1
+      }
     }
   ],
   "baseline_cases": 250,
-  "recheck_attempts": 8,
-  "engine_versions": [
-    "2026.10.20.1",
-    "2026.10.20.2"
-  ],
+  "recheck_attempts": 30,
+  "engine_versions": ["2026.10.20.1", "2026.10.20.2", "2026.10.20.3"],
   "baseline_engine_source_sha256": "7378a756625c28d1de0d08b3252ea08bf245dc9928066f7aa3f4c9e1f4e3b1d8",
   "baseline_runner_sha256": "4fbf82bc7a52b1a35b5bca526e2d9b7c4073feb09bda4a96a2ac266252f9c034"
 }

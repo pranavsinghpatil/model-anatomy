@@ -142,7 +142,7 @@ try {
 
     $oldProxy = [Environment]::GetEnvironmentVariable('API_PROXY_TARGET', 'Process')
     $savedFrontendEnv = @{}
-    $frontendSecretNames = @($settings.Keys) + @('DATABASE_URL', 'MODEL_ANATOMY_SUPABASE_SERVICE_ROLE_KEY', 'NEBIUS_API_KEY', 'MODEL_ANATOMY_NEBIUS_API_KEY')
+    $frontendSecretNames = @($settings.Keys) + @('DATABASE_URL', 'MODEL_ANATOMY_SUPABASE_SERVICE_ROLE_KEY', 'NEBIUS_API_KEY', 'MODEL_ANATOMY_NEBIUS_API_KEY', 'HF_TOKEN')
     foreach ($name in $frontendSecretNames | Select-Object -Unique) {
         $savedFrontendEnv[$name] = [Environment]::GetEnvironmentVariable($name, 'Process')
         [Environment]::SetEnvironmentVariable($name, $null, 'Process')

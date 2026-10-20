@@ -74,6 +74,35 @@ curated manifest records replacements and exact-revision verification.
   normalization or temporal pooling semantics. A repository without a selected Safetensors
   checkpoint remains artifact-only even when native configuration loading succeeds.
 
+The 250-model audit on engine `2026.10.20.2` found 87 partial graphs among 250
+pinned repositories. Full-report warnings identified unresolved source branches
+in 67 models and opaque calls in 64; those warning cohorts overlap. Semantic and
+module-semantic coverage were below one in 54 partial reports each, checkpoint
+parameter coverage in 4, and tensor-shape coverage in 49. Preserve each report's
+partial status until source-backed behavior and tensor ownership are established.
+
+The 142 artifact-only outcomes were primarily caused by unavailable
+Safetensors (49), unavailable native architecture support (49), required
+checkpoint selection (20), and required pipeline component selection (12).
+Configuration absence (6), GGUF header-only inspection (4), a metadata budget
+limit (1), and a standalone adapter (1) account for the remainder. These are
+honest bounded outcomes; adding a family route requires native construction and
+semantic acceptance, while selection ambiguity requires an explicit choice.
+
+Four recorded HTTP failures were confirmed by bounded public probes as gated
+401 responses. XTTS-v2 exposed non-finite JSON constants and no Safetensors file
+at the pinned path. Keep those access and artifact outcomes separate from
+unsupported native architecture and partial graph semantics.
+
+Historical `.2` reports with the supported IR schema remain available through
+explicit report selection and retain their `.2` provenance. Automatic analysis
+cache reuse stays bound to the current engine and schema. Benchmark links match
+the exact model, pin, artifact selection and schema, preferring a current-engine
+report and then the newest compatible report. See
+[`MODEL_COVERAGE_REPAIRS.md`](MODEL_COVERAGE_REPAIRS.md) for the audit and the
+final 22-case `.3` recheck record. Seven reports have fewer warnings; all original
+outcome classifications remain, with unresolved semantics still marked partial.
+
 Pinned rechecks and unchanged baseline observations remain separate evidence. Future family
 promotions must add deterministic semantic fixtures rather than suppressing warnings or
 relabeling partial reports as complete.

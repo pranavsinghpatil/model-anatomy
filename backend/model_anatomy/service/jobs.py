@@ -396,7 +396,7 @@ class JobService:
     def _ready_job(self, session, guest_id, value, model_id, report, summary, now):
         job = Job(
             id=uuid4().hex, guest_id=guest_id, model_input=value, model_id=model_id,
-            revision=report.revision, engine_version=self.settings.engine_version,
+            revision=report.revision, engine_version=report.engine_version,
             schema_version=self.settings.schema_version, status=summary["result_status"],
             stage=summary["result_status"], created_at=now,
             expires_at=now + self.settings.job_ttl_seconds, available_at=now, attempts=0,
@@ -424,14 +424,13 @@ class JobService:
     def _registry_candidates_by_id(self, report_id: str):
         with self.db.read() as session:
             report = session.get(ModelReport, report_id)
-            if not report or report.engine_version != self.settings.engine_version or report.schema_version != self.settings.schema_version:
+            if not report or report.schema_version != self.settings.schema_version:
                 return []
             return [report]
 
     def catalog(self, query: str = "", offset: int = 0, limit: int = 24) -> dict:
         with self.db.read() as session:
             base = select(ModelReport).where(
-                ModelReport.engine_version == self.settings.engine_version,
                 ModelReport.schema_version == self.settings.schema_version,
             )
             if query:

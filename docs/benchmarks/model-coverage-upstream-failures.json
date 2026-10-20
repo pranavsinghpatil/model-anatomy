@@ -1,0 +1,85 @@
+[
+  {
+    "model_id": "meta-llama/Llama-3.2-1B-Instruct",
+    "revision": "9213176726f574b556790deb65791e0c5aa438b6",
+    "probes": [
+      {
+        "file": "config.json",
+        "status": 401,
+        "hf_error_code": "GatedRepo"
+      },
+      {
+        "file": "model.safetensors",
+        "status": 401,
+        "hf_error_code": "GatedRepo"
+      }
+    ]
+  },
+  {
+    "model_id": "coqui/XTTS-v2",
+    "revision": "6c2b0d75eae4b7047358e3b6bd9325f857d43f77",
+    "probes": [
+      {
+        "file": "config.json",
+        "status": 200,
+        "nonfinite_json_constants": [
+          "Infinity",
+          "Infinity"
+        ]
+      },
+      {
+        "file": "model.safetensors",
+        "status": 404,
+        "hf_error_code": "EntryNotFound"
+      }
+    ]
+  },
+  {
+    "model_id": "black-forest-labs/FLUX.1-schnell",
+    "revision": "741f7c3ce8b383c54771c7003378a50191e9efe9",
+    "probes": [
+      {
+        "file": "transformer/config.json",
+        "status": 401,
+        "hf_error_code": "GatedRepo"
+      },
+      {
+        "file": "transformer/diffusion_pytorch_model-00001-of-00003.safetensors",
+        "status": 401,
+        "hf_error_code": "GatedRepo"
+      }
+    ]
+  },
+  {
+    "model_id": "DeepFloyd/IF-I-XL-v1.0",
+    "revision": "c03d510e9b75bce9f9db5bb85148c1402ad7e694",
+    "probes": [
+      {
+        "file": "unet/config.json",
+        "status": 401,
+        "hf_error_code": "GatedRepo"
+      },
+      {
+        "file": "unet/diffusion_pytorch_model.safetensors",
+        "status": 401,
+        "hf_error_code": "GatedRepo"
+      }
+    ]
+  },
+  {
+    "model_id": "meta-llama/Prompt-Guard-86M",
+    "revision": "1209add6ca7d9c1d815171b8e5571587fe3e7b03",
+    "probes": [
+      {
+        "file": "config.json",
+        "status": 401,
+        "hf_error_code": "GatedRepo"
+      },
+      {
+        "file": "model.safetensors",
+        "status": 401,
+        "hf_error_code": "GatedRepo"
+      }
+    ]
+  }
+]

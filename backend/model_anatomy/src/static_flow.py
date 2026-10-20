@@ -14,6 +14,7 @@ from types import ModuleType
 from typing import Any
 
 import torch
+from transformers.pytorch_utils import apply_chunking_to_forward
 from transformers.utils.import_utils import is_torch_fx_proxy, is_torchdynamo_compiling
 
 UNKNOWN = object()
@@ -369,24 +370,74 @@ class StaticFlowAnalyzer:
             return StaticValue(constant=getattr(value.constant, name, UNKNOWN))
         return StaticValue([(ref, name) for ref, _ in value.refs])
 
+    def source_callable(self, expression: ast.AST) -> Any:
+        """Resolve globals through module dictionaries without invoking descriptors or model code."""
+        parts = []
+        while isinstance(expression, ast.Attribute):
+            parts.append(expression.attr)
+            expression = expression.value
+        if not isinstance(expression, ast.Name) or expression.id in self.env:
+            return UNKNOWN
+        function = self.source_globals.get(expression.id, vars(builtins).get(expression.id, UNKNOWN))
+        for name in reversed(parts):
+            if not isinstance(function, ModuleType):
+                return UNKNOWN
+            function = vars(function).get(name, UNKNOWN)
+        return function
+
+    def functional_operation(self, node: ast.Call, arguments: dict[str, StaticValue]) -> StaticValue | None:
+        """Describe a bounded set of actual Torch operators; similarly named helpers stay opaque."""
+        if any(isinstance(arg, ast.Starred) for arg in node.args) or any(kw.arg is None for kw in node.keywords):
+            return None
+        function = self.source_callable(node.func)
+        contracts = (
+            (torch.nn.functional.dropout, "dropout", "Dropout", {"p": 0.5, "training": True, "inplace": False}),
+            (torch.nn.functional.relu, "activation", "ReLU", {"inplace": False}),
+            (torch.nn.functional.silu, "activation", "SiLU", {"inplace": False}),
+            (torch.nn.functional.gelu, "activation", "GELU", {"approximate": "none"}),
+            (torch.tanh, "activation", "Tanh", {}),
+            (torch.sigmoid, "activation", "Sigmoid", {}),
+            (torch.nn.functional.softmax, "softmax", "Softmax", {"dim": None, "_stacklevel": 3, "dtype": None}),
+        )
+        contract = next((item for item in contracts if function is item[0]), None)
+        if contract is None:
+            return None
+        _, kind, label, defaults = contract
+        parameters = [inspect.Parameter("input", inspect.Parameter.POSITIONAL_OR_KEYWORD)]
+        for name, default in defaults.items():
+            parameter_kind = (inspect.Parameter.KEYWORD_ONLY if function is torch.nn.functional.gelu
+                              else inspect.Parameter.POSITIONAL_OR_KEYWORD)
+            parameters.append(inspect.Parameter(name, parameter_kind, default=StaticValue(constant=default)))
+        try:
+            bound = inspect.Signature(parameters).bind(
+                *[arguments[str(index)] for index in range(len(node.args))],
+                **{key: value for key, value in arguments.items() if not key.isdecimal()},
+            )
+            bound.apply_defaults()
+        except TypeError:
+            return None
+        input_value = bound.arguments["input"]
+        if not input_value.refs or kind == "softmax" and bound.arguments["dtype"].constant is not None:
+            return None
+        parameters = {
+            name: value.constant if type(value.constant) in (type(None), bool, int, str)
+            or type(value.constant) is float and math.isfinite(value.constant) else {"known": False}
+            for name, value in bound.arguments.items() if name != "input"
+        }
+        return self.event(node, None, kind, label, {"input": input_value}, {
+            "callable": f"{function.__module__}.{function.__qualname__}",
+            "method": function.__name__, "parameters": parameters,
+            "shape_basis": "Torch unary shape-preserving operator contract",
+            "torch_version": str(torch.__version__), "runtime_verified": False,
+        })
+
     def canonical_predicate(self, node: ast.Call, arguments: dict[str, StaticValue]) -> StaticValue | None:
         """Resolve native predicates by identity, never by the spelling of a call."""
         if any(isinstance(arg, ast.Starred) for arg in node.args) or any(
             keyword.arg is None for keyword in node.keywords
         ):
             return None
-        parts = []
-        expression = node.func
-        while isinstance(expression, ast.Attribute):
-            parts.append(expression.attr)
-            expression = expression.value
-        if not isinstance(expression, ast.Name) or expression.id in self.env:
-            return None
-        function = self.source_globals.get(expression.id, vars(builtins).get(expression.id, UNKNOWN))
-        for name in reversed(parts):
-            if not isinstance(function, ModuleType):
-                return None
-            function = vars(function).get(name, UNKNOWN)
+        function = self.source_callable(node.func)
         if function is isinstance:
             if len(node.args) != 2 or node.keywords or not isinstance(node.args[1], ast.Name):
                 return None
@@ -441,6 +492,8 @@ class StaticFlowAnalyzer:
             return StaticValue(constant=node.value)
         if isinstance(node, ast.Name):
             return self.env.get(node.id, StaticValue())
+        if isinstance(node, ast.Starred):
+            return self.expression(node.value)
         if isinstance(node, ast.NamedExpr):
             value = self.expression(node.value)
             self.assign(node.target, value)
@@ -451,6 +504,13 @@ class StaticFlowAnalyzer:
             values = [self.expression(item) for item in node.elts]
             result = combine(values)
             result.items = values
+            return result
+        if isinstance(node, ast.Dict):
+            keys = [self.expression(key) for key in node.keys]
+            values = [self.expression(value) for value in node.values]
+            result = combine([*keys, *values])
+            if all(type(key.constant) is str for key in keys):
+                result.fields = {key.constant: value for key, value in zip(keys, values)}
             return result
         if isinstance(node, ast.Subscript):
             if getattr(self.model.config, "model_type", None) == "vit" and isinstance(node.slice, ast.Tuple):
@@ -476,6 +536,8 @@ class StaticFlowAnalyzer:
                 return value
             if value.items and type(index) is int and -len(value.items) <= index < len(value.items):
                 return value.items[index]
+            if value.fields and type(index) is str and index in value.fields:
+                return value.fields[index]
             return StaticValue(
                 [(ref, str(index) if index is not UNKNOWN else port) for ref, port in value.refs]
             )
@@ -503,6 +565,11 @@ class StaticFlowAnalyzer:
             return StaticValue()
         if isinstance(node, ast.Compare) and len(node.ops) == 1:
             left, right = self.expression(node.left), self.expression(node.comparators[0])
+            if (isinstance(node.ops[0], (ast.Is, ast.IsNot))
+                    and type(left.constant) in (type(None), bool)
+                    and type(right.constant) in (type(None), bool)):
+                same = left.constant is right.constant
+                return StaticValue(constant=same if isinstance(node.ops[0], ast.Is) else not same)
             if isinstance(node.ops[0], (ast.Is, ast.IsNot)) and right.constant is None:
                 if left.refs or left.module_path is not None:
                     return StaticValue(constant=isinstance(node.ops[0], ast.IsNot))
@@ -586,19 +653,35 @@ class StaticFlowAnalyzer:
                 return self.expression(node.args[0])
             arguments = {str(i): self.expression(arg) for i, arg in enumerate(node.args)}
             arguments.update(
-                {kw.arg: self.expression(kw.value) for kw in node.keywords if kw.arg is not None}
+                {kw.arg if kw.arg is not None else f"**{index}": self.expression(kw.value)
+                 for index, kw in enumerate(node.keywords)}
             )
             predicate = self.canonical_predicate(node, arguments)
             if predicate is not None:
                 return predicate
+            functional = self.functional_operation(node, arguments)
+            if functional is not None:
+                return functional
             if function.module_path is not None and function.method is None:
                 return self.event(node, function.module_path, "module", function.module_path, arguments)
             if function.method is not None and self.depth < 3:
-                return self.helper(function.module_path, function.method, list(arguments.values()), node)
-            if name == "apply_chunking_to_forward" and node.args:
-                helper = arguments["0"]
-                if helper.method:
-                    return self.helper(helper.module_path, helper.method, list(arguments.values())[3:], node)
+                return self.helper(
+                    function.module_path, function.method,
+                    [arguments[str(index)] for index in range(len(node.args))], node,
+                    keywords={key: value for key, value in arguments.items() if not key.isdecimal()},
+                )
+            if self.source_callable(node.func) is apply_chunking_to_forward:
+                if (len(node.args) >= 4 and not node.keywords
+                        and not any(isinstance(arg, ast.Starred) for arg in node.args)
+                        and type(arguments["1"].constant) is int and arguments["1"].constant == 0):
+                    helper = arguments["0"]
+                    if helper.method:
+                        return self.helper(
+                            helper.module_path, helper.method,
+                            [arguments[str(index)] for index in range(3, len(node.args))], node,
+                        )
+                self.flow.warnings.append("Chunked helper arguments are unresolved; dependencies only")
+                return combine(list(arguments.values()))
             if name.startswith("create_") and name.endswith("mask"):
                 return StaticValue()
             if name == "arange":
@@ -667,11 +750,16 @@ class StaticFlowAnalyzer:
         return StaticValue()
 
     def helper(
-        self, path: str | None, method_name: str, values: list[StaticValue], node: ast.AST
+        self, path: str | None, method_name: str, values: list[StaticValue], node: ast.AST,
+        *, keywords: dict[str, StaticValue] | None = None,
     ) -> StaticValue:
+        keywords = keywords or {}
+        dependencies = [*values, *keywords.values()]
         module = self.model.get_submodule(path) if path else self.model
         try:
-            method = inspect.unwrap(getattr(type(module), method_name))
+            descriptor = inspect.getattr_static(type(module), method_name)
+            method = inspect.unwrap(descriptor.__func__ if isinstance(descriptor, (staticmethod, classmethod))
+                                    else getattr(type(module), method_name))
             function = next(
                 n
                 for n in ast.parse(textwrap.dedent(inspect.getsource(method))).body
@@ -679,7 +767,35 @@ class StaticFlowAnalyzer:
             )
         except (AttributeError, OSError, TypeError, SyntaxError, StopIteration):
             self.flow.warnings.append(f"Helper source unavailable: {path}.{method_name}; dependencies only")
-            return combine(values)
+            return combine(dependencies)
+        if isinstance(node, ast.Call) and (
+            any(isinstance(arg, ast.Starred) for arg in node.args)
+            or any(keyword.arg is None for keyword in node.keywords)
+        ):
+            self.flow.warnings.append(f"Helper argument expansion is unresolved: {path}.{method_name}")
+            return combine(dependencies)
+        try:
+            receiver = ([] if isinstance(descriptor, staticmethod) else
+                        [StaticValue() if isinstance(descriptor, classmethod) else StaticValue(module_path=path)])
+            bound = inspect.signature(method).bind(*receiver, *values, **keywords)
+            bound.apply_defaults()
+        except (ValueError, TypeError):
+            self.flow.warnings.append(f"Helper arguments cannot be bound: {path}.{method_name}; dependencies only")
+            return combine(dependencies)
+        environment = {}
+        for name, value in bound.arguments.items():
+            if isinstance(value, StaticValue):
+                environment[name] = value
+            elif type(value) in (type(None), bool, int, str) or type(value) is float and math.isfinite(value):
+                environment[name] = StaticValue(constant=value)
+            elif type(value) is tuple and all(isinstance(item, StaticValue) for item in value):
+                environment[name] = combine(list(value))
+                environment[name].items = list(value)
+            elif type(value) is dict and all(isinstance(item, StaticValue) for item in value.values()):
+                environment[name] = combine(list(value.values()))
+                environment[name].fields = dict(value)
+            else:
+                environment[name] = StaticValue()
         old_env, old_output, old_globals, old_returned = (
             self.env,
             self.flow.outputs,
@@ -688,13 +804,13 @@ class StaticFlowAnalyzer:
         )
         self.source_globals = method.__globals__
         self.returned = []
-        self.env = {"self": StaticValue(module_path=path)}
-        self.env.update({arg.arg: value for arg, value in zip(function.args.args[1:], values)})
+        self.env = environment
         self.depth += 1
-        self.statements(function.body)
-        result = merge_outputs(self.returned)
-        self.depth -= 1
-        self.env, self.flow.outputs = old_env, old_output
-        self.source_globals = old_globals
-        self.returned = old_returned
-        return result
+        try:
+            self.statements(function.body)
+            return merge_outputs(self.returned)
+        finally:
+            self.depth -= 1
+            self.env, self.flow.outputs = old_env, old_output
+            self.source_globals = old_globals
+            self.returned = old_returned

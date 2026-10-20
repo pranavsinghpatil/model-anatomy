@@ -150,6 +150,76 @@ def test_registry_cache_identity_mismatch_is_invalidated(service):
         assert session.get(ModelReport, report.id) is None
 
 
+def test_historical_registry_report_is_openable_but_not_an_automatic_cache_hit(service):
+    from model_anatomy.service.database import Blob, ModelReport
+
+    service.settings = service.settings.model_copy(
+        update={"engine_version": "engine-3", "schema_version": "1.1"}
+    )
+    service.storage = MemoryStorage()
+    guest = visitor(service)
+    data = document()
+    data["metadata"]["engine_version"] = "engine-2"
+    payload = json.dumps(data).encode()
+    digest = service.storage.put(payload)
+    report_id = "a" * 64
+    revision = data["metadata"]["revision"]
+    summary = ir_summary(data)
+    with service.db.write() as session:
+        session.add(Blob(digest=digest, created_at=service.clock()))
+        session.add(
+            ModelReport(
+                id=report_id,
+                cache_identity=cache_key(data["model_id"], revision, "engine-2", "1.1"),
+                model_id=data["model_id"],
+                request_revision="main",
+                revision=revision,
+                engine_version="engine-2",
+                schema_version="1.1",
+                artifact="model.safetensors",
+                explicit_artifact=False,
+                blob_digest=digest,
+                summary=summary,
+                inspected_at=service.clock(),
+            )
+        )
+        # Historical engine versions are supported for opening only while the report schema is current.
+        session.add(
+            ModelReport(
+                id="b" * 64,
+                cache_identity=cache_key(data["model_id"], revision, "engine-1", "1.0"),
+                model_id=data["model_id"],
+                request_revision="main",
+                revision=revision,
+                engine_version="engine-1",
+                schema_version="1.0",
+                artifact="model.safetensors",
+                explicit_artifact=False,
+                blob_digest=digest,
+                summary=summary,
+                inspected_at=service.clock(),
+            )
+        )
+
+    opened = service.inspect_registry(guest, report_id)
+    stored_job = service.get(opened["id"], guest)
+    assert opened["cached"] is True
+    assert opened["engine_version"] == "engine-2"
+    assert stored_job.engine_version == "engine-2"
+    assert [(row["id"], row["engine_version"]) for row in service.catalog()["models"]] == [
+        (report_id, "engine-2")
+    ]
+
+    # The current engine cache lookup remains strict and queues a fresh reconstruction.
+    queued = service.create(guest, "gpt2")
+    assert queued["status"] == "queued"
+    assert queued["cached"] is False
+    assert queued["engine_version"] == "engine-3"
+    with pytest.raises(ServiceError) as exc:
+        service.inspect_registry(guest, "b" * 64)
+    assert exc.value.status == 404
+
+
 def test_existing_local_sqlite_jobs_gain_refresh_flag_without_data_loss(tmp_path):
     service = JobService(Settings(data_dir=tmp_path))
     service.initialize()

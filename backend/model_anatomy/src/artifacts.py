@@ -4,12 +4,15 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import re
 import struct
+from collections.abc import Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from math import isfinite, prod
 from typing import Any
-from urllib.parse import quote, unquote, urlsplit
+from urllib.parse import quote, unquote, urljoin, urlsplit
 
 import requests
 
@@ -209,19 +212,76 @@ def parse_safetensors_header(header_bytes: bytes, file_size: int) -> Safetensors
 class MetadataClient:
     """Never consume a weight-file body unless the exact requested range is honored."""
 
-    def __init__(self, session: requests.Session | None = None, timeout: float = 15.0):
+    def __init__(
+        self,
+        session: requests.Session | None = None,
+        timeout: float = 15.0,
+        token: str | None = None,
+    ):
         self.session = session or requests.Session()
         self.timeout = timeout
+        selected_token = token if token is not None else os.environ.get("HF_TOKEN", "")
+        if not isinstance(selected_token, str) or (
+            selected_token.strip() and any(not 33 <= ord(char) <= 126 for char in selected_token)
+        ):
+            raise ArtifactError("Invalid Hugging Face token configuration")
+        self._token = selected_token.strip()
         self.audit: list[dict[str, Any]] = []
         self.repository_files: dict[tuple[str, str], set[str]] = {}
         self.repository_metadata: dict[tuple[str, str], dict[str, str | None]] = {}
         self.header_bytes_read = 0
         self.checkpoint_header_bytes_read = 0
 
+    @staticmethod
+    def _trusted_hf_url(url: str) -> bool:
+        if any(ord(char) < 33 for char in url):
+            return False
+        try:
+            parsed = urlsplit(url)
+            return (
+                parsed.scheme == "https"
+                and parsed.hostname == "huggingface.co"
+                and parsed.port in (None, 443)
+                and parsed.username is None
+                and parsed.password is None
+            )
+        except ValueError:
+            return False
+
+    @contextmanager
+    def _get(self, url: str, headers: dict[str, str]) -> Iterator[requests.Response]:
+        current_url = url
+        request_headers: dict[str, str | None] = dict(headers)
+        if self._token and self._trusted_hf_url(current_url):
+            request_headers["Authorization"] = f"Bearer {self._token}"
+        else:
+            # A caller-owned Session may have default auth headers; suppress them
+            # per request without changing that Session's configuration.
+            request_headers["Authorization"] = None
+        for _ in range(6):
+            with self.session.get(
+                current_url,
+                stream=True,
+                timeout=self.timeout,
+                headers=request_headers,
+                auth=lambda prepared: prepared,
+                allow_redirects=False,
+            ) as response:
+                if response.status_code in {301, 302, 303, 307, 308} and response.headers.get("Location"):
+                    next_url = urljoin(current_url, response.headers["Location"])
+                    if not (
+                        self._trusted_hf_url(current_url)
+                        and self._trusted_hf_url(next_url)
+                    ):
+                        request_headers["Authorization"] = None
+                    current_url = next_url
+                    continue
+                yield response
+                return
+        raise ArtifactError("Artifact request exceeded the redirect limit")
+
     def json(self, url: str, max_bytes: int = 1024 * 1024) -> dict[str, Any]:
-        with self.session.get(
-            url, stream=True, timeout=self.timeout, headers={"Accept-Encoding": "identity"}
-        ) as response:
+        with self._get(url, {"Accept-Encoding": "identity"}) as response:
             response.raise_for_status()
             body = response.raw.read(max_bytes + 1, decode_content=True)
             if len(body) > max_bytes:
@@ -244,6 +304,8 @@ class MetadataClient:
         info = self.json(
             f"https://huggingface.co/api/models/{reference.model_id}/revision/{quote(reference.revision, safe='')}"
         )
+        if info.get("private") is True or (self._token and info.get("private") is not False):
+            raise ArtifactError("Private or unverified Hugging Face repository is not supported")
         sha = info.get("sha")
         if not isinstance(sha, str) or not re.fullmatch(r"[0-9a-f]{40}", sha):
             raise ArtifactError("Hugging Face did not return an immutable commit SHA")
@@ -371,12 +433,7 @@ class MetadataClient:
         )
 
     def range(self, url: str, start: int, end: int) -> tuple[bytes, int]:
-        with self.session.get(
-            url,
-            stream=True,
-            timeout=self.timeout,
-            headers={"Range": f"bytes={start}-{end}", "Accept-Encoding": "identity"},
-        ) as response:
+        with self._get(url, {"Range": f"bytes={start}-{end}", "Accept-Encoding": "identity"}) as response:
             response.raise_for_status()
             content_range = response.headers.get("Content-Range", "")
             match = re.fullmatch(r"bytes (\d+)-(\d+)/(\d+)", content_range)

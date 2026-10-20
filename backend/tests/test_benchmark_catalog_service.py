@@ -86,6 +86,50 @@ def test_publish_matches_only_compatible_stored_report(tmp_path):
     service.db.engine.dispose()
 
 
+def test_benchmark_links_prefer_current_engine_then_newest_exact_historical_report(tmp_path):
+    service = JobService(Settings(data_dir=tmp_path, engine_version="engine-3", schema_version="1.1"))
+    service.initialize()
+    catalog_service = BenchmarkCatalogService(service, clock=lambda: 10.0)
+    catalog = sample_catalog()
+    first, second = catalog["results"][:2]
+    reports = [
+        # A newer historical result must not outrank a compatible current-engine result.
+        ("a" * 64, first, "engine-2", "1.1", 100.0, "model.safetensors", False, first["revision"]),
+        ("b" * 64, first, "engine-3", "1.1", 10.0, "model.safetensors", False, first["revision"]),
+        ("c" * 64, first, "engine-3", "1.1", 20.0, "model.safetensors", False, first["revision"]),
+        # Revision, artifact selection, and schema compatibility remain exact.
+        ("d" * 64, first, "engine-3", "1.1", 200.0, "model.safetensors", False, "f" * 40),
+        ("e" * 64, first, "engine-3", "1.1", 300.0, "other.safetensors", True, first["revision"]),
+        ("f" * 64, second, "engine-2", "1.1", 50.0, "model.safetensors", False, second["revision"]),
+        ("g" * 64, second, "engine-3", "1.0", 400.0, "model.safetensors", False, second["revision"]),
+    ]
+    with service.db.write() as session:
+        for report_id, row, engine, schema, inspected_at, artifact, explicit, revision in reports:
+            session.add(
+                ModelReport(
+                    id=report_id,
+                    cache_identity="0" * 64,
+                    model_id=row["model_id"],
+                    request_revision=revision,
+                    revision=revision,
+                    engine_version=engine,
+                    schema_version=schema,
+                    artifact=artifact,
+                    explicit_artifact=explicit,
+                    blob_digest="1" * 64,
+                    summary={},
+                    inspected_at=inspected_at,
+                )
+            )
+
+    catalog_service.publish(catalog, sample_runs())
+    results = catalog_service.get_catalog()["results"]
+
+    assert results[0]["stored_report_id"] == "c" * 64
+    assert results[1]["stored_report_id"] == "f" * 64
+    service.db.engine.dispose()
+
+
 def test_publication_retains_external_failures_and_baseline_recheck_history(tmp_path):
     service = JobService(Settings(data_dir=tmp_path))
     service.initialize()
@@ -175,14 +219,18 @@ def test_original_250_publication_imports_idempotently_with_private_source_runs(
         }
     arguments = (
         root / "frontend/public/benchmark-catalog.json", root / "benchmarks/model-matrix-250.json",
-        [root / "docs/benchmarks/model-matrix-250-baseline.json", root / "docs/benchmarks/model-matrix-250-rechecks.json"],
+        [
+            root / "docs/benchmarks/model-matrix-250-baseline.json",
+            root / "docs/benchmarks/model-matrix-250-rechecks.json",
+            root / "docs/benchmarks/model-matrix-250-coverage-rechecks.json",
+        ],
         root / "not-read.env",
     )
     first = store_catalog_only(*arguments, profile_loader=load_profile, database_factory=make_database)
     assert store_catalog_only(*arguments, profile_loader=load_profile, database_factory=make_database) == first
     database = make_database(None)
     with database.read() as session:
-        assert session.scalar(select(func.count()).select_from(BenchmarkRun)) == 2
+        assert session.scalar(select(func.count()).select_from(BenchmarkRun)) == 3
         assert session.scalar(select(func.count()).select_from(BenchmarkCase)) == 250
         assert "_source_case_definition" in session.scalars(select(BenchmarkCase)).first().data
     database.engine.dispose()
@@ -193,3 +241,25 @@ def test_original_250_publication_imports_idempotently_with_private_source_runs(
     assert len(result["results"]) == 250
     assert all("_source_case_definition" not in row for row in result["results"])
     service.db.engine.dispose()
+
+
+def test_store_only_cli_defaults_to_all_three_measured_run_payloads(monkeypatch):
+    import sys
+
+    import scripts.publish_benchmark_catalog as publisher
+
+    captured = {}
+    monkeypatch.setattr(sys, "argv", ["publish_benchmark_catalog.py", "--store-only"])
+    monkeypatch.setattr(
+        publisher,
+        "store_catalog_only",
+        lambda catalog, manifest, runs, env_file: captured.update(runs=runs) or "a" * 64,
+    )
+
+    publisher.main()
+
+    assert captured["runs"] == [
+        Path("docs/benchmarks/model-matrix-250-baseline.json"),
+        Path("docs/benchmarks/model-matrix-250-rechecks.json"),
+        Path("docs/benchmarks/model-matrix-250-coverage-rechecks.json"),
+    ]

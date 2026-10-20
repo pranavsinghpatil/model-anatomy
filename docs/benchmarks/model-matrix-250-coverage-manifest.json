@@ -1,0 +1,370 @@
+{
+  "schema_version": 1,
+  "discovered_at": "2026-10-19T22:47:49Z",
+  "discovery": {
+    "source": "Hugging Face public model metadata API",
+    "baseline_manifest": "model-matrix-100.json",
+    "baseline_cases_preserved": 120,
+    "new_cases_metadata_verified": 130,
+    "weights_downloaded": false,
+    "new_case_selection": "balanced round-robin by declared pipeline task; specialist pools require trusted repository-name patterns, ignoring author names",
+    "rejections": {
+      "already present in baseline": 76,
+      "author diversity cap": 4,
+      "specialist search lacks matching metadata evidence": 53
+    },
+    "category_counts": {
+      "audio-classification": 4,
+      "audio-to-audio": 4,
+      "automatic-speech-recognition": 4,
+      "causal-lm": 13,
+      "code-lm": 3,
+      "depth-estimation": 6,
+      "document-understanding": 1,
+      "embedding": 9,
+      "extractive-qa": 2,
+      "feature-extraction": 4,
+      "fill-mask": 5,
+      "gguf-quantized": 4,
+      "image-captioning": 1,
+      "image-classification": 11,
+      "image-segmentation": 9,
+      "image-text-embedding": 2,
+      "image-text-to-text": 8,
+      "image-to-image": 4,
+      "image-to-text": 4,
+      "image-to-video": 5,
+      "neural-audio-codec": 1,
+      "object-detection": 8,
+      "peft-adapter": 1,
+      "protein-model": 4,
+      "question-answering": 4,
+      "reranker": 2,
+      "rl-policy": 2,
+      "rl-policy-decision-transformer": 3,
+      "rlhf-reward-model": 2,
+      "rlhf-sft-lm": 2,
+      "robotics-policy": 4,
+      "sentence-similarity": 4,
+      "sentiment-classification": 2,
+      "seq2seq": 2,
+      "seq2seq-instruct": 2,
+      "speech-recognition": 5,
+      "speech-representation": 1,
+      "speech-to-speech-translation": 1,
+      "summarization": 6,
+      "tabular-model": 4,
+      "text-classification": 6,
+      "text-classification-encoder": 2,
+      "text-generation": 5,
+      "text-to-audio": 4,
+      "text-to-image": 12,
+      "text-to-speech": 10,
+      "text-to-video": 8,
+      "time-series-forecasting": 4,
+      "token-classification": 4,
+      "translation": 8,
+      "unconditional-image-generation": 4,
+      "video-classification": 6,
+      "video-text-retrieval": 1,
+      "visual-question-answering": 6,
+      "voice-cloning-tts": 1,
+      "voice-conversion": 2,
+      "zero-shot-image-classification": 4
+    },
+    "curation": {
+      "curated_at": "2026-10-19T22:59:11Z",
+      "baseline_cases_preserved": 120,
+      "new_cases_after_curation": 130,
+      "specialist_case_replacements": 8,
+      "false_specialist_matches_rejected": 6,
+      "provider_diversity_replacements": 2,
+      "manual_rejection_log": [
+        {
+          "model_id": "OpenMed/OpenMed-NER-ProteinDetect-SuperClinical-141M",
+          "category": "protein-model",
+          "reason": "rejected prior NER-ProteinDetect match: token-classification entity detector, not a protein sequence model"
+        },
+        {
+          "model_id": "OpenMed/OpenMed-NER-ProteinDetect-SnowMed-568M",
+          "category": "protein-model",
+          "reason": "rejected prior NER-ProteinDetect match: token-classification entity detector, not a protein sequence model"
+        },
+        {
+          "model_id": "OpenMed/OpenMed-NER-ProteinDetect-TinyMed-135M",
+          "category": "protein-model",
+          "reason": "rejected prior NER-ProteinDetect match: token-classification entity detector, not a protein sequence model"
+        },
+        {
+          "model_id": "OpenMed/OpenMed-NER-ProteinDetect-ElectraMed-560M",
+          "category": "protein-model",
+          "reason": "rejected prior NER-ProteinDetect match: token-classification entity detector, not a protein sequence model"
+        },
+        {
+          "model_id": "tabularisai/multilingual-sentiment-analysis",
+          "category": "tabular-model",
+          "reason": "rejected prior match: repository is a text sentiment classifier"
+        },
+        {
+          "model_id": "tabularisai/ModernFinBERT",
+          "category": "tabular-model",
+          "reason": "rejected prior match: repository is a financial text classification model"
+        },
+        {
+          "model_id": "ibm-granite/granite-timeseries-tspulse-r1",
+          "category": "time-series-forecasting",
+          "reason": "provider diversity: add Amazon Chronos alongside the two retained IBM Granite time-series models"
+        },
+        {
+          "model_id": "ibm-granite/granite-timeseries-patchtst-fm-r2",
+          "category": "time-series-forecasting",
+          "reason": "provider diversity: add Google TimesFM alongside the two retained IBM Granite time-series models"
+        }
+      ],
+      "replacement_api_verification": [
+        {
+          "model_id": "facebook/esm2_t6_8M_UR50D",
+          "revision": "c731040fcd8d73dceaa04b0a8e6329b345b0f5df",
+          "verified_sibling_count": 9,
+          "verified_artifact_files": [
+            "config.json",
+            "model.safetensors",
+            "pytorch_model.bin"
+          ],
+          "verification_source": "Hugging Face model metadata API at the exact pinned revision"
+        },
+        {
+          "model_id": "facebook/esm2_t12_35M_UR50D",
+          "revision": "6fbf070e65b0b7291e7bbcd451118c216cff79d8",
+          "verified_sibling_count": 9,
+          "verified_artifact_files": [
+            "config.json",
+            "model.safetensors",
+            "pytorch_model.bin"
+          ],
+          "verification_source": "Hugging Face model metadata API at the exact pinned revision"
+        },
+        {
+          "model_id": "Rostlab/prot_bert",
+          "revision": "7a894481acdc12202f0a415dd567f6cfdb698908",
+          "verified_sibling_count": 7,
+          "verified_artifact_files": [
+            "config.json",
+            "pytorch_model.bin",
+            "vocab.txt"
+          ],
+          "verification_source": "Hugging Face model metadata API at the exact pinned revision"
+        },
+        {
+          "model_id": "ElnaggarLab/ankh-base",
+          "revision": "d99cb6b966530dfc2ae96bc69d9255c2a07308b0",
+          "verified_sibling_count": 7,
+          "verified_artifact_files": [
+            "config.json",
+            "pytorch_model.bin",
+            "tokenizer.json"
+          ],
+          "verification_source": "Hugging Face model metadata API at the exact pinned revision"
+        },
+        {
+          "model_id": "Prior-Labs/TabPFN-v2-clf",
+          "revision": "f851f2a3c941544733b712d8c0f96dfae9b28862",
+          "verified_sibling_count": 19,
+          "verified_artifact_files": [
+            "config.json",
+            "tabpfn-v2-classifier.ckpt"
+          ],
+          "verification_source": "Hugging Face model metadata API at the exact pinned revision"
+        },
+        {
+          "model_id": "Prior-Labs/TabPFN-v2-reg",
+          "revision": "4972a65a1b30806315c6f92499959ffbfc69a673",
+          "verified_sibling_count": 11,
+          "verified_artifact_files": [
+            "config.json",
+            "tabpfn-v2-regressor.ckpt"
+          ],
+          "verification_source": "Hugging Face model metadata API at the exact pinned revision"
+        },
+        {
+          "model_id": "amazon/chronos-t5-small",
+          "revision": "a971ba21945c4f1796b17a91fe69214b5f4ad472",
+          "verified_sibling_count": 6,
+          "verified_artifact_files": [
+            "config.json",
+            "model.safetensors"
+          ],
+          "verification_source": "Hugging Face model metadata API at the exact pinned revision"
+        },
+        {
+          "model_id": "google/timesfm-2.0-500m-pytorch",
+          "revision": "dc2443792ce5516872b89b37cf1bc058c3bf0c10",
+          "verified_sibling_count": 5,
+          "verified_artifact_files": [
+            "config.json",
+            "model.safetensors",
+            "torch_model.ckpt"
+          ],
+          "verification_source": "Hugging Face model metadata API at the exact pinned revision"
+        }
+      ],
+      "weights_downloaded": false
+    }
+  },
+  "cases": [
+    {
+      "model_id": "HuggingFaceTB/SmolLM2-135M",
+      "category": "causal-lm",
+      "revision": "93efa2f097d58c2a74874c7e644dbc9b0cee75a2",
+      "declared_task": "text-generation",
+      "notes": "API library_name=transformers"
+    },
+    {
+      "model_id": "Qwen/Qwen2.5-0.5B-Instruct",
+      "category": "causal-lm",
+      "revision": "7ae557604adf67be50417f59c2c2f167def9a775",
+      "declared_task": "text-generation",
+      "notes": "API library_name=transformers"
+    },
+    {
+      "model_id": "openai-community/gpt2",
+      "category": "causal-lm",
+      "revision": "607a30d783dfa663caf39e06633721c8d4cfcd7e",
+      "declared_task": "text-generation",
+      "notes": "API library_name=transformers"
+    },
+    {
+      "model_id": "EleutherAI/pythia-70m",
+      "category": "causal-lm",
+      "revision": "a39f36b100fe8a5377810d56c3f4789b9c53ac42",
+      "notes": "API library_name=gpt-neox"
+    },
+    {
+      "model_id": "bigcode/starcoder2-3b",
+      "category": "code-lm",
+      "revision": "733247c55e3f73af49ce8e9c7949bf14af205928",
+      "declared_task": "text-generation",
+      "notes": "API library_name=transformers"
+    },
+    {
+      "model_id": "meta-llama/Llama-3.2-1B-Instruct",
+      "category": "causal-lm",
+      "revision": "9213176726f574b556790deb65791e0c5aa438b6",
+      "declared_task": "text-generation",
+      "notes": "gated; API metadata is public but artifacts may require access; API library_name=transformers"
+    },
+    {
+      "model_id": "sentence-transformers/all-MiniLM-L6-v2",
+      "category": "embedding",
+      "revision": "1110a243fdf4706b3f48f1d95db1a4f5529b4d41",
+      "declared_task": "sentence-similarity",
+      "notes": "API library_name=sentence-transformers"
+    },
+    {
+      "model_id": "google-bert/bert-base-uncased",
+      "category": "text-classification-encoder",
+      "revision": "86b5e0934494bd15c9632b12f734a8a67f723594",
+      "declared_task": "fill-mask",
+      "notes": "API library_name=transformers"
+    },
+    {
+      "model_id": "FacebookAI/roberta-base",
+      "category": "text-classification-encoder",
+      "revision": "e2da8e2f811d1448a5b465c236feacd80ffbac7b",
+      "declared_task": "fill-mask",
+      "notes": "API library_name=transformers"
+    },
+    {
+      "model_id": "google-t5/t5-small",
+      "category": "seq2seq",
+      "revision": "df1b051c49625cf57a3d0d8d3863ed4d13564fe4",
+      "declared_task": "translation",
+      "notes": "API library_name=transformers"
+    },
+    {
+      "model_id": "google/flan-t5-small",
+      "category": "seq2seq-instruct",
+      "revision": "0fc9ddf78a1e988dac52e2dac162b0ede4fd74ab",
+      "notes": "API library_name=transformers"
+    },
+    {
+      "model_id": "google/vit-base-patch16-224",
+      "category": "image-classification",
+      "revision": "3f49326eb077187dfe1c2a2bb15fbd74e6ab91e3",
+      "declared_task": "image-classification",
+      "notes": "API library_name=transformers"
+    },
+    {
+      "model_id": "nvidia/segformer-b0-finetuned-ade-512-512",
+      "category": "image-segmentation",
+      "revision": "489d5cd81a0b59fab9b7ea758d3548ebe99677da",
+      "declared_task": "image-segmentation",
+      "notes": "API library_name=transformers"
+    },
+    {
+      "model_id": "MCG-NJU/videomae-base",
+      "category": "video-classification",
+      "revision": "dc740ceda42fce44faed2ea03c6d447db72f6af9",
+      "declared_task": "video-classification",
+      "notes": "API library_name=transformers"
+    },
+    {
+      "model_id": "microsoft/xclip-base-patch32",
+      "category": "video-text-retrieval",
+      "revision": "a2e27a78a2b5d802e894b8a1ef14f3a8ce490963",
+      "declared_task": "video-classification",
+      "notes": "API library_name=transformers"
+    },
+    {
+      "model_id": "openai/whisper-tiny",
+      "category": "speech-recognition",
+      "revision": "169d4a4341b33bc18d8881c4b69c2e104e1cc0af",
+      "declared_task": "automatic-speech-recognition",
+      "notes": "API library_name=transformers"
+    },
+    {
+      "model_id": "coqui/XTTS-v2",
+      "category": "voice-cloning-tts",
+      "revision": "6c2b0d75eae4b7047358e3b6bd9325f857d43f77",
+      "declared_task": "text-to-speech",
+      "notes": "voice-cloning text-to-speech; not speech-to-speech conversion; API library_name=coqui"
+    },
+    {
+      "model_id": "black-forest-labs/FLUX.1-schnell",
+      "category": "text-to-image",
+      "revision": "741f7c3ce8b383c54771c7003378a50191e9efe9",
+      "reference": "https://huggingface.co/black-forest-labs/FLUX.1-schnell/blob/741f7c3ce8b383c54771c7003378a50191e9efe9/transformer/diffusion_pytorch_model-00001-of-00003.safetensors",
+      "declared_task": "text-to-image",
+      "notes": "large metadata-only case; gated/access restrictions may apply; API library_name=diffusers"
+    },
+    {
+      "model_id": "DeepFloyd/IF-I-XL-v1.0",
+      "category": "text-to-image",
+      "revision": "c03d510e9b75bce9f9db5bb85148c1402ad7e694",
+      "reference": "https://huggingface.co/DeepFloyd/IF-I-XL-v1.0/blob/c03d510e9b75bce9f9db5bb85148c1402ad7e694/unet/diffusion_pytorch_model.safetensors",
+      "declared_task": "text-to-image",
+      "notes": "gated/access restrictions may apply; API library_name=diffusers"
+    },
+    {
+      "model_id": "laion/clap-htsat-fused",
+      "category": "audio-classification",
+      "revision": "365dea6ef167def6676140ed93bbc43f84dabb28",
+      "declared_task": "audio-classification",
+      "notes": "HF API verified; library_name=transformers"
+    },
+    {
+      "model_id": "meta-llama/Prompt-Guard-86M",
+      "category": "text-classification",
+      "revision": "1209add6ca7d9c1d815171b8e5571587fe3e7b03",
+      "declared_task": "text-classification",
+      "notes": "HF API verified; library_name=transformers"
+    },
+    {
+      "model_id": "answerdotai/ModernBERT-base",
+      "category": "fill-mask",
+      "revision": "8949b909ec900327062f0ebf497f51aef5e6f0c8",
+      "declared_task": "fill-mask",
+      "notes": "HF API verified; library_name=transformers"
+    }
+  ]
+}

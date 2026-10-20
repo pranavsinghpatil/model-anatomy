@@ -46,6 +46,11 @@ PUBLIC_FIELDS = (
     "service_contract_valid",
     "case_identity",
 )
+DEFAULT_RUNS = (
+    Path("docs/benchmarks/model-matrix-250-baseline.json"),
+    Path("docs/benchmarks/model-matrix-250-rechecks.json"),
+    Path("docs/benchmarks/model-matrix-250-coverage-rechecks.json"),
+)
 
 
 def _build_run(manifest_bytes: bytes, summary: dict, *, expected_cases: int) -> dict:
@@ -308,7 +313,7 @@ def main() -> None:
     parser.add_argument("--catalog", type=Path, default=Path("frontend/public/benchmark-catalog.json"))
     parser.add_argument(
         "--runs", nargs="+", type=Path,
-        default=[Path("docs/benchmarks/model-matrix-250-baseline.json"), Path("docs/benchmarks/model-matrix-250-rechecks.json")],
+        default=list(DEFAULT_RUNS),
     )
     args = parser.parse_args()
     if args.store_only:
