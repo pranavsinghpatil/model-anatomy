@@ -271,3 +271,14 @@
     grid-template-columns: 1fr;
   }
 }
+
+.benchmark-scope {
+  color: #94a3b8;
+  font-size: 12px;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.benchmark-card .card-top-row {
+  flex-wrap: wrap;
+}

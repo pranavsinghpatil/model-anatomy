@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { ArrowRight, ExternalLink, Search } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import "./benchmark-catalog.css";
@@ -16,12 +16,20 @@ type BenchmarkResult = {
   engine_version: string;
   warning_count?: number;
   warnings?: string[];
+  diagnostic_notes?: string[];
   reason_codes?: string[];
   error?: { message?: string };
   graph_count?: number;
   tensor_count?: number;
   parameter_counts?: { unique?: number | null };
   coverage?: Record<string, number | null>;
+  run_kind?: "baseline" | "recheck";
+  previous_observations?: Array<{
+    status: string;
+    engine_version: string;
+    finished_at: string;
+    case_identity: string;
+  }>;
 };
 
 type BenchmarkReport = {
@@ -30,6 +38,8 @@ type BenchmarkReport = {
   engine_version: string;
   manifest_sha256: string;
   results: BenchmarkResult[];
+  baseline_cases?: number;
+  recheck_attempts?: number;
 };
 
 const pageSize = 24;
@@ -172,14 +182,25 @@ export default function BenchmarkCatalog() {
     );
   if (!report) return null;
 
+  const reportRuns =
+    report.baseline_cases == null
+      ? `${report.results.length} repositories`
+      : `${report.baseline_cases} baseline attempts${
+          report.recheck_attempts == null
+            ? ""
+            : ` + ${report.recheck_attempts} rechecks`
+        } · ${report.results.length} pinned ${
+          report.results.length === 1 ? "repository" : "repositories"
+        }`;
+
   return (
     <section className="benchmark-content" aria-labelledby="benchmark-heading">
       <div className="benchmark-report-meta">
         <div>
-          <h2 id="benchmark-heading">Measured compatibility attempts</h2>
+          <h2 id="benchmark-heading">Measured compatibility results</h2>
           <p>
-            {report.results.length} pinned repositories · engine{" "}
-            {report.engine_version} · generated {dateTime(report.generated_at)}
+            {reportRuns} · engine {report.engine_version} · generated{" "}
+            {dateTime(report.generated_at)}
           </p>
         </div>
         <code title="Pinned input manifest SHA-256">
@@ -190,7 +211,7 @@ export default function BenchmarkCatalog() {
       <div className="benchmark-summary" aria-label="Outcome totals">
         <div>
           <strong>{report.results.length}</strong>
-          <span>Attempts</span>
+          <span>Repositories</span>
         </div>
         {statusCounts.map(({ status, count }) => (
           <div key={status}>
@@ -267,6 +288,9 @@ export default function BenchmarkCatalog() {
               item.reference ||
               `https://huggingface.co/${repoPath}/tree/${encodeURIComponent(item.revision)}`;
             const warnings = item.warnings ?? [];
+            const artifactPath = item.reference?.match(
+              /\/(?:blob|resolve)\/[0-9a-f]{40}\/(.+)$/,
+            )?.[1];
             return (
               <article
                 key={`${item.model_id}@${item.revision}`}
@@ -276,12 +300,20 @@ export default function BenchmarkCatalog() {
                   <span className={`benchmark-status status-${item.status}`}>
                     {statusLabel(item.status)}
                   </span>
+                  {item.run_kind === "recheck" && (
+                    <span className="card-family-tag">Recheck</span>
+                  )}
                   <span className="card-family-tag">{item.category}</span>
                 </div>
                 <h3 className="card-model-title">{item.model_id}</h3>
                 <p className="benchmark-task">
                   Declared task: {item.declared_task ?? "Not declared"}
                 </p>
+                {artifactPath && (
+                  <p className="benchmark-scope">
+                    Selected artifact: <code>{artifactPath}</code>
+                  </p>
+                )}
                 <div className="benchmark-facts">
                   <div>
                     <span>Architecture</span>
@@ -292,7 +324,7 @@ export default function BenchmarkCatalog() {
                     <strong>{number(item.graph_count)}</strong>
                   </div>
                   <div>
-                    <span>Tensors</span>
+                    <span>Inspected tensors</span>
                     <strong>{number(item.tensor_count)}</strong>
                   </div>
                   <div>
@@ -324,8 +356,17 @@ export default function BenchmarkCatalog() {
                   </a>
                 </div>
                 <details className="benchmark-details">
-                  <summary>Evidence and details</summary>
+                  <summary>
+                    Evidence and details
+                    {item.run_kind === "recheck" ? " · recheck" : ""}
+                  </summary>
                   <dl>
+                    {item.run_kind === "recheck" && (
+                      <>
+                        <dt>Run kind</dt>
+                        <dd>Recheck</dd>
+                      </>
+                    )}
                     <dt>Revision</dt>
                     <dd>{item.revision}</dd>
                     <dt>Reference</dt>
@@ -340,8 +381,19 @@ export default function BenchmarkCatalog() {
                     <dd>{dateTime(item.finished_at)}</dd>
                     <dt>Engine</dt>
                     <dd>{item.engine_version}</dd>
-                    <dt>Warnings</dt>
-                    <dd>{item.warning_count ?? warnings.length}</dd>
+                    {item.run_kind === "recheck" &&
+                      item.previous_observations?.map((previous, index) => (
+                        <Fragment key={`${previous.finished_at}-${index}`}>
+                          <dt>Previous observation {index + 1}</dt>
+                          <dd>
+                            {statusLabel(previous.status)} · engine{" "}
+                            {previous.engine_version} · finished{" "}
+                            {dateTime(previous.finished_at)}
+                          </dd>
+                        </Fragment>
+                      ))}
+                    <dt>Warning count</dt>
+                    <dd>{item.warning_count ?? "Not measured"}</dd>
                     <dt>Reason codes</dt>
                     <dd>{item.reason_codes?.join(", ") || "None recorded"}</dd>
                     {item.error?.message && (
@@ -353,13 +405,32 @@ export default function BenchmarkCatalog() {
                   </dl>
                   {warnings.length > 0 && (
                     <div>
-                      <h4>Warnings</h4>
+                      <h4>
+                        Warnings (showing {warnings.length} of{" "}
+                        {item.warning_count ?? warnings.length})
+                      </h4>
                       <ul>
                         {warnings.map((warning, index) => (
                           <li key={`${index}-${warning}`}>{warning}</li>
                         ))}
                       </ul>
                     </div>
+                  )}
+                  {item.diagnostic_notes &&
+                    item.diagnostic_notes.length > 0 && (
+                      <div className="benchmark-diagnostic-notes">
+                        <h4>Diagnostic summary</h4>
+                        <ul>
+                          {item.diagnostic_notes.map((note, index) => (
+                            <li key={`${index}-${note}`}>{note}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  {(item.warning_count ?? 0) > 0 && warnings.length === 0 && (
+                    <p>
+                      Run a pinned inspection to view full diagnostic details.
+                    </p>
                   )}
                   {item.coverage && (
                     <div className="benchmark-coverage">

@@ -1,4 +1,5 @@
 """Pinned repository catalog actions preserve revision and automatic checkpoint selection."""
+
 from pathlib import Path
 
 import pytest
@@ -25,14 +26,20 @@ def test_pinned_repository_url_retains_automatic_checkpoint_selection():
     assert reference.filename == "model.safetensors" and reference.explicit_filename is False
 
 
-@pytest.mark.parametrize("value", [
-    f"http://huggingface.co/owner/model/tree/{SHA}",
-    f"https://evil.example/owner/model/tree/{SHA}",
-    "https://huggingface.co/owner/model/tree/main",
-    "https://huggingface.co/owner/model/tree/..",
-    "https://huggingface.co/owner/model/tree/%2e%2e",
-    f"{URL}?download=true", f"{URL}#files", f"{URL}/extra", f"{URL}/%2e%2e",
-])
+@pytest.mark.parametrize(
+    "value",
+    [
+        f"http://huggingface.co/owner/model/tree/{SHA}",
+        f"https://evil.example/owner/model/tree/{SHA}",
+        "https://huggingface.co/owner/model/tree/main",
+        "https://huggingface.co/owner/model/tree/..",
+        "https://huggingface.co/owner/model/tree/%2e%2e",
+        f"{URL}?download=true",
+        f"{URL}#files",
+        f"{URL}/extra",
+        f"{URL}/%2e%2e",
+    ],
+)
 def test_new_repository_url_shape_keeps_rejecting_invalid_references(value):
     with pytest.raises(ServiceError):
         model_reference(value)
@@ -79,3 +86,20 @@ def test_pinned_catalog_flow_resolves_and_caches_exact_commit(tmp_path):
     assert cached["cached"] is True and cached["revision"] == revision
     assert service.get(cached["id"], guest).attempts == 0 and len(resolved) == 1
     service.db.engine.dispose()
+
+
+def test_all_250_catalog_actions_preserve_their_pinned_selection():
+    import json
+
+    root = Path(__file__).resolve().parents[2]
+    cases = json.loads((root / "benchmarks/model-matrix-250.json").read_text())["cases"]
+    assert len(cases) == 250
+    for case in cases:
+        value = case.get("reference") or f"https://huggingface.co/{case['model_id']}/tree/{case['revision']}"
+        assert model_reference(value)[1] == case["model_id"]
+        model_id, revision, artifact, explicit = request_selector(value)
+        native = parse_reference(value)
+        assert model_id == native.model_id == case["model_id"]
+        assert revision == native.revision == case["revision"]
+        assert explicit == native.explicit_filename == bool(case.get("reference"))
+        assert artifact == native.filename

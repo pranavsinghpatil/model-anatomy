@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-function report(count = 50) {
+function report(count = 50): any {
   return {
     schema_version: 1,
     generated_at: "2026-10-20T12:00:00Z",
@@ -35,6 +35,10 @@ function report(count = 50) {
         engine_version: "engine-test",
         warning_count: warnings.length,
         warnings,
+        diagnostic_notes:
+          status === "partial"
+            ? ["Some graph operations could not be traced."]
+            : [],
         reason_codes: status === "partial" ? ["graph_partial"] : [],
         graph_count: isGraphResult ? 1 : null,
         tensor_count: status === "inspected" ? 12 + index : null,
@@ -78,7 +82,7 @@ test("benchmark search, filters, counts, and 24-row pagination use measured rows
   await serveReport(page);
   await page.goto("/catalog");
   await expect(
-    page.getByRole("heading", { name: "Measured compatibility attempts" }),
+    page.getByRole("heading", { name: "Measured compatibility results" }),
   ).toBeVisible();
   await expect(page.locator(".benchmark-card")).toHaveCount(24);
   await expect(
@@ -97,6 +101,10 @@ test("benchmark search, filters, counts, and 24-row pagination use measured rows
   ).toBeVisible();
   await page.locator(".benchmark-details summary").click();
   await expect(page.getByText("Some layers were not traced.")).toBeVisible();
+  await expect(page.getByText("Diagnostic summary")).toBeVisible();
+  await expect(
+    page.getByText("Some graph operations could not be traced."),
+  ).toBeVisible();
 
   await page
     .getByRole("searchbox", { name: "Search benchmark results" })
@@ -232,4 +240,106 @@ test("benchmark cards fit a narrow viewport without horizontal page overflow", a
     viewport: document.documentElement.clientWidth,
   }));
   expect(widths.document).toBeLessThanOrEqual(widths.viewport);
+});
+
+test("selected component scope and artifact reference remain explicit", async ({
+  page,
+}) => {
+  const measured = report(1);
+  const artifact = `https://huggingface.co/org/model-000/blob/${"a".repeat(40)}/unet/diffusion_pytorch_model.safetensors`;
+  measured.results[0].revision = "a".repeat(40);
+  measured.results[0].reference = artifact;
+  await serveReport(page, { body: measured });
+  await page.goto("/catalog");
+  await expect(page.locator(".benchmark-scope")).toHaveText(
+    "Selected artifact: unet/diffusion_pytorch_model.safetensors",
+  );
+  await page.getByRole("button", { name: "Inspect pinned model" }).click();
+  await expect(page.locator("#model-input")).toHaveValue(artifact);
+});
+
+test("withheld raw diagnostics show safe notes and unknown warning counts honestly", async ({
+  page,
+}) => {
+  const withheld = report(1);
+  withheld.results[0].status = "failure";
+  withheld.results[0].warning_count = undefined;
+  withheld.results[0].warnings = [];
+  withheld.results[0].diagnostic_notes = [
+    "Pinned artifacts could not be read.",
+  ];
+  await serveReport(page, { body: withheld });
+  await page.goto("/catalog");
+  await page.locator(".benchmark-details summary").click();
+  await expect(page.getByText("Warning count").locator("..")).toContainText(
+    "Not measured",
+  );
+  await expect(page.getByText("Diagnostic summary")).toBeVisible();
+  await expect(
+    page.getByText("Pinned artifacts could not be read."),
+  ).toBeVisible();
+  await expect(
+    page.getByText("Run a pinned inspection to view full diagnostic details."),
+  ).toHaveCount(0);
+  withheld.results[0].warning_count = 2;
+  await serveReport(page, { body: withheld });
+  await page.reload();
+  await page.locator(".benchmark-details summary").click();
+  await expect(
+    page.getByText("Run a pinned inspection to view full diagnostic details."),
+  ).toBeVisible();
+});
+
+test("revision-only action builds the exact pinned repository reference", async ({
+  page,
+}) => {
+  const pinned = report(1);
+  pinned.results[0].reference = null;
+  await serveReport(page, { body: pinned });
+  await page.goto("/catalog");
+  await page.getByRole("button", { name: "Inspect pinned model" }).click();
+  await expect(page.locator("#model-input")).toHaveValue(
+    `https://huggingface.co/org/model-000/tree/${"0".repeat(40)}`,
+  );
+});
+
+test("mixed baseline and recheck reports show repository counts and prior evidence", async ({
+  page,
+}) => {
+  const mixed = report(1);
+  mixed.baseline_cases = 250;
+  mixed.recheck_attempts = 4;
+  mixed.results[0].run_kind = "recheck";
+  mixed.results[0].previous_observations = [
+    {
+      status: "partial",
+      engine_version: "engine-baseline",
+      finished_at: "2026-10-19T11:00:02Z",
+      case_identity: "org/model-000@revision",
+    },
+  ];
+  await serveReport(page, { body: mixed });
+  await page.goto("/catalog");
+
+  await expect(page.locator(".benchmark-summary > div").first()).toContainText(
+    "Repositories",
+  );
+  await expect(
+    page.getByText(
+      "250 baseline attempts + 4 rechecks · 1 pinned repository · engine engine-test",
+    ),
+  ).toBeVisible();
+  await expect(
+    page.locator(".card-top-row").getByText("Recheck", { exact: true }),
+  ).toBeVisible();
+  await page.locator(".benchmark-details summary").click();
+  await expect(page.locator(".benchmark-details summary")).toContainText(
+    "recheck",
+  );
+  await expect(page.getByText("Run kind").locator("..")).toContainText(
+    "Recheck",
+  );
+  await expect(page.locator(".benchmark-details dl")).toContainText(
+    "Partial graph · engine engine-baseline · finished",
+  );
 });

@@ -1,7 +1,8 @@
 # Evidence-preserving reconstruction by model family
 
-The 120-repository matrix in `benchmarks/model-matrix-100.json` is a compatibility
-probe, not a universal-support certification. A repository/task label is discovery
+The 120-repository baseline in `benchmarks/model-matrix-100.json` and the
+250-repository expansion in `benchmarks/model-matrix-250.json` are compatibility
+probes, not universal-support certifications. A repository/task label is discovery
 metadata. It does not establish a model's computation or training history.
 
 ## Shared acceptance gates
@@ -43,3 +44,36 @@ and incomplete semantics. Fix reproducible general correctness defects first.
 Then promote one family at a time using tiny native fixtures plus pinned real
 checkpoints. Rerun affected cases with a new engine identity and preserve the
 baseline. A safe artifact-only outcome must never be counted as complete anatomy.
+
+## Acceptance plans for specialist tasks in the 250-case matrix
+
+These are implementation plans, not claims that task-specific anatomy already
+exists. The catalog's measured outcome remains the authority for each pinned case.
+
+| Task family | Specific route and acceptance gate |
+| --- | --- |
+| Time series (Chronos, TimesFM, Granite) | Separate forecast horizon, patch/time/channel axes, context windows and scaling from language-token semantics. Use exact registered native classes where available; preserve component and tensor ownership. Test each configuration's real input/output contract without treating successful T5 construction as complete forecasting semantics. |
+| Protein sequence models (ESM, ProtBERT, Ankh) | Reconstruct the native sequence backbone, then attribute residue alphabet, special tokens, pooling and prediction heads to actual config/source. Sequence representations are distinct from protein NER and folding predictions. Add residue-axis and head-shape fixtures before promoting biological semantics. |
+| Tabular models (TabPFN, EXAONE, Kumo) | Begin with file/config inventory and safe tensor headers where supported. Do not unpickle `.ckpt`, `.pt` or executable serialized estimators. A reviewed native adapter must establish row/column/query axes, feature encoding and prediction heads before graph support is claimed. |
+| Robotics policies (LeRobot Pi0/Pi05) | Preserve vision, language, proprioceptive state, timestep and action components separately. Derive normalization and action dimensions from bounded artifact evidence. Review native constructors for downloads and allocations, then require component ownership and modality-edge fixtures. Policy success or safety is not established by static anatomy. |
+
+Selection itself needs evidence: a publisher name containing “tabular” or a
+biomedical NER model containing “protein” cannot establish the corresponding
+specialist task. The discovery regression tests reject these false matches; the
+curated manifest records replacements and exact-revision verification.
+
+## Contracts confirmed by the 250-model repair rechecks
+
+- **Hierarchical CLAP audio:** attention heads are a per-stage schedule, not a scalar.
+  Validate the effective native defaults, depth sum and stage/head alignment before construction.
+  The pinned repaired CLAP report is partial: shifted windows, padding, branch conditions,
+  normalization and modality similarity operations still need source-backed semantic acceptance.
+- **CLIP/XCLIP composites:** preserve fetched config JSON independently from Transformers'
+  mutable native config objects, and require IR JSON round trips for architecture and
+  artifact-only reports. Native modality ownership does not prove all similarity operations,
+  normalization or temporal pooling semantics. A repository without a selected Safetensors
+  checkpoint remains artifact-only even when native configuration loading succeeds.
+
+Pinned rechecks and unchanged baseline observations remain separate evidence. Future family
+promotions must add deterministic semantic fixtures rather than suppressing warnings or
+relabeling partial reports as complete.

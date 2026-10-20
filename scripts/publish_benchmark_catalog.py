@@ -7,11 +7,14 @@ import hashlib
 import json
 import sys
 from collections import Counter
+from datetime import datetime
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from scripts.model_matrix import COVERAGE_KEYS, case_identity, validate_manifest
+
+from model_anatomy.src.artifact_inspection import INSPECTION_MESSAGES
 
 SUCCESS = {"completed", "partial", "inspected"}
 STATUSES = SUCCESS | {
@@ -34,8 +37,6 @@ PUBLIC_FIELDS = (
     "started_at",
     "finished_at",
     "warning_count",
-    "warnings",
-    "reason_codes",
     "graph_count",
     "node_count",
     "tensor_count",
@@ -47,16 +48,16 @@ PUBLIC_FIELDS = (
 )
 
 
-def build_catalog(manifest_bytes: bytes, summary: dict) -> dict:
+def _build_run(manifest_bytes: bytes, summary: dict, *, expected_cases: int) -> dict:
     manifest = json.loads(manifest_bytes)
-    cases = validate_manifest(manifest)
-    if len(cases) != 250:
-        raise ValueError("catalog requires exactly 250 distinct pinned cases")
-    if len({c["model_id"].casefold() for c in cases}) != 250:
+    cases = validate_manifest(manifest, allow_small=expected_cases < 100)
+    if expected_cases < 1 or len(cases) != expected_cases:
+        raise ValueError(f"catalog requires exactly {expected_cases} distinct pinned cases")
+    if len({c["model_id"].casefold() for c in cases}) != expected_cases:
         raise ValueError("catalog repository IDs must be distinct ignoring case")
     rows = summary.get("results", [])
-    if summary.get("cases") != 250 or len(rows) != 250:
-        raise ValueError("catalog requires 250 measured results")
+    if summary.get("cases") != expected_cases or len(rows) != expected_cases:
+        raise ValueError(f"catalog requires {expected_cases} measured results")
     environment = summary["environment"]
     engine = environment["engine_version"]
     runner_hash = environment["runner_sha256"]
@@ -106,8 +107,34 @@ def build_catalog(manifest_bytes: bytes, summary: dict) -> dict:
             ):
                 raise ValueError("complete report requires full bounded coverage and no warnings")
         item = {key: row[key] for key in PUBLIC_FIELDS if key in row}
+        # Native blockers and warnings can include exception text or local paths.
+        # Publish only stable engine reason messages and generic warning summaries.
+        raw_reasons = row.get("reason_codes", [])
+        safe_messages = {
+            **INSPECTION_MESSAGES,
+            "coverage_not_complete": "The recorded static coverage is incomplete.",
+        }
+        reasons = list(dict.fromkeys(reason for reason in raw_reasons if reason in safe_messages))
+        notes = [safe_messages[reason] for reason in reasons]
+        if status in SUCCESS and row.get("warning_count", 0):
+            notes.append(
+                "Static-analysis warnings were recorded. Run a pinned inspection for full diagnostics."
+            )
+            if any(
+                "equivalence to publisher custom code is unverified" in warning
+                for warning in row.get("warnings", [])
+            ):
+                notes.append(
+                    "Publisher custom-code equivalence is unverified; the installed native implementation was used."
+                )
+        item["warnings"] = []
+        item["reason_codes"] = reasons if status in SUCCESS else []
+        item["diagnostic_notes"] = (
+            notes if status in SUCCESS else ["This attempt did not produce a validated report."]
+        )
         if status not in SUCCESS:
             for key in (
+                "warning_count",
                 "architecture",
                 "graph_count",
                 "node_count",
@@ -126,10 +153,10 @@ def build_catalog(manifest_bytes: bytes, summary: dict) -> dict:
         )
         # No traceback, filesystem paths, or raw exception messages in the public dataset.
         if status not in SUCCESS:
-            item["error"] = {
-                "message": f"{status} during {row.get('stage', 'case')}",
-                "cause_type": row.get("cause_type"),
-            }
+            stage = row.get("stage")
+            if stage not in {"case", "reconstruction", "report_validation"}:
+                stage = "case"
+            item["error"] = {"message": f"{status} during {stage}"}
         published.append(item)
         counts[status] += 1
     if dict(counts) != summary.get("status_counts"):
@@ -138,7 +165,12 @@ def build_catalog(manifest_bytes: bytes, summary: dict) -> dict:
         "schema_version": 1,
         "generated_at": summary["generated_at"],
         "engine_version": engine,
-        "manifest_sha256": hashlib.sha256(manifest_bytes).hexdigest(),
+        "manifest_sha256": hashlib.sha256(
+            json.dumps(
+                manifest, sort_keys=True, ensure_ascii=False, separators=(",", ":"), allow_nan=False
+            ).encode()
+        ).hexdigest(),
+        "manifest_hash_encoding": "canonical-json-v1",
         "runner_sha256": runner_hash,
         "engine_source_sha256": source_hash,
         "method": "Pinned metadata and bounded static reconstruction; no inference quality or speed measurement.",
@@ -147,13 +179,78 @@ def build_catalog(manifest_bytes: bytes, summary: dict) -> dict:
     }
 
 
+def build_catalog(
+    manifest_bytes: bytes, summary: dict, *, rechecks: list[tuple[bytes, dict]] | None = None
+) -> dict:
+    """Validate a complete baseline, then apply explicitly attributed newer observations."""
+    catalog = _build_run(manifest_bytes, summary, expected_cases=250)
+    if not rechecks:
+        return catalog
+    original_cases = {case["model_id"]: case for case in json.loads(manifest_bytes)["cases"]}
+    latest = {row["model_id"]: row for row in catalog["results"]}
+
+    def provenance(run: dict, kind: str) -> dict:
+        environment = run["environment"]
+        return {
+            "kind": kind,
+            "cases": run["cases"],
+            "generated_at": run["generated_at"],
+            "engine_version": environment["engine_version"],
+            "runner_sha256": environment["runner_sha256"],
+            "engine_source_sha256": environment["engine_source_sha256"],
+            "status_counts": run["status_counts"],
+        }
+
+    runs = [provenance(summary, "baseline")]
+    for row in latest.values():
+        row["run_kind"] = "baseline"
+    for manifest_data, run_summary in rechecks:
+        cases = validate_manifest(json.loads(manifest_data), allow_small=True)
+        for case in cases:
+            if original_cases.get(case["model_id"]) != case:
+                raise ValueError("rechecks must preserve the original pinned case definition")
+        checked = _build_run(manifest_data, run_summary, expected_cases=len(cases))
+        runs.append(provenance(run_summary, "recheck"))
+        for row in checked["results"]:
+            previous = latest[row["model_id"]]
+            if datetime.fromisoformat(row["finished_at"]) <= datetime.fromisoformat(previous["finished_at"]):
+                raise ValueError("rechecks must be newer than the observation they replace")
+            row["previous_observations"] = [
+                *previous.get("previous_observations", []),
+                {key: previous[key] for key in ("status", "engine_version", "finished_at", "case_identity")},
+            ]
+            row["run_kind"] = "recheck"
+            latest[row["model_id"]] = row
+    catalog["results"] = [latest[model_id] for model_id in original_cases]
+    catalog["status_counts"] = dict(Counter(row["status"] for row in catalog["results"]))
+    catalog["runs"] = runs
+    catalog["baseline_cases"] = 250
+    catalog["recheck_attempts"] = sum(run["cases"] for run in runs[1:])
+    catalog["engine_versions"] = list(dict.fromkeys(run["engine_version"] for run in runs))
+    catalog["engine_version"] = " + ".join(catalog["engine_versions"])
+    catalog["generated_at"] = runs[-1]["generated_at"]
+    catalog["baseline_engine_source_sha256"] = catalog.pop("engine_source_sha256")
+    catalog["baseline_runner_sha256"] = catalog.pop("runner_sha256")
+    return catalog
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--manifest", type=Path, default=Path("benchmarks/model-matrix-250.json"))
     parser.add_argument("--summary", type=Path, required=True)
     parser.add_argument("--output", type=Path, default=Path("frontend/public/benchmark-catalog.json"))
+    parser.add_argument("--recheck-manifest", type=Path, action="append", default=[])
+    parser.add_argument("--recheck-summary", type=Path, action="append", default=[])
     args = parser.parse_args()
-    catalog = build_catalog(args.manifest.read_bytes(), json.loads(args.summary.read_text(encoding="utf-8")))
+    if len(args.recheck_manifest) != len(args.recheck_summary):
+        parser.error("each recheck manifest requires a matching recheck summary")
+    rechecks = [
+        (manifest.read_bytes(), json.loads(summary.read_text(encoding="utf-8")))
+        for manifest, summary in zip(args.recheck_manifest, args.recheck_summary, strict=True)
+    ]
+    catalog = build_catalog(
+        args.manifest.read_bytes(), json.loads(args.summary.read_text(encoding="utf-8")), rechecks=rechecks
+    )
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(
         json.dumps(catalog, indent=2, ensure_ascii=False, allow_nan=False) + "\n", encoding="utf-8"

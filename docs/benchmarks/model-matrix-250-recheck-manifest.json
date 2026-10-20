@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "cases": [
+    {
+      "model_id": "HuggingFaceTB/SmolLM2-135M",
+      "category": "causal-lm",
+      "revision": "93efa2f097d58c2a74874c7e644dbc9b0cee75a2",
+      "declared_task": "text-generation",
+      "notes": "API library_name=transformers"
+    },
+    {
+      "model_id": "nvidia/segformer-b0-finetuned-ade-512-512",
+      "category": "image-segmentation",
+      "revision": "489d5cd81a0b59fab9b7ea758d3548ebe99677da",
+      "declared_task": "image-segmentation",
+      "notes": "API library_name=transformers"
+    },
+    {
+      "model_id": "openai/clip-vit-base-patch32",
+      "category": "image-text-embedding",
+      "revision": "3d74acf9a28c67741b2f4f2ea7635f0aaf6f0268",
+      "declared_task": "zero-shot-image-classification",
+      "notes": "API library_name=transformers"
+    },
+    {
+      "model_id": "laion/clap-htsat-fused",
+      "category": "audio-classification",
+      "revision": "365dea6ef167def6676140ed93bbc43f84dabb28",
+      "declared_task": "audio-classification",
+      "notes": "HF API verified; library_name=transformers"
+    },
+    {
+      "model_id": "openai/clip-vit-large-patch14",
+      "category": "zero-shot-image-classification",
+      "revision": "32bd64288804d66eefd0ccbe215aa642df71cc41",
+      "declared_task": "zero-shot-image-classification",
+      "notes": "HF API verified; library_name=transformers"
+    },
+    {
+      "model_id": "microsoft/xclip-base-patch16-zero-shot",
+      "category": "video-classification",
+      "revision": "6746d6a5202bf24300cd9bf36f457f174483d41b",
+      "declared_task": "video-classification",
+      "notes": "HF API verified; library_name=transformers"
+    },
+    {
+      "model_id": "laion/CLIP-ViT-B-32-laion2B-s34B-b79K",
+      "category": "zero-shot-image-classification",
+      "revision": "1a25a446712ba5ee05982a381eed697ef9b435cf",
+      "declared_task": "zero-shot-image-classification",
+      "notes": "HF API verified; library_name=open_clip"
+    },
+    {
+      "model_id": "openai/clip-vit-large-patch14-336",
+      "category": "zero-shot-image-classification",
+      "revision": "ce19dc912ca5cd21c8a653c79e251e808ccabcd1",
+      "declared_task": "zero-shot-image-classification",
+      "notes": "HF API verified; library_name=transformers"
+    }
+  ]
+}

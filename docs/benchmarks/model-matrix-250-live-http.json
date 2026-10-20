@@ -1,8 +1,9 @@
 {
-  "checked_at": "2026-10-19T23:08:56Z",
+  "checked_at": "2026-10-20T00:50:26Z",
   "base_url": "http://127.0.0.1:8000",
   "model_id": "HuggingFaceTB/SmolLM2-135M",
   "revision": "93efa2f097d58c2a74874c7e644dbc9b0cee75a2",
+  "engine_version": "2026.10.20.2",
   "submission_http_status": 202,
   "poll_http_status": 200,
   "refresh_requested": true,
@@ -12,6 +13,7 @@
   "catalog_matches": 1,
   "registry_reopen_cached": true,
   "registry_reopen_revision": "93efa2f097d58c2a74874c7e644dbc9b0cee75a2",
+  "registry_reopen_engine_version": "2026.10.20.2",
   "health": {
     "status": "ok",
     "api_version": "v1",

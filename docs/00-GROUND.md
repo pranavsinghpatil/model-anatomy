@@ -68,7 +68,8 @@ Model Autopsy is a future analysis layer built on a trustworthy representation, 
 The public benchmark catalog lists measured static compatibility outcomes for
 pinned repositories. It publishes case evidence, not prepared architecture
 reports or visitor analyses. Complete static reports, partial graphs, artifact
-inspection and failed attempts stay distinct. Its inspection action submits
-the exact pinned reference through the normal visitor-owned flow. Stored
+inspection and failed attempts stay distinct. Its inspection action opens
+the normal submission flow with the exact pinned reference. Submitting creates a
+visitor-owned analysis. Stored
 inspections remain a separate view backed by the report registry. These
 compatibility measurements do not measure inference speed or task accuracy.

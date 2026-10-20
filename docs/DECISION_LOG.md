@@ -791,8 +791,8 @@ Elevate the model dashboard (`/app/analyses/:id` across `overview`, `architectur
   - Total: 24/24 E2E tests passing cleanly.
 
 
-## D-056 — Durable database-first inspections and real catalog
-**2026-10-20 — explicit user request**
+## D-056 â€” Durable database-first inspections and real catalog
+**2026-10-20 â€” explicit user request**
 
 Inspection requests first consult a durable report registry in Supabase
 PostgreSQL. Compatible saved reports create a new visitor-owned analysis without
@@ -849,10 +849,30 @@ definitions and collect fresh observations with frozen engine and runner source.
 The catalog defaults to measured case outcomes with search, task/outcome filters,
 pagination, revision links and bounded coverage evidence. The database-backed
 stored-inspection view remains available separately. A benchmark row never
-becomes a saved analysis; its action submits a pinned model normally.
+becomes a saved analysis; its action opens the normal submission flow with a pinned model.
 
 Publication requires all 250 measured outcomes to match the manifest and source
 identities. Failed cases remain visible; artifact inspection is never promoted
 to an architecture graph. Raw exception traces are excluded from the public
 export. Support breadth is an observation, not a promise of universal semantic
 coverage, inference performance or model accuracy.
+
+## D-058 - Preserve native configuration artifacts and validate CLAP schedules
+
+**2026-10-20 - defects measured by the 250-model matrix**
+
+Native configuration construction must not mutate the fetched JSON retained as
+`metadata.source_config`. Copy validated native constructor input deeply before
+passing it to Transformers, whose CLIP/XCLIP composite constructors normalize
+nested `id2label` keys in place. Preserve the original artifact and IR JSON round trip.
+
+Validate CLAP audio stage depths, stage count and per-stage heads using its actual
+native schedule contract. Omitted fields use inspected installed-constructor defaults;
+explicit nulls, malformed values and resource-budget violations remain rejected before
+AutoConfig. This allowance applies only to CLAP audio, preserving scalar-head rules
+for text/unknown configurations and the existing remote-code/backbone boundaries.
+
+Advance extraction/cache identity to `2026.10.20.2`. Keep the full `.1` baseline
+unchanged and publish targeted `.2` observations with their own source/runner hashes
+and prior outcome history. Successful serialization is a structural gate, not proof
+of full semantic reconstruction. See `TWO_FIFTY_MODEL_BENCHMARK.md` for measured results.
