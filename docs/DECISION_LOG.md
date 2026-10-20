@@ -876,3 +876,22 @@ Advance extraction/cache identity to `2026.10.20.2`. Keep the full `.1` baseline
 unchanged and publish targeted `.2` observations with their own source/runner hashes
 and prior outcome history. Successful serialization is a structural gate, not proof
 of full semantic reconstruction. See `TWO_FIFTY_MODEL_BENCHMARK.md` for measured results.
+
+## D-059 - Persist measured catalog evidence and validated reports in Supabase
+
+**2026-10-20 - explicit user request to preserve the 250-model work and align the app**
+
+Persist immutable benchmark publications, original case definitions and source
+run payloads in private PostgreSQL tables. Serve the measured catalog through
+the API instead of a static-file runtime path. Retain all failures and prior
+observations. Keep the committed export as reproducible evidence.
+
+Capture and validate full pinned inspection reports independently, then import
+them into private content-addressed Storage and the existing durable registry.
+Require read-back verification before making a report reusable. A benchmark
+summary alone cannot become a saved analysis. Open a compatible saved report
+through the visitor-owned registry flow; preserve the exact pin/artifact match.
+
+The live port-8000 backend and port-5176 preview now share Supabase; prior local
+visitor analyses are preserved. See `SUPABASE_CATALOG_ALIGNMENT.md` for evidence
+and the explicit optional-AI/deployment boundaries.

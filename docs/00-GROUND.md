@@ -44,8 +44,10 @@ result. Catalog access creates a new visitor-owned analysis for the selected
 pinned report. See [Database catalog](DATABASE_CATALOG.md). There is no
 prepared-example API, seeded graph, static report shortcut or demo fallback.
 Exact-revision caching reuses real inspected reports; it is not mock data.
-Historical CLI outputs may be retained as extraction evidence and test inputs,
-but are never served as application analyses.
+Historical run summaries remain benchmark evidence. Separately captured full
+inspection reports may enter the durable registry only after revision, digest,
+IR/schema and storage read-back validation. Opening one creates a visitor-owned
+analysis; the summary itself is never treated as an architecture report.
 
 Safetensors is tensor evidence, not a computation graph. The reconstruction fuses configuration, executable structure, module hierarchy, graph tracing where possible, source, and tensor metadata. Unknown or untraceable facts stay explicit; the system never fills gaps with plausible architecture.
 

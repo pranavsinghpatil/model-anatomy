@@ -19,6 +19,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from starlette.exceptions import HTTPException
 
 from model_anatomy.service.ai import ExplanationService
+from model_anatomy.service.benchmark_catalog import BenchmarkCatalogService
 from model_anatomy.service.errors import ServiceError
 from model_anatomy.service.jobs import JobService
 from model_anatomy.service.views import artifact_view, export, graph_view, load_ir, node_view
@@ -27,6 +28,7 @@ from .schemas import (
     AnalysesResponse,
     AnalysisDetail,
     ArtifactInspectionResponse,
+    BenchmarkCatalogResponse,
     CatalogResponse,
     CreateAnalysis,
     ErrorResponse,
@@ -46,6 +48,7 @@ COOKIE = "model_anatomy_visitor"
 def create_app(settings: Settings | None = None, *, service=None, explanation=None) -> FastAPI:
     config = settings if settings is not None else Settings()
     jobs = service or JobService(config)
+    benchmark_catalog = BenchmarkCatalogService(jobs)
     ai = explanation or ExplanationService(config)
     initialization_lock = threading.Lock()
     retry_initialization_at = 0.0
@@ -77,6 +80,7 @@ def create_app(settings: Settings | None = None, *, service=None, explanation=No
     )
     app.state.service_ready = False
     app.state.jobs = jobs
+    app.state.benchmark_catalog = benchmark_catalog
     app.state.explanation = ai
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=config.allowed_hosts, www_redirect=False)
     app.add_middleware(
@@ -275,6 +279,11 @@ def create_app(settings: Settings | None = None, *, service=None, explanation=No
     def catalog(request: Request, q: str = Query(default="", max_length=128), offset: int = Query(default=0, ge=0), limit: int = Query(default=24, ge=1, le=100)):
         require_service()
         return jobs.catalog(q, offset, limit)
+
+    @app.get("/api/v1/benchmarks/catalog", response_model=BenchmarkCatalogResponse, response_model_exclude_unset=True)
+    def get_benchmark_catalog():
+        require_service()
+        return benchmark_catalog.get_catalog()
 
     @app.post("/api/v1/catalog/{report_id}/inspect", response_model=AnalysisDetail)
     def inspect_catalog_item(report_id: str, request: Request):

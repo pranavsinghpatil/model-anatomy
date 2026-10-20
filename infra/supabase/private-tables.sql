@@ -12,6 +12,9 @@ ALTER TABLE public.analysis_jobs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.analysis_cache ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.analysis_blobs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.model_reports ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.benchmark_runs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.benchmark_publications ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.benchmark_cases ENABLE ROW LEVEL SECURITY;
 
 -- No anon/authenticated policies: browser keys must not bypass guest ownership.
 REVOKE ALL PRIVILEGES ON TABLE
@@ -23,7 +26,10 @@ REVOKE ALL PRIVILEGES ON TABLE
     public.analysis_jobs,
     public.analysis_cache,
     public.analysis_blobs,
-    public.model_reports
+    public.model_reports,
+    public.benchmark_runs,
+    public.benchmark_publications,
+    public.benchmark_cases
 FROM PUBLIC, anon, authenticated;
 
 REVOKE ALL PRIVILEGES ON SEQUENCE public.service_mutex_id_seq

@@ -1,29 +1,44 @@
-import { existsSync, readFileSync } from "node:fs";
-import { resolve } from "node:path";
 import { expect, test } from "@playwright/test";
-import { mockService } from "./service";
+import type { Page } from "@playwright/test";
 
-const source = resolve("public/benchmark-catalog.json");
-const evidence = existsSync(source)
-  ? JSON.parse(readFileSync(source, "utf8"))
-  : null;
-if (!evidence && process.env.REQUIRE_BENCHMARK_EVIDENCE === "1") {
-  throw new Error(
-    "REQUIRE_BENCHMARK_EVIDENCE=1 requires public/benchmark-catalog.json with all 250 measured cases.",
-  );
-}
 test.skip(
-  !evidence,
-  "The measured 250-case evidence file has not been published yet.",
+  process.env.REQUIRE_BENCHMARK_EVIDENCE !== "1",
+  "Set REQUIRE_BENCHMARK_EVIDENCE=1 to run against the live 250-row API publication.",
 );
+
+async function publishedCatalog(page: Page) {
+  const baseURL = process.env.E2E_BASE_URL ?? "http://127.0.0.1:5174";
+  const response = await page.request.get(
+    `${baseURL}/api/v1/benchmarks/catalog`,
+  );
+  expect(response.ok(), "The benchmark catalog API must be available").toBe(
+    true,
+  );
+  const evidence = await response.json();
+  expect(evidence.schema_version).toBe(1);
+  expect(evidence.results).toHaveLength(250);
+  expect(
+    evidence.results.every(
+      (row: { stored_report_id?: unknown }) =>
+        row.stored_report_id === null ||
+        typeof row.stored_report_id === "string",
+    ),
+  ).toBe(true);
+  return evidence;
+}
 
 test("every published repository appears exactly once across catalog pages", async ({
   page,
 }, info) => {
   test.setTimeout(90_000);
-  expect(evidence.results).toHaveLength(250);
-  await mockService(page);
+  const evidence = await publishedCatalog(page);
+  const catalogRequests: string[] = [];
+  page.on("request", (request) => {
+    if (new URL(request.url()).pathname === "/api/v1/benchmarks/catalog")
+      catalogRequests.push(request.url());
+  });
   await page.goto("/catalog");
+  await expect.poll(() => catalogRequests.length).toBeGreaterThan(0);
   await expect(
     page.getByRole("heading", { name: "Measured compatibility results" }),
   ).toBeVisible();
@@ -50,7 +65,7 @@ test("every published repository appears exactly once across catalog pages", asy
 });
 
 test("actual measured cards fit a 320px viewport", async ({ page }) => {
-  await mockService(page);
+  const evidence = await publishedCatalog(page);
   await page.setViewportSize({ width: 320, height: 800 });
   await page.goto("/catalog");
   await expect(page.locator(".benchmark-card")).toHaveCount(24);
@@ -65,7 +80,7 @@ test("published measurements render their recorded outcomes, counts, and diagnos
   page,
 }) => {
   test.setTimeout(90_000);
-  await mockService(page);
+  const evidence = await publishedCatalog(page);
   await page.goto("/catalog");
   const pages = Math.ceil(evidence.results.length / 24);
   const statusLabels: Record<string, string> = {
@@ -153,10 +168,12 @@ test("published measurements render their recorded outcomes, counts, and diagnos
 test("published selected artifact and revision-only actions keep the exact pinned input", async ({
   page,
 }) => {
-  await mockService(page);
+  const evidence = await publishedCatalog(page);
   await page.goto("/catalog");
-  const selected = evidence.results.find((row: { reference?: string | null }) =>
-    /\/(?:blob|resolve)\/[0-9a-f]{40}\//.test(row.reference ?? ""),
+  const selected = evidence.results.find(
+    (row: { reference?: string | null; stored_report_id: string | null }) =>
+      row.stored_report_id === null &&
+      /\/(?:blob|resolve)\/[0-9a-f]{40}\//.test(row.reference ?? ""),
   );
   expect(
     selected,
@@ -173,7 +190,8 @@ test("published selected artifact and revision-only actions keep the exact pinne
   await expect(page.locator("#model-input")).toHaveValue(selected.reference);
 
   const revisionOnly = evidence.results.find(
-    (row: { reference?: string | null }) => !row.reference,
+    (row: { reference?: string | null; stored_report_id: string | null }) =>
+      row.stored_report_id === null && !row.reference,
   );
   expect(
     revisionOnly,

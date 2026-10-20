@@ -26,6 +26,31 @@ export class ApiError extends Error {
   }
 }
 
+export type BenchmarkCatalogResult = {
+  model_id: string;
+  category: string;
+  revision: string;
+  status: string;
+  architecture: string | null;
+  reference: string | null;
+  declared_task: string | null;
+  started_at: string;
+  finished_at: string;
+  engine_version: string;
+  stored_report_id: string | null;
+  [key: string]: unknown;
+};
+
+export type BenchmarkCatalogResponse = {
+  schema_version: 1;
+  generated_at: string;
+  engine_version: string;
+  manifest_sha256: string;
+  results: BenchmarkCatalogResult[];
+  baseline_cases?: number;
+  recheck_attempts?: number;
+};
+
 async function errorFrom(response: Response): Promise<ApiError> {
   const payload = await response.json().catch(() => null);
   const error = payload?.error;
@@ -116,6 +141,8 @@ export const api = {
     });
     return request<CatalogResponse>(`/catalog?${params}`, { signal });
   },
+  benchmarkCatalog: (signal?: AbortSignal) =>
+    request<BenchmarkCatalogResponse>("/benchmarks/catalog", { signal }),
   inspectCatalog: (id: string) =>
     request<AnalysisDetail>(`/catalog/${segment(id)}/inspect`, {
       method: "POST",

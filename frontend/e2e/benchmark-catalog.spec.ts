@@ -22,6 +22,7 @@ function report(count = 50): any {
         model_id: `org/model-${String(index).padStart(3, "0")}`,
         category: index % 2 ? "text-generation" : "image-classification",
         revision,
+        stored_report_id: null,
         status,
         architecture: isGraphResult
           ? index % 2
@@ -65,7 +66,7 @@ async function serveReport(
   options: { status?: number; body?: unknown } = {},
 ) {
   let requests = 0;
-  await page.route("**/benchmark-catalog.json", async (route) => {
+  await page.route("**/api/v1/benchmarks/catalog", async (route) => {
     requests++;
     await route.fulfill({
       status: options.status ?? 200,
@@ -137,12 +138,83 @@ test("pinned action opens the normal visitor-owned inspection flow with its refe
   );
 });
 
+test("stored report action inspects the persisted report and opens the visitor-owned result", async ({
+  page,
+}) => {
+  const catalog = report(1);
+  catalog.results[0].stored_report_id = "persisted-report-123";
+  await serveReport(page, { body: catalog });
+  let inspectRequests = 0;
+  let finishInspect: (() => void) | undefined;
+  const unexpectedRequests: string[] = [];
+  page.on("request", (request) => {
+    const url = new URL(request.url());
+    if (
+      url.pathname.endsWith("/benchmark-catalog.json") ||
+      (url.pathname === "/api/v1/analyses" && request.method() === "POST")
+    )
+      unexpectedRequests.push(`${request.method()} ${url.pathname}`);
+  });
+  await page.route(
+    "**/api/v1/catalog/persisted-report-123/inspect",
+    async (route) => {
+      inspectRequests++;
+      await new Promise<void>((resolve) => {
+        finishInspect = resolve;
+      });
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ id: "visitor-owned-cached-analysis" }),
+      });
+    },
+  );
+  await page.goto("/catalog");
+  await page.getByRole("button", { name: "Open stored report" }).click();
+  const opening = page.getByRole("button", { name: "Opening stored report…" });
+  await expect(opening).toBeDisabled();
+  finishInspect?.();
+  await expect(page).toHaveURL(
+    /\/app\/analyses\/visitor-owned-cached-analysis\?view=architecture$/,
+  );
+  expect(inspectRequests).toBe(1);
+  expect(unexpectedRequests).toEqual([]);
+});
+
+test("stored report errors stay explicit and do not navigate", async ({
+  page,
+}) => {
+  const catalog = report(1);
+  catalog.results[0].stored_report_id = "persisted-report-123";
+  await serveReport(page, { body: catalog });
+  await page.route(
+    "**/api/v1/catalog/persisted-report-123/inspect",
+    async (route) =>
+      route.fulfill({
+        status: 403,
+        contentType: "application/json",
+        body: JSON.stringify({
+          error: {
+            code: "forbidden",
+            message: "This report is unavailable.",
+          },
+        }),
+      }),
+  );
+  await page.goto("/catalog");
+  await page.getByRole("button", { name: "Open stored report" }).click();
+  await expect(page.getByRole("alert")).toContainText(
+    "Could not open stored inspection: This report is unavailable.",
+  );
+  await expect(page).toHaveURL(/\/catalog$/);
+});
+
 test("report loading failure offers retry and does not show sample results", async ({
   page,
 }) => {
   let allowSuccess = false;
   let requests = 0;
-  await page.route("**/benchmark-catalog.json", async (route) => {
+  await page.route("**/api/v1/benchmarks/catalog", async (route) => {
     requests++;
     await route.fulfill({
       status: allowSuccess ? 200 : 503,
@@ -165,7 +237,7 @@ test("loading, malformed reports, and empty measured reports stay explicit", asy
   page,
 }) => {
   let release: (() => void) | undefined;
-  await page.route("**/benchmark-catalog.json", async (route) => {
+  await page.route("**/api/v1/benchmarks/catalog", async (route) => {
     await new Promise<void>((resolve) => {
       release = resolve;
     });

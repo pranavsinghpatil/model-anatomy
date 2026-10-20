@@ -1,5 +1,9 @@
 # Database-backed inspections and catalog
 
+The current 250-case cloud publication and saved-report flow are documented in
+[Supabase catalog alignment](SUPABASE_CATALOG_ALIGNMENT.md). Its live preview is
+on API port 8000 and frontend port 5176; older port/test evidence below is historical.
+
 The catalog is built from actual completed inspections. It starts empty; there
 are no seeded model cards, prepared reports, or fallback architecture facts.
 PostgreSQL stores report identities and projected metadata. Full reports stay in

@@ -4,7 +4,20 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
 
-from sqlalchemy import JSON, Boolean, Float, Integer, String, create_engine, event, inspect, select, text
+from sqlalchemy import (
+    JSON,
+    Boolean,
+    Float,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    create_engine,
+    event,
+    inspect,
+    select,
+    text,
+)
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column
 
 from .errors import ServiceError
@@ -89,6 +102,35 @@ class ModelReport(Base):
     blob_digest: Mapped[str] = mapped_column(String(64), index=True)
     summary: Mapped[dict] = mapped_column(JSON)
     inspected_at: Mapped[float] = mapped_column(Float, index=True)
+
+
+class BenchmarkRun(Base):
+    """Immutable portable source payload for one measured benchmark run."""
+    __tablename__ = "benchmark_runs"
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    payload: Mapped[dict] = mapped_column(JSON)
+    created_at: Mapped[float] = mapped_column(Float, index=True)
+
+
+class BenchmarkPublication(Base):
+    """Content-addressed publication metadata and ordered source run references."""
+    __tablename__ = "benchmark_publications"
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    metadata_json: Mapped[dict] = mapped_column("metadata", JSON)
+    run_ids: Mapped[list] = mapped_column(JSON)
+    created_at: Mapped[float] = mapped_column(Float, index=True)
+
+
+class BenchmarkCase(Base):
+    """Public-safe case evidence belonging to an immutable publication."""
+    __tablename__ = "benchmark_cases"
+    __table_args__ = (Index("ix_benchmark_cases_publication_ordinal", "publication_id", "ordinal"),)
+    publication_id: Mapped[str] = mapped_column(
+        String(64), ForeignKey("benchmark_publications.id", ondelete="CASCADE"), primary_key=True
+    )
+    model_id: Mapped[str] = mapped_column(String(256), primary_key=True)
+    ordinal: Mapped[int] = mapped_column(Integer)
+    data: Mapped[dict] = mapped_column(JSON)
 
 
 class Blob(Base):

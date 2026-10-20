@@ -1,12 +1,15 @@
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { ArrowRight, ExternalLink, Search } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
+import { ApiError, api } from "../api/client";
 import "./benchmark-catalog.css";
 
 type BenchmarkResult = {
   model_id: string;
   category: string;
   revision: string;
+  stored_report_id: string | null;
   status: string;
   architecture: string | null;
   reference: string | null;
@@ -70,6 +73,7 @@ function dateTime(value: string) {
 
 export default function BenchmarkCatalog() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [report, setReport] = useState<BenchmarkReport | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -77,16 +81,23 @@ export default function BenchmarkCatalog() {
   const [category, setCategory] = useState("all");
   const [outcome, setOutcome] = useState("all");
   const [page, setPage] = useState(0);
+  const [inspectingId, setInspectingId] = useState<string | null>(null);
+  const [inspectionError, setInspectionError] = useState("");
 
   const load = async (signal?: AbortSignal) => {
     setLoading(true);
     setError("");
     try {
-      const response = await fetch("/benchmark-catalog.json", { signal });
-      if (!response.ok)
-        throw new Error(`Report request failed (${response.status}).`);
-      const payload = (await response.json()) as BenchmarkReport;
-      if (payload.schema_version !== 1 || !Array.isArray(payload.results))
+      const payload = await api.benchmarkCatalog(signal);
+      if (
+        payload.schema_version !== 1 ||
+        !Array.isArray(payload.results) ||
+        payload.results.some(
+          (item) =>
+            item.stored_report_id !== null &&
+            typeof item.stored_report_id !== "string",
+        )
+      )
         throw new Error(
           "The benchmark report has an unsupported or invalid format.",
         );
@@ -151,6 +162,27 @@ export default function BenchmarkCatalog() {
       item.reference ||
       `https://huggingface.co/${repoPath}/tree/${encodeURIComponent(item.revision)}`;
     navigate(`/app?model=${encodeURIComponent(reference)}`);
+  };
+
+  const openStoredReport = async (item: BenchmarkResult) => {
+    if (!item.stored_report_id || inspectingId) return;
+    setInspectingId(item.stored_report_id);
+    setInspectionError("");
+    try {
+      const analysis = await api.inspectCatalog(item.stored_report_id);
+      await queryClient.invalidateQueries({ queryKey: ["catalog"] });
+      navigate(
+        `/app/analyses/${encodeURIComponent(analysis.id)}?view=architecture`,
+      );
+    } catch (cause) {
+      setInspectionError(
+        cause instanceof ApiError
+          ? cause.message
+          : "Could not open the stored inspection.",
+      );
+    } finally {
+      setInspectingId(null);
+    }
   };
 
   const counts = (value: string, key: "category" | "status") =>
@@ -220,6 +252,12 @@ export default function BenchmarkCatalog() {
           </div>
         ))}
       </div>
+
+      {inspectionError && (
+        <p className="benchmark-action-error" role="alert">
+          Could not open stored inspection: {inspectionError}
+        </p>
+      )}
 
       <div className="benchmark-filters" aria-label="Filter benchmark results">
         <label className="catalog-search-box">
@@ -340,9 +378,20 @@ export default function BenchmarkCatalog() {
                   <button
                     type="button"
                     className="card-inspect-btn"
-                    onClick={() => startInspection(item)}
+                    disabled={inspectingId !== null}
+                    onClick={() =>
+                      item.stored_report_id
+                        ? void openStoredReport(item)
+                        : startInspection(item)
+                    }
                   >
-                    <span>Inspect pinned model</span>
+                    <span>
+                      {item.stored_report_id
+                        ? inspectingId === item.stored_report_id
+                          ? "Opening stored report…"
+                          : "Open stored report"
+                        : "Inspect pinned model"}
+                    </span>
                     <ArrowRight size={14} />
                   </button>
                   <a

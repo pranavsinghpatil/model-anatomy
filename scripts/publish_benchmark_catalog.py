@@ -234,14 +234,93 @@ def build_catalog(
     return catalog
 
 
+def prepare_catalog_payload(catalog: dict, run_payloads: list[dict], manifest_path: Path) -> tuple[dict, list[dict]]:
+    """Attach and cross-check the original manifest cases before durable import."""
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    cases = validate_manifest(manifest)
+    manifest_digest = hashlib.sha256(json.dumps(
+        manifest, sort_keys=True, ensure_ascii=False, separators=(",", ":"), allow_nan=False
+    ).encode()).hexdigest()
+    if catalog.get("manifest_sha256") != manifest_digest:
+        raise ValueError("catalog manifest hash differs from the original pinned manifest")
+    if len(cases) != 250 or len(catalog.get("results", [])) != 250:
+        raise ValueError("benchmark import requires all 250 pinned manifest cases")
+    for case, row in zip(cases, catalog["results"], strict=True):
+        if any(row.get(key) != case.get(key) for key in ("model_id", "category", "revision")):
+            raise ValueError("catalog row does not match the original pinned manifest")
+    prepared = dict(catalog)
+    prepared["case_definitions"] = cases
+    return prepared, run_payloads
+
+
+def store_catalog_only(
+    catalog_path: Path,
+    manifest_path: Path,
+    run_paths: list[Path],
+    env_file: Path,
+    *,
+    profile_loader=None,
+    database_factory=None,
+) -> str:
+    """Import a prepared catalog into PostgreSQL/Supabase without touching cloud storage."""
+    from types import SimpleNamespace
+
+    from scripts.supabase_profile import load_supabase_profile
+
+    from model_anatomy.api.settings import Settings
+    from model_anatomy.service.benchmark_catalog import BenchmarkCatalogService
+    from model_anatomy.service.database import Database
+
+    load_profile = profile_loader or load_supabase_profile
+    make_database = database_factory or Database
+    profile = load_profile(env_file)
+    settings = Settings.model_validate({
+        "environment": "production", "allowed_hosts": ["localhost"], "cors_origins": ["https://localhost"],
+        "database_url": profile["DATABASE_URL"], "supabase_url": profile["MODEL_ANATOMY_SUPABASE_URL"],
+        "supabase_service_role_key": profile["MODEL_ANATOMY_SUPABASE_KEY"],
+        "storage_backend": "supabase", "supabase_bucket": profile["MODEL_ANATOMY_SUPABASE_BUCKET"],
+    })
+    if settings.storage_backend != "supabase" or not settings.resolved_database_url.startswith("postgresql+"):
+        raise ValueError("catalog import requires PostgreSQL and private Supabase configuration")
+    catalog = json.loads(catalog_path.read_text(encoding="utf-8"))
+    run_payloads = [json.loads(path.read_text(encoding="utf-8")) for path in run_paths]
+    prepared, run_payloads = prepare_catalog_payload(catalog, run_payloads, manifest_path)
+    database = make_database(settings.resolved_database_url)
+    try:
+        database.initialize(create=False)
+        return BenchmarkCatalogService(SimpleNamespace(db=database, settings=settings)).publish(prepared, run_payloads)
+    except Exception:  # noqa: BLE001 - redact connection credentials in all provider failures
+        # Exception messages may include a database host or user-provided data.
+        raise RuntimeError("benchmark catalog import failed; inspect local service diagnostics") from None
+    finally:
+        database.engine.dispose()
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--store-only", action="store_true", help="store an existing catalog and run histories in Supabase")
     parser.add_argument("--manifest", type=Path, default=Path("benchmarks/model-matrix-250.json"))
-    parser.add_argument("--summary", type=Path, required=True)
+    parser.add_argument("--summary", type=Path)
     parser.add_argument("--output", type=Path, default=Path("frontend/public/benchmark-catalog.json"))
     parser.add_argument("--recheck-manifest", type=Path, action="append", default=[])
     parser.add_argument("--recheck-summary", type=Path, action="append", default=[])
+    parser.add_argument("--env-file", type=Path, default=Path("infra/.env"))
+    parser.add_argument("--catalog", type=Path, default=Path("frontend/public/benchmark-catalog.json"))
+    parser.add_argument(
+        "--runs", nargs="+", type=Path,
+        default=[Path("docs/benchmarks/model-matrix-250-baseline.json"), Path("docs/benchmarks/model-matrix-250-rechecks.json")],
+    )
     args = parser.parse_args()
+    if args.store_only:
+        try:
+            publication_id = store_catalog_only(args.catalog, args.manifest, args.runs, args.env_file)
+            print(f"Stored benchmark publication {publication_id}")
+            return
+        except Exception as exc:  # noqa: BLE001 - error text may contain credentials or remote diagnostics
+            print(f"Benchmark catalog import failed: {type(exc).__name__}", file=sys.stderr)
+            raise SystemExit(2) from None
+    if args.summary is None:
+        parser.error("--summary is required unless --store-only is selected")
     if len(args.recheck_manifest) != len(args.recheck_summary):
         parser.error("each recheck manifest requires a matching recheck summary")
     rechecks = [

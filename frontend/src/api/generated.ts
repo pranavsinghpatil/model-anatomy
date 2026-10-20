@@ -59,6 +59,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/benchmarks/catalog": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get Benchmark Catalog */
+    get: operations["get_benchmark_catalog_api_v1_benchmarks_catalog_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/catalog/{report_id}/inspect": {
     parameters: {
       query?: never;
@@ -362,6 +379,56 @@ export interface components {
       offset: number;
       /** Limit */
       limit: number;
+    };
+    /**
+     * BenchmarkCatalogResponse
+     * @description Measured publication; case dictionaries are allowlisted by the catalog service.
+     */
+    BenchmarkCatalogResponse: {
+      /**
+       * Schema Version
+       * @constant
+       */
+      schema_version: 1;
+      /** Generated At */
+      generated_at: string;
+      /** Engine Version */
+      engine_version: string;
+      /** Manifest Sha256 */
+      manifest_sha256: string;
+      /**
+       * Manifest Hash Encoding
+       * @constant
+       */
+      manifest_hash_encoding: "canonical-json-v1";
+      /** Method */
+      method: string;
+      /** Status Counts */
+      status_counts: {
+        [key: string]: number;
+      };
+      /** Results */
+      results: {
+        [key: string]: unknown;
+      }[];
+      /** Runs */
+      runs: {
+        [key: string]: unknown;
+      }[];
+      /** Baseline Cases */
+      baseline_cases?: number | null;
+      /** Recheck Attempts */
+      recheck_attempts?: number | null;
+      /** Engine Versions */
+      engine_versions?: string[] | null;
+      /** Runner Sha256 */
+      runner_sha256?: string | null;
+      /** Engine Source Sha256 */
+      engine_source_sha256?: string | null;
+      /** Baseline Runner Sha256 */
+      baseline_runner_sha256?: string | null;
+      /** Baseline Engine Source Sha256 */
+      baseline_engine_source_sha256?: string | null;
     };
     /** CatalogItem */
     CatalogItem: {
@@ -976,6 +1043,80 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["CatalogResponse"];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Conflict */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Gone */
+      410: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Unprocessable Entity */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Too Many Requests */
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Service Unavailable */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  get_benchmark_catalog_api_v1_benchmarks_catalog_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["BenchmarkCatalogResponse"];
         };
       };
       /** @description Not Found */

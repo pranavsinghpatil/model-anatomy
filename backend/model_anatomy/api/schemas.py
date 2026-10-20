@@ -94,6 +94,27 @@ class CatalogResponse(BaseModel):
     limit: int
 
 
+class BenchmarkCatalogResponse(BaseModel):
+    """Measured publication; case dictionaries are allowlisted by the catalog service."""
+
+    schema_version: Literal[1]
+    generated_at: str
+    engine_version: str
+    manifest_sha256: str
+    manifest_hash_encoding: Literal["canonical-json-v1"]
+    method: str
+    status_counts: dict[str, int]
+    results: list[dict[str, Any]]
+    runs: list[dict[str, Any]]
+    baseline_cases: int | None = None
+    recheck_attempts: int | None = None
+    engine_versions: list[str] | None = None
+    runner_sha256: str | None = None
+    engine_source_sha256: str | None = None
+    baseline_runner_sha256: str | None = None
+    baseline_engine_source_sha256: str | None = None
+
+
 class AnalysisQuality(BaseModel):
     semantic_coverage: float | None = Field(default=None, ge=0, le=1)
     module_semantic_coverage: float | None = Field(default=None, ge=0, le=1)

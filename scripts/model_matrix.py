@@ -191,7 +191,7 @@ def _bounded(items: Any, limit: int = MAX_WARNINGS) -> list[str]:
     return [str(item)[:MAX_WARNING_CHARS] for item in items[:limit]]
 
 
-def _analyze_case(case: dict[str, Any]) -> dict[str, Any]:
+def _analyze_case(case: dict[str, Any], *, report_directory: Path | None = None) -> dict[str, Any]:
     """Worker entry point; imports the reconstruction engine only in the fresh child."""
     from model_anatomy.api.schemas import ArtifactInspectionResponse, GraphResponse, NodeInspection
     from model_anatomy.service.views import artifact_view, graph_view, node_view
@@ -305,6 +305,22 @@ def _analyze_case(case: dict[str, Any]) -> dict[str, Any]:
         and not analysis.get("unmapped_checkpoint_tensors", [])
         else "partial"
     )
+    report_digest = None
+    if report_directory is not None and status in {"completed", "partial", "inspected"}:
+        report_digest = hashlib.sha256(report_json.encode("utf-8")).hexdigest()
+        report_path = report_directory / f"{report_digest}.json"
+        report_directory.mkdir(parents=True, exist_ok=True)
+        report_data = report_json.encode("utf-8")
+        if not report_path.exists() or report_path.read_bytes() != report_data:
+            temporary_path = report_path.with_suffix(f".{os.getpid()}.tmp")
+            try:
+                with temporary_path.open("wb") as stream:
+                    stream.write(report_data)
+                    stream.flush()
+                    os.fsync(stream.fileno())
+                os.replace(temporary_path, report_path)
+            finally:
+                temporary_path.unlink(missing_ok=True)
     return {
         "model_id": case["model_id"],
         "category": case["category"],
@@ -323,6 +339,7 @@ def _analyze_case(case: dict[str, Any]) -> dict[str, Any]:
         "edge_count": graph_edge_count if not inspection_only else 0,
         "tensor_count": tensor_count,
         "serialized_report_bytes": report_bytes,
+        "report_digest": report_digest,
         "service_storage_limit_bytes": SERVICE_STORAGE_LIMIT_BYTES,
         "storage_contract_valid": storage_contract_valid,
         "service_contract_valid": not invalid_report,
