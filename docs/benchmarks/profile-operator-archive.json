@@ -1,0 +1,121 @@
+{
+  "method": "Private content-addressed Supabase evidence archive; every object read back and verified.",
+  "engine_version": "2026.10.21.1",
+  "engine_source_sha256": "8cbdbd67a7b17a82c075f4071a3b9f67b265c77d58d322e48e1a5d6f9aa1dc7a",
+  "objects": [
+    {
+      "source": "final-manifest.json",
+      "digest": "6463cc2c343898f72f3201f98e5dfadcbabe344a473a9fa6e7988dead2eaa9cb",
+      "bytes": 39003,
+      "verified": true
+    },
+    {
+      "source": "final-rechecks.ndjson",
+      "digest": "36e55c6dad39260449a5b8f2878112a15c5c3b6a93c2ddc25b2aa26ddf487024",
+      "bytes": 293549,
+      "verified": true
+    },
+    {
+      "source": "final-summary.json",
+      "digest": "bae7456a27f79b6904408467cb48decd88ea7d33fe865efb749540591e914515",
+      "bytes": 365547,
+      "verified": true
+    },
+    {
+      "source": "final-store.ndjson",
+      "digest": "35a3c454293fccfa2f11d04ecfd34d51f01c0e85f199102a5d4ca4ac90faba67",
+      "bytes": 21358,
+      "verified": true
+    },
+    {
+      "source": "final-comparison.json",
+      "digest": "925d728c4c179c27b314461a3e9f87b5aac861753d768c307a09ef6e6e6ff119",
+      "bytes": 75182,
+      "verified": true
+    },
+    {
+      "source": "live-acceptance.json",
+      "digest": "6f6cc9fd8c26f8a228bae3560025286dc7fd28337f300d552550d6f3c3427816",
+      "bytes": 14659,
+      "verified": true
+    },
+    {
+      "source": "boot-acceptance.json",
+      "digest": "76e9a8210e082ed295b113fb2e04a2c6aedc5ed5597fd7e4e77b9119639ac17b",
+      "bytes": 616,
+      "verified": true
+    },
+    {
+      "source": "part-0-manifest.json",
+      "digest": "d3763c497137103caa77705d400f5d722e00d0557be8872a94b8b9b0b284b822",
+      "bytes": 23853,
+      "verified": true
+    },
+    {
+      "source": "part-1-manifest.json",
+      "digest": "5312bb43fe3cf2a7ba3fbb8278e03b57922710faa86c5168f8242e6d6ab75ad2",
+      "bytes": 23376,
+      "verified": true
+    },
+    {
+      "source": "part-0.ndjson",
+      "digest": "4038596bce9ff47cc176a8b200f45f4371cb1f2fa10055a981668a6bb327a6d7",
+      "bytes": 151368,
+      "verified": true
+    },
+    {
+      "source": "part-1.ndjson",
+      "digest": "4b4923cc3f47e38e7dbbc3300f4cb3d1ede20a99c829e6658c77035f0c6b4d14",
+      "bytes": 142072,
+      "verified": true
+    },
+    {
+      "source": "merge_capture.py",
+      "digest": "2aee50be3e59f7887d19d53c83019917621d3ae09f3ca3ee09b953c7b9cfb342",
+      "bytes": 2264,
+      "verified": true
+    },
+    {
+      "source": "publish_profile.py",
+      "digest": "f4b7dc3ce7f4df64c38f981d2180b6113337dfc7bf7f3770109dec9b5841a879",
+      "bytes": 3828,
+      "verified": true
+    },
+    {
+      "source": "font-acceptance.json",
+      "digest": "1cc09242c2307255fbfc51dcfba5a05512b3f8faa8e2351e7fdf1c9e5f7cb2ae",
+      "bytes": 175,
+      "verified": true
+    },
+    {
+      "source": "tensor-port-acceptance.json",
+      "digest": "eea1b85f5a5ff70e9f6203856750fcdbcdf9034047863c9e8182e9a30152d671",
+      "bytes": 1232,
+      "verified": true
+    },
+    {
+      "source": "offline-release.log",
+      "digest": "b8fb0619ca08ec3ef1dd6bb81ba4b05ba4e61688474b1bb768043350dd5ffb7a",
+      "bytes": 1607,
+      "verified": true
+    },
+    {
+      "source": "browser-final.log",
+      "digest": "30ebd65ac1e738d2afef27f2dc3b7bada4c76a0d3e3c03e3802b1e6581905f9d",
+      "bytes": 4876,
+      "verified": true
+    },
+    {
+      "source": "frontend-build.log",
+      "digest": "839660dbfc8ad0a199da603969f043bdd0f720fec723e7a1d4479cb9551d38fd",
+      "bytes": 2599,
+      "verified": true
+    },
+    {
+      "source": "capture-source.zip",
+      "digest": "345a47e6732b268e0f48d04aa5c0496774e502d1e6bd1196d34ab5c50b67cc38",
+      "bytes": 144412,
+      "verified": true
+    }
+  ]
+}

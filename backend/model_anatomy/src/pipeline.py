@@ -395,6 +395,13 @@ def reconstruct(
         "parameter_count_policy": "Model parameter object identity is unique; checkpoint duplicates and hierarchy references are reported separately",
         "analysis_report": {
             "mode": "static",
+            "analysis_scope": {
+                "profile": "canonical_inference",
+                "model_mode": "eval",
+                "cache": "disabled",
+                "training_loss": "excluded",
+                "inputs": "canonical modality inputs",
+            },
             "forward_executed": False,
             "runtime_trace_available": False,
             "semantic_coverage": 1 - len(unknown) / len(all_nodes) if all_nodes else 0,
@@ -416,9 +423,22 @@ def reconstruct(
             if edges
             else 0,
             "adapters_used": [adapter.name] if adapter else [],
+            "static_flow_diagnostics": [
+                {"module_path": path, **item}
+                for path, report in builder.flow_reports.items()
+                for item in report.get("diagnostics", [])
+                if isinstance(item, dict)
+            ],
+            "profile_assumptions": [
+                {"module_path": path, **assumption}
+                for path, report in builder.flow_reports.items()
+                for assumption in report.get("profile_assumptions", [])
+                if isinstance(assumption, dict)
+            ],
             "warnings": list(dict.fromkeys(warnings)),
         },
         "limitations": [
+            "Coverage describes canonical eval inference with cache and training loss disabled; other input, cache and training profiles are not established",
             "Static source analysis supports a bounded Python subset; unresolved branches and unsupported loops are reported",
             "Semantic classifications and symbolic shapes are inspectable reconstructions, not runtime observations",
             "Floating edge dtypes describe the native meta model profile; runtime casts are unverified, while checkpoint dtypes are direct header evidence",

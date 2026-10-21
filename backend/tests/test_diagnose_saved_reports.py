@@ -45,6 +45,16 @@ def test_full_ratios_with_opaque_operations_are_still_warning_only_partial(tmp_p
     assert "raw-private-warning" not in json.dumps(result)
 
 
+def test_unproven_tensor_transforms_have_a_separate_safe_blocker_count(tmp_path):
+    result = build_diagnosis([source(tmp_path, warnings=[
+        "Tensor transform reshape has no proven output contract: private-source-details",
+    ])])
+    assert result["cases"][0]["warning_counts"]["unproven_tensor_transform"] == 1
+    assert result["cases"][0]["warning_counts"]["other"] == 0
+    assert result["overlapping_partial_warning_model_counts"]["unproven_tensor_transform"] == 1
+    assert "private-source-details" not in json.dumps(result)
+
+
 @pytest.mark.parametrize("options", [
     {"gaps": {"tensor_shape_coverage": 0.6}},
     {"unknown": 1},

@@ -27,6 +27,7 @@ WARNING_MARKERS = {
     "unresolved_loop": "Loop could not be statically resolved",
     "unmodeled_exception_path": "Try control flow is partially modeled",
     "unowned_checkpoint_tensor": "checkpoint tensors have no native module owner",
+    "unproven_tensor_transform": "Tensor transform ",
 }
 OPERATION_COHORTS = {
     "numerical_stability": ("torch.clamp", "torch.isinf", "torch.where"),

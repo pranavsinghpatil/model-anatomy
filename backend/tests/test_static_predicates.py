@@ -168,7 +168,9 @@ def test_tiny_native_gpt2_no_longer_has_an_opaque_padding_guard():
     )
     paths = {path: SimpleNamespace(kind="backbone") for path, _ in model.named_modules()}
     flow = StaticFlowAnalyzer(model, "transformer", paths).analyze()
-    assert flow.warnings == []
+    # Opaque attention outputs must not acquire a shape to silence a later view.
+    assert not any("padding" in warning or "is_torch_fx_proxy" in warning for warning in flow.warnings)
+    assert any("view has no proven output contract" in warning for warning in flow.warnings)
     assert any("is_torch_fx_proxy" in item["predicate"] for item in flow.profile_assumptions)
 
 

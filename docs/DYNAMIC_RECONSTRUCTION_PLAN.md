@@ -8,6 +8,12 @@ owner. That is why a valid report can remain partial. This draft defines how to
 close those gaps without replacing missing evidence with plausible architecture.
 It does not claim that the routes below are already implemented.
 
+The first profile/operator increment is implemented in engine `2026.10.21.1`.
+See [profile and operator evidence closure](PROFILE_OPERATOR_CLOSURE.md) for its
+exact contracts, measured validation and remaining boundaries. The broader format,
+component, task-profile and ownership routes below remain proposals unless that
+implementation record explicitly says otherwise.
+
 ## What the debugging established
 
 The diagnosis overlays the latest 22 pinned rechecks onto the previous 250-model

@@ -959,3 +959,34 @@ their already-repaired operator warnings as current defects. Fresh bounded probe
 confirm the same four gated access failures and invalid XTTS config/missing checkpoint.
 This increment drafts the approach and adds debugging evidence/tooling; extraction
 behavior, report labels, engine identity and the running service remain unchanged.
+
+## D-062 - Prove scoped tensor facts and native output ports
+
+**2026-10-21 - first implementation increment of dynamic reconstruction**
+
+Carry shape, dtype, symbolic axes and tuple members through reviewed operator
+contracts. Resolve a guard only from established facts; join only facts shared
+by every feasible branch. Preserve short-circuit execution and opposite arm
+conditions. Inspect metadata without executing publisher properties or forwards.
+Bound finite metadata loops, and retain warnings for unsupported operations.
+
+Declare the canonical eval/no-cache/no-training-loss profile in report and graph
+metadata and in user-visible limitations. Its native meta dtypes and nonempty
+symbolic local inputs are assumptions, not runtime observations.
+
+Use exact Torch callable/module identities and source-fingerprinted native T5,
+Whisper, Llama and ViT contracts. A proven tuple port zero never establishes
+other ports or tuple arity. Missing output facts cannot inherit a default hidden
+shape. A primitive may recover facts from one verified incoming graph edge only
+after its exact contract validates dimensions, parameters, dtype and hooks.
+Scalar shape `[]` remains distinct from unknown shape.
+
+Advance engine/cache identity to `2026.10.21.1`, retaining IR `1.1` and compatible
+historical report reads. Preserve all prior benchmark observations and stored
+reports. More honest uncertainty can turn an earlier complete observation into
+a current partial one; never restore an unproved shape to preserve a label.
+
+See [PROFILE_OPERATOR_CLOSURE.md](PROFILE_OPERATOR_CLOSURE.md) for the pinned
+111-case recheck, remaining family gaps, deterministic checks, Supabase read-back
+and live application evidence. Broader format/component/task routes remain
+subsequent increments of the dynamic reconstruction plan.
