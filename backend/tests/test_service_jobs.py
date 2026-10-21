@@ -57,69 +57,10 @@ def test_guests_are_persistent_unforgeable_and_isolated(service):
     reopened.db.engine.dispose()
 
 
-def test_legacy_summary_is_reprojected_without_rewriting_saved_job_or_artifact(service, monkeypatch):
-    guest = visitor(service)
-    job_id = service.create(guest, "gpt2")["id"]
-    service.claim("worker-a")
-    finish(service, job_id)
-    with service.db.write() as session:
-        job = session.get(Job, job_id)
-        old_summary = dict(job.summary)
-        for key in ("quality", "limitations", "partial_reasons", "engine_version"):
-            old_summary.pop(key, None)
-        old_summary["warnings"] += document()["metadata"]["limitations"]
-        job.summary = old_summary
-        digest = job.blob_digest
-    original = service.storage.get(digest)
-    calls = []
-    get = service.storage.get
-    monkeypatch.setattr(service.storage, "get", lambda digest: calls.append(digest) or get(digest))
-    detail = service.present(service.get(job_id, guest))
-    recent = service.recent(guest)[0]
-    assert detail == recent
-    assert len(calls) == 1
-    assert detail["warnings"] == document()["metadata"]["analysis_report"]["warnings"]
-    assert detail["limitations"] == document()["metadata"]["limitations"]
-    assert detail["quality"]["checkpoint_parameter_coverage"] == 1
-    assert service.get(job_id, guest).summary == old_summary
-    assert get(digest) == original
-    with pytest.raises(ServiceError) as exc:
-        service.get(job_id, visitor(service))
-    assert exc.value.status == 404
-    assert len(calls) == 1
 
 
-def test_legacy_terminal_status_matches_artifact_assessment_without_database_rewrite(service):
-    guest = visitor(service)
-    job_id = service.create(guest, "gpt2")["id"]
-    service.claim("worker-a")
-    finish(service, job_id)
-    with service.db.write() as session:
-        job = session.get(Job, job_id)
-        job.status = job.stage = "completed"
-        job.summary = {"warnings": []}
-    detail = service.present(service.get(job_id, guest))
-    assert detail["status"] == detail["stage"] == "partial"
-    assert detail["warnings"] == document()["metadata"]["analysis_report"]["warnings"]
-    assert service.cancel(job_id, guest) == detail
-    persisted = service.get(job_id, guest)
-    assert persisted.status == persisted.stage == "completed"
-    assert persisted.summary == {"warnings": []}
 
 
-def test_summary_predating_input_applicability_is_read_from_immutable_report(service):
-    guest = visitor(service)
-    job_id = service.create(guest, "gpt2")["id"]
-    service.claim("worker-a")
-    finish(service, job_id)
-    with service.db.write() as session:
-        job = session.get(Job, job_id)
-        summary = dict(job.summary)
-        summary.pop("input_names")
-        job.summary = summary
-    expected = sorted(document()["metadata"]["inputs"]["input_specs"])
-    assert service.present(service.get(job_id, guest))["input_names"] == expected
-    assert "input_names" not in service.get(job_id, guest).summary
 
 
 def test_global_worker_lease_and_claim_serialize_independent_connections(service):

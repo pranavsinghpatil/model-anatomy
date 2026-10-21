@@ -154,7 +154,7 @@ class ModelIR:
     @classmethod
     def from_json(cls, value: str) -> ModelIR:
         data = json.loads(value)
-        if data.get("schema_version") not in {"1.0", "1.1"}:
+        if data.get("schema_version") != IR_SCHEMA_VERSION:
             raise AnatomyError("Unsupported IR schema version")
 
         def graph_from_dict(item: dict[str, Any]) -> Graph:

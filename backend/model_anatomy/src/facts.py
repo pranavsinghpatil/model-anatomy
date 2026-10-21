@@ -15,6 +15,7 @@ from .artifacts import CheckpointMetadata, InspectionBudgetError, SafetensorsMet
 from .errors import ArtifactError, NativeShapeMismatchError
 
 ATTRIBUTES = (
+    "training",
     "in_features",
     "out_features",
     "in_channels",
@@ -43,6 +44,13 @@ ATTRIBUTES = (
     "n_heads",
     "key_value_proj_dim",
     "num_key_value_groups",
+    "attention_type",
+    "layer_type",
+    "layer_idx",
+    "sliding_window",
+    "window_size",
+    "local_attention",
+    "global_attn_every_n_layers",
 )
 
 
@@ -81,7 +89,7 @@ def inspect_native_model(
             "type": type(module).__name__,
             "qualified_type": qualified,
             "parent": path.rpartition(".")[0] if path else None,
-            "children": [f"{path}.{name}" if path else name for name, _ in module.named_children()],
+            "children": [f"{path}.{name}" if path else name for name, child in module._modules.items() if child is not None],
             "parameters": [
                 f"{path}.{name}" if path else name for name, _ in module.named_parameters(recurse=False)
             ],

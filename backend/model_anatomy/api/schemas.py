@@ -72,6 +72,7 @@ class Dimensions(BaseModel):
 
 
 class AnalysisQuality(BaseModel):
+    architecture_scope: str | None = None
     semantic_coverage: float | None = Field(default=None, ge=0, le=1)
     module_semantic_coverage: float | None = Field(default=None, ge=0, le=1)
     checkpoint_parameter_coverage: float | None = Field(default=None, ge=0, le=1)

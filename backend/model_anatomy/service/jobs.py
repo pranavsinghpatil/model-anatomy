@@ -7,7 +7,6 @@ import re
 import secrets
 import time
 from datetime import UTC, datetime
-from functools import lru_cache
 from urllib.parse import unquote, urlsplit
 from uuid import uuid4
 
@@ -140,64 +139,48 @@ def ir_summary(data: dict) -> dict:
             },
         }
     report = metadata.get("analysis_report", {})
-    completion = report.get("completion")
-    scoped = isinstance(completion, dict) and type(completion.get("version")) is int and completion["version"] == 1
+    completion = report.get("completion", {})
     warnings = list(dict.fromkeys(report.get("warnings", [])))
-    quality = {}
-    reasons = []
-    if completion is not None and not scoped:
-        reasons.append("Profile computation contract version was not established.")
-    for key, label in (
-        ("semantic_coverage", "Graph component classification"),
-        ("module_semantic_coverage", "Native module classification"),
-        ("checkpoint_parameter_coverage", "Checkpoint parameter mapping"),
-        ("tensor_shape_coverage", "Graph connection shapes"),
-    ):
+    quality, reasons = {}, []
+    for key in ("semantic_coverage", "module_semantic_coverage", "checkpoint_parameter_coverage"):
         value = report.get(key)
         valid = type(value) in (int, float) and 0 <= value <= 1 and math.isfinite(value)
         quality[key] = value if valid else None
-        if not valid:
-            reasons.append(f"{label}: coverage was not established.")
-        elif value < 1 and (not scoped or key not in {"semantic_coverage", "module_semantic_coverage"}):
-            reasons.append(f"{label}: coverage is incomplete.")
+    # Semantic role labels are annotations. An observed module can have an
+    # unclassified role without becoming an invented or missing component.
     for key in ("unknown_nodes", "unmapped_checkpoint_tensors"):
         value = report.get(key)
         if key == "unmapped_checkpoint_tensors":
             value = len(value) if isinstance(value, list) else None
         quality[key] = value if type(value) is int and value >= 0 else None
-        if quality[key] is None:
-            label = (
-                "Unknown component count"
-                if key == "unknown_nodes"
-                else "Unmapped tensor count"
-            )
-            reasons.append(f"{label}: check was not established.")
-        elif quality[key] and (not scoped or key != "unknown_nodes"):
-            label = (
-                "unclassified graph component"
-                if key == "unknown_nodes"
-                else "unmapped checkpoint tensor"
-            )
-            if value != 1:
-                label += "s"
-            reasons.append(f"{value} {label}.")
-    if scoped:
-        required = {"parameter_mapping", "source_interpretation", "source_invocations", "operation_shapes", "profile_recorded"}
-        checks = completion.get("checks")
-        valid_checks = isinstance(checks, dict) and required <= checks.keys() and all(type(checks[key]) is bool for key in required)
-        if not valid_checks or completion.get("status") not in {"complete", "partial"} or type(completion.get("scope")) is not str:
-            reasons.append("Profile computation completeness was not established.")
-        elif completion["status"] != "complete" or not all(checks[key] for key in required):
-            reasons.append("Profile computation checks are incomplete.")
-        quality["computation_scope"] = completion.get("scope")
-        annotations = completion.get("semantic_annotations", {})
-        if isinstance(annotations, dict):
-            quality["semantic_annotations"] = {
-                "active_coverage": annotations.get("active_coverage"),
-                "registered_unknown_count": len(annotations["registered_unknown_paths"]) if isinstance(annotations.get("registered_unknown_paths"), list) else None,
-                "active_unknown_count": len(annotations["active_unknown_paths"]) if isinstance(annotations.get("active_unknown_paths"), list) else None,
-                "scope": annotations.get("scope"),
-            }
+    required = {"module_inventory", "parameter_mapping", "native_architecture", "module_topology"}
+    checks = completion.get("checks") if isinstance(completion, dict) else None
+    valid_checks = isinstance(checks, dict) and required <= checks.keys() and all(type(checks[key]) is bool for key in required)
+    if (not isinstance(completion, dict) or type(completion.get("version")) is not int
+            or completion["version"] != 3 or not valid_checks
+            or completion.get("status") not in {"complete", "partial"}
+            or not isinstance(completion.get("scope"), str)):
+        reasons.append("Architecture completeness contract was not established.")
+    else:
+        reasons.extend(f"Architecture check incomplete: {key}." for key in sorted(required) if not checks[key])
+        if completion["status"] != "complete" and not reasons:
+            reasons.append("Architecture report is partial.")
+        quality["architecture_scope"] = completion["scope"]
+    if quality["checkpoint_parameter_coverage"] != 1:
+        reasons.append("Checkpoint parameter mapping is incomplete or unverified.")
+    if quality["unmapped_checkpoint_tensors"] != 0:
+        reasons.append("Checkpoint tensor ownership is incomplete or unverified.")
+    if quality["unknown_nodes"] != 0:
+        reasons.append("Unknown graph components remain or their count is unverified.")
+    diagnostics = report.get("diagnostics", [])
+    if isinstance(diagnostics, list):
+        for item in diagnostics:
+            if isinstance(item, dict) and item.get("blocking") is True:
+                message = item.get("reason") or "Unresolved architecture diagnostic"
+                if item.get("module_path"):
+                    message = f"{item['module_path']}: {message}"
+                if message not in reasons:
+                    reasons.append(message)
     for key in ("forward_executed", "runtime_trace_available"):
         value = report.get(key)
         quality[key] = value if type(value) is bool else None
@@ -215,12 +198,12 @@ def ir_summary(data: dict) -> dict:
         "quality": quality,
         "partial_reasons": reasons,
         "engine_version": metadata.get("engine_version"),
-        "result_status": "partial" if reasons or warnings else "completed",
+        "result_status": "partial" if reasons else "completed",
     }
 
 
-def job_detail(job: Job, summary: dict | None = None) -> dict:
-    summary = summary if summary is not None else job.summary or {}
+def job_detail(job: Job) -> dict:
+    summary = job.summary or {}
     return {
         "id": job.id,
         "model_id": job.model_id,
@@ -250,28 +233,8 @@ class JobService:
         self.settings, self.clock = settings, clock
         self.db = Database(settings.resolved_database_url)
         self.storage = storage or storage_for(settings)
-        self._legacy_summary = lru_cache(maxsize=64)(self._read_legacy_summary)
-
-    def _read_legacy_summary(self, digest: str) -> dict:
-        try:
-            return ir_summary(json.loads(self.storage.get(digest)))
-        except (ValueError, KeyError, TypeError) as exc:
-            raise ServiceError(
-                503, "invalid_artifact", "Stored report summary is unavailable"
-            ) from exc
 
     def present(self, job: Job) -> dict:
-        # Older persisted summaries mixed method limitations into extraction warnings.
-        # Reproject immutable report facts; cache only the small summary, never the full IR.
-        if (
-            job.blob_digest
-            and job.status in {"completed", "partial"}
-            and not {"quality", "input_names"}.issubset(job.summary or {})
-        ):
-            summary = self._legacy_summary(job.blob_digest)
-            detail = job_detail(job, summary)
-            detail["status"] = detail["stage"] = summary["result_status"]
-            return detail
         return job_detail(job)
 
     def initialize(self) -> None:

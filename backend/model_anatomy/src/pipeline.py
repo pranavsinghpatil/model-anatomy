@@ -5,7 +5,6 @@ from __future__ import annotations
 import hashlib
 import json
 import re
-from collections import Counter
 from collections.abc import Callable
 from dataclasses import replace
 from functools import partial
@@ -313,11 +312,10 @@ def build_native_report(
     model: Any, selection: dict[str, Any], profile: dict[str, Any],
     progress: Callable[[str], None],
 ) -> ModelIR:
-    """Use one source/ownership/shape path for native whole models and scoped components."""
+    """Build one module architecture path for whole models and scoped components."""
     from .facts import inspect_native_model
-    from .coverage import source_completeness
     from .hierarchy import HierarchyBuilder
-    from .inputs import InputResolver
+    from .inputs import describe_inputs
     from .patterns import SemanticAnalyzer
 
     config_url = reference.url(config_file, revision)
@@ -330,10 +328,8 @@ def build_native_report(
     progress("analyzing_components")
     builder = HierarchyBuilder(model, raw, analyzer)
     root = builder.build()
-    from .source_semantics import annotate_graphs
-    interpretation = annotate_graphs(builder, root)
     raw["semantic_diagnostics"] = analyzer.diagnostics()
-    raw["static_flow_reports"] = builder.flow_reports
+    raw["module_topology"] = builder.topology.reports
     raw["model_selection"] = selection
     parameter_refs = {}
     for name, parameter in raw["parameters"].items():
@@ -391,30 +387,21 @@ def build_native_report(
             header_sha256=shard["header_sha256"],
             file_size=shard["file_size"],
         )
-    completeness = source_completeness(root, builder.flow_reports)
-    from .shape_validation import validate_shapes
-    from .shape_rules import known as known_shape
-    shape_validation = validate_shapes(root, model)
     from .completion import completion_report
-    completion = completion_report(root, raw, interpretation, completeness, shape_validation)
-    warnings = list(selection["warnings"]) + list(raw["warnings"]) + completeness["warnings"] + shape_validation["warnings"]
-    for path, report in builder.flow_reports.items():
-        warnings.extend(f"{path or '<root>'}: {w}" for w in report["warnings"])
+    completion = completion_report(raw, builder.represented, builder.covered_by_leaf, selection, builder.topology.reports)
+    warnings = list(selection["warnings"]) + list(raw["warnings"])
+    diagnostics = [dict(item, module_path=path) for path, report in builder.topology.reports.items()
+                   for item in report["boundaries"]]
+    for path, report in builder.topology.reports.items():
+        blocking = [item for item in report["boundaries"] if item.get("blocking", True)]
+        if blocking:
+            warnings.append(f"{path or '<root>'}: module topology has {len(blocking)} architecture gaps")
     unknown_tensors = [name for name, item in raw["checkpoint_extras"].items() if item["kind"] == "unmapped"]
     if unknown_tensors:
-        warnings.append(
-            f"{len(unknown_tensors)} checkpoint tensors have no native module owner; preserved as unmapped"
-        )
-    all_nodes = [
-        node
-        for graph in root.walk()
-        for node in graph.nodes
-        if node.kind not in {"input", "output", "parameter"}
-    ]
-    unknown = [node for node in all_nodes if node.kind == "unknown"]
-    unknown_categories = Counter(node.metadata.get("unknown_category", "unsupported_source") for node in unknown)
-    edges = [edge for graph in root.walk() for edge in graph.edges if edge.relation == "dataflow"]
-    unknown_modules = raw["semantic_diagnostics"]["unknown_components"]
+        warnings.append(f"{len(unknown_tensors)} checkpoint tensors have no native module owner")
+    all_nodes = [node for graph in root.walk() for node in graph.nodes if node.module_path is not None]
+    unclassified = raw["semantic_diagnostics"]["unclassified_roles"]
+    used_arguments = [node.metadata["argument"] for node in root.nodes if node.kind == "input"]
     metadata = {
         "model_profile": profile,
         "revision": revision,
@@ -432,50 +419,35 @@ def build_native_report(
         "versions": raw["versions"],
         "engine_version": ENGINE_VERSION,
         "artifacts": artifact_data,
-        "inputs": InputResolver(model).describe(),
+        "inputs": describe_inputs(model, used_arguments),
         "parameter_count_policy": "Model parameter object identity is unique; checkpoint duplicates and hierarchy references are reported separately",
         "analysis_report": {
             "architecture_selection": selection["architecture_selection"],
-            "source_interpretation": interpretation,
             "completion": completion,
-            "mode": "static",
+            "mode": "static_module_architecture",
             "forward_executed": False,
             "runtime_trace_available": False,
-            "semantic_coverage": 1 - len(unknown) / len(all_nodes) if all_nodes else 0,
-            "classified_nodes": len(all_nodes) - len(unknown),
-            "unknown_nodes": len(unknown),
-            "unparsed_nodes": unknown_categories.get("unsupported_source", 0),
-            "unknown_node_categories": dict(unknown_categories),
-            "module_semantic_coverage": 1 - len(unknown_modules) / len(raw["modules"]),
-            "unknown_module_paths": unknown_modules,
+            "semantic_coverage": sum(node.kind != "module" for node in all_nodes) / len(all_nodes) if all_nodes else 1,
+            "module_semantic_coverage": 1 - len(unclassified) / len(raw["modules"]),
+            "unknown_nodes": 0,
+            "unclassified_module_roles": unclassified,
             "unmapped_checkpoint_tensors": unknown_tensors,
             "checkpoint_parameter_coverage": sum(
-                p["parameter_count"]
-                for name, p in raw["parameters"].items()
+                p["parameter_count"] for name, p in raw["parameters"].items()
                 if name == p["canonical_parameter"] and p["checkpoint_matched"]
-            )
-            / raw["unique_parameter_count"]
-            if raw["unique_parameter_count"]
-            else 1,
-            "tensor_shape_coverage": sum(e.tensor is not None and known_shape(e.tensor.shape) for e in edges)
-            / len(edges)
-            if edges
-            else 0,
-            "adapters_used": [],
-            "source_completeness": completeness,
-            "shape_validation": shape_validation,
-            "diagnostics": [dict(item, module_path=path) for path, flow in builder.flow_reports.items() for item in flow.get("diagnostics", [])],
+            ) / raw["unique_parameter_count"] if raw["unique_parameter_count"] else 1,
+            "module_inventory_coverage": (len(builder.represented | builder.covered_by_leaf.keys()) / len(raw["modules"])),
+            "module_topology": builder.topology.reports,
+            "diagnostics": diagnostics,
             "warnings": list(dict.fromkeys(warnings)),
         },
         "limitations": [
-            "Static source analysis supports a bounded Python subset; unresolved branches and unsupported loops are reported",
-            "Semantic classifications and symbolic shapes are inspectable reconstructions, not runtime observations",
-            "Floating edge dtypes describe the native meta model profile; runtime casts are unverified, while checkpoint dtypes are direct header evidence",
-            "Secondary tuple output shapes are unknown unless their role is established; opaque transformations retain dependency evidence only",
-            "Containment edges are explicitly distinguished from dataflow; registration order is never assumed to be execution order",
-            "Forward execution, weight downloads, remote code, and CPU parameter allocation are disabled",
-            "Quantized shape conversions, opaque kernels, and optional native dependencies may require additional handling",
-            "Collapsed child graphs show a representative instance; all source paths and raw parameter records are retained",
+            "Graphs describe actual native modules. Basic modules are leaves; tensor expressions are outside this representation",
+            "Edges are source-backed module dependencies with intermediate expressions omitted, not runtime tensor traces",
+            "ModuleList registration does not establish execution order; every actual layer instance is retained",
+            "Checkpoint shapes and storage dtypes are direct header evidence; intermediate activation shapes are not inferred",
+            "Forward execution, weight downloads and publisher remote code are disabled",
+            "Module registration establishes presence, not reachability for every possible runtime input",
         ],
     }
     if selection["architecture_selection"]["status"] == "checkpoint_selected":
@@ -491,7 +463,7 @@ def build_native_report(
         )
     if selection["architecture_selection"]["status"] == "declared_native_with_ignored_tensors":
         metadata["limitations"].append(
-            "Native loading rules ignore recorded checkpoint keys without module owners; computation completeness "
+            "Native loading rules ignore recorded checkpoint keys without module owners; architecture completeness "
             "covers the declared native implementation, not complete checkpoint ownership or publisher equivalence"
         )
     evidence = [

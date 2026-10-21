@@ -33,7 +33,7 @@ def mermaid(graph: Graph) -> str:
             else "unknown shape"
         )
         label = f"{edge.label}: " if edge.label else ""
-        label += f"[{shape}]" if edge.relation == "dataflow" else edge.relation
+        label += f"[{shape}]" if edge.relation == "dataflow" and edge.tensor else edge.relation
         arrow = "-->" if edge.relation == "dataflow" else "-.->"
         lines.append(f'    {ids[edge.source]} {arrow}|"{_label(label)}"| {ids[edge.target]}')
     return "\n".join(lines) + "\n"
@@ -83,7 +83,7 @@ def write_outputs(
                 "analysis_report": ir.metadata.get("analysis_report"),
                 "module_tree": ir.raw_structure.get("modules"),
                 **ir.raw_structure.get("semantic_diagnostics", {}),
-                "static_flow": ir.raw_structure.get("static_flow_reports"),
+                "module_topology": ir.raw_structure.get("module_topology"),
             },
             indent=2,
             sort_keys=True,
@@ -96,9 +96,9 @@ def write_outputs(
         "",
         f"Model: `{ir.model_id}` | Revision: `{ir.metadata['revision']}`",
         "",
-        "These graphs are generated from the same Hierarchical Model IR. Solid edges represent static source or pattern dataflow; dotted edges represent structural relationships. No forward pass was executed.",
+        "These graphs contain actual registered modules. Dependency edges omit intermediate expressions and do not assert tensor identity. Conditional edges retain source conditions. No forward pass was executed.",
         "",
-        "Child graphs of repeated nodes show a representative instance. All instance paths and parameters remain in the raw structure. Unknown shapes and components are explicitly marked.",
+        "Layer containers retain every actual instance, including differing layer attributes. Basic modules do not expand. Registration alone never establishes execution order. Checkpoint tensor shapes and dtypes remain available for inspection.",
         "",
     ]
     for graph in ir.root_graph.walk():

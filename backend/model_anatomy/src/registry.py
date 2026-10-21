@@ -53,10 +53,10 @@ _IMPLICIT_BACKBONE_STAGE_TYPES = {
 def _validate_embedded_config(data: dict[str, Any]) -> None:
     if not isinstance(data, dict):
         raise ArtifactError("Native configuration must be an object")
-    pending: list[tuple[Any, int, str | None]] = [(data, 0, None)]
+    pending: list[tuple[Any, int, str | None, bool]] = [(data, 0, None, True)]
     visited = 0
     while pending:
-        value, depth, inherited_stage_type = pending.pop()
+        value, depth, inherited_stage_type, construction_config = pending.pop()
         if not isinstance(value, (dict, list)):
             continue
         visited += 1
@@ -65,14 +65,15 @@ def _validate_embedded_config(data: dict[str, Any]) -> None:
         if depth > limits.MAX_CONFIG_NESTING_DEPTH:
             raise ArtifactError("Configuration exceeds the nested metadata depth limit")
         if isinstance(value, list):
-            pending.extend((item, depth + 1, None) for item in value if isinstance(item, (dict, list)))
+            pending.extend((item, depth + 1, None, False) for item in value if isinstance(item, (dict, list)))
             continue
 
-        if value.get("use_pretrained_backbone") or value.get("pretrained"):
+        construction_config = construction_config or isinstance(value.get("model_type"), str)
+        if construction_config and (value.get("use_pretrained_backbone") or value.get("pretrained")):
             raise UnsupportedModelError(
                 "Pretrained backbone initialization is disabled; weights must not be loaded"
             )
-        if value.get("backbone") and value.get("backbone_config") is None:
+        if construction_config and value.get("backbone") and value.get("backbone_config") is None:
             raise UnsupportedModelError(
                 "External backbone resolution is disabled; embedded backbone_config is required"
             )
@@ -112,6 +113,7 @@ def _validate_embedded_config(data: dict[str, Any]) -> None:
                 item,
                 depth + 1,
                 implicit_stage_type if name == "backbone_config" else None,
+                construction_config and (name.endswith("_config") or name in {"encoder", "decoder"}),
             )
             for name, item in value.items()
             if isinstance(item, (dict, list))

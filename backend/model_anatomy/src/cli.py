@@ -22,7 +22,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--preview-dir", type=Path, default=Path("preview"))
     parser.add_argument("--revision", help="Optional immutable 40-character commit SHA")
     parser.add_argument(
-        "--inspect", action="store_true", help="Print semantic coverage and unknown component diagnostics"
+        "--inspect", action="store_true", help="Print module inventory, checkpoint binding and topology diagnostics"
     )
     parser.add_argument(
         "--artifacts", action="store_true",

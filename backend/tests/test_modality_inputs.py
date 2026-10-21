@@ -1,15 +1,15 @@
-"""Symbolic input axes follow native source rather than a task-name guess."""
+"""Declared interfaces do not imply unobserved activation shapes."""
 
 from types import SimpleNamespace
 
 import torch
 from transformers import CLIPConfig, VideoMAEConfig
 
-from model_anatomy.src.inputs import InputResolver
+from model_anatomy.src.inputs import describe_inputs
 from model_anatomy.src.registry import instantiate_native
 
 
-def test_videomae_has_frame_axis_without_executing_forward():
+def test_videomae_interface_does_not_infer_frame_axes():
     config = VideoMAEConfig(
         image_size=16,
         patch_size=8,
@@ -22,12 +22,12 @@ def test_videomae_has_frame_axis_without_executing_forward():
         architectures=["VideoMAEForVideoClassification"],
     )
     model, _ = instantiate_native(config)
-    description = InputResolver(model).describe()
-    assert description["input_specs"]["pixel_values"]["shape"] == ["B", 4, 3, 16, 16]
+    description = describe_inputs(model, ["pixel_values"])
+    assert description["input_specs"]["pixel_values"]["shape"] is None
     assert description["execution"] == "disabled"
 
 
-def test_native_clip_uses_nested_vision_config_not_default_image_size():
+def test_native_clip_interface_does_not_guess_image_size():
     config = CLIPConfig(
         text_config={
             "vocab_size": 16,
@@ -47,7 +47,7 @@ def test_native_clip_uses_nested_vision_config_not_default_image_size():
         architectures=["CLIPModel"],
     )
     model, _ = instantiate_native(config)
-    assert InputResolver(model).spec("pixel_values").shape == ["B", 3, 16, 16]
+    assert describe_inputs(model, ["pixel_values"])["input_specs"]["pixel_values"]["shape"] is None
 
 
 class CompositeModel(torch.nn.Module):
@@ -62,10 +62,10 @@ class CompositeModel(torch.nn.Module):
 
 
 def test_unknown_composite_image_video_packing_stays_unknown():
-    description = InputResolver(CompositeModel("custom_multimodal")).describe()
+    description = describe_inputs(CompositeModel("custom_multimodal"), ["pixel_values", "pixel_values_videos"])
     assert description["input_specs"]["pixel_values"]["shape"] is None
     assert description["input_specs"]["pixel_values_videos"]["shape"] is None
 
 
 def test_other_video_families_are_not_assigned_videomae_axis_order():
-    assert InputResolver(CompositeModel("timesformer")).spec("pixel_values").shape is None
+    assert describe_inputs(CompositeModel("timesformer"), ["pixel_values"])["input_specs"]["pixel_values"]["shape"] is None

@@ -12,7 +12,7 @@ from .artifacts import CheckpointMetadata, InspectionBudgetError, SafetensorsMet
 from .errors import ArtifactError, NativeShapeMismatchError, UnsupportedModelError
 from .facts import inspect_native_model
 from .registry import _auto_model_candidates, instantiate_candidate
-from .source_eval import DTYPES
+from .metadata_types import DTYPES
 
 
 def compatible_dtype(native: str, stored: str | None) -> bool:
@@ -54,11 +54,14 @@ def compatibility(model: torch.nn.Module, raw: dict[str, Any]) -> dict[str, Any]
                           for path in item["buffer_paths"]
                           if not compatible_dtype(raw["buffers"][path]["dtype"], item["checkpoint_dtype"]))
     return {
-        "status": "exact_metadata_match" if not (missing or unowned or missing_buffers or alias_conflicts or dtype_conflicts or raw["warnings"]) else "incompatible",
+        "status": "exact_metadata_match" if not (missing or unowned or missing_buffers or dtype_conflicts) else "incompatible",
         "missing_parameters": missing, "unowned_checkpoint_tensors": unowned,
         "native_ignored_checkpoint_tensors": [name for name, item in raw["checkpoint_extras"].items()
                                                if item["kind"] == "legacy_checkpoint_tensor"],
         "missing_persistent_buffers": missing_buffers, "unverified_tied_values": alias_conflicts,
+        "numerical_integrity": {"verified": False, "blocking_for_architecture": False,
+                                "tied_checkpoint_values_not_compared": alias_conflicts,
+                                "basis": "Native parameter identity establishes aliases; headers establish shapes, not payload equality"},
         "parameter_alias_groups": raw["parameter_alias_groups"],
         "key_conversions": raw["checkpoint_name_conversions"],
         "parameter_shapes_checked": True, "tensor_values_verified": False,
@@ -92,8 +95,8 @@ def select_checkpoint_architecture(
 
     ignored = initial["native_ignored_checkpoint_tensors"]
     active_failures = any(initial[key] for key in (
-        "missing_parameters", "missing_persistent_buffers", "unverified_tied_values", "dtype_conflicts"))
-    if (config.architectures and ignored and not active_failures and not raw["warnings"]
+        "missing_parameters", "missing_persistent_buffers", "dtype_conflicts"))
+    if (config.architectures and ignored and not active_failures
             and set(initial["unowned_checkpoint_tensors"]) == set(ignored)):
         proof.update(status="declared_native_with_ignored_tensors", native_state_covered=True,
                      checkpoint_ownership_complete=False, native_ignored_checkpoint_tensors=ignored,

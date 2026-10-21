@@ -8,6 +8,7 @@ version = "0.1.0"
 description = "Reconstruct Hugging Face models into semantic architecture graphs"
 requires-python = ">=3.11"
 dependencies = [
+  "polars>=2.0.0",
   "requests>=2.32,<3",
 ]
 
