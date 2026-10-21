@@ -51,6 +51,60 @@ export type BenchmarkCatalogResponse = {
   recheck_attempts?: number;
 };
 
+export type DiscoveryObservation = {
+  status?: string;
+  engine_version?: string | null;
+  finished_at?: string | null;
+  case_identity?: string;
+  revision?: string | null;
+  reference?: string | null;
+  artifact?: string | null;
+  stored_report_id?: string | null;
+};
+
+export type DiscoveryCatalogResult = {
+  model_id: string;
+  category: string;
+  revision: string | null;
+  reference: string | null;
+  stored_report_id: string | null;
+  status: string;
+  architecture: string | null;
+  declared_task: string | null;
+  started_at: string | null;
+  finished_at: string | null;
+  engine_version: string | null;
+  warning_count: number | null;
+  graph_count: number | null;
+  tensor_count: number | null;
+  parameter_counts?: { unique?: number | null } | null;
+  coverage?: Record<string, number | null> | null;
+  dimensions?: Record<string, number | number[] | null> | null;
+  artifact?: string | null;
+  explicit_artifact?: boolean | null;
+  artifact_verified?: boolean | null;
+  selection_id?: string | null;
+  category_source?: string | null;
+  declared_task_source?: string | null;
+  revision_source?: string | null;
+  source: "inspection" | "benchmark";
+  run_kind?: "baseline" | "recheck";
+  previous_observations?: DiscoveryObservation[];
+  benchmark_observations?: DiscoveryObservation[];
+  warnings?: string[];
+  diagnostic_notes?: string[];
+  reason_codes?: string[];
+  error?: { message?: string } | null;
+};
+
+export type DiscoveryCatalogResponse = {
+  results: DiscoveryCatalogResult[];
+  total: number;
+  status_counts: Record<string, number>;
+  generated_at: string;
+  benchmark_publication_id: string | null;
+};
+
 async function errorFrom(response: Response): Promise<ApiError> {
   const payload = await response.json().catch(() => null);
   const error = payload?.error;
@@ -143,6 +197,30 @@ export const api = {
   },
   benchmarkCatalog: (signal?: AbortSignal) =>
     request<BenchmarkCatalogResponse>("/benchmarks/catalog", { signal }),
+  discoveryCatalog: async (signal?: AbortSignal) => {
+    const payload = await request<DiscoveryCatalogResponse>(
+      "/catalog/discovery",
+      { signal },
+    );
+    if (
+      !payload ||
+      !Array.isArray(payload.results) ||
+      typeof payload.total !== "number" ||
+      !payload.status_counts ||
+      typeof payload.status_counts !== "object" ||
+      typeof payload.generated_at !== "string" ||
+      !(
+        payload.benchmark_publication_id === null ||
+        typeof payload.benchmark_publication_id === "string"
+      )
+    )
+      throw new ApiError(
+        0,
+        "invalid_response",
+        "The model catalog returned an invalid response.",
+      );
+    return payload;
+  },
   inspectCatalog: (id: string) =>
     request<AnalysisDetail>(`/catalog/${segment(id)}/inspect`, {
       method: "POST",

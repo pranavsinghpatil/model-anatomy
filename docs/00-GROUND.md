@@ -72,6 +72,8 @@ pinned repositories. It publishes case evidence, not prepared architecture
 reports or visitor analyses. Complete static reports, partial graphs, artifact
 inspection and failed attempts stay distinct. Its inspection action opens
 the normal submission flow with the exact pinned reference. Submitting creates a
-visitor-owned analysis. Stored
-inspections remain a separate view backed by the report registry. These
-compatibility measurements do not measure inference speed or task accuracy.
+visitor-owned analysis. The model catalog combines these immutable benchmark observations with durable
+inspection reports and safe terminal failure outcomes in one discovery view.
+Each displayed status, metric and report link comes from one identified source;
+benchmark history remains attributed separately. These compatibility measurements
+do not measure inference speed or task accuracy.

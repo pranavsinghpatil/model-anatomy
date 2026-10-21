@@ -133,6 +133,21 @@ class BenchmarkCase(Base):
     data: Mapped[dict] = mapped_column(JSON)
 
 
+class InspectionFailure(Base):
+    """Public-safe terminal outcome for an inspection that produced no report."""
+    __tablename__ = "inspection_failures"
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    model_id: Mapped[str] = mapped_column(String(256), index=True)
+    revision: Mapped[str | None] = mapped_column(String(40), index=True)
+    revision_source: Mapped[str | None] = mapped_column(String(16))
+    artifact: Mapped[str] = mapped_column(String(512))
+    explicit_artifact: Mapped[bool] = mapped_column(Boolean)
+    status: Mapped[str] = mapped_column(String(32), index=True)
+    engine_version: Mapped[str] = mapped_column(String(128))
+    started_at: Mapped[float] = mapped_column(Float)
+    finished_at: Mapped[float] = mapped_column(Float, index=True)
+
+
 class Blob(Base):
     __tablename__ = "analysis_blobs"
     digest: Mapped[str] = mapped_column(String(64), primary_key=True)

@@ -76,6 +76,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/catalog/discovery": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get Discovery Catalog */
+    get: operations["get_discovery_catalog_api_v1_catalog_discovery_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/catalog/{report_id}/inspect": {
     parameters: {
       query?: never;
@@ -507,6 +524,23 @@ export interface components {
       layers?: number | null;
       /** Vocabulary */
       vocabulary?: number | null;
+    };
+    /** DiscoveryCatalogResponse */
+    DiscoveryCatalogResponse: {
+      /** Results */
+      results: {
+        [key: string]: unknown;
+      }[];
+      /** Total */
+      total: number;
+      /** Status Counts */
+      status_counts: {
+        [key: string]: number;
+      };
+      /** Generated At */
+      generated_at: string;
+      /** Benchmark Publication Id */
+      benchmark_publication_id: string | null;
     };
     /** ErrorDetail */
     ErrorDetail: {
@@ -1117,6 +1151,80 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["BenchmarkCatalogResponse"];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Conflict */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Gone */
+      410: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Unprocessable Entity */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Too Many Requests */
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Service Unavailable */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  get_discovery_catalog_api_v1_catalog_discovery_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DiscoveryCatalogResponse"];
         };
       };
       /** @description Not Found */

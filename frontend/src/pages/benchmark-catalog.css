@@ -177,7 +177,19 @@
 }
 .benchmark-card-actions {
   display: flex;
+  align-items: stretch;
+  flex-wrap: wrap;
   gap: 8px;
+}
+.card-retry-btn {
+  padding: 8px 10px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  color: #cbd5e1;
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
 }
 .benchmark-details {
   border-top: 1px solid rgba(255, 255, 255, 0.07);
@@ -205,6 +217,17 @@
 }
 .benchmark-details dd a {
   color: #93c5fd;
+}
+.history-open-btn {
+  display: block;
+  margin-top: 6px;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: #93c5fd;
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
 }
 .benchmark-details h4 {
   margin: 12px 0 6px;
@@ -256,6 +279,28 @@
 }
 .benchmark-disclaimer {
   text-align: center;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.catalog-refresh-error {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin: 0;
+  color: #fcd34d;
+  font-size: 12px;
+  text-align: center;
+}
+.catalog-refresh-error button {
+  border: 0;
+  padding: 2px 4px;
+  background: transparent;
+  color: #93c5fd;
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
 }
 
 @media (max-width: 760px) {
@@ -269,6 +314,10 @@
   }
   .benchmark-filters {
     grid-template-columns: 1fr;
+  }
+  .catalog-refresh-error {
+    align-items: flex-start;
+    flex-direction: column;
   }
 }
 

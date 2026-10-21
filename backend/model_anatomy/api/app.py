@@ -20,6 +20,7 @@ from starlette.exceptions import HTTPException
 
 from model_anatomy.service.ai import ExplanationService
 from model_anatomy.service.benchmark_catalog import BenchmarkCatalogService
+from model_anatomy.service.discovery_catalog import DiscoveryCatalogService
 from model_anatomy.service.errors import ServiceError
 from model_anatomy.service.jobs import JobService
 from model_anatomy.service.views import artifact_view, export, graph_view, load_ir, node_view
@@ -31,6 +32,7 @@ from .schemas import (
     BenchmarkCatalogResponse,
     CatalogResponse,
     CreateAnalysis,
+    DiscoveryCatalogResponse,
     ErrorResponse,
     GraphResponse,
     Health,
@@ -49,6 +51,7 @@ def create_app(settings: Settings | None = None, *, service=None, explanation=No
     config = settings if settings is not None else Settings()
     jobs = service or JobService(config)
     benchmark_catalog = BenchmarkCatalogService(jobs)
+    discovery_catalog = DiscoveryCatalogService(jobs)
     ai = explanation or ExplanationService(config)
     initialization_lock = threading.Lock()
     retry_initialization_at = 0.0
@@ -81,6 +84,7 @@ def create_app(settings: Settings | None = None, *, service=None, explanation=No
     app.state.service_ready = False
     app.state.jobs = jobs
     app.state.benchmark_catalog = benchmark_catalog
+    app.state.discovery_catalog = discovery_catalog
     app.state.explanation = ai
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=config.allowed_hosts, www_redirect=False)
     app.add_middleware(
@@ -284,6 +288,11 @@ def create_app(settings: Settings | None = None, *, service=None, explanation=No
     def get_benchmark_catalog():
         require_service()
         return benchmark_catalog.get_catalog()
+
+    @app.get("/api/v1/catalog/discovery", response_model=DiscoveryCatalogResponse)
+    def get_discovery_catalog():
+        require_service()
+        return discovery_catalog.get_catalog()
 
     @app.post("/api/v1/catalog/{report_id}/inspect", response_model=AnalysisDetail)
     def inspect_catalog_item(report_id: str, request: Request):

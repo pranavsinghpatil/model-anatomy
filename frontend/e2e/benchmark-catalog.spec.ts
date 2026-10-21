@@ -66,12 +66,46 @@ async function serveReport(
   options: { status?: number; body?: unknown } = {},
 ) {
   let requests = 0;
-  await page.route("**/api/v1/benchmarks/catalog", async (route) => {
+  await page.route("**/api/v1/catalog/discovery", async (route) => {
     requests++;
+    const legacy = options.body ?? report();
+    const discovery =
+      (legacy as { schema_version?: number }).schema_version === undefined
+        ? legacy
+        : {
+            results: (legacy as ReturnType<typeof report>).results.map(
+              (item: any) => ({
+                ...item,
+                source: "benchmark",
+                artifact:
+                  item.reference?.match(
+                    /\/(?:blob|resolve)\/[0-9a-f]{40}\/(.+)$/,
+                  )?.[1] ?? null,
+                explicit_artifact: Boolean(item.reference?.includes("/blob/")),
+              }),
+            ),
+            total: (legacy as ReturnType<typeof report>).results.length,
+            status_counts: Object.fromEntries(
+              [
+                ...new Set(
+                  (legacy as ReturnType<typeof report>).results.map(
+                    (item: any) => item.status,
+                  ),
+                ),
+              ].map((status) => [
+                status,
+                (legacy as ReturnType<typeof report>).results.filter(
+                  (item: any) => item.status === status,
+                ).length,
+              ]),
+            ),
+            generated_at: (legacy as ReturnType<typeof report>).generated_at,
+            benchmark_publication_id: "publication-test",
+          };
     await route.fulfill({
       status: options.status ?? 200,
       contentType: "application/json",
-      body: JSON.stringify(options.body ?? report()),
+      body: JSON.stringify(discovery),
     });
   });
   return () => requests;
@@ -83,22 +117,22 @@ test("benchmark search, filters, counts, and 24-row pagination use measured rows
   await serveReport(page);
   await page.goto("/catalog?view=benchmark");
   await expect(
-    page.getByRole("heading", { name: "Measured compatibility results" }),
+    page.getByRole("heading", { name: "Unified model evidence" }),
   ).toBeVisible();
   await expect(page.locator(".benchmark-card")).toHaveCount(24);
   await expect(
-    page.getByText("Showing 1–24 of 50 matching results"),
+    page.getByText("Showing 1–24 of 50 matching records"),
   ).toBeVisible();
   await page.getByRole("button", { name: "Next" }).click();
   await expect(page.locator(".benchmark-card")).toHaveCount(24);
   await expect(page.getByText("Page 2 of 3")).toBeVisible();
 
   await page
-    .getByRole("searchbox", { name: "Search benchmark results" })
+    .getByRole("searchbox", { name: "Search model catalog" })
     .fill("model-001");
   await expect(page.locator(".benchmark-card")).toHaveCount(1);
   await expect(
-    page.getByText("Showing 1–1 of 1 matching results"),
+    page.getByText("Showing 1–1 of 1 matching records"),
   ).toBeVisible();
   await page.locator(".benchmark-details summary").click();
   await expect(page.getByText("Some layers were not traced.")).toBeVisible();
@@ -107,15 +141,13 @@ test("benchmark search, filters, counts, and 24-row pagination use measured rows
     page.getByText("Some graph operations could not be traced."),
   ).toBeVisible();
 
-  await page
-    .getByRole("searchbox", { name: "Search benchmark results" })
-    .fill("");
+  await page.getByRole("searchbox", { name: "Search model catalog" }).fill("");
   await page
     .getByRole("combobox", { name: "Filter by task category" })
     .selectOption("image-classification");
   await expect(page.locator(".benchmark-card")).toHaveCount(24);
   await expect(
-    page.getByText("Showing 1–24 of 25 matching results"),
+    page.getByText("Showing 1–24 of 25 matching records"),
   ).toBeVisible();
   await page
     .getByRole("combobox", { name: "Filter by outcome" })
@@ -131,7 +163,9 @@ test("pinned action opens the normal visitor-owned inspection flow with its refe
 }) => {
   await serveReport(page, { body: report(1) });
   await page.goto("/catalog?view=benchmark");
-  await page.getByRole("button", { name: "Inspect pinned model" }).click();
+  await page
+    .getByRole("button", { name: "Inspect this revision for org/model-000" })
+    .click();
   await expect(page).toHaveURL(/\/app\?model=/);
   await expect(page.locator("#model-input")).toHaveValue(
     `https://huggingface.co/org/model-000/tree/${"0".repeat(40)}`,
@@ -170,12 +204,16 @@ test("stored report action inspects the persisted report and opens the visitor-o
     },
   );
   await page.goto("/catalog?view=benchmark");
-  await page.getByRole("button", { name: "Open stored report" }).click();
-  const opening = page.getByRole("button", { name: "Opening stored report…" });
+  await page
+    .getByRole("button", { name: "Open saved inspection for org/model-000" })
+    .click();
+  const opening = page.getByRole("button", {
+    name: "Opening saved report for org/model-000",
+  });
   await expect(opening).toBeDisabled();
   finishInspect?.();
   await expect(page).toHaveURL(
-    /\/app\/analyses\/visitor-owned-cached-analysis\?view=architecture$/,
+    /\/app\/analyses\/visitor-owned-cached-analysis\/architecture$/,
   );
   expect(inspectRequests).toBe(1);
   expect(unexpectedRequests).toEqual([]);
@@ -202,9 +240,11 @@ test("stored report errors stay explicit and do not navigate", async ({
       }),
   );
   await page.goto("/catalog?view=benchmark");
-  await page.getByRole("button", { name: "Open stored report" }).click();
+  await page
+    .getByRole("button", { name: "Open saved inspection for org/model-000" })
+    .click();
   await expect(page.getByRole("alert")).toContainText(
-    "Could not open stored inspection: This report is unavailable.",
+    "This report is unavailable.",
   );
   await expect(page).toHaveURL(/\/catalog\?view=benchmark$/);
 });
@@ -214,17 +254,30 @@ test("report loading failure offers retry and does not show sample results", asy
 }) => {
   let allowSuccess = false;
   let requests = 0;
-  await page.route("**/api/v1/benchmarks/catalog", async (route) => {
+  await page.route("**/api/v1/catalog/discovery", async (route) => {
     requests++;
     await route.fulfill({
       status: allowSuccess ? 200 : 503,
       contentType: "application/json",
-      body: allowSuccess ? JSON.stringify(report(1)) : "unavailable",
+      body: allowSuccess
+        ? JSON.stringify({
+            results: report(1).results.map((item: any) => ({
+              ...item,
+              source: "benchmark",
+            })),
+            total: 1,
+            status_counts: { completed: 1 },
+            generated_at: "2026-10-20T12:00:00Z",
+            benchmark_publication_id: "publication-test",
+          })
+        : JSON.stringify({
+            error: { code: "unavailable", message: "unavailable" },
+          }),
     });
   });
   await page.goto("/catalog?view=benchmark");
   await expect(
-    page.getByRole("heading", { name: "Could not load benchmark results" }),
+    page.getByRole("heading", { name: "Could not load the model catalog" }),
   ).toBeVisible();
   await expect(page.locator(".benchmark-card")).toHaveCount(0);
   allowSuccess = true;
@@ -237,29 +290,35 @@ test("loading, malformed reports, and empty measured reports stay explicit", asy
   page,
 }) => {
   let release: (() => void) | undefined;
-  await page.route("**/api/v1/benchmarks/catalog", async (route) => {
+  await page.route("**/api/v1/catalog/discovery", async (route) => {
     await new Promise<void>((resolve) => {
       release = resolve;
     });
     await route.fulfill({
       status: 200,
       contentType: "application/json",
-      body: JSON.stringify(report(0)),
+      body: JSON.stringify({
+        results: [],
+        total: 0,
+        status_counts: {},
+        generated_at: "2026-10-20T12:00:00Z",
+        benchmark_publication_id: "publication-test",
+      }),
     });
   });
   await page.goto("/catalog?view=benchmark");
   await expect(page.getByRole("status")).toContainText(
-    "Loading measured benchmark results",
+    "Loading the model catalog",
   );
   release?.();
   await expect(
-    page.getByText("No measured results match these filters"),
+    page.getByRole("heading", { name: "No model evidence is available yet" }),
   ).toBeVisible();
   await page.unrouteAll();
   await serveReport(page, { body: { schema_version: 9, results: [] } });
   await page.reload();
   await expect(
-    page.getByRole("heading", { name: "Could not load benchmark results" }),
+    page.getByRole("heading", { name: "Could not load the model catalog" }),
   ).toBeVisible();
   await expect(page.locator(".benchmark-card")).toHaveCount(0);
 });
@@ -324,9 +383,11 @@ test("selected component scope and artifact reference remain explicit", async ({
   await serveReport(page, { body: measured });
   await page.goto("/catalog?view=benchmark");
   await expect(page.locator(".benchmark-scope")).toHaveText(
-    "Selected artifact: unet/diffusion_pytorch_model.safetensors",
+    "Requested artifact: unet/diffusion_pytorch_model.safetensors",
   );
-  await page.getByRole("button", { name: "Inspect pinned model" }).click();
+  await page
+    .getByRole("button", { name: "Inspect this revision for org/model-000" })
+    .click();
   await expect(page.locator("#model-input")).toHaveValue(artifact);
 });
 
@@ -344,7 +405,7 @@ test("withheld raw diagnostics show safe notes and unknown warning counts honest
   await page.goto("/catalog?view=benchmark");
   await page.locator(".benchmark-details summary").click();
   await expect(page.getByText("Warning count").locator("..")).toContainText(
-    "Not measured",
+    "Unknown",
   );
   await expect(page.getByText("Diagnostic summary")).toBeVisible();
   await expect(
@@ -369,13 +430,15 @@ test("revision-only action builds the exact pinned repository reference", async 
   pinned.results[0].reference = null;
   await serveReport(page, { body: pinned });
   await page.goto("/catalog?view=benchmark");
-  await page.getByRole("button", { name: "Inspect pinned model" }).click();
+  await page
+    .getByRole("button", { name: "Inspect this revision for org/model-000" })
+    .click();
   await expect(page.locator("#model-input")).toHaveValue(
     `https://huggingface.co/org/model-000/tree/${"0".repeat(40)}`,
   );
 });
 
-test("mixed baseline and recheck reports show repository counts and prior evidence", async ({
+test("benchmark rechecks preserve prior observation provenance", async ({
   page,
 }) => {
   const mixed = report(1);
@@ -393,25 +456,15 @@ test("mixed baseline and recheck reports show repository counts and prior eviden
   await serveReport(page, { body: mixed });
   await page.goto("/catalog?view=benchmark");
 
-  await expect(page.locator(".benchmark-summary > div").first()).toContainText(
-    "Repositories",
-  );
-  await expect(
-    page.getByText(
-      "250 baseline attempts + 4 rechecks · 1 pinned repository · engine engine-test",
-    ),
-  ).toBeVisible();
   await expect(
     page.locator(".card-top-row").getByText("Recheck", { exact: true }),
   ).toBeVisible();
   await page.locator(".benchmark-details summary").click();
-  await expect(page.locator(".benchmark-details summary")).toContainText(
-    "recheck",
-  );
   await expect(page.getByText("Run kind").locator("..")).toContainText(
     "Recheck",
   );
-  await expect(page.locator(".benchmark-details dl")).toContainText(
-    "Partial graph · engine engine-baseline · finished",
-  );
+  await expect(page.getByText("Previous observations")).toBeVisible();
+  await expect(
+    page.getByText(/Partial graph · engine engine-baseline · finished/),
+  ).toBeVisible();
 });

@@ -1030,3 +1030,28 @@ Preserve exact-revision reopening as a new visitor-owned cached analysis.
 Extraction behavior, IR schema and engine/cache identity are unchanged.
 
 See DATABASE_CATALOG.md for behavior and the catalog-revisit acceptance evidence.
+
+
+## D-065 - Unify discovery around durable inspection outcomes
+
+**2026-10-21 - user clarification: show every inspected model in one rich catalog**
+
+Supersede D-064's split-view presentation. Combine the latest immutable benchmark
+publication, compatible durable reports and safe terminal failure records into
+one discovery feed. Keep revision and explicit artifact selection in row identity;
+multiple pins are distinct records. A card's metrics, status, engine and saved
+report link must describe the same observation. Preserve benchmark observations
+as attributed history rather than treating visitor inspections as benchmark runs.
+
+Keep validated private report storage and visitor-owned reopening. Publish only
+allowlisted model facts and generic failure codes; never visitor identifiers, job
+IDs, raw errors, credentials or private storage addresses. Save terminal failures
+independently of expiring visitor jobs. Missing facts remain unknown, and artifact
+inspection never implies a semantic graph or unique parameter count.
+
+The unified browser view searches, filters and pages all discovery records,
+refreshes on entry/focus, polls while visible, and supports manual refresh. The
+existing report and benchmark APIs remain available to their existing consumers.
+No extraction rules, completeness thresholds or engine/cache identities change.
+
+See UNIFIED_MODEL_CATALOG.md for deterministic and live acceptance evidence.

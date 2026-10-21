@@ -1,48 +1,87 @@
 import { expect, test } from "@playwright/test";
 import { analysisFor, mockService } from "./service";
 
-const items = [
+const records = [
   {
-    id: "registry-smol",
     model_id: "HuggingFaceTB/SmolLM2-135M",
+    category: "text-generation",
     revision: "abc123",
+    reference: "https://huggingface.co/HuggingFaceTB/SmolLM2-135M/tree/abc123",
+    stored_report_id: "stored-smol",
+    status: "completed",
     architecture: "LlamaForCausalLM",
-    status: "completed" as const,
-    parameter_count: 134515008,
-    dimensions: { hidden: 576, heads: [9, 3], layers: 30, vocabulary: null },
+    declared_task: "text-generation",
+    started_at: "2026-10-19T09:59:00Z",
+    finished_at: "2026-10-19T10:00:00Z",
     engine_version: "engine-1",
-    schema_version: "1",
+    warning_count: 0,
+    graph_count: 1,
+    tensor_count: 182,
+    parameter_counts: { unique: 134515008 },
+    dimensions: { hidden: 576, heads: [9, 3], layers: 30, vocabulary: null },
     artifact: "model.safetensors",
     explicit_artifact: false,
-    inspected_at: "2026-10-19T10:00:00Z",
+    source: "inspection" as const,
+    category_source: "model configuration",
+    declared_task_source: "model configuration",
   },
   {
-    id: "registry-unknown",
     model_id: "org/custom-model",
-    revision: "def456",
+    category: "unclassified",
+    revision: null,
+    reference: null,
+    stored_report_id: null,
+    status: "artifact_error",
     architecture: null,
-    status: "inspected" as const,
-    parameter_count: null,
+    declared_task: null,
+    started_at: null,
+    finished_at: null,
+    engine_version: null,
+    warning_count: null,
+    graph_count: null,
+    tensor_count: null,
+    parameter_counts: { unique: null },
     dimensions: { hidden: null, heads: null, layers: null, vocabulary: null },
-    engine_version: "engine-1",
-    schema_version: "1",
     artifact: "weights.bin",
     explicit_artifact: true,
-    inspected_at: "2026-10-18T10:00:00Z",
+    source: "benchmark" as const,
+    benchmark_observations: [
+      {
+        status: "unsupported",
+        engine_version: "engine-old",
+        finished_at: "2026-10-18T10:00:00Z",
+      },
+    ],
   },
 ];
 
+function response(results: any[] = records) {
+  const status_counts = Object.fromEntries(
+    [...new Set(results.map((item) => item.status))].map((status) => [
+      status,
+      results.filter((item) => item.status === status).length,
+    ]),
+  );
+  return {
+    results,
+    total: results.length,
+    status_counts,
+    generated_at: "2026-10-21T10:00:00Z",
+    benchmark_publication_id: "a".repeat(64),
+  };
+}
+
 async function catalogApi(
   page: import("@playwright/test").Page,
-  options: { empty?: boolean; failOnce?: boolean; paginated?: boolean } = {},
+  options: { empty?: boolean; failOnce?: boolean } = {},
 ) {
   await mockService(page);
-  let failures = options.failOnce ? 50 : 0;
+  let failures = options.failOnce ? 2 : 0;
   const requests: string[] = [];
-  await page.route("**/api/v1/catalog**", async (route) => {
-    const request = route.request();
-    const url = new URL(request.url());
-    requests.push(`${request.method()} ${url.pathname}${url.search}`);
+  await page.route("**/api/v1/catalog/discovery", async (route) => {
+    requests.push(
+      `${route.request().method()} ${new URL(route.request().url()).pathname}`,
+    );
     if (failures) {
       failures--;
       return route.fulfill({
@@ -53,214 +92,333 @@ async function catalogApi(
         }),
       });
     }
-    if (url.pathname.endsWith("/inspect"))
-      return route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify(analysisFor("saved-analysis")),
-      });
-    const q = url.searchParams.get("q")?.toLowerCase() ?? "";
-    const filtered = (options.empty ? [] : items).filter((item) =>
-      item.model_id.toLowerCase().includes(q),
-    );
-    const offset = Number(url.searchParams.get("offset") ?? 0);
-    const limit = Number(url.searchParams.get("limit") ?? 24);
     return route.fulfill({
       status: 200,
       contentType: "application/json",
-      body: JSON.stringify({
-        models: filtered.slice(offset, offset + limit),
-        total: options.paginated && !q ? 30 : filtered.length,
-        offset,
-        limit,
-      }),
+      body: JSON.stringify(response(options.empty ? [] : undefined)),
     });
   });
+  await page.route("**/api/v1/catalog/stored-smol/inspect", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(analysisFor("saved-analysis")),
+    }),
+  );
   return requests;
 }
 
-test("catalog renders saved API facts and opens the selected registry record", async ({
+test("one catalog combines inspection and benchmark provenance with honest metrics", async ({
   page,
 }) => {
   const requests = await catalogApi(page);
-  await page.goto("/catalog");
-  await expect(page).toHaveURL(/\/catalog$/);
+  await page.goto("/catalog?view=benchmark");
   await expect(
-    page.getByRole("button", { name: "Stored inspections", exact: true }),
-  ).toHaveAttribute("aria-pressed", "true");
+    page.getByRole("heading", { name: "Unified model evidence" }),
+  ).toBeVisible();
   await expect(
-    page.getByRole("heading", { name: "Model Catalog" }),
-  ).toBeVisible({ timeout: 25_000 });
-  await expect(page.locator(".catalog-detail-card")).toHaveCount(2);
-  await expect(page.getByText("134,515,008 parameters")).toBeVisible();
+    page.getByRole("button", { name: "Benchmark results" }),
+  ).toHaveCount(0);
+  await expect(page.locator(".benchmark-card")).toHaveCount(2);
+  await expect(page.getByText("134,515,008", { exact: true })).toBeVisible();
+  await expect(page.getByRole("article").nth(1)).toContainText("Unknown");
+  await expect(page.getByRole("article").nth(1)).toContainText(
+    "repository reference only",
+  );
   await expect(
-    page.locator(".catalog-detail-card").nth(0).locator(".spec-metric").nth(3),
-  ).toContainText("Unknown");
-  await expect(page.getByText("org/custom-model")).toBeVisible();
+    page.getByText("Saved inspection", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("Benchmark attempt", { exact: true }),
+  ).toBeVisible();
 
   await page
-    .getByRole("searchbox", { name: "Search stored model catalog" })
+    .getByRole("searchbox", { name: "Search model catalog" })
     .fill("custom");
-  await expect(page.locator(".catalog-detail-card")).toHaveCount(1);
+  await expect(page.locator(".benchmark-card")).toHaveCount(1);
+  await page.locator(".benchmark-details summary").click();
+  await expect(page.getByText("Benchmark history")).toBeVisible();
   await expect(
-    page.getByText("Unknown", { exact: true }).first(),
+    page.getByText("Reconstruction unavailable · engine engine-old · finished"),
   ).toBeVisible();
   await page
+    .getByRole("button", { name: "Retry inspection for org/custom-model" })
+    .click();
+  await expect(page).toHaveURL(
+    /\/app\?model=https%3A%2F%2Fhuggingface.co%2Forg%2Fcustom-model$/,
+  );
+  expect(requests).toContain("GET /api/v1/catalog/discovery");
+});
+
+test("saved reports reopen through inspectCatalog and discovery entries refresh into the same view", async ({
+  page,
+}) => {
+  await mockService(page);
+  let includeNew = false;
+  const discoveryRequests: string[] = [];
+  await page.route("**/api/v1/catalog/discovery", async (route) => {
+    discoveryRequests.push(route.request().method());
+    const rows = includeNew
+      ? [
+          ...records,
+          {
+            ...records[0],
+            model_id: "org/new-inspection",
+            stored_report_id: "stored-new",
+          },
+        ]
+      : records;
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(response(rows)),
+    });
+  });
+  await page.route("**/api/v1/catalog/stored-smol/inspect", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(analysisFor("saved-analysis")),
+    }),
+  );
+  await page.goto("/catalog");
+  await page
     .getByRole("button", {
-      name: "Open stored inspection for org/custom-model",
+      name: "Open saved inspection for HuggingFaceTB/SmolLM2-135M",
     })
     .click();
   await expect(page).toHaveURL(
     /\/app\/analyses\/saved-analysis\/architecture$/,
   );
-  expect(requests).toContain("POST /api/v1/catalog/registry-unknown/inspect");
-});
-
-test("catalog refresh reveals a new inspection and keeps the selected view in the URL", async ({
-  page,
-}) => {
-  await mockService(page);
-  let includeNew = false;
-  const catalogRequests: string[] = [];
-  await page.route("**/api/v1/catalog**", async (route) => {
-    const url = new URL(route.request().url());
-    catalogRequests.push(
-      `${route.request().method()} ${url.pathname}${url.search}`,
-    );
-    const models = includeNew
-      ? [
-          ...items,
-          {
-            ...items[0],
-            id: "registry-new",
-            model_id: "org/new-inspection",
-            inspected_at: "2026-10-21T10:00:00Z",
-          },
-        ]
-      : items;
-    await route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify({
-        models: models.slice(
-          Number(url.searchParams.get("offset") ?? 0),
-          Number(url.searchParams.get("offset") ?? 0) + 24,
-        ),
-        total: 30,
-        offset: Number(url.searchParams.get("offset") ?? 0),
-        limit: Number(url.searchParams.get("limit") ?? 24),
-      }),
-    });
-  });
-  await page.goto("/catalog");
-  await expect(page.locator(".catalog-detail-card")).toHaveCount(2);
-  await page.getByRole("button", { name: "Next" }).click();
-  await expect(page.locator(".catalog-detail-card")).toHaveCount(0);
+  await page.goto("/catalog?view=stored");
+  await expect(page.locator(".benchmark-card")).toHaveCount(2);
   includeNew = true;
-  const pageZeroRequestsBeforeRefresh = catalogRequests.filter((request) =>
-    request.includes("offset=0"),
-  ).length;
-  await page
-    .getByRole("button", { name: "Refresh stored inspections" })
-    .click();
-  await expect(page.locator(".catalog-detail-card")).toHaveCount(3);
+  await page.getByRole("button", { name: "Refresh model catalog" }).click();
   await expect(page.getByText("org/new-inspection")).toBeVisible();
-  expect(
-    catalogRequests.filter((request) => request.includes("offset=0")).length,
-  ).toBeGreaterThan(pageZeroRequestsBeforeRefresh);
-
-  await page.getByRole("button", { name: "Benchmark results" }).click();
-  await expect(page).toHaveURL(/\/catalog\?view=benchmark$/);
-  await page.reload();
-  await expect(
-    page.getByRole("button", { name: "Benchmark results", exact: true }),
-  ).toHaveAttribute("aria-pressed", "true");
-  await page.goBack();
-  await expect(page).toHaveURL(/\/catalog$/);
-  await expect(page.locator(".catalog-detail-card")).toHaveCount(3);
+  expect(discoveryRequests.length).toBeGreaterThan(1);
 });
 
-test("catalog supports server pagination and shows honest empty state", async ({
-  page,
-}) => {
-  const requests = await catalogApi(page, { paginated: true });
-  await page.goto("/catalog");
-  await page.getByRole("button", { name: "Next" }).click();
-  await expect(page).toHaveURL(/\/catalog$/);
-  expect(requests.some((request) => request.includes("offset=24"))).toBe(true);
-  await page
-    .getByRole("searchbox", { name: "Search stored model catalog" })
-    .fill("absent");
-  await expect(
-    page.getByRole("heading", { name: /No stored models match/ }),
-  ).toBeVisible();
-  await expect(
-    page.getByRole("link", { name: "Inspect a model" }),
-  ).toBeVisible();
-});
-
-test("saved model names and checkpoint paths fit a 320px viewport", async ({
+test("recorded inspection failure keeps its prior saved report and retry reference", async ({
   page,
 }) => {
   await mockService(page);
-  const item = {
-    ...items[0],
-    model_id:
-      "organization/a-long-model-name-with-an-unbroken-architecture-identifier",
-    revision: "a".repeat(40),
-    artifact: "component-directory/model-00001-of-00099.safetensors",
-    explicit_artifact: true,
-  };
-  await page.route("**/api/v1/catalog?**", (route) =>
+  await page.route("**/api/v1/catalog/discovery", (route) =>
     route.fulfill({
       status: 200,
       contentType: "application/json",
-      body: JSON.stringify({ models: [item], total: 1, offset: 0, limit: 24 }),
+      body: JSON.stringify(
+        response([
+          {
+            ...records[1],
+            source: "inspection",
+            stored_report_id: null,
+            benchmark_observations: [],
+            category_source: "model configuration",
+            previous_observations: [
+              {
+                status: "inspected",
+                engine_version: "engine-previous",
+                finished_at: "2026-10-17T09:00:00Z",
+                stored_report_id: "previous-custom-report",
+              },
+            ],
+          },
+        ]),
+      ),
     }),
   );
-  await page.setViewportSize({ width: 320, height: 800 });
+  await page.route(
+    "**/api/v1/catalog/previous-custom-report/inspect",
+    (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(analysisFor("previous-analysis")),
+      }),
+  );
   await page.goto("/catalog");
-  await expect(page.locator(".card-model-title")).toHaveText(item.model_id);
-  await expect(page.locator(".tech-class")).toContainText(item.artifact);
-  expect(
-    await page.evaluate(
-      () => document.documentElement.scrollWidth <= innerWidth,
-    ),
-  ).toBe(true);
+  await expect(
+    page.getByText("Recorded failure · Artifact processing failed"),
+  ).toBeVisible();
+  await expect(
+    page.getByText("Inspection attempt", { exact: true }),
+  ).toBeVisible();
+  await page.locator(".benchmark-details summary").click();
+  await expect(
+    page.getByText("Recorded failure; previous saved report available"),
+  ).toBeVisible();
+  await expect(page.getByText("Category source").locator("..")).toContainText(
+    "model configuration",
+  );
+  await page
+    .getByRole("button", { name: "Open previous saved report" })
+    .click();
+  await expect(page).toHaveURL(
+    /\/app\/analyses\/previous-analysis\/architecture$/,
+  );
 });
 
-test("catalog retries API errors and explains a truly empty database", async ({
+test("unverified explicit artifacts stay withheld and retry at the pinned repository", async ({
   page,
 }) => {
-  await catalogApi(page, { failOnce: true });
+  await mockService(page);
+  await page.route("**/api/v1/catalog/discovery", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(
+        response([
+          {
+            ...records[1],
+            model_id: "org/private-model",
+            revision: "abc123",
+            reference: "https://huggingface.co/org/private-model/tree/abc123",
+            artifact: null,
+            artifact_verified: false,
+            explicit_artifact: true,
+            selection_id: "opaque-selection-42",
+          },
+        ]),
+      ),
+    }),
+  );
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/catalog");
+  await expect(page.getByText("Requested artifact withheld")).toBeVisible();
+  await expect(page.getByText("weights.bin", { exact: true })).toHaveCount(0);
+  await page
+    .getByRole("button", {
+      name: "Inspect pinned repository for org/private-model",
+    })
+    .click();
+  await expect(page.locator("#model-input")).toHaveValue(
+    "https://huggingface.co/org/private-model/tree/abc123",
+  );
+});
+
+test("status and category filters show global totals and paginate at 24", async ({
+  page,
+}) => {
+  const many = Array.from({ length: 50 }, (_, index) => ({
+    ...records[index % records.length],
+    model_id: `org/model-${String(index).padStart(3, "0")}`,
+    revision: String(index).padStart(40, "0"),
+    status: index % 2 ? "partial" : "completed",
+    category: index % 2 ? "text-generation" : "image-classification",
+    source: "benchmark" as const,
+  }));
+  await mockService(page);
+  await page.route("**/api/v1/catalog/discovery", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        ...response(many),
+        status_counts: { completed: 25, partial: 25 },
+      }),
+    }),
+  );
+  await page.goto("/catalog");
+  await expect(page.locator(".benchmark-card")).toHaveCount(24);
+  await expect(page.getByText("Page 1 of 3")).toBeVisible();
+  await page.getByRole("button", { name: "Next" }).click();
+  await expect(page.locator(".benchmark-card")).toHaveCount(24);
+  await page
+    .getByRole("combobox", { name: "Filter by task category" })
+    .selectOption("image-classification");
+  await page
+    .getByRole("combobox", { name: "Filter by outcome" })
+    .selectOption("completed");
+  await expect(page.locator(".benchmark-card")).toHaveCount(24);
+  await expect(
+    page.getByText("Showing 1–24 of 25 matching records"),
+  ).toBeVisible();
+});
+
+test("background refresh error keeps last data and privacy excludes static benchmark fetches", async ({
+  page,
+}) => {
+  await mockService(page);
+  let failNext = false;
+  let calls = 0;
+  const unexpected: string[] = [];
+  page.on("request", (request) => {
+    if (
+      request.url().includes("benchmark-catalog.json") ||
+      request.url().includes("/benchmarks/catalog")
+    )
+      unexpected.push(request.url());
+  });
+  await page.route("**/api/v1/catalog/discovery", async (route) => {
+    calls++;
+    await route.fulfill({
+      status: failNext ? 503 : 200,
+      contentType: "application/json",
+      body: failNext
+        ? JSON.stringify({
+            error: { code: "unavailable", message: "Catalog offline" },
+          })
+        : JSON.stringify(response()),
+    });
+  });
+  await page.goto("/catalog");
+  await expect(page.locator(".benchmark-card")).toHaveCount(2);
+  failNext = true;
+  await page.getByRole("button", { name: "Refresh model catalog" }).click();
+  await expect(page.getByRole("status")).toContainText(
+    "Showing the last loaded catalog",
+  );
+  await expect(page.locator(".benchmark-card")).toHaveCount(2);
+  expect(calls).toBeGreaterThan(1);
+  expect(unexpected).toEqual([]);
+});
+
+test("initial failure offers retry and empty discovery stays honest", async ({
+  page,
+}) => {
+  await mockService(page);
+  let allowSuccess = false;
+  await page.route("**/api/v1/catalog/discovery", (route) =>
+    route.fulfill({
+      status: allowSuccess ? 200 : 503,
+      contentType: "application/json",
+      body: allowSuccess
+        ? JSON.stringify(response())
+        : JSON.stringify({
+            error: { code: "unavailable", message: "Try again" },
+          }),
+    }),
+  );
   await page.goto("/catalog");
   await expect(
     page.getByRole("heading", { name: "Could not load the model catalog" }),
   ).toBeVisible();
-  await page.unrouteAll();
-  await catalogApi(page);
+  allowSuccess = true;
   await page.getByRole("button", { name: "Retry" }).click();
-  await expect(page.locator(".catalog-detail-card")).toHaveCount(2);
+  await expect(page.locator(".benchmark-card")).toHaveCount(2);
 
   await page.unrouteAll();
   await catalogApi(page, { empty: true });
   await page.reload();
   await expect(
-    page.getByRole("heading", { name: "No inspections are stored yet" }),
+    page.getByRole("heading", { name: "No model evidence is available yet" }),
   ).toBeVisible();
 });
 
-test("entry links into the database-backed catalog without model count claims", async ({
-  page,
-}) => {
+test("catalog cards fit a narrow viewport", async ({ page }) => {
   await catalogApi(page);
-  await page.goto("/");
-  await expect(
-    page.getByText("Saved inspections", { exact: true }),
-  ).toBeVisible();
-  await expect(page.getByText("8 Pre-verified", { exact: true })).toHaveCount(
-    0,
-  );
-  await page.getByRole("link", { name: "Browse Full Catalog" }).click();
-  await expect(page).toHaveURL(/\/catalog$/);
+  await page.setViewportSize({ width: 320, height: 800 });
+  await page.goto("/catalog");
+  await expect(page.locator(".benchmark-card")).toHaveCount(2);
+  expect(
+    await page.evaluate(() => {
+      const main = document.querySelector("#main")!;
+      const disclaimer = document.querySelector(".benchmark-disclaimer")!;
+      return {
+        documentFits: document.documentElement.scrollWidth <= innerWidth,
+        mainFits: main.scrollWidth <= main.clientWidth,
+        disclaimerFits: disclaimer.scrollWidth <= disclaimer.clientWidth,
+      };
+    }),
+  ).toEqual({ documentFits: true, mainFits: true, disclaimerFits: true });
 });

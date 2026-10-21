@@ -13,11 +13,23 @@ from uuid import uuid4
 
 from sqlalchemy import delete, func, select, update
 
-from .database import Blob, CacheEntry, Database, Guest, Job, ModelReport, Mutex, RateBucket, Tombstone
+from .database import (
+    Blob,
+    CacheEntry,
+    Database,
+    Guest,
+    InspectionFailure,
+    Job,
+    ModelReport,
+    Mutex,
+    RateBucket,
+    Tombstone,
+)
 from .errors import ServiceError
 from .storage import storage_for
 
 TERMINAL = {"completed", "partial", "inspected", "unsupported", "failed", "timed_out", "cancelled"}
+REVISION_RE = re.compile(r"^[0-9a-f]{40}$")
 
 
 def timestamp(value: float) -> str:
@@ -93,14 +105,22 @@ def cache_key(
 def ir_summary(data: dict) -> dict:
     metadata = data["metadata"]
     inspection = metadata.get("inspection")
+    profile = metadata.get("model_profile")
+    declared_task = profile.get("declared_task") if isinstance(profile, dict) else None
     if inspection and inspection.get("kind") == "artifact_inspection":
+        warnings = metadata.get("analysis_report", {}).get("warnings", [])
         return {
             "architecture": None,
             "root_graph_id": None,
             "parameter_count": None,
             "dimensions": {},
             "input_names": [],
-            "warnings": metadata.get("analysis_report", {}).get("warnings", []),
+            "warnings": warnings,
+            "warning_count": len(warnings),
+            "graph_count": 0,
+            "tensor_count": len(data.get("tensors", {})),
+            "declared_task": declared_task if isinstance(declared_task, str) else None,
+            "category": "unclassified",
             "limitations": metadata.get("limitations", []),
             "quality": {
                 "mode": "artifact_inspection",
@@ -154,6 +174,14 @@ def ir_summary(data: dict) -> dict:
         value = report.get(key)
         quality[key] = value if type(value) is bool else None
     quality["mode"] = report.get("mode") if isinstance(report.get("mode"), str) else None
+    def graph_total(graph: dict) -> int:
+        total = 1
+        for node in graph.get("nodes", []):
+            child = node.get("child_graph")
+            if isinstance(child, dict):
+                total += graph_total(child)
+        return total
+
     return {
         "architecture": data["architecture"],
         "root_graph_id": data["root_graph"]["id"],
@@ -161,6 +189,11 @@ def ir_summary(data: dict) -> dict:
         "dimensions": metadata.get("dimensions", {}),
         "input_names": sorted(metadata.get("inputs", {}).get("input_specs", {})),
         "warnings": warnings,
+        "warning_count": len(warnings),
+        "graph_count": graph_total(data.get("root_graph", {})) if isinstance(data.get("root_graph"), dict) else None,
+        "tensor_count": len(data.get("tensors", {})),
+        "declared_task": declared_task if isinstance(declared_task, str) else None,
+        "category": "unclassified",
         "limitations": list(dict.fromkeys(metadata.get("limitations", []))),
         "quality": quality,
         "partial_reasons": reasons,
@@ -262,6 +295,30 @@ class JobService:
                 bucket.count += 1
             else:
                 session.add(RateBucket(key=key, window=window, count=1))
+
+    def _record_failure_outcome(self, session, job: Job, code: str, status: str, finished_at: float) -> None:
+        try:
+            _, requested_revision, artifact, explicit = request_selector(job.model_input)
+        except ServiceError:
+            requested_revision, artifact, explicit = "main", "model.safetensors", False
+        revision = job.revision or (requested_revision if REVISION_RE.fullmatch(requested_revision) else None)
+        revision_source = "resolved" if job.revision else "requested" if revision else None
+        outcome = (
+            "unsupported" if status == "unsupported" or code == "unsupported_model"
+            else "timeout" if status == "timed_out" or code in {"timeout", "worker_crashed"}
+            else "network" if code in {"artifact_network", "artifact_unavailable"}
+            else "memorylimit" if code == "memory_limit"
+            else "artifact_error" if code in {"artifact_http", "invalid_artifacts"}
+            else "failure"
+        )
+        identity = {
+            "model_id": job.model_id, "revision": revision, "revision_source": revision_source,
+            "artifact": artifact, "explicit_artifact": explicit, "status": outcome,
+            "engine_version": job.engine_version, "started_at": job.created_at, "finished_at": finished_at,
+        }
+        failure_id = hashlib.sha256(json.dumps(identity, sort_keys=True).encode()).hexdigest()
+        if session.get(InspectionFailure, failure_id) is None:
+            session.add(InspectionFailure(id=failure_id, **identity))
 
     def _quota_available(self, session, guest_id: str, action: str) -> None:
         """Reject already-exhausted visitors before any report blob is read."""
@@ -550,6 +607,7 @@ class JobService:
                             "code": "worker_interrupted",
                             "message": "Worker recovery attempts exhausted",
                         }
+                        self._record_failure_outcome(session, job, "worker_interrupted", "failed", now)
                     else:
                         job.status = job.stage = "queued"
                         job.available_at = now
@@ -705,6 +763,8 @@ class JobService:
                 job.available_at = self.clock() + min(30, 2**job.attempts)
             else:
                 job.status = job.stage = status
+                if status in {"failed", "timed_out", "unsupported"}:
+                    self._record_failure_outcome(session, job, code, status, self.clock())
             job.lease_owner, job.lease_until = None, None
 
     def cleanup(self) -> None:

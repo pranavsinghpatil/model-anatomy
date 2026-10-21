@@ -4,10 +4,13 @@ The current 250-case cloud publication and saved-report flow are documented in
 [Supabase catalog alignment](SUPABASE_CATALOG_ALIGNMENT.md). Its live preview is
 on API port 8000 and frontend port 5176; older port/test evidence below is historical.
 
-The catalog is built from actual completed inspections. It starts empty; there
+The catalog combines actual saved inspections, durable safe failure outcomes,
+and the latest published compatibility benchmark in one discovery view. There
 are no seeded model cards, prepared reports, or fallback architecture facts.
-PostgreSQL stores report identities and projected metadata. Full reports stay in
-the private Supabase Storage bucket, addressed by their content digest.
+PostgreSQL stores report identities, projected metadata and failure outcomes.
+Full reports stay in the private Supabase Storage bucket, addressed by their
+content digest. See [Unified catalog](UNIFIED_MODEL_CATALOG.md) for current behavior
+and acceptance; dated evidence below describes earlier increments.
 
 ## Inspection requests
 
@@ -25,8 +28,10 @@ checkpoints cannot silently reuse another result.
 
 On a miss, the existing worker resolves the real Hugging Face artifacts,
 inspects them, uploads the resulting report, and publishes its metadata to the
-registry. Failed jobs do not become catalog entries. Partial architecture
-reports and artifact-only reports retain their actual status and limitations.
+registry. Terminal inspection failures now create separate safe outcome records
+without a report link. Transient retries and visitor cancellations do not become
+measured failures. Partial architecture reports and artifact-only reports retain
+their actual status and limitations.
 
 ## Catalog
 
@@ -35,13 +40,14 @@ reports and artifact-only reports retain their actual status and limitations.
 - `POST /api/v1/catalog/{id}/inspect` opens that exact stored revision and
   checkpoint as a new visitor-owned analysis.
 
-`/catalog` opens **Stored inspections** by default. Results are ordered by actual
-inspection time, newest first, with a stable ID tie-break for pagination. The
-page refetches on entry and focus, polls every 15 seconds while visible, and
-provides a manual refresh that returns to the newest page. Benchmark results
-remain available through their tab and `/catalog?view=benchmark`; a newly
-validated model enters the saved registry automatically, without being added to
-the fixed measured benchmark cohort.
+`GET /api/v1/catalog/discovery` returns the unified discovery feed, global
+status totals, generation time and benchmark publication identity. `/catalog`
+shows all records in one searchable, filterable list with metrics and history;
+legacy `?view=stored` and `?view=benchmark` links reach this same view. The browser
+refetches on entry and focus, polls every 15 seconds while visible and supports
+manual refresh. A newly validated model enters the report registry automatically
+and appears in discovery without being inserted into the immutable benchmark.
+The legacy paged report endpoint and benchmark endpoint remain available.
 
 Catalog entries expose model facts, inspection time, and pinned identity. They
 do not expose guest identifiers, analysis history, storage credentials, or raw
@@ -154,3 +160,14 @@ and engine/cache identity remain unchanged.
 Full local logs and screenshots are in
 `D:/neb-hf/.local/catalog-revisit-runtime/`; report objects are stored privately
 in Supabase through the application's normal finish path.
+
+
+## October 21 unified discovery acceptance
+
+The current catalog supersedes the earlier split presentation described above.
+All 250 benchmark models and new worker inspections appear together, with actual
+metrics and distinct complete/partial/artifact/failure outcomes. Historical
+metric enrichment preserved all 398 original reports. Live testing saved a new
+SmolLM inspection, a partial Pythia report and a restricted-model failure, and
+verified refresh, exact saved reopening, visitor isolation and 320px layout.
+See [Unified catalog](UNIFIED_MODEL_CATALOG.md) and its portable acceptance file.

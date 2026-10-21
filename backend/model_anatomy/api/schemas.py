@@ -115,6 +115,14 @@ class BenchmarkCatalogResponse(BaseModel):
     baseline_engine_source_sha256: str | None = None
 
 
+class DiscoveryCatalogResponse(BaseModel):
+    results: list[dict[str, Any]]
+    total: int
+    status_counts: dict[str, int]
+    generated_at: str
+    benchmark_publication_id: str | None
+
+
 class AnalysisQuality(BaseModel):
     semantic_coverage: float | None = Field(default=None, ge=0, le=1)
     module_semantic_coverage: float | None = Field(default=None, ge=0, le=1)
