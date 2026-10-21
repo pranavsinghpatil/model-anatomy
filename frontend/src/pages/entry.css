@@ -1962,6 +1962,23 @@
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18), 0 20px 48px rgba(96, 165, 250, 0.14);
 }
 
+.catalog-models-section .catalog-detail-card {
+  min-width: 0;
+}
+
+.catalog-models-section .card-top-row {
+  flex-wrap: wrap;
+}
+
+.catalog-models-section .card-model-title,
+.catalog-models-section .tech-class {
+  overflow-wrap: anywhere;
+}
+
+.catalog-models-section .tech-class {
+  min-width: 0;
+}
+
 .card-top-row {
   display: flex;
   align-items: center;

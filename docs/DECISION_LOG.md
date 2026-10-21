@@ -1011,3 +1011,22 @@ Advance engine/cache identity to `2026.10.21.2`, retaining IR `1.1`. Preserve
 all earlier benchmark observations and stored reports; publish the attributed
 rechecks only after frozen-source validation and private storage read-back.
 See `DECODER_FACT_CLOSURE.md` for measured results and remaining limitations.
+
+
+## D-064 - Make newly validated inspections visible and revisitable
+
+**2026-10-21 - user request for new analyses to appear in the model catalog**
+
+Successful worker finalization already stores the report blob and durable
+ModelReport metadata. Preserve that automatic write path and the distinction
+between a validated report and a failed job. Make saved inspections the default
+catalog view; keep the measured benchmark cohort accessible explicitly by URL
+and tab without turning ordinary analyses into benchmark observations.
+
+Order saved results by actual inspected_at descending with a stable ID tie-break.
+Refetch saved metadata on entry/focus, poll visible pages every 15 seconds, and
+provide manual refresh. Keep view choice in the URL for reload/back navigation.
+Preserve exact-revision reopening as a new visitor-owned cached analysis.
+Extraction behavior, IR schema and engine/cache identity are unchanged.
+
+See DATABASE_CATALOG.md for behavior and the catalog-revisit acceptance evidence.

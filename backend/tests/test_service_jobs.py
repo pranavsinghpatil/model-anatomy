@@ -101,6 +101,52 @@ def test_durable_registry_serves_private_ready_job_without_worker_or_cache_ttl(s
     assert exc.value.status == 404
 
 
+def test_finished_models_automatically_enter_recent_catalog_and_remain_revisitable(service):
+    service.storage = MemoryStorage()
+    guest = visitor(service)
+    for name, inspected_at in [
+        ("owner/aa-older", 10000.0),
+        ("owner/zz-newer", 10001.0),
+        ("owner/mm-newer", 10001.0),
+    ]:
+        service.test_now[0] = inspected_at
+        data = document()
+        data["model_id"] = name
+        data["metadata"]["engine_version"] = service.settings.engine_version
+        job_id = service.create(guest, name)["id"]
+        assert service.claim("worker-a") == job_id
+        revision = data["metadata"]["revision"]
+        service.resolved(job_id, "worker-a", name, revision)
+        key = cache_key(name, revision, service.settings.engine_version, service.settings.schema_version)
+        service.finish(job_id, "worker-a", json.dumps(data).encode(), key, cached=False)
+
+    pages = [service.catalog(offset=offset, limit=1) for offset in range(3)]
+    rows = [page["models"][0] for page in pages]
+    assert all(page["total"] == 3 for page in pages)
+    assert {row["model_id"] for row in rows[:2]} == {"owner/zz-newer", "owner/mm-newer"}
+    assert rows[2]["model_id"] == "owner/aa-older"
+    assert len({row["id"] for row in rows}) == 3
+    assert [service.catalog(offset=offset, limit=1)["models"][0]["id"] for offset in range(3)] == [
+        row["id"] for row in rows
+    ]
+    assert service.catalog("aa-older")["total"] == 1
+
+    service.test_now[0] += service.settings.job_ttl_seconds + service.settings.cache_ttl_seconds + 1
+    service.cleanup()
+    service.release_worker("worker-a")
+    reopened = JobService(service.settings, clock=service.clock)
+    reopened.storage = service.storage
+    reopened.initialize()
+    try:
+        assert reopened.catalog()["total"] == 3
+        saved = reopened.inspect_registry(visitor(reopened), rows[0]["id"])
+        assert saved["cached"] is True
+        assert saved["model_id"] == rows[0]["model_id"]
+        assert saved["revision"] == rows[0]["revision"]
+    finally:
+        reopened.db.engine.dispose()
+
+
 def test_default_main_does_not_reuse_a_report_requested_from_named_branch(service):
     service.storage = MemoryStorage()
     guest = visitor(service)

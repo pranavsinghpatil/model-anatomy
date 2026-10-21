@@ -37,7 +37,7 @@ test("every published repository appears exactly once across catalog pages", asy
     if (new URL(request.url()).pathname === "/api/v1/benchmarks/catalog")
       catalogRequests.push(request.url());
   });
-  await page.goto("/catalog");
+  await page.goto("/catalog?view=benchmark");
   await expect.poll(() => catalogRequests.length).toBeGreaterThan(0);
   await expect(
     page.getByRole("heading", { name: "Measured compatibility results" }),
@@ -67,7 +67,7 @@ test("every published repository appears exactly once across catalog pages", asy
 test("actual measured cards fit a 320px viewport", async ({ page }) => {
   const evidence = await publishedCatalog(page);
   await page.setViewportSize({ width: 320, height: 800 });
-  await page.goto("/catalog");
+  await page.goto("/catalog?view=benchmark");
   await expect(page.locator(".benchmark-card")).toHaveCount(24);
   expect(
     await page.evaluate(
@@ -81,7 +81,7 @@ test("published measurements render their recorded outcomes, counts, and diagnos
 }) => {
   test.setTimeout(90_000);
   const evidence = await publishedCatalog(page);
-  await page.goto("/catalog");
+  await page.goto("/catalog?view=benchmark");
   const pages = Math.ceil(evidence.results.length / 24);
   const statusLabels: Record<string, string> = {
     completed: "Complete static report",
@@ -169,7 +169,7 @@ test("published selected artifact and revision-only actions keep the exact pinne
   page,
 }) => {
   const evidence = await publishedCatalog(page);
-  await page.goto("/catalog");
+  await page.goto("/catalog?view=benchmark");
   const selected = evidence.results.find(
     (row: { reference?: string | null; stored_report_id: string | null }) =>
       row.stored_report_id === null &&
@@ -197,7 +197,7 @@ test("published selected artifact and revision-only actions keep the exact pinne
     revisionOnly,
     "The curated manifest includes revision-only cases",
   ).toBeTruthy();
-  await page.goto("/catalog");
+  await page.goto("/catalog?view=benchmark");
   const index = evidence.results.indexOf(revisionOnly);
   for (let offset = 0; offset < Math.floor(index / 24); offset++)
     await page.getByRole("button", { name: "Next", exact: true }).click();

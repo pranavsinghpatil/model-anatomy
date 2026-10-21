@@ -436,7 +436,9 @@ class JobService:
             if query:
                 base = base.where(ModelReport.model_id.ilike(f"%{query}%"))
             total = session.scalar(select(func.count()).select_from(base.subquery())) or 0
-            rows = session.scalars(base.order_by(ModelReport.model_id, ModelReport.revision.desc(), ModelReport.id).offset(offset).limit(limit)).all()
+            rows = session.scalars(
+                base.order_by(ModelReport.inspected_at.desc(), ModelReport.id).offset(offset).limit(limit)
+            ).all()
         models = []
         for row in rows:
             summary = row.summary

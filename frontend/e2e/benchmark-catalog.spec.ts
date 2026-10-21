@@ -81,7 +81,7 @@ test("benchmark search, filters, counts, and 24-row pagination use measured rows
   page,
 }) => {
   await serveReport(page);
-  await page.goto("/catalog");
+  await page.goto("/catalog?view=benchmark");
   await expect(
     page.getByRole("heading", { name: "Measured compatibility results" }),
   ).toBeVisible();
@@ -130,7 +130,7 @@ test("pinned action opens the normal visitor-owned inspection flow with its refe
   page,
 }) => {
   await serveReport(page, { body: report(1) });
-  await page.goto("/catalog");
+  await page.goto("/catalog?view=benchmark");
   await page.getByRole("button", { name: "Inspect pinned model" }).click();
   await expect(page).toHaveURL(/\/app\?model=/);
   await expect(page.locator("#model-input")).toHaveValue(
@@ -169,7 +169,7 @@ test("stored report action inspects the persisted report and opens the visitor-o
       });
     },
   );
-  await page.goto("/catalog");
+  await page.goto("/catalog?view=benchmark");
   await page.getByRole("button", { name: "Open stored report" }).click();
   const opening = page.getByRole("button", { name: "Opening stored report…" });
   await expect(opening).toBeDisabled();
@@ -201,12 +201,12 @@ test("stored report errors stay explicit and do not navigate", async ({
         }),
       }),
   );
-  await page.goto("/catalog");
+  await page.goto("/catalog?view=benchmark");
   await page.getByRole("button", { name: "Open stored report" }).click();
   await expect(page.getByRole("alert")).toContainText(
     "Could not open stored inspection: This report is unavailable.",
   );
-  await expect(page).toHaveURL(/\/catalog$/);
+  await expect(page).toHaveURL(/\/catalog\?view=benchmark$/);
 });
 
 test("report loading failure offers retry and does not show sample results", async ({
@@ -222,7 +222,7 @@ test("report loading failure offers retry and does not show sample results", asy
       body: allowSuccess ? JSON.stringify(report(1)) : "unavailable",
     });
   });
-  await page.goto("/catalog");
+  await page.goto("/catalog?view=benchmark");
   await expect(
     page.getByRole("heading", { name: "Could not load benchmark results" }),
   ).toBeVisible();
@@ -247,7 +247,7 @@ test("loading, malformed reports, and empty measured reports stay explicit", asy
       body: JSON.stringify(report(0)),
     });
   });
-  await page.goto("/catalog");
+  await page.goto("/catalog?view=benchmark");
   await expect(page.getByRole("status")).toContainText(
     "Loading measured benchmark results",
   );
@@ -268,7 +268,7 @@ test("artifact and access failures keep unavailable graph fields unknown", async
   page,
 }) => {
   await serveReport(page, { body: report(5) });
-  await page.goto("/catalog");
+  await page.goto("/catalog?view=benchmark");
   await page
     .getByRole("combobox", { name: "Filter by outcome" })
     .selectOption("artifact_error");
@@ -305,7 +305,7 @@ test("benchmark cards fit a narrow viewport without horizontal page overflow", a
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await serveReport(page, { body: report(5) });
-  await page.goto("/catalog");
+  await page.goto("/catalog?view=benchmark");
   await expect(page.locator(".benchmark-card")).toHaveCount(5);
   const widths = await page.evaluate(() => ({
     document: document.documentElement.scrollWidth,
@@ -322,7 +322,7 @@ test("selected component scope and artifact reference remain explicit", async ({
   measured.results[0].revision = "a".repeat(40);
   measured.results[0].reference = artifact;
   await serveReport(page, { body: measured });
-  await page.goto("/catalog");
+  await page.goto("/catalog?view=benchmark");
   await expect(page.locator(".benchmark-scope")).toHaveText(
     "Selected artifact: unet/diffusion_pytorch_model.safetensors",
   );
@@ -341,7 +341,7 @@ test("withheld raw diagnostics show safe notes and unknown warning counts honest
     "Pinned artifacts could not be read.",
   ];
   await serveReport(page, { body: withheld });
-  await page.goto("/catalog");
+  await page.goto("/catalog?view=benchmark");
   await page.locator(".benchmark-details summary").click();
   await expect(page.getByText("Warning count").locator("..")).toContainText(
     "Not measured",
@@ -368,7 +368,7 @@ test("revision-only action builds the exact pinned repository reference", async 
   const pinned = report(1);
   pinned.results[0].reference = null;
   await serveReport(page, { body: pinned });
-  await page.goto("/catalog");
+  await page.goto("/catalog?view=benchmark");
   await page.getByRole("button", { name: "Inspect pinned model" }).click();
   await expect(page.locator("#model-input")).toHaveValue(
     `https://huggingface.co/org/model-000/tree/${"0".repeat(40)}`,
@@ -391,7 +391,7 @@ test("mixed baseline and recheck reports show repository counts and prior eviden
     },
   ];
   await serveReport(page, { body: mixed });
-  await page.goto("/catalog");
+  await page.goto("/catalog?view=benchmark");
 
   await expect(page.locator(".benchmark-summary > div").first()).toContainText(
     "Repositories",

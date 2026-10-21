@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import {
   ArrowRight,
   Search,
@@ -29,7 +29,15 @@ function statusLabel(status: CatalogItem["status"]) {
 }
 
 export default function Catalog() {
-  const [view, setView] = useState<"benchmark" | "stored">("benchmark");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const requestedView = searchParams.get("view");
+  const view = requestedView === "benchmark" ? "benchmark" : "stored";
+  const selectView = (nextView: "benchmark" | "stored") => {
+    const next = new URLSearchParams(searchParams);
+    if (nextView === "stored") next.delete("view");
+    else next.set("view", nextView);
+    setSearchParams(next);
+  };
   return (
     <div className="entry-page">
       <DitherBackground />
@@ -45,8 +53,9 @@ export default function Catalog() {
               Model <span className="hero-highlight-amber">Catalog</span>
             </h1>
             <p className="catalog-page-subtitle">
-              Compare measured static reconstruction attempts for pinned Hugging
-              Face revisions, then run your own inspection from any result.
+              Validated inspection reports are saved automatically for later
+              revisiting. Compare them with measured results for pinned Hugging
+              Face revisions.
             </p>
           </div>
         </header>
@@ -56,7 +65,7 @@ export default function Catalog() {
             type="button"
             aria-pressed={view === "benchmark"}
             className={view === "benchmark" ? "is-active" : ""}
-            onClick={() => setView("benchmark")}
+            onClick={() => selectView("benchmark")}
           >
             Benchmark results
           </button>
@@ -64,7 +73,7 @@ export default function Catalog() {
             type="button"
             aria-pressed={view === "stored"}
             className={view === "stored" ? "is-active" : ""}
-            onClick={() => setView("stored")}
+            onClick={() => selectView("stored")}
           >
             Stored inspections
           </button>
@@ -99,7 +108,10 @@ function StoredCatalog() {
     queryFn: ({ signal }) =>
       api.catalog(debouncedQuery, offset, pageSize, signal),
     retry: retryQuery,
+    staleTime: 0,
     refetchOnWindowFocus: true,
+    refetchInterval: 15_000,
+    refetchIntervalInBackground: false,
   });
   const inspect = useMutation({
     mutationFn: (id: string) => api.inspectCatalog(id),
@@ -129,6 +141,18 @@ function StoredCatalog() {
     <>
       <section className="catalog-toolbar-section" aria-label="Catalog search">
         <div className="catalog-toolbar-inner">
+          <button
+            type="button"
+            className="catalog-empty-btn"
+            aria-label="Refresh stored inspections"
+            disabled={catalog.isFetching}
+            onClick={() => {
+              if (offset > 0) setOffset(0);
+              else void catalog.refetch();
+            }}
+          >
+            {catalog.isFetching ? "Refreshing…" : "Refresh"}
+          </button>
           <div className="catalog-search-box">
             <Search size={16} className="search-icon" aria-hidden="true" />
             <input

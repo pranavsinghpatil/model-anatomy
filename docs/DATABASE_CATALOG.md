@@ -35,6 +35,14 @@ reports and artifact-only reports retain their actual status and limitations.
 - `POST /api/v1/catalog/{id}/inspect` opens that exact stored revision and
   checkpoint as a new visitor-owned analysis.
 
+`/catalog` opens **Stored inspections** by default. Results are ordered by actual
+inspection time, newest first, with a stable ID tie-break for pagination. The
+page refetches on entry and focus, polls every 15 seconds while visible, and
+provides a manual refresh that returns to the newest page. Benchmark results
+remain available through their tab and `/catalog?view=benchmark`; a newly
+validated model enters the saved registry automatically, without being added to
+the fixed measured benchmark cohort.
+
 Catalog entries expose model facts, inspection time, and pinned identity. They
 do not expose guest identifiers, analysis history, storage credentials, or raw
 private-storage URLs. Unknown parameter counts and dimensions remain unknown.
@@ -112,3 +120,37 @@ for a normal checkout and fresh-project provisioning.
 The live Supabase behavior above is verified independently of browser test
 fixtures. Linux container deployment and a clean full browser acceptance run
 remain separate release gates.
+
+
+## October 21 catalog revisit acceptance
+
+The catalog previously opened the fixed benchmark cohort while automatic worker
+saves were available under Stored inspections. The default now opens saved
+reports, newest first. Catalog metadata is immediately stale for refetch on
+entry/focus; visible pages poll every 15 seconds. Manual refresh returns to page
+one and fetches it even when that page was recently cached. URL view selection
+survives reload and browser back navigation. Saved cards wrap long model names,
+status badges and checkpoint paths at 320px without page overflow.
+
+A genuinely new `HuggingFaceTB/SmolLM2-1.7B` inspection at revision
+`effd688a12921b4cc83e3312b6feb579f70f9c71` completed through the live worker. It
+entered Supabase automatically, appeared at the top of the open catalog without
+manual refresh, survived reload, and reopened from the exact saved report as a
+new cached analysis. A separate visitor could open the saved catalog report but
+received 404 for the original visitor's analysis. A new SmolLM2-360M inspection
+at `f8027fd0eaeea54caa13c31d31b9fdc459c38b49` was also saved during validation.
+Neither ordinary inspection changes the fixed 250-case benchmark publication.
+
+Verification: 74 targeted backend/API tests, 12 saved-catalog desktop/mobile
+checks, and 32 benchmark browser checks passed. The saved-catalog run was
+repeated after correcting two test-fixture/selector failures; the live narrow
+layout failure was fixed with a dedicated regression test. Ruff, compilation,
+changed-TypeScript formatting, frontend type checking and the production build
+pass. The existing large-bundle advisory remains. API 8000, worker and preview
+5176 run this branch against Supabase with all health checks passing. Extraction
+and engine/cache identity remain unchanged.
+
+[Portable live acceptance](benchmarks/catalog-revisit-acceptance.json).
+Full local logs and screenshots are in
+`D:/neb-hf/.local/catalog-revisit-runtime/`; report objects are stored privately
+in Supabase through the application's normal finish path.

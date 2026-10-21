@@ -84,7 +84,10 @@ test("catalog renders saved API facts and opens the selected registry record", a
 }) => {
   const requests = await catalogApi(page);
   await page.goto("/catalog");
-  await page.getByRole("button", { name: "Stored inspections" }).click();
+  await expect(page).toHaveURL(/\/catalog$/);
+  await expect(
+    page.getByRole("button", { name: "Stored inspections", exact: true }),
+  ).toHaveAttribute("aria-pressed", "true");
   await expect(
     page.getByRole("heading", { name: "Model Catalog" }),
   ).toBeVisible({ timeout: 25_000 });
@@ -113,12 +116,75 @@ test("catalog renders saved API facts and opens the selected registry record", a
   expect(requests).toContain("POST /api/v1/catalog/registry-unknown/inspect");
 });
 
+test("catalog refresh reveals a new inspection and keeps the selected view in the URL", async ({
+  page,
+}) => {
+  await mockService(page);
+  let includeNew = false;
+  const catalogRequests: string[] = [];
+  await page.route("**/api/v1/catalog**", async (route) => {
+    const url = new URL(route.request().url());
+    catalogRequests.push(
+      `${route.request().method()} ${url.pathname}${url.search}`,
+    );
+    const models = includeNew
+      ? [
+          ...items,
+          {
+            ...items[0],
+            id: "registry-new",
+            model_id: "org/new-inspection",
+            inspected_at: "2026-10-21T10:00:00Z",
+          },
+        ]
+      : items;
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        models: models.slice(
+          Number(url.searchParams.get("offset") ?? 0),
+          Number(url.searchParams.get("offset") ?? 0) + 24,
+        ),
+        total: 30,
+        offset: Number(url.searchParams.get("offset") ?? 0),
+        limit: Number(url.searchParams.get("limit") ?? 24),
+      }),
+    });
+  });
+  await page.goto("/catalog");
+  await expect(page.locator(".catalog-detail-card")).toHaveCount(2);
+  await page.getByRole("button", { name: "Next" }).click();
+  await expect(page.locator(".catalog-detail-card")).toHaveCount(0);
+  includeNew = true;
+  const pageZeroRequestsBeforeRefresh = catalogRequests.filter((request) =>
+    request.includes("offset=0"),
+  ).length;
+  await page
+    .getByRole("button", { name: "Refresh stored inspections" })
+    .click();
+  await expect(page.locator(".catalog-detail-card")).toHaveCount(3);
+  await expect(page.getByText("org/new-inspection")).toBeVisible();
+  expect(
+    catalogRequests.filter((request) => request.includes("offset=0")).length,
+  ).toBeGreaterThan(pageZeroRequestsBeforeRefresh);
+
+  await page.getByRole("button", { name: "Benchmark results" }).click();
+  await expect(page).toHaveURL(/\/catalog\?view=benchmark$/);
+  await page.reload();
+  await expect(
+    page.getByRole("button", { name: "Benchmark results", exact: true }),
+  ).toHaveAttribute("aria-pressed", "true");
+  await page.goBack();
+  await expect(page).toHaveURL(/\/catalog$/);
+  await expect(page.locator(".catalog-detail-card")).toHaveCount(3);
+});
+
 test("catalog supports server pagination and shows honest empty state", async ({
   page,
 }) => {
   const requests = await catalogApi(page, { paginated: true });
   await page.goto("/catalog");
-  await page.getByRole("button", { name: "Stored inspections" }).click();
   await page.getByRole("button", { name: "Next" }).click();
   await expect(page).toHaveURL(/\/catalog$/);
   expect(requests.some((request) => request.includes("offset=24"))).toBe(true);
@@ -133,12 +199,41 @@ test("catalog supports server pagination and shows honest empty state", async ({
   ).toBeVisible();
 });
 
+test("saved model names and checkpoint paths fit a 320px viewport", async ({
+  page,
+}) => {
+  await mockService(page);
+  const item = {
+    ...items[0],
+    model_id:
+      "organization/a-long-model-name-with-an-unbroken-architecture-identifier",
+    revision: "a".repeat(40),
+    artifact: "component-directory/model-00001-of-00099.safetensors",
+    explicit_artifact: true,
+  };
+  await page.route("**/api/v1/catalog?**", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ models: [item], total: 1, offset: 0, limit: 24 }),
+    }),
+  );
+  await page.setViewportSize({ width: 320, height: 800 });
+  await page.goto("/catalog");
+  await expect(page.locator(".card-model-title")).toHaveText(item.model_id);
+  await expect(page.locator(".tech-class")).toContainText(item.artifact);
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+});
+
 test("catalog retries API errors and explains a truly empty database", async ({
   page,
 }) => {
   await catalogApi(page, { failOnce: true });
   await page.goto("/catalog");
-  await page.getByRole("button", { name: "Stored inspections" }).click();
   await expect(
     page.getByRole("heading", { name: "Could not load the model catalog" }),
   ).toBeVisible();
@@ -150,7 +245,6 @@ test("catalog retries API errors and explains a truly empty database", async ({
   await page.unrouteAll();
   await catalogApi(page, { empty: true });
   await page.reload();
-  await page.getByRole("button", { name: "Stored inspections" }).click();
   await expect(
     page.getByRole("heading", { name: "No inspections are stored yet" }),
   ).toBeVisible();
