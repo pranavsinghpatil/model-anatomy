@@ -51,6 +51,7 @@ DEFAULT_RUNS = (
     Path("docs/benchmarks/model-matrix-250-rechecks.json"),
     Path("docs/benchmarks/model-matrix-250-coverage-rechecks.json"),
     Path("docs/benchmarks/model-matrix-250-profile-rechecks.json"),
+    Path("docs/benchmarks/model-matrix-250-decoder-rechecks.json"),
 )
 
 

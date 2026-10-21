@@ -1,4 +1,4 @@
-"""Narrow output contracts for reviewed native T5, Whisper, Llama, and ViT modules.
+"""Narrow output contracts for reviewed native Transformers modules.
 
 These describe the canonical eval, no-cache, no-autocast profile. They inspect
 module structure and parameter metadata only; no forward method is called.
@@ -7,6 +7,7 @@ module structure and parameter metadata only; no forward method is called.
 from __future__ import annotations
 
 import hashlib
+import importlib
 import inspect
 import math
 from pathlib import Path
@@ -23,6 +24,13 @@ CONTRACT_SOURCE_SHA256 = {
     "transformers.models.whisper.modeling_whisper": "851c78f1aa62f84ed0d0a4dfded478a05c98f43d26732b56fea2d4acc79728b8",
     "transformers.models.llama.modeling_llama": "31bf660a663259134324bc65da4e155951dc89c5ca46471d2325a9938e859e26",
     "transformers.models.vit.modeling_vit": "069e0958c10e806551a2e1d2421cd26e6bff21f7c65aeb9f0f3c0dbde1a88ca5",
+    "transformers.models.qwen2.modeling_qwen2": "a59fa06524227361fb401baf4d177124a27aec146bc01ec931235a9abbab17cb",
+    "transformers.models.qwen3.modeling_qwen3": "4b95c371fd26d40c69083dab36ac1eafd8cf82b415a0bb827275097c5ad2305b",
+    "transformers.models.phi.modeling_phi": "1853d5c78107af5d8bca539730451ecc060a91063a847b2c0acc2eb28e1cff4f",
+    "transformers.models.gpt2.modeling_gpt2": "b591253d7acadd39635bbf6f9f6fd0a97d6be5d7cf901074e2d959ff3e478e80",
+    "transformers.pytorch_utils": "e17301af0b11aa8982283208fb7b4af513853d643711b193283d1a429d6b2b86",
+    "transformers.modeling_outputs": "2edce49b0a7f9fad53b52395bece5fb20e3d0f83c305f3866354d19d790a5d14",
+    "transformers.utils.generic": "94728825190dff491f2e0b93beb59c8246adb0b6049e3203c511405f43bb7e30",
     "transformers.activations": "3dd5a81b1e5e0c5371256f00efec19df52255420318737db1e03430a98cf4264",
 }
 
@@ -105,6 +113,63 @@ def native_module_outputs(module: nn.Module, input_spec: TensorSpec) -> dict[str
         if output_width is None:
             return None
         return {"0": TensorSpec([*input_spec.shape[:2], output_width], input_spec.dtype, "hidden_states")}
+    elif family in {
+        "transformers.models.qwen2.modeling_qwen2",
+        "transformers.models.qwen3.modeling_qwen3",
+    }:
+        if not _rank_three(input_spec):
+            return None
+        if family.endswith("qwen2.modeling_qwen2"):
+            from transformers.models.qwen2 import modeling_qwen2 as qwen
+            config_type, attention_type, mlp_type = qwen.Qwen2Config, qwen.Qwen2Attention, qwen.Qwen2MLP
+            norm_type, layer_type = qwen.Qwen2RMSNorm, qwen.Qwen2DecoderLayer
+            qwen3 = False
+        else:
+            from transformers.models.qwen3 import modeling_qwen3 as qwen
+            config_type, attention_type, mlp_type = qwen.Qwen3Config, qwen.Qwen3Attention, qwen.Qwen3MLP
+            norm_type, layer_type = qwen.Qwen3RMSNorm, qwen.Qwen3DecoderLayer
+            qwen3 = True
+        if type(module) is attention_type:
+            width = _qwen_attention(module, input_spec, config_type, norm_type, qwen3)
+        elif type(module) is mlp_type:
+            width = _qwen_mlp(module, input_spec, config_type)
+        elif type(module) is norm_type:
+            width = input_spec.shape[-1] if _qwen_norm(module, input_spec, norm_type) else None
+        elif type(module) is layer_type:
+            width = _qwen_layer(module, input_spec, config_type, attention_type, mlp_type, norm_type, qwen3)
+        else:
+            return None
+        port = "output" if type(module) in (norm_type, mlp_type, layer_type) else "0"
+    elif family == "transformers.models.phi.modeling_phi":
+        from transformers.models.phi import modeling_phi as phi
+
+        if not _rank_three(input_spec):
+            return None
+        if type(module) is phi.PhiAttention:
+            width = _phi_attention(module, input_spec, phi)
+        elif type(module) is phi.PhiMLP:
+            width = _phi_mlp(module, input_spec, phi)
+        elif type(module) is phi.PhiDecoderLayer:
+            width = _phi_layer(module, input_spec, phi)
+        else:
+            return None
+        port = "0" if type(module) in (phi.PhiAttention, phi.PhiDecoderLayer) else "output"
+    elif family == "transformers.models.gpt2.modeling_gpt2":
+        from transformers.models.gpt2 import modeling_gpt2 as gpt2
+
+        if type(module) is gpt2.GPT2Model:
+            return _gpt2_model(module, input_spec, gpt2)
+        if not _rank_three(input_spec):
+            return None
+        if type(module) is gpt2.GPT2Attention:
+            width = _gpt2_attention(module, input_spec, gpt2)
+        elif type(module) is gpt2.GPT2MLP:
+            width = _gpt2_mlp(module, input_spec, gpt2)
+        elif type(module) is gpt2.GPT2Block:
+            width = _gpt2_block(module, input_spec, gpt2)
+        else:
+            return None
+        port = "output" if type(module) is gpt2.GPT2MLP else "0"
     else:
         from transformers.models.whisper import modeling_whisper as whisper
 
@@ -135,6 +200,15 @@ def _trusted_source(cls: type, family: str) -> bool:
             and hashlib.sha256(Path(source).read_bytes()).hexdigest() == CONTRACT_SOURCE_SHA256[family]
         )
     except (OSError, TypeError, KeyError):
+        return False
+
+
+def _trusted_module_file(module_name: str) -> bool:
+    try:
+        module = importlib.import_module(module_name)
+        source = getattr(module, "__file__", None)
+        return bool(source) and hashlib.sha256(Path(source).read_bytes()).hexdigest() == CONTRACT_SOURCE_SHA256[module_name]
+    except (ImportError, OSError, KeyError, TypeError):
         return False
 
 
@@ -250,6 +324,8 @@ def _native_activation(module: object) -> bool:
     native_types = (activations.GELUActivation, activations.NewGELUActivation, activations.SiLUActivation)
     if type(module) is nn.ReLU:
         return True
+    if type(module) is activations.GELUActivation and module.act is not nn.functional.gelu:
+        return False
     return type(module) in native_types and _trusted_source(type(module), "transformers.activations")
 
 
@@ -367,8 +443,9 @@ def _layer_norm(module: object, width: int, dtype: torch.dtype) -> bool:
         and _safe_module(module)
         and tuple(module.normalized_shape) == (width,)
         and module.weight is not None
+        and tuple(module.weight.shape) == (width,)
         and module.weight.dtype == dtype
-        and (module.bias is None or module.bias.dtype == dtype)
+        and (module.bias is None or (tuple(module.bias.shape) == (width,) and module.bias.dtype == dtype))
     )
 
 
@@ -502,3 +579,283 @@ def _vit_attention(module: nn.Module, spec: TensorSpec, vit: object) -> int | No
         )
         else None
     )
+
+
+def _qwen_norm(module: object, spec: TensorSpec, norm_type: type) -> bool:
+    epsilon = getattr(module, "variance_epsilon", None)
+    return (
+        type(module) is norm_type
+        and _safe_module(module)
+        and _trusted_source(type(module), type(module).__module__)
+        and tuple(module.weight.shape) == (spec.shape[-1],)
+        and module.weight.dtype == _TORCH_DTYPES[spec.dtype]
+        and type(epsilon) in (int, float)
+        and math.isfinite(epsilon)
+        and epsilon > 0
+    )
+
+
+def _qwen_attention(module: nn.Module, spec: TensorSpec, config_type: type, norm_type: type, qwen3: bool) -> int | None:
+    config = getattr(module, "config", None)
+    width, dtype = spec.shape[-1], _TORCH_DTYPES[spec.dtype]
+    heads = getattr(config, "num_attention_heads", None)
+    kv_heads = getattr(config, "num_key_value_heads", None)
+    head_dim = getattr(module, "head_dim", None)
+    if (
+        not _safe_module(module)
+        or not _trusted_source(type(module), type(module).__module__)
+        or type(config) is not config_type
+        or config._attn_implementation != "eager"
+        or config.hidden_size != width
+        or type(heads) is not int or heads <= 0
+        or type(kv_heads) is not int or kv_heads <= 0 or heads % kv_heads
+        or type(head_dim) is not int or head_dim <= 0
+        or module.num_key_value_groups != heads // kv_heads
+        or module.scaling != head_dim ** -0.5
+        or module.is_causal is not True
+    ):
+        return None
+    query_width, kv_width = heads * head_dim, kv_heads * head_dim
+    if not all((
+        _linear(module.q_proj, width, query_width, dtype),
+        _linear(module.k_proj, width, kv_width, dtype),
+        _linear(module.v_proj, width, kv_width, dtype),
+        _linear(module.o_proj, query_width, width, dtype),
+    )):
+        return None
+    if qwen3:
+        head_spec = TensorSpec(list(spec.shape[:-1]) + [head_dim], spec.dtype, "head_states")
+        if not _qwen_norm(module.q_norm, head_spec, norm_type):
+            return None
+        if not _qwen_norm(module.k_norm, head_spec, norm_type):
+            return None
+    return width
+
+
+def _qwen_mlp(module: nn.Module, spec: TensorSpec, config_type: type) -> int | None:
+    config = getattr(module, "config", None)
+    width, dtype = spec.shape[-1], _TORCH_DTYPES[spec.dtype]
+    intermediate = getattr(config, "intermediate_size", None)
+    if (
+        not _safe_module(module)
+        or not _trusted_source(type(module), type(module).__module__)
+        or type(config) is not config_type
+        or config._attn_implementation != "eager"
+        or config.hidden_size != width
+        or type(intermediate) is not int or intermediate <= 0
+        or module.hidden_size != width
+        or module.intermediate_size != intermediate
+        or not _native_activation(module.act_fn)
+    ):
+        return None
+    return width if all(
+        _linear(getattr(module, name, None), width, intermediate, dtype)
+        for name in ("gate_proj", "up_proj")
+    ) and _linear(module.down_proj, intermediate, width, dtype) else None
+
+
+def _qwen_layer(module: nn.Module, spec: TensorSpec, config_type: type, attention_type: type,
+                mlp_type: type, norm_type: type, qwen3: bool) -> int | None:
+    if not _safe_module(module) or not _trusted_source(type(module), type(module).__module__):
+        return None
+    width, dtype = spec.shape[-1], _TORCH_DTYPES[spec.dtype]
+    attention, mlp = getattr(module, "self_attn", None), getattr(module, "mlp", None)
+    norms = (getattr(module, "input_layernorm", None), getattr(module, "post_attention_layernorm", None))
+    config = getattr(attention, "config", None)
+    return width if (
+        type(config) is config_type and config.hidden_size == width
+        and type(attention) is attention_type and _qwen_attention(attention, spec, config_type, norm_type, qwen3) == width
+        and type(mlp) is mlp_type and _qwen_mlp(mlp, spec, config_type) == width
+        and all(_qwen_norm(norm, spec, norm_type) for norm in norms)
+        and all(norm.weight.dtype == dtype for norm in norms)
+    ) else None
+
+
+def _phi_attention(module: nn.Module, spec: TensorSpec, phi: object) -> int | None:
+    config = getattr(module, "config", None)
+    width, dtype = spec.shape[-1], _TORCH_DTYPES[spec.dtype]
+    heads, kv_heads = getattr(config, "num_attention_heads", None), getattr(config, "num_key_value_heads", None)
+    head_dim = getattr(module, "head_dim", None)
+    if (not _safe_module(module) or not _trusted_source(type(module), type(module).__module__)
+        or type(config) is not phi.PhiConfig or config._attn_implementation != "eager"
+        or config.hidden_size != width or type(heads) is not int or heads <= 0
+        or type(kv_heads) is not int or kv_heads <= 0 or heads % kv_heads
+        or type(head_dim) is not int or head_dim <= 0 or module.is_causal is not True
+        or module.scaling != head_dim ** -0.5 or module.num_key_value_groups != heads // kv_heads):
+        return None
+    query_width, kv_width = heads * head_dim, kv_heads * head_dim
+    if not (_linear(module.q_proj, width, query_width, dtype)
+        and _linear(module.k_proj, width, kv_width, dtype)
+        and _linear(module.v_proj, width, kv_width, dtype)
+        and _linear(module.dense, query_width, width, dtype)):
+        return None
+    if config.qk_layernorm and not all(
+        _layer_norm(getattr(module, name, None), head_dim, dtype) for name in ("q_layernorm", "k_layernorm")
+    ):
+        return None
+    return width
+
+
+def _phi_mlp(module: nn.Module, spec: TensorSpec, phi: object) -> int | None:
+    config = getattr(module, "config", None)
+    width, dtype = spec.shape[-1], _TORCH_DTYPES[spec.dtype]
+    intermediate = getattr(config, "intermediate_size", None)
+    if (not _safe_module(module) or not _trusted_source(type(module), type(module).__module__)
+        or type(config) is not phi.PhiConfig or config._attn_implementation != "eager"
+        or config.hidden_size != width or type(intermediate) is not int or intermediate <= 0
+        or not _native_activation(module.activation_fn)):
+        return None
+    return width if _linear(module.fc1, width, intermediate, dtype) and _linear(module.fc2, intermediate, width, dtype) else None
+
+
+def _phi_layer(module: nn.Module, spec: TensorSpec, phi: object) -> int | None:
+    if not _safe_module(module) or not _trusted_source(type(module), type(module).__module__):
+        return None
+    width, dtype = spec.shape[-1], _TORCH_DTYPES[spec.dtype]
+    attention, mlp = getattr(module, "self_attn", None), getattr(module, "mlp", None)
+    return width if (
+        type(attention) is phi.PhiAttention and _phi_attention(attention, spec, phi) == width
+        and type(mlp) is phi.PhiMLP and _phi_mlp(mlp, spec, phi) == width
+        and _layer_norm(module.input_layernorm, width, dtype)
+        and _dropout(module.resid_dropout)
+    ) else None
+
+
+def _gpt2_conv1d(module: object, source: int, target: int, dtype: torch.dtype, gpt2: object) -> bool:
+    return (
+        type(module) is gpt2.Conv1D and _safe_module(module)
+        and _trusted_source(type(module), "transformers.pytorch_utils")
+        and module.nf == target
+        and tuple(module.weight.shape) == (source, target) and module.weight.dtype == dtype
+        and tuple(module.bias.shape) == (target,) and module.bias.dtype == dtype
+    )
+
+
+def _gpt2_attention(module: nn.Module, spec: TensorSpec, gpt2: object) -> int | None:
+    config = getattr(module, "config", None)
+    width, dtype = spec.shape[-1], _TORCH_DTYPES[spec.dtype]
+    heads = getattr(module, "num_heads", None)
+    if (not _safe_module(module) or not _trusted_source(type(module), type(module).__module__)
+        or type(config) is not gpt2.GPT2Config or config._attn_implementation != "eager"
+        or config.add_cross_attention or module.is_cross_attention or config.hidden_size != width
+        or type(heads) is not int or heads <= 0 or heads != config.num_attention_heads
+        or module.head_dim * heads != width or module.split_size != width or module.is_causal is not True
+        or module.pruned_heads):
+        return None
+    return width if (_gpt2_conv1d(module.c_attn, width, 3 * width, dtype, gpt2)
+        and _gpt2_conv1d(module.c_proj, width, width, dtype, gpt2)
+        and _dropout(module.attn_dropout) and _dropout(module.resid_dropout)) else None
+
+
+def _gpt2_mlp(module: nn.Module, spec: TensorSpec, gpt2: object) -> int | None:
+    width, dtype = spec.shape[-1], _TORCH_DTYPES[spec.dtype]
+    intermediate = getattr(module.c_fc, "nf", None)
+    if (not _safe_module(module) or not _trusted_source(type(module), type(module).__module__)
+        or type(intermediate) is not int or intermediate <= 0
+        or not _native_activation(module.act)):
+        return None
+    return width if (_gpt2_conv1d(module.c_fc, width, intermediate, dtype, gpt2)
+        and _gpt2_conv1d(module.c_proj, intermediate, width, dtype, gpt2)
+        and _dropout(module.dropout)) else None
+
+
+def _gpt2_block(module: nn.Module, spec: TensorSpec, gpt2: object) -> int | None:
+    if not _safe_module(module) or not _trusted_source(type(module), type(module).__module__):
+        return None
+    config = getattr(getattr(module, "attn", None), "config", None)
+    width, dtype = spec.shape[-1], _TORCH_DTYPES[spec.dtype]
+    return width if (
+        type(config) is gpt2.GPT2Config and not config.add_cross_attention and config.hidden_size == width
+        and type(module.attn) is gpt2.GPT2Attention and _gpt2_attention(module.attn, spec, gpt2) == width
+        and type(module.mlp) is gpt2.GPT2MLP and _gpt2_mlp(module.mlp, spec, gpt2) == width
+        and _layer_norm(module.ln_1, width, dtype) and _layer_norm(module.ln_2, width, dtype)
+    ) else None
+
+
+def _trusted_class_method(cls: type, method_name: str, module_name: str) -> bool:
+    try:
+        method = inspect.unwrap(getattr(cls, method_name))
+        source = inspect.getsourcefile(method)
+        module = importlib.import_module(module_name)
+        return (
+            bool(source)
+            and source == getattr(module, "__file__", None)
+            and method.__qualname__ == f"{cls.__name__}.{method_name}"
+        )
+    except (AttributeError, ImportError, OSError, TypeError):
+        return False
+
+
+def _gpt2_model_output_zero_is_hidden_state(gpt2: object) -> bool:
+    from transformers.modeling_outputs import BaseModelOutputWithPastAndCrossAttentions
+    from transformers.utils.generic import ModelOutput
+
+    output_type = BaseModelOutputWithPastAndCrossAttentions
+    return (
+        output_type.__module__ == "transformers.modeling_outputs"
+        and getattr(gpt2, "BaseModelOutputWithPastAndCrossAttentions", None) is output_type
+        and output_type.__bases__ == (ModelOutput,)
+        and tuple(output_type.__dataclass_fields__) == (
+            "last_hidden_state",
+            "past_key_values",
+            "hidden_states",
+            "attentions",
+            "cross_attentions",
+        )
+        and _trusted_module_file("transformers.modeling_outputs")
+        and _trusted_module_file("transformers.utils.generic")
+        and all(
+            _trusted_class_method(ModelOutput, method_name, "transformers.utils.generic")
+            for method_name in ("__getitem__", "to_tuple", "__post_init__")
+        )
+    )
+
+
+def _gpt2_model(module: nn.Module, ids: TensorSpec, gpt2: object) -> dict[str, TensorSpec] | None:
+    config = getattr(module, "config", None)
+    width = getattr(config, "hidden_size", None)
+    vocab_size = getattr(config, "vocab_size", None)
+    position_count = getattr(config, "max_position_embeddings", None)
+    layer_count = getattr(config, "n_layer", None)
+    tokens, positions = getattr(module, "wte", None), getattr(module, "wpe", None)
+    layers, final_norm = getattr(module, "h", None), getattr(module, "ln_f", None)
+    if (
+        not _rank_two_ids(ids)
+        or type(config) is not gpt2.GPT2Config
+        or config._attn_implementation != "eager"
+        or config.add_cross_attention
+        or type(width) is not int or width <= 0
+        or type(vocab_size) is not int or vocab_size <= 0
+        or type(position_count) is not int or position_count <= 0
+        or type(layer_count) is not int or layer_count <= 0
+        or module.model_parallel
+        or getattr(module, "gradient_checkpointing", False)
+        or type(tokens) is not nn.Embedding
+        or not _safe_module(tokens)
+        or tokens.num_embeddings != vocab_size
+        or tokens.embedding_dim != width
+        or tuple(tokens.weight.shape) != (vocab_size, width)
+        or tokens.weight.dtype not in _TORCH_DTYPES.values()
+        or type(positions) is not nn.Embedding
+        or not _safe_module(positions)
+        or positions.num_embeddings != position_count
+        or positions.embedding_dim != width
+        or tuple(positions.weight.shape) != (position_count, width)
+        or positions.weight.dtype != tokens.weight.dtype
+        or type(layers) is not nn.ModuleList
+        or not _safe_module(layers)
+        or len(layers) != layer_count
+        or any(type(block) is not gpt2.GPT2Block or _gpt2_block(
+            block, TensorSpec([*ids.shape, width], _dtype_name(tokens.weight.dtype), "hidden_states"), gpt2
+        ) != width for block in layers)
+        or not _layer_norm(final_norm, width, tokens.weight.dtype)
+        or final_norm.eps != config.layer_norm_epsilon
+        or not _dropout(getattr(module, "drop", None))
+        or not _gpt2_model_output_zero_is_hidden_state(gpt2)
+    ):
+        return None
+    return {"0": TensorSpec([*ids.shape, width], _dtype_name(tokens.weight.dtype), "last_hidden_state")}
+
+
+def _dtype_name(dtype: torch.dtype) -> str | None:
+    return next((name for name, candidate in _TORCH_DTYPES.items() if candidate == dtype), None)

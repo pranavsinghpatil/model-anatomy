@@ -206,6 +206,8 @@ class StaticFlowAnalyzer:
         label: str,
         arguments: dict[str, StaticValue],
         metadata: dict[str, Any] | None = None,
+        *,
+        native_container_member: bool = False,
     ) -> StaticValue:
         metadata = dict(metadata or {})
         if path is not None and "output_port_specs" not in metadata:
@@ -213,6 +215,21 @@ class StaticFlowAnalyzer:
             if spec is not None:
                 metadata["output_port_specs"] = {"output": self.spec_data(spec)}
                 metadata["contract"] = "exact_native_torch_primitive.v1"
+            elif native_container_member:
+                from .native_output_contracts import CONTRACT_SOURCE_SHA256, native_module_outputs
+
+                outputs = self.container_member_outputs(path, arguments, native_module_outputs)
+                if outputs is not None:
+                    container = self.model.get_submodule(path) if path else self.model
+                    metadata["output_port_specs"] = {
+                        port: self.spec_data(value) for port, value in outputs.items()
+                    }
+                    metadata["contract"] = "reviewed_native_module_list_member.v1"
+                    metadata["native_container"] = path
+                    metadata["native_member_classes"] = sorted(
+                        {f"{type(child).__module__}.{type(child).__name__}" for child in container}
+                    )
+                    metadata["native_contract_source_hashes"] = CONTRACT_SOURCE_SHA256
             else:
                 from .native_output_contracts import CONTRACT_SOURCE_SHA256, native_module_outputs
 
@@ -264,6 +281,39 @@ class StaticFlowAnalyzer:
         if path is not None:
             return StaticValue([(identifier, "output")], spec=self.module_spec(path, arguments))
         return StaticValue([(identifier, "output")])
+
+    def container_member_outputs(
+        self,
+        path: str,
+        arguments: dict[str, StaticValue],
+        native_module_outputs: Any,
+    ) -> dict[str, TensorSpec] | None:
+        """Prove a common output map for every member of a native ModuleList loop."""
+        container = self.model.get_submodule(path) if path else self.model
+        if (
+            type(container) is not torch.nn.ModuleList
+            or not container._modules
+            or len(container._modules) > MAX_STATIC_ITERATIONS
+            or container.training
+            or "forward" in vars(container)
+            or container._forward_hooks
+            or container._forward_pre_hooks
+            or container._backward_hooks
+        ):
+            return None
+        common: dict[str, TensorSpec] | None = None
+        for name, child in container._modules.items():
+            if not isinstance(child, torch.nn.Module):
+                return None
+            child_path = f"{path}.{name}" if path else name
+            incoming = self.module_input(child_path, arguments).spec
+            if incoming is None:
+                return None
+            outputs = native_module_outputs(child, incoming)
+            if outputs is None or common is not None and outputs != common:
+                return None
+            common = outputs
+        return common
 
     @staticmethod
     def spec_data(spec: TensorSpec) -> dict[str, Any]:
@@ -400,7 +450,12 @@ class StaticFlowAnalyzer:
                 if name in values:
                     result = self.primitive(values[name])
                 elif inspect.getattr_static(type(obj), name, UNKNOWN) is not UNKNOWN:
-                    return None
+                    from .native_metadata_contracts import native_config_attribute
+
+                    supported, value = native_config_attribute(obj, name)
+                    if not supported:
+                        return None
+                    result = self.primitive(value)
                 elif len(node.args) == 3:
                     result = arguments["2"]
                 else:
@@ -487,11 +542,13 @@ class StaticFlowAnalyzer:
     ) -> StaticValue | None:
         if receiver.spec is None or not isinstance(node.func, ast.Attribute):
             return None
-        if any(isinstance(arg, ast.Starred) for arg in node.args) or any(
-            kw.arg is None for kw in node.keywords
-        ):
-            return None
         name = node.func.attr
+        has_starred = any(isinstance(arg, ast.Starred) for arg in node.args)
+        has_expansion = any(keyword.arg is None for keyword in node.keywords)
+        if (has_starred or has_expansion) and name not in {"view", "reshape"}:
+            return None
+        if has_expansion:
+            return None
         shape = receiver.spec.shape
         if name in {"dim", "ndimension"} and not arguments and shape is not None:
             return StaticValue(constant=len(shape))
@@ -518,7 +575,15 @@ class StaticFlowAnalyzer:
                     parameters = {"dimensions": [parameters["dim0"], parameters["dim1"]]}
                 return self.tensor_event(node, name, {"input": receiver}, parameters, f"torch.Tensor.{name}")
         if name in {"view", "reshape"} and not node.keywords:
-            values = [arguments[str(index)] for index in range(len(node.args))]
+            values = []
+            for index, arg in enumerate(node.args):
+                value = arguments[str(index)]
+                if isinstance(arg, ast.Starred):
+                    if value.items is None:
+                        return None
+                    values.extend(value.items)
+                else:
+                    values.append(value)
             if len(values) == 1 and values[0].items is not None:
                 values = values[0].items
             dimensions = [value.constant if type(value.constant) is int else value.symbol for value in values]
@@ -788,7 +853,10 @@ class StaticFlowAnalyzer:
                 elif iterable.module_path is not None:
                     target = node.target.elts[-1] if isinstance(node.target, ast.Tuple) else node.target
                     before = dict(self.env)
-                    self.assign(target, iterable)
+                    self.assign(
+                        target,
+                        StaticValue(module_path=iterable.module_path, category="container_member"),
+                    )
                     start = len(self.flow.events)
                     self.statements(node.body)
                     calls = [
@@ -1012,6 +1080,18 @@ class StaticFlowAnalyzer:
             if attribute is UNKNOWN:
                 attribute = inspect.getattr_static(type(value.constant), name, UNKNOWN)
                 if isinstance(attribute, property) or hasattr(type(attribute), "__get__"):
+                    from .native_metadata_contracts import native_config_attribute
+
+                    supported, native_value = native_config_attribute(value.constant, name)
+                    if supported:
+                        diagnostic = {
+                            "code": "native_config_attribute",
+                            "attribute": name,
+                            "basis": "Source-fingerprinted native descriptor backing field; no descriptor invocation",
+                        }
+                        if diagnostic not in self.flow.diagnostics:
+                            self.flow.diagnostics.append(diagnostic)
+                        return StaticValue(constant=native_value)
                     return StaticValue()
             return StaticValue(constant=attribute)
         return StaticValue([(ref, name) for ref, _ in value.refs])
@@ -1479,7 +1559,14 @@ class StaticFlowAnalyzer:
             if functional is not None:
                 return functional
             if function.module_path is not None and function.method is None:
-                return self.event(node, function.module_path, "module", function.module_path, arguments)
+                return self.event(
+                    node,
+                    function.module_path,
+                    "module",
+                    function.module_path,
+                    arguments,
+                    native_container_member=function.category == "container_member",
+                )
             if function.method is not None and self.depth < 3:
                 return self.helper(
                     function.module_path,

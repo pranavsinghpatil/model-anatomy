@@ -2,12 +2,24 @@
 
 from __future__ import annotations
 
+import ast
+import inspect
+import textwrap
+
 import pytest
 import torch
 from torch import nn
 from transformers.activations import GELUActivation, SiLUActivation
+from transformers.models.gpt2 import modeling_gpt2 as gpt2
+from transformers.models.gpt2.configuration_gpt2 import GPT2Config
 from transformers.models.llama import modeling_llama as llama
 from transformers.models.llama.configuration_llama import LlamaConfig
+from transformers.models.phi import modeling_phi as phi
+from transformers.models.phi.configuration_phi import PhiConfig
+from transformers.models.qwen2 import modeling_qwen2 as qwen2
+from transformers.models.qwen2.configuration_qwen2 import Qwen2Config
+from transformers.models.qwen3 import modeling_qwen3 as qwen3
+from transformers.models.qwen3.configuration_qwen3 import Qwen3Config
 from transformers.models.t5 import modeling_t5 as t5
 from transformers.models.t5.configuration_t5 import T5Config
 from transformers.models.vit import modeling_vit as vit
@@ -41,6 +53,31 @@ def _llama_config() -> LlamaConfig:
 
 def _vit_config() -> ViTConfig:
     config = ViTConfig(hidden_size=16, num_attention_heads=2)
+    config._attn_implementation = "eager"
+    return config
+
+
+def _qwen_config(kind: str):
+    config_type = Qwen2Config if kind == "qwen2" else Qwen3Config
+    config = config_type(
+        hidden_size=16,
+        intermediate_size=32,
+        num_attention_heads=2,
+        num_key_value_heads=1,
+        **({"head_dim": 8} if kind == "qwen3" else {}),
+    )
+    config._attn_implementation = "eager"
+    return config
+
+
+def _phi_config() -> PhiConfig:
+    config = PhiConfig(hidden_size=16, intermediate_size=32, num_attention_heads=2)
+    config._attn_implementation = "eager"
+    return config
+
+
+def _gpt2_config() -> GPT2Config:
+    config = GPT2Config(n_embd=16, n_head=2, n_layer=1)
     config._attn_implementation = "eager"
     return config
 
@@ -83,6 +120,36 @@ def _module(kind: str) -> nn.Module:
             module = llama.LlamaRMSNorm(16, eps=1e-6)
         elif kind == "vit_attention":
             module = vit.ViTSelfAttention(_vit_config())
+        elif kind == "qwen2_attention":
+            module = qwen2.Qwen2Attention(_qwen_config("qwen2"), layer_idx=0)
+        elif kind == "qwen2_mlp":
+            module = qwen2.Qwen2MLP(_qwen_config("qwen2"))
+        elif kind == "qwen2_norm":
+            module = qwen2.Qwen2RMSNorm(16)
+        elif kind == "qwen2_layer":
+            module = qwen2.Qwen2DecoderLayer(_qwen_config("qwen2"), layer_idx=0)
+        elif kind == "qwen3_attention":
+            module = qwen3.Qwen3Attention(_qwen_config("qwen3"), layer_idx=0)
+        elif kind == "qwen3_mlp":
+            module = qwen3.Qwen3MLP(_qwen_config("qwen3"))
+        elif kind == "qwen3_norm":
+            module = qwen3.Qwen3RMSNorm(16)
+        elif kind == "qwen3_layer":
+            module = qwen3.Qwen3DecoderLayer(_qwen_config("qwen3"), layer_idx=0)
+        elif kind == "phi_attention":
+            module = phi.PhiAttention(_phi_config(), layer_idx=0)
+        elif kind == "phi_mlp":
+            module = phi.PhiMLP(_phi_config())
+        elif kind == "phi_layer":
+            module = phi.PhiDecoderLayer(_phi_config(), layer_idx=0)
+        elif kind == "gpt2_attention":
+            module = gpt2.GPT2Attention(_gpt2_config(), layer_idx=0)
+        elif kind == "gpt2_mlp":
+            module = gpt2.GPT2MLP(32, _gpt2_config())
+        elif kind == "gpt2_block":
+            module = gpt2.GPT2Block(_gpt2_config(), layer_idx=0)
+        elif kind == "gpt2_model":
+            module = gpt2.GPT2Model(_gpt2_config())
         else:
             raise AssertionError(kind)
     return module.eval()
@@ -108,6 +175,20 @@ SPEC = TensorSpec(["B", "S", 16], "F32", "hidden_states")
         ("llama_mlp", "output"),
         ("llama_norm", "output"),
         ("vit_attention", "0"),
+        ("qwen2_attention", "0"),
+        ("qwen2_mlp", "output"),
+        ("qwen2_norm", "output"),
+        ("qwen2_layer", "output"),
+        ("qwen3_attention", "0"),
+        ("qwen3_mlp", "output"),
+        ("qwen3_norm", "output"),
+        ("qwen3_layer", "output"),
+        ("phi_attention", "0"),
+        ("phi_mlp", "output"),
+        ("phi_layer", "0"),
+        ("gpt2_attention", "0"),
+        ("gpt2_mlp", "output"),
+        ("gpt2_block", "0"),
     ],
 )
 def test_validated_native_module_claims_only_its_primary_port(kind: str, port: str) -> None:
@@ -145,6 +226,75 @@ def test_t5_stack_requires_integer_token_ids_and_matching_meta_dtype() -> None:
     assert native_module_outputs(module, TensorSpec(["B", "S"], "F32", "input_ids")) is None
     module.embed_tokens.half()
     assert native_module_outputs(module, TensorSpec(["B", "S"], "I64", "input_ids")) is None
+
+
+def test_gpt2_model_contract_maps_only_proven_first_hidden_state_port() -> None:
+    module = _module("gpt2_model")
+    ids = TensorSpec(["B", "S"], "I64", "input_ids")
+    assert native_module_outputs(module, ids) == {"0": TensorSpec(["B", "S", 16], "F32", "last_hidden_state")}
+    assert native_module_outputs(module, SPEC) is None
+    assert native_module_outputs(module, TensorSpec(["B", "S"], "F32", "input_ids")) is None
+    assert native_module_outputs(module, TensorSpec(["B", "S", 1], "I64", "input_ids")) is None
+
+
+def test_gpt2_model_contract_derives_hidden_dtype_from_embeddings() -> None:
+    module = _module("gpt2_model").half()
+    ids = TensorSpec(["B", "S"], "I64", "input_ids")
+    assert native_module_outputs(module, ids) == {"0": TensorSpec(["B", "S", 16], "F16", "last_hidden_state")}
+    module.wpe.float()
+    assert native_module_outputs(module, ids) is None
+
+
+@pytest.mark.parametrize("replacement", ["wte", "wpe", "drop", "ln_f"])
+def test_gpt2_model_contract_rejects_replaced_terminal_child(replacement: str) -> None:
+    module = _module("gpt2_model")
+    setattr(module, replacement, nn.Identity())
+    assert native_module_outputs(module, TensorSpec(["B", "S"], "I64", "input_ids")) is None
+
+
+def test_gpt2_model_contract_rejects_bad_block_type_count_and_mode() -> None:
+    ids = TensorSpec(["B", "S"], "I64", "input_ids")
+    module = _module("gpt2_model")
+    module.h[0] = nn.Identity()
+    assert native_module_outputs(module, ids) is None
+    module = _module("gpt2_model")
+    module.config.n_layer += 1
+    assert native_module_outputs(module, ids) is None
+    module = _module("gpt2_model")
+    module.train()
+    assert native_module_outputs(module, ids) is None
+
+
+def test_gpt2_model_contract_rejects_bad_output_wrapper_source(monkeypatch: pytest.MonkeyPatch) -> None:
+    module = _module("gpt2_model")
+    monkeypatch.setitem(CONTRACT_SOURCE_SHA256, "transformers.modeling_outputs", "0" * 64)
+    assert native_module_outputs(module, TensorSpec(["B", "S"], "I64", "input_ids")) is None
+
+
+def test_gpt2_model_contract_rejects_rebound_output_constructor(monkeypatch: pytest.MonkeyPatch) -> None:
+    module = _module("gpt2_model")
+    monkeypatch.setattr(gpt2, "BaseModelOutputWithPastAndCrossAttentions", object())
+    assert native_module_outputs(module, TensorSpec(["B", "S"], "I64", "input_ids")) is None
+
+
+@pytest.mark.parametrize("method_name", ["__getitem__", "to_tuple", "__post_init__"])
+def test_gpt2_model_contract_rejects_replaced_output_wrapper_method(
+    monkeypatch: pytest.MonkeyPatch, method_name: str
+) -> None:
+    from transformers.utils.generic import ModelOutput
+
+    module = _module("gpt2_model")
+    monkeypatch.setattr(ModelOutput, method_name, lambda *_args, **_kwargs: None)
+    assert native_module_outputs(module, TensorSpec(["B", "S"], "I64", "input_ids")) is None
+
+
+def test_gpt2_model_output_wrapper_field_order_proves_index_zero_is_hidden_state() -> None:
+    from transformers.modeling_outputs import BaseModelOutputWithPastAndCrossAttentions
+    from transformers.utils.generic import ModelOutput
+
+    output_type = BaseModelOutputWithPastAndCrossAttentions
+    assert output_type.__bases__ == (ModelOutput,)
+    assert next(iter(output_type.__dataclass_fields__)) == "last_hidden_state"
 
 
 def test_reviewed_gelu_preserves_known_shape_and_dtype_only_with_native_act() -> None:
@@ -321,3 +471,88 @@ def test_vit_attention_output_uses_actual_all_head_size() -> None:
     with torch.device("meta"):
         module = vit.ViTSelfAttention(config).eval()
     assert native_module_outputs(module, SPEC) == {"0": TensorSpec(["B", "S", 15], "F32", "hidden_states")}
+
+
+@pytest.mark.parametrize("kind", ["qwen2_attention", "qwen2_mlp", "qwen2_norm", "qwen2_layer", "qwen3_attention", "qwen3_mlp", "qwen3_norm", "qwen3_layer", "phi_attention", "phi_mlp", "phi_layer", "gpt2_attention", "gpt2_mlp", "gpt2_block"])
+def test_decoder_family_contracts_reject_wrong_shape_or_dtype(kind: str) -> None:
+    module = _module(kind)
+    assert native_module_outputs(module, TensorSpec(["B", "S", 8], "F32", "hidden_states")) is None
+    assert native_module_outputs(module, TensorSpec(["B", "S", 16], "F16", "hidden_states")) is None
+
+
+@pytest.mark.parametrize("kind", ["qwen2_attention", "qwen2_mlp", "qwen2_layer", "qwen3_attention", "qwen3_mlp", "qwen3_layer", "phi_attention", "phi_mlp", "phi_layer", "gpt2_attention", "gpt2_mlp", "gpt2_block"])
+def test_decoder_family_contracts_reject_modified_execution_metadata(kind: str) -> None:
+    module = _module(kind)
+    if kind.startswith(("qwen2", "qwen3", "phi")):
+        attention = getattr(module, "self_attn", module)
+        attention.config._attn_implementation = "sdpa"
+    elif kind.startswith("gpt2"):
+        if kind == "gpt2_mlp":
+            module.act = nn.Identity()
+        else:
+            attention = getattr(module, "attn", module)
+            attention.config._attn_implementation = "sdpa"
+    assert native_module_outputs(module, SPEC) is None
+
+
+@pytest.mark.parametrize("kind", ["qwen2_layer", "qwen3_layer", "phi_layer", "gpt2_block"])
+def test_decoder_family_contracts_reject_replaced_nested_children(kind: str) -> None:
+    module = _module(kind)
+    child_name = "input_layernorm" if kind.startswith(("qwen2", "qwen3", "phi")) else "ln_1"
+    setattr(module, child_name, nn.Identity())
+    assert native_module_outputs(module, SPEC) is None
+
+
+@pytest.mark.parametrize(
+    ("kind", "activation_name"),
+    [
+        ("qwen2_mlp", "act_fn"),
+        ("qwen3_mlp", "act_fn"),
+        ("phi_mlp", "activation_fn"),
+        ("gpt2_mlp", "act"),
+    ],
+)
+def test_decoder_family_contracts_reject_overridden_gelu_callable(kind: str, activation_name: str) -> None:
+    module = _module(kind)
+    activation = GELUActivation().eval()
+    activation.act = lambda value: value
+    setattr(module, activation_name, activation)
+    assert native_module_outputs(module, SPEC) is None
+
+
+def _native_forward_returns_tuple(cls: type) -> bool:
+    function = ast.parse(textwrap.dedent(inspect.getsource(cls.forward))).body[0]
+    returns = [node.value for node in ast.walk(function) if isinstance(node, ast.Return)]
+    assert len(returns) == 1
+    returned = returns[0]
+    if isinstance(returned, ast.Tuple):
+        return True
+    if isinstance(returned, ast.Name):
+        return any(
+            isinstance(node, ast.Assign)
+            and any(isinstance(target, ast.Name) and target.id == returned.id for target in node.targets)
+            and isinstance(node.value, ast.Tuple)
+            for node in ast.walk(function)
+        )
+    raise AssertionError(f"Unreviewed native return form: {ast.dump(returned)}")
+
+
+@pytest.mark.parametrize(
+    ("cls", "is_tuple"),
+    [
+        (qwen2.Qwen2Attention, True),
+        (qwen2.Qwen2MLP, False),
+        (qwen2.Qwen2DecoderLayer, False),
+        (qwen3.Qwen3Attention, True),
+        (qwen3.Qwen3MLP, False),
+        (qwen3.Qwen3DecoderLayer, False),
+        (phi.PhiAttention, True),
+        (phi.PhiMLP, False),
+        (phi.PhiDecoderLayer, True),
+        (gpt2.GPT2Attention, True),
+        (gpt2.GPT2MLP, False),
+        (gpt2.GPT2Block, True),
+    ],
+)
+def test_decoder_family_output_ports_follow_native_return_ast(cls: type, is_tuple: bool) -> None:
+    assert _native_forward_returns_tuple(cls) is is_tuple

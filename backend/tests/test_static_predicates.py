@@ -168,9 +168,15 @@ def test_tiny_native_gpt2_no_longer_has_an_opaque_padding_guard():
     )
     paths = {path: SimpleNamespace(kind="backbone") for path, _ in model.named_modules()}
     flow = StaticFlowAnalyzer(model, "transformer", paths).analyze()
-    # Opaque attention outputs must not acquire a shape to silence a later view.
+    # Every native block now proves the same primary port, so the downstream
+    # view is resolved without borrowing a default hidden-state shape.
     assert not any("padding" in warning or "is_torch_fx_proxy" in warning for warning in flow.warnings)
-    assert any("view has no proven output contract" in warning for warning in flow.warnings)
+    assert not any("view has no proven output contract" in warning for warning in flow.warnings)
+    assert any(
+        event.metadata.get("contract") == "reviewed_native_module_list_member.v1"
+        and event.metadata["output_port_specs"]["0"]["shape"] == ["B", "S", 8]
+        for event in flow.events
+    )
     assert any("is_torch_fx_proxy" in item["predicate"] for item in flow.profile_assumptions)
 
 

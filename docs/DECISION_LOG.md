@@ -990,3 +990,24 @@ See [PROFILE_OPERATOR_CLOSURE.md](PROFILE_OPERATOR_CLOSURE.md) for the pinned
 111-case recheck, remaining family gaps, deterministic checks, Supabase read-back
 and live application evidence. Broader format/component/task routes remain
 subsequent increments of the dynamic reconstruction plan.
+
+
+## D-063 - Close reviewed decoder output ports and native metadata facts
+
+**2026-10-21 - user request to repair partial and incomplete graphs**
+
+Extend source-fingerprinted native contracts to Qwen2, Qwen3, GPT-2 and Phi.
+Prove tensor versus tuple output ports from the reviewed native source and
+validate the actual projection geometry, parameter dtypes, normalization and
+activation children. Do not recover completeness by reinstating generic hidden
+state shapes or assuming tuple arity from port zero.
+
+Resolve a bounded splatted view/reshape target only when every expanded item is
+known metadata. Inspect selected native config backing metadata without invoking
+the property. Unsupported descriptors, transforms and checkpoint-equality claims
+remain explicit. Keep the canonical eval/no-cache scope and original model pins.
+
+Advance engine/cache identity to `2026.10.21.2`, retaining IR `1.1`. Preserve
+all earlier benchmark observations and stored reports; publish the attributed
+rechecks only after frozen-source validation and private storage read-back.
+See `DECODER_FACT_CLOSURE.md` for measured results and remaining limitations.

@@ -224,6 +224,7 @@ def test_original_250_publication_imports_idempotently_with_private_source_runs(
             root / "docs/benchmarks/model-matrix-250-rechecks.json",
             root / "docs/benchmarks/model-matrix-250-coverage-rechecks.json",
             root / "docs/benchmarks/model-matrix-250-profile-rechecks.json",
+            root / "docs/benchmarks/model-matrix-250-decoder-rechecks.json",
         ],
         root / "not-read.env",
     )
@@ -231,7 +232,7 @@ def test_original_250_publication_imports_idempotently_with_private_source_runs(
     assert store_catalog_only(*arguments, profile_loader=load_profile, database_factory=make_database) == first
     database = make_database(None)
     with database.read() as session:
-        assert session.scalar(select(func.count()).select_from(BenchmarkRun)) == 4
+        assert session.scalar(select(func.count()).select_from(BenchmarkRun)) == 5
         assert session.scalar(select(func.count()).select_from(BenchmarkCase)) == 250
         assert "_source_case_definition" in session.scalars(select(BenchmarkCase)).first().data
     database.engine.dispose()
@@ -244,7 +245,7 @@ def test_original_250_publication_imports_idempotently_with_private_source_runs(
     service.db.engine.dispose()
 
 
-def test_store_only_cli_defaults_to_all_four_measured_run_payloads(monkeypatch):
+def test_store_only_cli_defaults_to_all_five_measured_run_payloads(monkeypatch):
     import sys
 
     import scripts.publish_benchmark_catalog as publisher
@@ -264,4 +265,5 @@ def test_store_only_cli_defaults_to_all_four_measured_run_payloads(monkeypatch):
         Path("docs/benchmarks/model-matrix-250-rechecks.json"),
         Path("docs/benchmarks/model-matrix-250-coverage-rechecks.json"),
         Path("docs/benchmarks/model-matrix-250-profile-rechecks.json"),
+        Path("docs/benchmarks/model-matrix-250-decoder-rechecks.json"),
     ]

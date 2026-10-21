@@ -1,13 +1,13 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-10-21T06:05:49.499811+00:00",
-  "engine_version": "2026.10.20.1 + 2026.10.20.2 + 2026.10.20.3 + 2026.10.21.1",
+  "generated_at": "2026-10-21T07:15:05.579825+00:00",
+  "engine_version": "2026.10.20.1 + 2026.10.20.2 + 2026.10.20.3 + 2026.10.21.1 + 2026.10.21.2",
   "manifest_sha256": "8d68ccb4b925220634a37b855d86074847ca8878c754420c55349b5e941a6814",
   "manifest_hash_encoding": "canonical-json-v1",
   "method": "Pinned metadata and bounded static reconstruction; no inference quality or speed measurement.",
   "status_counts": {
-    "completed": 7,
-    "partial": 96,
+    "completed": 16,
+    "partial": 87,
     "http_access": 4,
     "inspected": 142,
     "artifact_error": 1
@@ -19,27 +19,27 @@
       "revision": "93efa2f097d58c2a74874c7e644dbc9b0cee75a2",
       "status": "completed",
       "architecture": "LlamaForCausalLM",
-      "engine_version": "2026.10.21.1",
-      "started_at": "2026-10-21T05:46:46.802333+00:00",
-      "finished_at": "2026-10-21T05:47:40.523826+00:00",
+      "engine_version": "2026.10.21.2",
+      "started_at": "2026-10-21T07:11:04.429019+00:00",
+      "finished_at": "2026-10-21T07:11:23.381869+00:00",
       "warning_count": 0,
       "graph_count": 6,
       "node_count": 51,
       "tensor_count": 272,
       "parameter_counts": {
-        "checkpoint_tensor_elements": 134515008,
+        "unique": 134515008,
         "logical": 162826560,
-        "unique": 134515008
+        "checkpoint_tensor_elements": 134515008
       },
       "coverage": {
-        "checkpoint_parameter_coverage": 1.0,
-        "module_semantic_coverage": 1.0,
         "semantic_coverage": 1.0,
+        "module_semantic_coverage": 1.0,
+        "checkpoint_parameter_coverage": 1.0,
         "tensor_shape_coverage": 1.0
       },
-      "wall_seconds": 53.719,
+      "wall_seconds": 18.952,
       "service_contract_valid": true,
-      "case_identity": "372f6d503264f52165ad099efb70773e341711be23e21e6f1e12069a7a57fb10",
+      "case_identity": "354fa199c3cb82010c99d31f345bb7168684f868ba5a35870adc83c40a87285b",
       "warnings": [],
       "reason_codes": [],
       "diagnostic_notes": [],
@@ -63,6 +63,12 @@
           "engine_version": "2026.10.20.3",
           "finished_at": "2026-10-20T12:17:13.632382+00:00",
           "case_identity": "13626ce28882ab35072a3ab1c74adbfec2ee90cc877f6efe02ddbd31180f5843"
+        },
+        {
+          "status": "completed",
+          "engine_version": "2026.10.21.1",
+          "finished_at": "2026-10-21T05:47:40.523826+00:00",
+          "case_identity": "372f6d503264f52165ad099efb70773e341711be23e21e6f1e12069a7a57fb10"
         }
       ],
       "run_kind": "recheck"
@@ -73,9 +79,9 @@
       "revision": "a10cc1512eabd3dde888204e902eca88bddb4951",
       "status": "completed",
       "architecture": "LlamaForCausalLM",
-      "engine_version": "2026.10.21.1",
-      "started_at": "2026-10-21T05:50:18.205980+00:00",
-      "finished_at": "2026-10-21T05:50:34.134985+00:00",
+      "engine_version": "2026.10.21.2",
+      "started_at": "2026-10-21T07:11:04.146653+00:00",
+      "finished_at": "2026-10-21T07:11:23.462743+00:00",
       "warning_count": 0,
       "graph_count": 6,
       "node_count": 51,
@@ -91,9 +97,9 @@
         "checkpoint_parameter_coverage": 1.0,
         "tensor_shape_coverage": 1.0
       },
-      "wall_seconds": 15.928,
+      "wall_seconds": 19.315,
       "service_contract_valid": true,
-      "case_identity": "6cd289715f54a145e619d0c15233e9611452793767344e3396516591aa133a68",
+      "case_identity": "301a2dce67184e465feedb23a1c3849d76f3efb4c3109e97e54f0be43bc6ead3",
       "warnings": [],
       "reason_codes": [],
       "diagnostic_notes": [],
@@ -105,6 +111,12 @@
           "engine_version": "2026.10.20.1",
           "finished_at": "2026-10-19T23:05:27.205512+00:00",
           "case_identity": "6a58dc3c3b6d3af098737bb368d17838025f72c83173f676c390a3196f067c24"
+        },
+        {
+          "status": "completed",
+          "engine_version": "2026.10.21.1",
+          "finished_at": "2026-10-21T05:50:34.134985+00:00",
+          "case_identity": "6cd289715f54a145e619d0c15233e9611452793767344e3396516591aa133a68"
         }
       ],
       "run_kind": "recheck"
@@ -115,9 +127,9 @@
       "revision": "c1899de289a04d12100db370d81485cdf75e47ca",
       "status": "partial",
       "architecture": "Qwen3ForCausalLM",
-      "engine_version": "2026.10.21.1",
-      "started_at": "2026-10-21T05:50:20.715241+00:00",
-      "finished_at": "2026-10-21T05:50:34.388734+00:00",
+      "engine_version": "2026.10.21.2",
+      "started_at": "2026-10-21T07:11:23.384375+00:00",
+      "finished_at": "2026-10-21T07:11:42.281038+00:00",
       "warning_count": 1,
       "graph_count": 6,
       "node_count": 51,
@@ -131,17 +143,14 @@
         "semantic_coverage": 1.0,
         "module_semantic_coverage": 1.0,
         "checkpoint_parameter_coverage": 1.0,
-        "tensor_shape_coverage": 0.864406779661017
+        "tensor_shape_coverage": 1.0
       },
-      "wall_seconds": 13.673,
+      "wall_seconds": 18.896,
       "service_contract_valid": true,
-      "case_identity": "77193c09a837b880eceef747ed6d4f8f5be47b22db36641ad28b9e0b26cb311f",
+      "case_identity": "2a0f3eda788e9c45d18c1e7f0890baca3b917ab8a6ddffba53b849b5298673ef",
       "warnings": [],
-      "reason_codes": [
-        "coverage_not_complete"
-      ],
+      "reason_codes": [],
       "diagnostic_notes": [
-        "The recorded static coverage is incomplete.",
         "Static-analysis warnings were recorded. Run a pinned inspection for full diagnostics."
       ],
       "reference": null,
@@ -152,6 +161,12 @@
           "engine_version": "2026.10.20.1",
           "finished_at": "2026-10-19T23:05:42.543976+00:00",
           "case_identity": "b8fec5df2c3c0f37a59aa9873a00ad2941f708cb7fe52eea44b71800553f91dd"
+        },
+        {
+          "status": "partial",
+          "engine_version": "2026.10.21.1",
+          "finished_at": "2026-10-21T05:50:34.388734+00:00",
+          "case_identity": "77193c09a837b880eceef747ed6d4f8f5be47b22db36641ad28b9e0b26cb311f"
         }
       ],
       "run_kind": "recheck"
@@ -160,11 +175,11 @@
       "model_id": "Qwen/Qwen2.5-0.5B-Instruct",
       "category": "causal-lm",
       "revision": "7ae557604adf67be50417f59c2c2f167def9a775",
-      "status": "partial",
+      "status": "completed",
       "architecture": "Qwen2ForCausalLM",
-      "engine_version": "2026.10.21.1",
-      "started_at": "2026-10-21T05:50:34.136984+00:00",
-      "finished_at": "2026-10-21T05:50:51.903958+00:00",
+      "engine_version": "2026.10.21.2",
+      "started_at": "2026-10-21T07:11:23.465242+00:00",
+      "finished_at": "2026-10-21T07:11:42.192741+00:00",
       "warning_count": 0,
       "graph_count": 6,
       "node_count": 51,
@@ -178,18 +193,14 @@
         "semantic_coverage": 1.0,
         "module_semantic_coverage": 1.0,
         "checkpoint_parameter_coverage": 1.0,
-        "tensor_shape_coverage": 0.864406779661017
+        "tensor_shape_coverage": 1.0
       },
-      "wall_seconds": 17.765,
+      "wall_seconds": 18.727,
       "service_contract_valid": true,
-      "case_identity": "833cc9314d195119bed024d6be007b578c0b1c92a0ba82d562977000d4eb1c2c",
+      "case_identity": "3690672aa34a2001530c92c72a331b0ce6e18f83f510f03c7c693f1d4f996c24",
       "warnings": [],
-      "reason_codes": [
-        "coverage_not_complete"
-      ],
-      "diagnostic_notes": [
-        "The recorded static coverage is incomplete."
-      ],
+      "reason_codes": [],
+      "diagnostic_notes": [],
       "reference": null,
       "declared_task": "text-generation",
       "previous_observations": [
@@ -204,6 +215,12 @@
           "engine_version": "2026.10.20.3",
           "finished_at": "2026-10-20T12:17:28.803718+00:00",
           "case_identity": "e592b44305ab97d634df678c403ac593aebbaffcbf4cafda9fa41e543c6442c9"
+        },
+        {
+          "status": "partial",
+          "engine_version": "2026.10.21.1",
+          "finished_at": "2026-10-21T05:50:51.903958+00:00",
+          "case_identity": "833cc9314d195119bed024d6be007b578c0b1c92a0ba82d562977000d4eb1c2c"
         }
       ],
       "run_kind": "recheck"
@@ -212,14 +229,14 @@
       "model_id": "openai-community/gpt2",
       "category": "causal-lm",
       "revision": "607a30d783dfa663caf39e06633721c8d4cfcd7e",
-      "status": "partial",
+      "status": "completed",
       "architecture": "GPT2LMHeadModel",
-      "engine_version": "2026.10.21.1",
-      "started_at": "2026-10-21T05:50:34.390639+00:00",
-      "finished_at": "2026-10-21T05:50:51.591413+00:00",
-      "warning_count": 1,
-      "graph_count": 5,
-      "node_count": 48,
+      "engine_version": "2026.10.21.2",
+      "started_at": "2026-10-21T07:11:42.283044+00:00",
+      "finished_at": "2026-10-21T07:12:01.258126+00:00",
+      "warning_count": 0,
+      "graph_count": 6,
+      "node_count": 51,
       "tensor_count": 160,
       "parameter_counts": {
         "unique": 124439808,
@@ -230,19 +247,14 @@
         "semantic_coverage": 1.0,
         "module_semantic_coverage": 1.0,
         "checkpoint_parameter_coverage": 1.0,
-        "tensor_shape_coverage": 0.8125
+        "tensor_shape_coverage": 1.0
       },
-      "wall_seconds": 17.2,
+      "wall_seconds": 18.975,
       "service_contract_valid": true,
-      "case_identity": "77e51b9286e28903df677fdda88d5c3ae9072f2279d386a5bfb11038220ffaab",
+      "case_identity": "99d6b8ee89ab62d3449efe65d7e5f2fefecc819987602130403d73a4e59b806c",
       "warnings": [],
-      "reason_codes": [
-        "coverage_not_complete"
-      ],
-      "diagnostic_notes": [
-        "The recorded static coverage is incomplete.",
-        "Static-analysis warnings were recorded. Run a pinned inspection for full diagnostics."
-      ],
+      "reason_codes": [],
+      "diagnostic_notes": [],
       "reference": null,
       "declared_task": "text-generation",
       "previous_observations": [
@@ -257,6 +269,12 @@
           "engine_version": "2026.10.20.3",
           "finished_at": "2026-10-20T12:17:40.980443+00:00",
           "case_identity": "684c1b7ebf629cb7638a8fc8afe2b5dc44ee3a2176863e53a6a1cdf6577fc53e"
+        },
+        {
+          "status": "partial",
+          "engine_version": "2026.10.21.1",
+          "finished_at": "2026-10-21T05:50:51.591413+00:00",
+          "case_identity": "77e51b9286e28903df677fdda88d5c3ae9072f2279d386a5bfb11038220ffaab"
         }
       ],
       "run_kind": "recheck"
@@ -367,9 +385,9 @@
       "revision": "fe8a4ea1ffedaf415f4da2f062534de366a451e6",
       "status": "completed",
       "architecture": "LlamaForCausalLM",
-      "engine_version": "2026.10.21.1",
-      "started_at": "2026-10-21T05:51:16.619992+00:00",
-      "finished_at": "2026-10-21T05:51:34.254511+00:00",
+      "engine_version": "2026.10.21.2",
+      "started_at": "2026-10-21T07:11:42.193769+00:00",
+      "finished_at": "2026-10-21T07:12:01.114294+00:00",
       "warning_count": 0,
       "graph_count": 6,
       "node_count": 51,
@@ -385,9 +403,9 @@
         "checkpoint_parameter_coverage": 1.0,
         "tensor_shape_coverage": 1.0
       },
-      "wall_seconds": 17.634,
+      "wall_seconds": 18.919,
       "service_contract_valid": true,
-      "case_identity": "04fd63c9b272385bdb3e0df26800017a971a15d79965836813b06bf759aa960d",
+      "case_identity": "e21ecc1358a84f8d5a890f06a0eedbc17248cd0eebf0e971f8caccc92412c86b",
       "warnings": [],
       "reason_codes": [],
       "diagnostic_notes": [],
@@ -399,6 +417,12 @@
           "engine_version": "2026.10.20.1",
           "finished_at": "2026-10-19T23:07:32.438349+00:00",
           "case_identity": "80264c25aca5e4672cd9e1e995f4e6896394e12e98753bf2c4bd77351e5360ac"
+        },
+        {
+          "status": "completed",
+          "engine_version": "2026.10.21.1",
+          "finished_at": "2026-10-21T05:51:34.254511+00:00",
+          "case_identity": "04fd63c9b272385bdb3e0df26800017a971a15d79965836813b06bf759aa960d"
         }
       ],
       "run_kind": "recheck"
@@ -407,11 +431,11 @@
       "model_id": "microsoft/phi-2",
       "category": "causal-lm",
       "revision": "810d367871c1d460086d9f82db8696f2e0a0fcd0",
-      "status": "partial",
+      "status": "completed",
       "architecture": "PhiForCausalLM",
-      "engine_version": "2026.10.21.1",
-      "started_at": "2026-10-21T05:51:16.682161+00:00",
-      "finished_at": "2026-10-21T05:51:36.928159+00:00",
+      "engine_version": "2026.10.21.2",
+      "started_at": "2026-10-21T07:12:01.260635+00:00",
+      "finished_at": "2026-10-21T07:12:23.695217+00:00",
       "warning_count": 0,
       "graph_count": 6,
       "node_count": 49,
@@ -425,18 +449,14 @@
         "semantic_coverage": 1.0,
         "module_semantic_coverage": 1.0,
         "checkpoint_parameter_coverage": 1.0,
-        "tensor_shape_coverage": 0.875
+        "tensor_shape_coverage": 1.0
       },
-      "wall_seconds": 20.245,
+      "wall_seconds": 22.435,
       "service_contract_valid": true,
-      "case_identity": "741ac6831520b0846e7831ba8252b997189d6feff287b4e730622dff1473f232",
+      "case_identity": "18658c8ea43bf5062f5c2640b9ea263f3759c0da2b95f9bd640c261c2f63c514",
       "warnings": [],
-      "reason_codes": [
-        "coverage_not_complete"
-      ],
-      "diagnostic_notes": [
-        "The recorded static coverage is incomplete."
-      ],
+      "reason_codes": [],
+      "diagnostic_notes": [],
       "reference": null,
       "declared_task": "text-generation",
       "previous_observations": [
@@ -445,6 +465,12 @@
           "engine_version": "2026.10.20.1",
           "finished_at": "2026-10-19T23:08:07.011474+00:00",
           "case_identity": "2565060d057100665816bae7a34f4e38d979a377d311e23481d1f9fa8d019864"
+        },
+        {
+          "status": "partial",
+          "engine_version": "2026.10.21.1",
+          "finished_at": "2026-10-21T05:51:36.928159+00:00",
+          "case_identity": "741ac6831520b0846e7831ba8252b997189d6feff287b4e730622dff1473f232"
         }
       ],
       "run_kind": "recheck"
@@ -500,11 +526,11 @@
       "model_id": "Qwen/Qwen2.5-Coder-0.5B-Instruct",
       "category": "code-lm",
       "revision": "ea3f2471cf1b1f0db85067f1ef93848e38e88c25",
-      "status": "partial",
+      "status": "completed",
       "architecture": "Qwen2ForCausalLM",
-      "engine_version": "2026.10.21.1",
-      "started_at": "2026-10-21T05:51:36.930159+00:00",
-      "finished_at": "2026-10-21T05:51:54.060554+00:00",
+      "engine_version": "2026.10.21.2",
+      "started_at": "2026-10-21T07:12:01.115295+00:00",
+      "finished_at": "2026-10-21T07:12:20.714124+00:00",
       "warning_count": 0,
       "graph_count": 6,
       "node_count": 51,
@@ -518,18 +544,14 @@
         "semantic_coverage": 1.0,
         "module_semantic_coverage": 1.0,
         "checkpoint_parameter_coverage": 1.0,
-        "tensor_shape_coverage": 0.864406779661017
+        "tensor_shape_coverage": 1.0
       },
-      "wall_seconds": 17.128,
+      "wall_seconds": 19.598,
       "service_contract_valid": true,
-      "case_identity": "718c2ee3f08d4b28af896355769be1594c29da0fe203c1f8fc26b39b264c56e2",
+      "case_identity": "c92b7ae2250d375f9b5480d0d5b4bc2de812db7d56e6d2c85566ce38284f22c8",
       "warnings": [],
-      "reason_codes": [
-        "coverage_not_complete"
-      ],
-      "diagnostic_notes": [
-        "The recorded static coverage is incomplete."
-      ],
+      "reason_codes": [],
+      "diagnostic_notes": [],
       "reference": null,
       "declared_task": "text-generation",
       "previous_observations": [
@@ -538,6 +560,12 @@
           "engine_version": "2026.10.20.1",
           "finished_at": "2026-10-19T23:09:10.517563+00:00",
           "case_identity": "b3f894e6e5ad28110e948f3f611c9f76d11739f6a2ebeaaf257e97c018cd3ca4"
+        },
+        {
+          "status": "partial",
+          "engine_version": "2026.10.21.1",
+          "finished_at": "2026-10-21T05:51:54.060554+00:00",
+          "case_identity": "718c2ee3f08d4b28af896355769be1594c29da0fe203c1f8fc26b39b264c56e2"
         }
       ],
       "run_kind": "recheck"
@@ -601,9 +629,9 @@
       "revision": "e063262dac8366fc1f28a4da0ff3c50ea66259ca",
       "status": "completed",
       "architecture": "LlamaForCausalLM",
-      "engine_version": "2026.10.21.1",
-      "started_at": "2026-10-21T05:51:54.062553+00:00",
-      "finished_at": "2026-10-21T05:52:10.748548+00:00",
+      "engine_version": "2026.10.21.2",
+      "started_at": "2026-10-21T07:12:23.699215+00:00",
+      "finished_at": "2026-10-21T07:12:41.602453+00:00",
       "warning_count": 0,
       "graph_count": 6,
       "node_count": 49,
@@ -619,9 +647,9 @@
         "checkpoint_parameter_coverage": 1.0,
         "tensor_shape_coverage": 1.0
       },
-      "wall_seconds": 16.686,
+      "wall_seconds": 17.903,
       "service_contract_valid": true,
-      "case_identity": "d7b64f9912b10a121da5aaa038ddd12321a0a570cdb51d6acd74a1aa475e6f20",
+      "case_identity": "ae06d7c2832e6476be84ee9d23cb2ccfbcdc24a8da6ce6bc68b5e16709db87b0",
       "warnings": [],
       "reason_codes": [],
       "diagnostic_notes": [],
@@ -633,6 +661,12 @@
           "engine_version": "2026.10.20.1",
           "finished_at": "2026-10-19T23:10:04.330922+00:00",
           "case_identity": "7510aedd22813a190f4d0bb070ffb56715ff6544a3b5cd2e94cc8569b0fac45a"
+        },
+        {
+          "status": "completed",
+          "engine_version": "2026.10.21.1",
+          "finished_at": "2026-10-21T05:52:10.748548+00:00",
+          "case_identity": "d7b64f9912b10a121da5aaa038ddd12321a0a570cdb51d6acd74a1aa475e6f20"
         }
       ],
       "run_kind": "recheck"
@@ -643,9 +677,9 @@
       "revision": "31b70e2e869a7173562077fd711b654946d38674",
       "status": "completed",
       "architecture": "LlamaForCausalLM",
-      "engine_version": "2026.10.21.1",
-      "started_at": "2026-10-21T05:52:09.888564+00:00",
-      "finished_at": "2026-10-21T05:52:25.979022+00:00",
+      "engine_version": "2026.10.21.2",
+      "started_at": "2026-10-21T07:12:20.716654+00:00",
+      "finished_at": "2026-10-21T07:12:40.861040+00:00",
       "warning_count": 0,
       "graph_count": 6,
       "node_count": 49,
@@ -661,9 +695,9 @@
         "checkpoint_parameter_coverage": 1.0,
         "tensor_shape_coverage": 1.0
       },
-      "wall_seconds": 16.089,
+      "wall_seconds": 20.144,
       "service_contract_valid": true,
-      "case_identity": "2677dff1a85d3d4bcab3f9e3a8079ee898060ee11301af8c93cdcb16fc6508d1",
+      "case_identity": "4db43297c290178a21a5fc51936b18963cbcfaf9e85770b24d3a8c9f7fbd9d0b",
       "warnings": [],
       "reason_codes": [],
       "diagnostic_notes": [],
@@ -675,6 +709,12 @@
           "engine_version": "2026.10.20.1",
           "finished_at": "2026-10-19T23:10:40.968438+00:00",
           "case_identity": "bbc9bbc1f6a52e307d4478154b0cfbd477e6fdc148857da39c3b3d19720d72da"
+        },
+        {
+          "status": "completed",
+          "engine_version": "2026.10.21.1",
+          "finished_at": "2026-10-21T05:52:25.979022+00:00",
+          "case_identity": "2677dff1a85d3d4bcab3f9e3a8079ee898060ee11301af8c93cdcb16fc6508d1"
         }
       ],
       "run_kind": "recheck"
@@ -1832,10 +1872,10 @@
       "revision": "df1b051c49625cf57a3d0d8d3863ed4d13564fe4",
       "status": "partial",
       "architecture": "T5ForConditionalGeneration",
-      "engine_version": "2026.10.21.1",
-      "started_at": "2026-10-21T05:54:56.622254+00:00",
-      "finished_at": "2026-10-21T05:55:12.003139+00:00",
-      "warning_count": 13,
+      "engine_version": "2026.10.21.2",
+      "started_at": "2026-10-21T07:12:41.676365+00:00",
+      "finished_at": "2026-10-21T07:12:57.062749+00:00",
+      "warning_count": 5,
       "graph_count": 41,
       "node_count": 317,
       "tensor_count": 132,
@@ -1848,11 +1888,11 @@
         "semantic_coverage": 1.0,
         "module_semantic_coverage": 1.0,
         "checkpoint_parameter_coverage": 1.0,
-        "tensor_shape_coverage": 0.8862973760932945
+        "tensor_shape_coverage": 0.9035087719298246
       },
-      "wall_seconds": 15.38,
+      "wall_seconds": 15.385,
       "service_contract_valid": true,
-      "case_identity": "e1d44d40142acfa130eb3bf11791bc0d28c1c64b6b900cc28bb0febe3318bfec",
+      "case_identity": "138ddc993dd27fa7331987233eba35557d9a118c78316a1848fe2656122214dc",
       "warnings": [],
       "reason_codes": [
         "coverage_not_complete"
@@ -1875,6 +1915,12 @@
           "engine_version": "2026.10.20.3",
           "finished_at": "2026-10-20T12:18:55.183109+00:00",
           "case_identity": "f437ffdad139a7ff7da5ed839a798d63b1c890aabb8766af29c2ca4e89c8ec69"
+        },
+        {
+          "status": "partial",
+          "engine_version": "2026.10.21.1",
+          "finished_at": "2026-10-21T05:55:12.003139+00:00",
+          "case_identity": "e1d44d40142acfa130eb3bf11791bc0d28c1c64b6b900cc28bb0febe3318bfec"
         }
       ],
       "run_kind": "recheck"
@@ -1885,10 +1931,10 @@
       "revision": "0fc9ddf78a1e988dac52e2dac162b0ede4fd74ab",
       "status": "partial",
       "architecture": "T5ForConditionalGeneration",
-      "engine_version": "2026.10.21.1",
-      "started_at": "2026-10-21T05:54:39.904700+00:00",
-      "finished_at": "2026-10-21T05:54:55.273419+00:00",
-      "warning_count": 21,
+      "engine_version": "2026.10.21.2",
+      "started_at": "2026-10-21T07:12:40.876578+00:00",
+      "finished_at": "2026-10-21T07:12:56.482301+00:00",
+      "warning_count": 13,
       "graph_count": 41,
       "node_count": 328,
       "tensor_count": 190,
@@ -1901,11 +1947,11 @@
         "semantic_coverage": 1.0,
         "module_semantic_coverage": 1.0,
         "checkpoint_parameter_coverage": 1.0,
-        "tensor_shape_coverage": 0.8370165745856354
+        "tensor_shape_coverage": 0.853185595567867
       },
-      "wall_seconds": 15.367,
+      "wall_seconds": 15.605,
       "service_contract_valid": true,
-      "case_identity": "9b8f9b795f9d30cba3ccbcbfa9b9a60e67c2e94d96d48cb99a168ffd56ded9e3",
+      "case_identity": "d9e2dfe31c3d01b0ad6328f6733484c98e8705874a740e6543d1b102420aafc3",
       "warnings": [],
       "reason_codes": [
         "coverage_not_complete"
@@ -1928,6 +1974,12 @@
           "engine_version": "2026.10.20.3",
           "finished_at": "2026-10-20T12:19:10.526935+00:00",
           "case_identity": "ed5fb94f339f3d27fb96ff97a6041d9688b497d302a992024282ea6c9b7a1dfd"
+        },
+        {
+          "status": "partial",
+          "engine_version": "2026.10.21.1",
+          "finished_at": "2026-10-21T05:54:55.273419+00:00",
+          "case_identity": "9b8f9b795f9d30cba3ccbcbfa9b9a60e67c2e94d96d48cb99a168ffd56ded9e3"
         }
       ],
       "run_kind": "recheck"
@@ -1938,10 +1990,10 @@
       "revision": "7bcac572ce56db69c1ea7c8af255c5d7c9672fc2",
       "status": "partial",
       "architecture": "T5ForConditionalGeneration",
-      "engine_version": "2026.10.21.1",
-      "started_at": "2026-10-21T05:55:12.006142+00:00",
-      "finished_at": "2026-10-21T05:55:27.918432+00:00",
-      "warning_count": 21,
+      "engine_version": "2026.10.21.2",
+      "started_at": "2026-10-21T07:12:57.068748+00:00",
+      "finished_at": "2026-10-21T07:13:14.050712+00:00",
+      "warning_count": 13,
       "graph_count": 41,
       "node_count": 328,
       "tensor_count": 282,
@@ -1954,11 +2006,11 @@
         "semantic_coverage": 1.0,
         "module_semantic_coverage": 1.0,
         "checkpoint_parameter_coverage": 1.0,
-        "tensor_shape_coverage": 0.8370165745856354
+        "tensor_shape_coverage": 0.853185595567867
       },
-      "wall_seconds": 15.912,
+      "wall_seconds": 16.98,
       "service_contract_valid": true,
-      "case_identity": "477a4ef7465d546f61e977720eb5acd8ff76ba9835c6545a0c1290e41ea8725f",
+      "case_identity": "d7b803e99ba4db24a9c2e8cb79e34ce4a6eb54c315fd3046956801595388c480",
       "warnings": [],
       "reason_codes": [
         "coverage_not_complete"
@@ -1975,6 +2027,12 @@
           "engine_version": "2026.10.20.1",
           "finished_at": "2026-10-19T23:20:50.928617+00:00",
           "case_identity": "a32b83b53207503f94644fead34a1278e03e4c21bacbef07a7b1c5fc78b9c789"
+        },
+        {
+          "status": "partial",
+          "engine_version": "2026.10.21.1",
+          "finished_at": "2026-10-21T05:55:27.918432+00:00",
+          "case_identity": "477a4ef7465d546f61e977720eb5acd8ff76ba9835c6545a0c1290e41ea8725f"
         }
       ],
       "run_kind": "recheck"
@@ -2279,9 +2337,9 @@
       "revision": "3f49326eb077187dfe1c2a2bb15fbd74e6ab91e3",
       "status": "completed",
       "architecture": "ViTForImageClassification",
-      "engine_version": "2026.10.21.1",
-      "started_at": "2026-10-21T05:55:09.711631+00:00",
-      "finished_at": "2026-10-21T05:55:23.523785+00:00",
+      "engine_version": "2026.10.21.2",
+      "started_at": "2026-10-21T07:12:56.484293+00:00",
+      "finished_at": "2026-10-21T07:13:12.250973+00:00",
       "warning_count": 0,
       "graph_count": 13,
       "node_count": 75,
@@ -2297,9 +2355,9 @@
         "checkpoint_parameter_coverage": 1.0,
         "tensor_shape_coverage": 1.0
       },
-      "wall_seconds": 13.812,
+      "wall_seconds": 15.766,
       "service_contract_valid": true,
-      "case_identity": "a4909cbd716bf2cf52e930199bcf139216382f62fb11beeaf79c65eedfea255d",
+      "case_identity": "33e339c0cc600a3e41dc8a56a180be22c037fb1c8f101d1181385acf3e7b851c",
       "warnings": [],
       "reason_codes": [],
       "diagnostic_notes": [],
@@ -2317,6 +2375,12 @@
           "engine_version": "2026.10.20.3",
           "finished_at": "2026-10-20T12:19:26.889049+00:00",
           "case_identity": "8d4a5f7a60d104cc7ed52384f888ed3991464af9bdd5c6a0764fd8e034523302"
+        },
+        {
+          "status": "completed",
+          "engine_version": "2026.10.21.1",
+          "finished_at": "2026-10-21T05:55:23.523785+00:00",
+          "case_identity": "a4909cbd716bf2cf52e930199bcf139216382f62fb11beeaf79c65eedfea255d"
         }
       ],
       "run_kind": "recheck"
@@ -2453,9 +2517,9 @@
       "revision": "b4569560a39a0f1af58e3ddaf17facf20ab919b0",
       "status": "partial",
       "architecture": "ViTModel",
-      "engine_version": "2026.10.21.1",
-      "started_at": "2026-10-21T05:55:23.527921+00:00",
-      "finished_at": "2026-10-21T05:55:37.695856+00:00",
+      "engine_version": "2026.10.21.2",
+      "started_at": "2026-10-21T07:13:14.051718+00:00",
+      "finished_at": "2026-10-21T07:13:28.112130+00:00",
       "warning_count": 0,
       "graph_count": 13,
       "node_count": 76,
@@ -2471,9 +2535,9 @@
         "checkpoint_parameter_coverage": 1.0,
         "tensor_shape_coverage": 0.9466666666666667
       },
-      "wall_seconds": 14.167,
+      "wall_seconds": 14.06,
       "service_contract_valid": true,
-      "case_identity": "9b35b1d071f17212bc6c303817ebcf6a70a26301e4653d49b0dd47cc66524b35",
+      "case_identity": "1f55e8588cf81ee21dbc12707de1abb9cec4fffdd5d3bb71c1dc70719c26fc30",
       "warnings": [],
       "reason_codes": [
         "coverage_not_complete"
@@ -2489,6 +2553,12 @@
           "engine_version": "2026.10.20.1",
           "finished_at": "2026-10-19T23:23:47.060335+00:00",
           "case_identity": "d7c57113302382f20555247ec0adbb1ee9882ce3a545b7a7db0ddba84b008cf7"
+        },
+        {
+          "status": "partial",
+          "engine_version": "2026.10.21.1",
+          "finished_at": "2026-10-21T05:55:37.695856+00:00",
+          "case_identity": "9b35b1d071f17212bc6c303817ebcf6a70a26301e4653d49b0dd47cc66524b35"
         }
       ],
       "run_kind": "recheck"
@@ -3657,9 +3727,9 @@
       "revision": "169d4a4341b33bc18d8881c4b69c2e104e1cc0af",
       "status": "partial",
       "architecture": "WhisperForConditionalGeneration",
-      "engine_version": "2026.10.21.1",
-      "started_at": "2026-10-21T05:58:12.106125+00:00",
-      "finished_at": "2026-10-21T05:58:30.329948+00:00",
+      "engine_version": "2026.10.21.2",
+      "started_at": "2026-10-21T07:13:12.257976+00:00",
+      "finished_at": "2026-10-21T07:13:26.789361+00:00",
       "warning_count": 2,
       "graph_count": 12,
       "node_count": 108,
@@ -3675,9 +3745,9 @@
         "checkpoint_parameter_coverage": 1.0,
         "tensor_shape_coverage": 0.8389830508474576
       },
-      "wall_seconds": 18.223,
+      "wall_seconds": 14.531,
       "service_contract_valid": true,
-      "case_identity": "dcfb9b7d89464baeeba29854c544a5e47b0399ae80f785186e707a13da23524a",
+      "case_identity": "98018307a977d4d1e52ec9c233e6ab9224d7c42b9ac66795afe5a9ee69daad57",
       "warnings": [],
       "reason_codes": [
         "coverage_not_complete"
@@ -3700,6 +3770,12 @@
           "engine_version": "2026.10.20.3",
           "finished_at": "2026-10-20T12:21:11.131956+00:00",
           "case_identity": "e178f7067a4a1401e307ce843cd7eea00059b8b9a3528d253beac64ae4800822"
+        },
+        {
+          "status": "partial",
+          "engine_version": "2026.10.21.1",
+          "finished_at": "2026-10-21T05:58:30.329948+00:00",
+          "case_identity": "dcfb9b7d89464baeeba29854c544a5e47b0399ae80f785186e707a13da23524a"
         }
       ],
       "run_kind": "recheck"
@@ -3710,9 +3786,9 @@
       "revision": "e37978b90ca9030d5170a5c07aadb050351a65bb",
       "status": "partial",
       "architecture": "WhisperForConditionalGeneration",
-      "engine_version": "2026.10.21.1",
-      "started_at": "2026-10-21T05:57:54.360792+00:00",
-      "finished_at": "2026-10-21T05:58:12.238428+00:00",
+      "engine_version": "2026.10.21.2",
+      "started_at": "2026-10-21T07:13:28.115350+00:00",
+      "finished_at": "2026-10-21T07:13:42.561863+00:00",
       "warning_count": 2,
       "graph_count": 12,
       "node_count": 108,
@@ -3728,9 +3804,9 @@
         "checkpoint_parameter_coverage": 1.0,
         "tensor_shape_coverage": 0.8389830508474576
       },
-      "wall_seconds": 17.877,
+      "wall_seconds": 14.445,
       "service_contract_valid": true,
-      "case_identity": "97f12ba5597ba10506cb5e6d60a82ee86b728fd485fd76573ccc257f9f7057f5",
+      "case_identity": "3ff490c3275c2f26828c1e08396752ad95618ac202a4d6bc64486b5034f14bca",
       "warnings": [],
       "reason_codes": [
         "coverage_not_complete"
@@ -3747,6 +3823,12 @@
           "engine_version": "2026.10.20.1",
           "finished_at": "2026-10-19T23:29:53.402288+00:00",
           "case_identity": "8c69e2819552080ec26b6fa9c0e2341e92ad6cf24f165bccf47bceb351f6c445"
+        },
+        {
+          "status": "partial",
+          "engine_version": "2026.10.21.1",
+          "finished_at": "2026-10-21T05:58:12.238428+00:00",
+          "case_identity": "97f12ba5597ba10506cb5e6d60a82ee86b728fd485fd76573ccc257f9f7057f5"
         }
       ],
       "run_kind": "recheck"
@@ -5287,11 +5369,11 @@
       "model_id": "Qwen/Qwen3-4B",
       "category": "text-generation",
       "revision": "1cfa9a7208912126459214e8b04321603b3df60c",
-      "status": "partial",
+      "status": "completed",
       "architecture": "Qwen3ForCausalLM",
-      "engine_version": "2026.10.21.1",
-      "started_at": "2026-10-21T05:58:14.752400+00:00",
-      "finished_at": "2026-10-21T05:58:35.056129+00:00",
+      "engine_version": "2026.10.21.2",
+      "started_at": "2026-10-21T07:13:26.792436+00:00",
+      "finished_at": "2026-10-21T07:13:45.271023+00:00",
       "warning_count": 0,
       "graph_count": 6,
       "node_count": 51,
@@ -5305,18 +5387,14 @@
         "semantic_coverage": 1.0,
         "module_semantic_coverage": 1.0,
         "checkpoint_parameter_coverage": 1.0,
-        "tensor_shape_coverage": 0.864406779661017
+        "tensor_shape_coverage": 1.0
       },
-      "wall_seconds": 20.303,
+      "wall_seconds": 18.478,
       "service_contract_valid": true,
-      "case_identity": "bf0c17962e502b08e013fa315c0655a72fe3824bc5f8be713bfdae0019366da5",
+      "case_identity": "a2fa48aa2d56aad9e18857decc9739e6de7bd1dfb8115f21d2bdf0b2adc5cfc9",
       "warnings": [],
-      "reason_codes": [
-        "coverage_not_complete"
-      ],
-      "diagnostic_notes": [
-        "The recorded static coverage is incomplete."
-      ],
+      "reason_codes": [],
+      "diagnostic_notes": [],
       "reference": null,
       "declared_task": "text-generation",
       "previous_observations": [
@@ -5325,6 +5403,12 @@
           "engine_version": "2026.10.20.1",
           "finished_at": "2026-10-19T23:38:03.886292+00:00",
           "case_identity": "49369fe229f555e7e8564e70ff292f540646559cead89e821bff293ef4757328"
+        },
+        {
+          "status": "partial",
+          "engine_version": "2026.10.21.1",
+          "finished_at": "2026-10-21T05:58:35.056129+00:00",
+          "case_identity": "bf0c17962e502b08e013fa315c0655a72fe3824bc5f8be713bfdae0019366da5"
         }
       ],
       "run_kind": "recheck"
@@ -5570,10 +5654,10 @@
       "revision": "a9723ea7f1b39c1eae772870f3b547bf6ef7e6c1",
       "status": "partial",
       "architecture": "T5ForConditionalGeneration",
-      "engine_version": "2026.10.21.1",
-      "started_at": "2026-10-21T05:59:06.818062+00:00",
-      "finished_at": "2026-10-21T05:59:23.502012+00:00",
-      "warning_count": 13,
+      "engine_version": "2026.10.21.2",
+      "started_at": "2026-10-21T07:13:42.562864+00:00",
+      "finished_at": "2026-10-21T07:13:59.834437+00:00",
+      "warning_count": 5,
       "graph_count": 41,
       "node_count": 317,
       "tensor_count": 258,
@@ -5586,11 +5670,11 @@
         "semantic_coverage": 1.0,
         "module_semantic_coverage": 1.0,
         "checkpoint_parameter_coverage": 1.0,
-        "tensor_shape_coverage": 0.8862973760932945
+        "tensor_shape_coverage": 0.9035087719298246
       },
-      "wall_seconds": 16.683,
+      "wall_seconds": 17.27,
       "service_contract_valid": true,
-      "case_identity": "9377ee145f0f07ee5dc95d3b0a92b26c822945f296f65058b150b136cd42a477",
+      "case_identity": "a9c981e2df8a0243e3b579ffd1199dc8dc0391ad74494db587b400bd6c9a01ac",
       "warnings": [],
       "reason_codes": [
         "coverage_not_complete"
@@ -5607,6 +5691,12 @@
           "engine_version": "2026.10.20.1",
           "finished_at": "2026-10-19T23:40:02.213135+00:00",
           "case_identity": "f985932a0ff32471efa65283e93bc803fa755a59702d5582c87b0ba43de63dbb"
+        },
+        {
+          "status": "partial",
+          "engine_version": "2026.10.21.1",
+          "finished_at": "2026-10-21T05:59:23.502012+00:00",
+          "case_identity": "9377ee145f0f07ee5dc95d3b0a92b26c822945f296f65058b150b136cd42a477"
         }
       ],
       "run_kind": "recheck"
@@ -6517,10 +6607,10 @@
       "revision": "a971ba21945c4f1796b17a91fe69214b5f4ad472",
       "status": "partial",
       "architecture": "T5ForConditionalGeneration",
-      "engine_version": "2026.10.21.1",
-      "started_at": "2026-10-21T06:00:19.730170+00:00",
-      "finished_at": "2026-10-21T06:00:37.171071+00:00",
-      "warning_count": 13,
+      "engine_version": "2026.10.21.2",
+      "started_at": "2026-10-21T07:13:45.274023+00:00",
+      "finished_at": "2026-10-21T07:14:01.033940+00:00",
+      "warning_count": 5,
       "graph_count": 41,
       "node_count": 317,
       "tensor_count": 131,
@@ -6533,11 +6623,11 @@
         "semantic_coverage": 1.0,
         "module_semantic_coverage": 1.0,
         "checkpoint_parameter_coverage": 1.0,
-        "tensor_shape_coverage": 0.8862973760932945
+        "tensor_shape_coverage": 0.9035087719298246
       },
-      "wall_seconds": 17.439,
+      "wall_seconds": 15.76,
       "service_contract_valid": true,
-      "case_identity": "8677cbc4bff43774f51ae91c216bc6dd350256ec440052c4e0324bb981e9d539",
+      "case_identity": "2fef6d0a9b0d26be9644534fd026e78c7b5570f6c170363a808880a62ed9c247",
       "warnings": [],
       "reason_codes": [
         "coverage_not_complete"
@@ -6554,6 +6644,12 @@
           "engine_version": "2026.10.20.1",
           "finished_at": "2026-10-19T23:43:31.610010+00:00",
           "case_identity": "c6329be00a1a79a64158f233d3cd31013747c93fd4699755ecddfbf90a0a1bb7"
+        },
+        {
+          "status": "partial",
+          "engine_version": "2026.10.21.1",
+          "finished_at": "2026-10-21T06:00:37.171071+00:00",
+          "case_identity": "8677cbc4bff43774f51ae91c216bc6dd350256ec440052c4e0324bb981e9d539"
         }
       ],
       "run_kind": "recheck"
@@ -6689,11 +6785,11 @@
       "model_id": "Qwen/Qwen3-8B",
       "category": "text-generation",
       "revision": "b968826d9c46dd6066d109eabc6255188de91218",
-      "status": "partial",
+      "status": "completed",
       "architecture": "Qwen3ForCausalLM",
-      "engine_version": "2026.10.21.1",
-      "started_at": "2026-10-21T06:00:37.174045+00:00",
-      "finished_at": "2026-10-21T06:01:00.319520+00:00",
+      "engine_version": "2026.10.21.2",
+      "started_at": "2026-10-21T07:13:59.837440+00:00",
+      "finished_at": "2026-10-21T07:14:21.923340+00:00",
       "warning_count": 0,
       "graph_count": 6,
       "node_count": 51,
@@ -6707,18 +6803,14 @@
         "semantic_coverage": 1.0,
         "module_semantic_coverage": 1.0,
         "checkpoint_parameter_coverage": 1.0,
-        "tensor_shape_coverage": 0.864406779661017
+        "tensor_shape_coverage": 1.0
       },
-      "wall_seconds": 23.145,
+      "wall_seconds": 22.086,
       "service_contract_valid": true,
-      "case_identity": "41a5fa1c0a3ba9191321e8e8b6d915afc621788eb8104dab5612eb806ddebabd",
+      "case_identity": "2f3e7c38e12913fc963b407ffd83792d23d5881f8755c6a7b721493e9984c924",
       "warnings": [],
-      "reason_codes": [
-        "coverage_not_complete"
-      ],
-      "diagnostic_notes": [
-        "The recorded static coverage is incomplete."
-      ],
+      "reason_codes": [],
+      "diagnostic_notes": [],
       "reference": null,
       "declared_task": "text-generation",
       "previous_observations": [
@@ -6727,6 +6819,12 @@
           "engine_version": "2026.10.20.1",
           "finished_at": "2026-10-19T23:44:35.356668+00:00",
           "case_identity": "f431fd5489a143d0473c5800f49c14ad6a0832970d087497ec40692694ebde11"
+        },
+        {
+          "status": "partial",
+          "engine_version": "2026.10.21.1",
+          "finished_at": "2026-10-21T06:01:00.319520+00:00",
+          "case_identity": "41a5fa1c0a3ba9191321e8e8b6d915afc621788eb8104dab5612eb806ddebabd"
         }
       ],
       "run_kind": "recheck"
@@ -6918,10 +7016,10 @@
       "revision": "bf86a88089c7199d6dad4dc815ee4821e362070d",
       "status": "partial",
       "architecture": "LongT5ForConditionalGeneration",
-      "engine_version": "2026.10.21.1",
-      "started_at": "2026-10-21T06:01:15.359343+00:00",
-      "finished_at": "2026-10-21T06:01:35.484024+00:00",
-      "warning_count": 28,
+      "engine_version": "2026.10.21.2",
+      "started_at": "2026-10-21T07:14:01.036945+00:00",
+      "finished_at": "2026-10-21T07:14:17.650021+00:00",
+      "warning_count": 20,
       "graph_count": 41,
       "node_count": 323,
       "tensor_count": 295,
@@ -6934,11 +7032,11 @@
         "semantic_coverage": 1.0,
         "module_semantic_coverage": 1.0,
         "checkpoint_parameter_coverage": 1.0,
-        "tensor_shape_coverage": 0.8328611898016998
+        "tensor_shape_coverage": 0.8323863636363636
       },
-      "wall_seconds": 20.125,
+      "wall_seconds": 16.612,
       "service_contract_valid": true,
-      "case_identity": "fdee3ffee2eaef9b70f5f17bda3d701af1196516785445e3554561495526f3b5",
+      "case_identity": "dfa1906465105656e12f0ba27730ad41c00bae23e62e6e2168151ec447da17cf",
       "warnings": [],
       "reason_codes": [
         "coverage_not_complete"
@@ -6955,6 +7053,12 @@
           "engine_version": "2026.10.20.1",
           "finished_at": "2026-10-19T23:46:10.319639+00:00",
           "case_identity": "381d0a94c74b5fbe3e9ec87353bf1991aa1364be704d11e6cf3f165592a0d3cc"
+        },
+        {
+          "status": "partial",
+          "engine_version": "2026.10.21.1",
+          "finished_at": "2026-10-21T06:01:35.484024+00:00",
+          "case_identity": "fdee3ffee2eaef9b70f5f17bda3d701af1196516785445e3554561495526f3b5"
         }
       ],
       "run_kind": "recheck"
@@ -7043,11 +7147,11 @@
       "model_id": "Qwen/Qwen3-Embedding-0.6B",
       "category": "feature-extraction",
       "revision": "97b0c614be4d77ee51c0cef4e5f07c00f9eb65b3",
-      "status": "partial",
+      "status": "completed",
       "architecture": "Qwen3ForCausalLM",
-      "engine_version": "2026.10.21.1",
-      "started_at": "2026-10-21T06:01:12.158124+00:00",
-      "finished_at": "2026-10-21T06:01:31.533382+00:00",
+      "engine_version": "2026.10.21.2",
+      "started_at": "2026-10-21T07:14:21.925343+00:00",
+      "finished_at": "2026-10-21T07:14:34.792952+00:00",
       "warning_count": 0,
       "graph_count": 6,
       "node_count": 51,
@@ -7061,18 +7165,14 @@
         "semantic_coverage": 1.0,
         "module_semantic_coverage": 1.0,
         "checkpoint_parameter_coverage": 1.0,
-        "tensor_shape_coverage": 0.864406779661017
+        "tensor_shape_coverage": 1.0
       },
-      "wall_seconds": 19.374,
+      "wall_seconds": 12.867,
       "service_contract_valid": true,
-      "case_identity": "c0dd2eef6c30176e35190854a4e151361fc7f41382aac4213bf1ea60c68ac382",
+      "case_identity": "f415b7b19665b7f15fa08cd93091c41a71a251bb6af21dd8bb14f99ebeecda9f",
       "warnings": [],
-      "reason_codes": [
-        "coverage_not_complete"
-      ],
-      "diagnostic_notes": [
-        "The recorded static coverage is incomplete."
-      ],
+      "reason_codes": [],
+      "diagnostic_notes": [],
       "reference": null,
       "declared_task": "feature-extraction",
       "previous_observations": [
@@ -7081,6 +7181,12 @@
           "engine_version": "2026.10.20.1",
           "finished_at": "2026-10-19T23:48:23.684257+00:00",
           "case_identity": "4c18e9e31b8e2835869a2dab5d329775f58d5c5b9dda4d196ed0540df2ede9d7"
+        },
+        {
+          "status": "partial",
+          "engine_version": "2026.10.21.1",
+          "finished_at": "2026-10-21T06:01:31.533382+00:00",
+          "case_identity": "c0dd2eef6c30176e35190854a4e151361fc7f41382aac4213bf1ea60c68ac382"
         }
       ],
       "run_kind": "recheck"
@@ -8049,11 +8155,11 @@
       "model_id": "Qwen/Qwen3-14B",
       "category": "text-generation",
       "revision": "40c069824f4251a91eefaf281ebe4c544efd3e18",
-      "status": "partial",
+      "status": "completed",
       "architecture": "Qwen3ForCausalLM",
-      "engine_version": "2026.10.21.1",
-      "started_at": "2026-10-21T06:02:11.984046+00:00",
-      "finished_at": "2026-10-21T06:02:38.702909+00:00",
+      "engine_version": "2026.10.21.2",
+      "started_at": "2026-10-21T07:14:17.652021+00:00",
+      "finished_at": "2026-10-21T07:14:42.593482+00:00",
       "warning_count": 0,
       "graph_count": 6,
       "node_count": 51,
@@ -8067,18 +8173,14 @@
         "semantic_coverage": 1.0,
         "module_semantic_coverage": 1.0,
         "checkpoint_parameter_coverage": 1.0,
-        "tensor_shape_coverage": 0.864406779661017
+        "tensor_shape_coverage": 1.0
       },
-      "wall_seconds": 26.718,
+      "wall_seconds": 24.941,
       "service_contract_valid": true,
-      "case_identity": "4a10c9e6d7257bcf8efc69bc8f5aaddde2f8d58deda3564d34b185561b50c46e",
+      "case_identity": "2c84125c93bd01e53edab662d62faeb541f3d94ba3c3d9e35b1fcdc0dca13908",
       "warnings": [],
-      "reason_codes": [
-        "coverage_not_complete"
-      ],
-      "diagnostic_notes": [
-        "The recorded static coverage is incomplete."
-      ],
+      "reason_codes": [],
+      "diagnostic_notes": [],
       "reference": null,
       "declared_task": "text-generation",
       "previous_observations": [
@@ -8087,6 +8189,12 @@
           "engine_version": "2026.10.20.1",
           "finished_at": "2026-10-19T23:59:29.329767+00:00",
           "case_identity": "1c01d5923d9099debefdc0f456400539004d7f3be7b783e88b3f815268a03914"
+        },
+        {
+          "status": "partial",
+          "engine_version": "2026.10.21.1",
+          "finished_at": "2026-10-21T06:02:38.702909+00:00",
+          "case_identity": "4a10c9e6d7257bcf8efc69bc8f5aaddde2f8d58deda3564d34b185561b50c46e"
         }
       ],
       "run_kind": "recheck"
@@ -9402,11 +9510,11 @@
       "model_id": "Qwen/Qwen2.5-7B-Instruct",
       "category": "text-generation",
       "revision": "a09a35458c702b33eeacc393d103063234e8bc28",
-      "status": "partial",
+      "status": "completed",
       "architecture": "Qwen2ForCausalLM",
-      "engine_version": "2026.10.21.1",
-      "started_at": "2026-10-21T06:03:25.602868+00:00",
-      "finished_at": "2026-10-21T06:03:46.940379+00:00",
+      "engine_version": "2026.10.21.2",
+      "started_at": "2026-10-21T07:14:34.794955+00:00",
+      "finished_at": "2026-10-21T07:14:52.497808+00:00",
       "warning_count": 0,
       "graph_count": 6,
       "node_count": 51,
@@ -9420,18 +9528,14 @@
         "semantic_coverage": 1.0,
         "module_semantic_coverage": 1.0,
         "checkpoint_parameter_coverage": 1.0,
-        "tensor_shape_coverage": 0.864406779661017
+        "tensor_shape_coverage": 1.0
       },
-      "wall_seconds": 21.337,
+      "wall_seconds": 17.703,
       "service_contract_valid": true,
-      "case_identity": "20d781b2e66ec3bc1ae8fd8c5e020171a2a123fc2a0f86a91a3707233ad5c0ac",
+      "case_identity": "1ce00b160e2c82f79e0ee04c3161159deb9c2a5c56312b37fd8189d8b525fdbd",
       "warnings": [],
-      "reason_codes": [
-        "coverage_not_complete"
-      ],
-      "diagnostic_notes": [
-        "The recorded static coverage is incomplete."
-      ],
+      "reason_codes": [],
+      "diagnostic_notes": [],
       "reference": null,
       "declared_task": "text-generation",
       "previous_observations": [
@@ -9440,6 +9544,12 @@
           "engine_version": "2026.10.20.1",
           "finished_at": "2026-10-20T00:26:52.279350+00:00",
           "case_identity": "fd446f76fe6fe2d905f996a4a1e2835f21701e62b8221ba3a892e78dc3b391ac"
+        },
+        {
+          "status": "partial",
+          "engine_version": "2026.10.21.1",
+          "finished_at": "2026-10-21T06:03:46.940379+00:00",
+          "case_identity": "20d781b2e66ec3bc1ae8fd8c5e020171a2a123fc2a0f86a91a3707233ad5c0ac"
         }
       ],
       "run_kind": "recheck"
@@ -9798,9 +9908,9 @@
       "revision": "96cb0d0342c7afb80cab76ecc58b265fa44da256",
       "status": "completed",
       "architecture": "ViTForImageClassification",
-      "engine_version": "2026.10.21.1",
-      "started_at": "2026-10-21T06:04:21.375262+00:00",
-      "finished_at": "2026-10-21T06:04:36.474999+00:00",
+      "engine_version": "2026.10.21.2",
+      "started_at": "2026-10-21T07:14:42.596584+00:00",
+      "finished_at": "2026-10-21T07:14:54.770024+00:00",
       "warning_count": 0,
       "graph_count": 13,
       "node_count": 75,
@@ -9816,9 +9926,9 @@
         "checkpoint_parameter_coverage": 1.0,
         "tensor_shape_coverage": 1.0
       },
-      "wall_seconds": 15.098,
+      "wall_seconds": 12.173,
       "service_contract_valid": true,
-      "case_identity": "d6415a3a653f54a3180aa25d2cea8457d35d06b480eff7f06b3f489ffd5c34ea",
+      "case_identity": "45b0bec873dbe4812e12a27a4aa2984f2fd85e3b7a831e0b9faebc98ea5b1910",
       "warnings": [],
       "reason_codes": [],
       "diagnostic_notes": [],
@@ -9830,6 +9940,12 @@
           "engine_version": "2026.10.20.1",
           "finished_at": "2026-10-20T00:33:13.671466+00:00",
           "case_identity": "255c7983b2d1e446b81baa73f5cb577e62e5c626cae13799aaa2e567d0bb2316"
+        },
+        {
+          "status": "completed",
+          "engine_version": "2026.10.21.1",
+          "finished_at": "2026-10-21T06:04:36.474999+00:00",
+          "case_identity": "d6415a3a653f54a3180aa25d2cea8457d35d06b480eff7f06b3f489ffd5c34ea"
         }
       ],
       "run_kind": "recheck"
@@ -10148,9 +10264,9 @@
       "revision": "41f01f3fe87f28c78e2fbf8b568835947dd65ed9",
       "status": "partial",
       "architecture": "WhisperForConditionalGeneration",
-      "engine_version": "2026.10.21.1",
-      "started_at": "2026-10-21T06:04:52.658619+00:00",
-      "finished_at": "2026-10-21T06:05:09.327483+00:00",
+      "engine_version": "2026.10.21.2",
+      "started_at": "2026-10-21T07:14:52.499807+00:00",
+      "finished_at": "2026-10-21T07:15:05.578742+00:00",
       "warning_count": 3,
       "graph_count": 12,
       "node_count": 108,
@@ -10166,9 +10282,9 @@
         "checkpoint_parameter_coverage": 1.0,
         "tensor_shape_coverage": 0.8389830508474576
       },
-      "wall_seconds": 16.669,
+      "wall_seconds": 13.078,
       "service_contract_valid": true,
-      "case_identity": "146b49cb6265b8857a1e1a2cbfd78fa02f39dc1eb8fbba83ed1ca881e0d416c8",
+      "case_identity": "22c07c9d42d2beb70b90e74527cac3e3cbd84a3aa3927a6f4d178aab049f84a6",
       "warnings": [],
       "reason_codes": [
         "coverage_not_complete"
@@ -10185,6 +10301,12 @@
           "engine_version": "2026.10.20.1",
           "finished_at": "2026-10-20T00:35:49.806371+00:00",
           "case_identity": "a360c8795285d9ff06f704fea87c9e6b03dff26014b21817d9ab6f3426982d24"
+        },
+        {
+          "status": "partial",
+          "engine_version": "2026.10.21.1",
+          "finished_at": "2026-10-21T06:05:09.327483+00:00",
+          "case_identity": "146b49cb6265b8857a1e1a2cbfd78fa02f39dc1eb8fbba83ed1ca881e0d416c8"
         }
       ],
       "run_kind": "recheck"
@@ -10909,15 +11031,28 @@
         "artifact_error": 1,
         "inspected": 3
       }
+    },
+    {
+      "kind": "recheck",
+      "cases": 27,
+      "generated_at": "2026-10-21T07:15:05.579825+00:00",
+      "engine_version": "2026.10.21.2",
+      "runner_sha256": "aee78cfe31bd8c776246a66d9aeda50b3e6052d255e387dee768ffb171a5295b",
+      "engine_source_sha256": "17c74c869a041a5ac8e42267074c4f4ff26109baa02bb618ee0874e894daa063",
+      "status_counts": {
+        "completed": 16,
+        "partial": 11
+      }
     }
   ],
   "baseline_cases": 250,
-  "recheck_attempts": 141,
+  "recheck_attempts": 168,
   "engine_versions": [
     "2026.10.20.1",
     "2026.10.20.2",
     "2026.10.20.3",
-    "2026.10.21.1"
+    "2026.10.21.1",
+    "2026.10.21.2"
   ],
   "baseline_engine_source_sha256": "7378a756625c28d1de0d08b3252ea08bf245dc9928066f7aa3f4c9e1f4e3b1d8",
   "baseline_runner_sha256": "4fbf82bc7a52b1a35b5bca526e2d9b7c4073feb09bda4a96a2ac266252f9c034"

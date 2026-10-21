@@ -758,41 +758,124 @@ class HierarchyBuilder:
         child = backbone.child_graph
         incoming = [e for e in graph.edges if e.target == backbone.id]
         outgoing = [e for e in graph.edges if e.source == backbone.id]
-        mapping = {}
+        output_ids = {node.id for node in child.nodes if node.kind == "output"}
+        output_edges = [edge for edge in child.edges if edge.target in output_ids]
+        fields = child.metadata.get("output_fields")
+        if not isinstance(fields, Mapping) or not outgoing:
+            return
+        routes: dict[str, Edge] = {}
+        for edge in outgoing:
+            references = fields.get(edge.source_port)
+            if not isinstance(references, list) or len(references) != 1:
+                return
+            reference = references[0]
+            if not isinstance(reference, list) or len(reference) != 2:
+                return
+            matches = [
+                candidate
+                for candidate in output_edges
+                if [candidate.source, candidate.source_port] == reference
+            ]
+            if len(matches) != 1 or matches[0].tensor is None:
+                return
+            routes[edge.source_port] = matches[0]
+
+        input_routes: dict[str, Edge] = {}
         for node in child.nodes:
             if node.kind == "input":
                 argument = node.metadata.get("argument_name")
-                edge = next(
-                    (
-                        e
-                        for e in incoming
-                        if e.target_port == argument or e.target_port == "0" and argument == "input_ids"
-                    ),
-                    None,
-                )
-                if edge:
-                    mapping[node.id] = edge.source
-                    continue
-            if node.kind == "output":
+                matches = [
+                    edge
+                    for edge in incoming
+                    if edge.target_port == argument
+                    or (edge.target_port == "0" and argument == "input_ids")
+                ]
+                if len(matches) > 1:
+                    return
+                if matches:
+                    edge = matches[0]
+                    if edge.tensor is None or any(
+                        (spec.shape, spec.dtype) != (edge.tensor.shape, edge.tensor.dtype)
+                        for spec in node.outputs
+                    ):
+                        return
+                    input_routes[node.id] = edge
+
+        used_ids = {node.id for node in graph.nodes if node is not backbone}
+        mapping: dict[str, str] = {}
+        inlined_nodes: list[Node] = []
+        for node in child.nodes:
+            if node.id in output_ids:
                 continue
-            new_id = node.id if all(n.id != node.id for n in graph.nodes) else backbone.id + "_" + node.id
+            if node.id in input_routes:
+                mapping[node.id] = input_routes[node.id].source
+                continue
+            new_id = node.id
+            if new_id in used_ids:
+                new_id = f"{backbone.id}_{new_id}"
+                while new_id in used_ids:
+                    new_id += "_"
+            used_ids.add(new_id)
             mapping[node.id] = new_id
-            node.id = new_id
-            node.metadata["backbone_path"] = backbone.module_path
-            graph.nodes.append(node)
-        output_nodes = {n.id for n in child.nodes if n.kind == "output"}
-        primary = next((e for e in reversed(child.edges) if e.target in output_nodes), None)
-        graph.nodes = [n for n in graph.nodes if n is not backbone]
-        graph.edges = [e for e in graph.edges if e.source != backbone.id and e.target != backbone.id]
+            inlined_nodes.append(
+                replace(node, id=new_id, metadata={**node.metadata, "backbone_path": backbone.module_path})
+            )
+
+        if any(route.source not in mapping for route in routes.values()):
+            return
+        inlined_edges: list[Edge] = []
         for edge in child.edges:
-            if edge.target not in output_nodes and edge.source in mapping and edge.target in mapping:
-                edge.source, edge.target = mapping[edge.source], mapping[edge.target]
-                graph.edges.append(edge)
-        if primary:
-            for edge in outgoing:
-                edge.source = mapping[primary.source]
-                edge.tensor = primary.tensor
-                graph.edges.append(edge)
+            if edge.target in output_ids or edge.source not in mapping or edge.target not in mapping:
+                continue
+            input_route = input_routes.get(edge.source)
+            inlined_edges.append(
+                replace(
+                    edge,
+                    source=mapping[edge.source],
+                    target=mapping[edge.target],
+                    source_port=input_route.source_port if input_route else edge.source_port,
+                    tensor=input_route.tensor if input_route else edge.tensor,
+                )
+            )
+        rewired = []
+        for edge in outgoing:
+            route = routes[edge.source_port]
+            input_route = input_routes.get(route.source)
+            rewired.append(
+                replace(
+                    edge,
+                    source=mapping[route.source],
+                    source_port=input_route.source_port if input_route else route.source_port,
+                    tensor=input_route.tensor if input_route else route.tensor,
+                    evidence=[*edge.evidence, *route.evidence],
+                )
+            )
+        graph.nodes = [node for node in graph.nodes if node is not backbone] + inlined_nodes
+        graph.edges = [
+            edge for edge in graph.edges if edge.source != backbone.id and edge.target != backbone.id
+        ] + inlined_edges + rewired
+        affected = {edge.target for edge in rewired}
+        affected.update(edge.target for edge in inlined_edges)
+        for node in graph.nodes:
+            if node.id in affected:
+                node.inputs = [
+                    edge.tensor
+                    for edge in graph.edges
+                    if edge.target == node.id and edge.relation == "dataflow" and edge.tensor is not None
+                ]
+        parent_fields = graph.metadata.get("output_fields")
+        if isinstance(parent_fields, dict):
+            for references in parent_fields.values():
+                if isinstance(references, list):
+                    for reference in references:
+                        if isinstance(reference, list) and len(reference) == 2 and reference[0] == backbone.id:
+                            route = routes.get(reference[1])
+                            if route is not None:
+                                input_route = input_routes.get(route.source)
+                                reference[:] = [
+                                    mapping[route.source],
+                                    input_route.source_port if input_route else route.source_port,
+                                ]
         graph.metadata["backbone_path"] = backbone.module_path
         # Render nodes in a stable topological order after inlining the backbone.
         ordered, pending = [], list(graph.nodes)

@@ -125,6 +125,26 @@ class PublisherProperty(Base):
         return x
 
 
+class StarredView(Base):
+    def __init__(self):
+        super().__init__()
+        self.anchor = nn.Parameter(torch.empty(1, device="meta"))
+
+    def forward(self, x):
+        batch = (x.size(0),)
+        rest = (x.size(1), 4)
+        return x.view(*batch, *rest)
+
+
+def unknown_shape(*_args):
+    return None
+
+
+class UnknownStarredView(StarredView):
+    def forward(self, x):
+        return x.view(*unknown_shape(x))
+
+
 def analyze(module: nn.Module):
     kinds = {name: SimpleNamespace(kind="backbone") for name, _ in module.named_modules()}
     return StaticFlowAnalyzer(module.eval(), "", kinds).analyze()
@@ -196,3 +216,17 @@ def test_conditional_statement_arms_have_opposite_conditions() -> None:
 def test_publisher_property_is_not_invoked_during_static_analysis() -> None:
     flow = analyze(PublisherProperty())
     assert flow.outputs.refs == [("input:x", "output")]
+
+
+def test_starred_view_uses_only_static_shape_items() -> None:
+    flow = analyze(StarredView())
+    assert flow.warnings == []
+    assert flow.outputs.spec.shape == ["B", "S", 4]
+
+
+def test_unknown_starred_view_does_not_claim_an_output_shape() -> None:
+    flow = analyze(UnknownStarredView())
+    assert flow.outputs.spec is not None
+    assert flow.outputs.spec.shape is None
+    assert flow.outputs.spec.dtype == "F32"
+    assert flow.warnings[-1] == "Tensor transform view has no proven output contract"
