@@ -422,6 +422,8 @@ class StaticFlowAnalyzer:
     def expression(self, node: ast.AST | None) -> StaticValue:
         if node is None:
             return StaticValue(constant=None)
+        if isinstance(node, ast.Starred):
+            return self.expression(node.value)
         if isinstance(node, ast.Constant):
             return StaticValue(constant=node.value)
         if isinstance(node, ast.Name):
@@ -437,6 +439,8 @@ class StaticFlowAnalyzer:
             result = combine(values)
             result.items = values
             return result
+        if isinstance(node, ast.Dict):
+            return combine([self.expression(value) for value in node.values])
         if isinstance(node, ast.Subscript):
             if getattr(self.model.config, "model_type", None) == "vit" and isinstance(node.slice, ast.Tuple):
                 value = self.expression(node.value)
@@ -579,11 +583,34 @@ class StaticFlowAnalyzer:
             if function.module_path is not None and function.method is None:
                 return self.event(node, function.module_path, "module", function.module_path, arguments)
             if function.method is not None and self.depth < 3:
-                return self.helper(function.module_path, function.method, list(arguments.values()), node)
+                if any(isinstance(arg, ast.Starred) for arg in node.args) or any(
+                    keyword.arg is None for keyword in node.keywords
+                ):
+                    self.flow.warnings.append(
+                        f"Helper arguments could not be statically bound: {ast.unparse(node.func)}"
+                    )
+                    expanded = list(arguments.values()) + [
+                        self.expression(keyword.value) for keyword in node.keywords if keyword.arg is None
+                    ]
+                    return combine(expanded)
+                return self.helper(function.module_path, function.method, arguments, node)
             if name == "apply_chunking_to_forward" and node.args:
+                if any(isinstance(arg, ast.Starred) for arg in node.args) or node.keywords:
+                    self.flow.warnings.append(
+                        f"Helper arguments could not be statically bound: {ast.unparse(node.func)}"
+                    )
+                    expanded = list(arguments.values()) + [
+                        self.expression(keyword.value) for keyword in node.keywords if keyword.arg is None
+                    ]
+                    return combine(expanded)
                 helper = arguments["0"]
                 if helper.method:
-                    return self.helper(helper.module_path, helper.method, list(arguments.values())[3:], node)
+                    return self.helper(
+                        helper.module_path,
+                        helper.method,
+                        {str(i - 3): value for i, value in enumerate(arguments.values()) if i >= 3},
+                        node,
+                    )
             if name.startswith("create_") and name.endswith("mask"):
                 return StaticValue()
             if name == "arange":
@@ -652,7 +679,11 @@ class StaticFlowAnalyzer:
         return StaticValue()
 
     def helper(
-        self, path: str | None, method_name: str, values: list[StaticValue], node: ast.AST
+        self,
+        path: str | None,
+        method_name: str,
+        arguments: dict[str, StaticValue],
+        node: ast.AST,
     ) -> StaticValue:
         module = self.model.get_submodule(path) if path else self.model
         try:
@@ -664,7 +695,99 @@ class StaticFlowAnalyzer:
             )
         except (AttributeError, OSError, TypeError, SyntaxError, StopIteration):
             self.flow.warnings.append(f"Helper source unavailable: {path}.{method_name}; dependencies only")
-            return combine(values)
+            return combine(list(arguments.values()))
+        descriptor = inspect.getattr_static(type(module), method_name)
+        if isinstance(descriptor, classmethod):
+            self.flow.warnings.append(
+                f"Helper arguments could not be statically bound: class method {path}.{method_name}"
+            )
+            return combine(list(arguments.values()))
+
+        def unresolved() -> StaticValue:
+            self.flow.warnings.append(
+                f"Helper arguments could not be statically bound: {ast.unparse(node.func)}"
+            )
+            return combine(list(arguments.values()))
+
+        is_static = isinstance(descriptor, staticmethod)
+        positional_args = list(function.args.posonlyargs + function.args.args)
+        receiver = None
+        if not is_static and positional_args:
+            receiver = positional_args.pop(0)
+        keyword_only_args = list(function.args.kwonlyargs)
+        positional_values = [
+            arguments[str(index)] for index in range(len(arguments)) if str(index) in arguments
+        ]
+        named_values = {name: value for name, value in arguments.items() if not name.isdigit()}
+        if len(positional_values) > len(positional_args) and function.args.vararg is None:
+            return unresolved()
+
+        provided: dict[str, StaticValue] = {}
+        for parameter, value in zip(positional_args, positional_values):
+            provided[parameter.arg] = value
+        if function.args.vararg is not None:
+            remaining = positional_values[len(positional_args) :]
+            rest = combine(remaining)
+            rest.items = remaining
+            provided[function.args.vararg.arg] = rest
+
+        positional_only = {parameter.arg for parameter in function.args.posonlyargs}
+        if receiver is not None:
+            positional_only.discard(receiver.arg)
+        for name, value in named_values.items():
+            parameter = next((item for item in positional_args + keyword_only_args if item.arg == name), None)
+            if parameter is None or name in positional_only:
+                if function.args.kwarg is None:
+                    return unresolved()
+                provided.setdefault(function.args.kwarg.arg, StaticValue(fields={})).fields[name] = value
+            elif name in provided:
+                return unresolved()
+            else:
+                provided[name] = value
+
+        if function.args.kwarg is not None:
+            fields = provided.get(function.args.kwarg.arg, StaticValue(fields={})).fields
+            rest = combine(list(fields.values()))
+            rest.fields = fields
+            provided[function.args.kwarg.arg] = rest
+
+        defaults = function.args.defaults
+        positional_defaults = {
+            parameter.arg for parameter in (positional_args[-len(defaults) :] if defaults else [])
+        }
+        keyword_defaults = {
+            parameter.arg
+            for parameter, default in zip(keyword_only_args, function.args.kw_defaults)
+            if default is not None
+        }
+        for parameter in positional_args + keyword_only_args:
+            if parameter.arg in provided:
+                continue
+            has_default = parameter.arg in positional_defaults or parameter.arg in keyword_defaults
+            if not has_default:
+                return unresolved()
+            default = next(
+                (
+                    value
+                    for candidate, value in zip(
+                        positional_args[-len(defaults) :] if defaults else [], defaults
+                    )
+                    if candidate.arg == parameter.arg
+                ),
+                next(
+                    (
+                        value
+                        for candidate, value in zip(keyword_only_args, function.args.kw_defaults)
+                        if candidate.arg == parameter.arg
+                    ),
+                    None,
+                ),
+            )
+            try:
+                provided[parameter.arg] = StaticValue(constant=ast.literal_eval(default))
+            except (ValueError, TypeError, SyntaxError):
+                return unresolved()
+
         old_env, old_output, old_globals, old_returned = (
             self.env,
             self.flow.outputs,
@@ -673,8 +796,8 @@ class StaticFlowAnalyzer:
         )
         self.source_globals = method.__globals__
         self.returned = []
-        self.env = {"self": StaticValue(module_path=path)}
-        self.env.update({arg.arg: value for arg, value in zip(function.args.args[1:], values)})
+        self.env = {receiver.arg: StaticValue(module_path=path)} if receiver is not None else {}
+        self.env.update(provided)
         self.depth += 1
         self.statements(function.body)
         result = merge_outputs(self.returned)

@@ -13,6 +13,9 @@ Read [AGENTS.md](../AGENTS.md) first when performing repository work.
 For application users, [Reading Reports](READING_REPORTS.md) explains status,
 revision, coverage checks, actual warnings, analysis scope and manual verification.
 
+[Backend reliability](BACKEND_RELIABILITY.md) records the current measured gap,
+the stepwise acceptance approach and the next reconstruction gate.
+
 [UI redesign](UI_REDESIGN.md) documents the application flow, design system,
 responsive workspace and validation requirements. Its annotated
 [wireframes](design/workspace-wireframes.svg) describe desktop and mobile layouts.

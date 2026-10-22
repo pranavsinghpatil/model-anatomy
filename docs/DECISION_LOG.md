@@ -790,3 +790,18 @@ Elevate the model dashboard (`/app/analyses/:id` across `overview`, `architectur
   - `e2e/report-quality.spec.ts`: 9/9 passed.
   - Total: 24/24 E2E tests passing cleanly.
 
+## D-056 - Bind static-source helpers by their Python parameter contract
+**2026-10-22 - backend reliability increment**
+
+Static helpers keep their first argument; instance helpers bind their receiver
+separately. Explicit keywords bind by parameter name and omitted literal defaults
+remain available. Invalid bindings, class methods and dynamic argument expansions
+retain dependencies and report uncertainty. Helpers are never executed.
+
+This closes a concrete parser defect seen in T5's native causal-mask helper,
+without assuming its symbolic sequence length or mask rank. Engine cache identity
+advances to `2026.10.22.1`; saved reports remain immutable. Measured before/after
+results, isolated-snapshot checks and remaining gates are recorded in
+[BACKEND_RELIABILITY.md](BACKEND_RELIABILITY.md). The narrow increment excludes
+the previously uncommitted Cursor changes.
+
