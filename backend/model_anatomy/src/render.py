@@ -7,6 +7,7 @@ from pathlib import Path
 
 from .errors import AnatomyError
 from .ir import Graph, ModelIR
+from .output_transaction import publish_files
 
 
 def _label(value: str) -> str:
@@ -54,22 +55,14 @@ def write_outputs(
     serialized = ir.to_json()
     if ModelIR.from_json(serialized).to_dict() != ir.to_dict():
         raise ValueError("IR round-trip changed the model representation")
-    output_directory.mkdir(parents=True, exist_ok=True)
-    config_directory.mkdir(parents=True, exist_ok=True)
-    preview_directory.mkdir(parents=True, exist_ok=True)
-    model_path.write_text(serialized, encoding="utf-8")
     config_path = config_directory / "config.json"
-    config_path.write_text(
-        json.dumps(ir.metadata["source_config"], indent=2, sort_keys=True) + "\n", encoding="utf-8"
-    )
     audit_path = output_directory / "artifact_audit.json"
-    audit_path.write_text(
-        json.dumps(ir.metadata["artifacts"], indent=2, sort_keys=True) + "\n", encoding="utf-8"
-    )
-    paths = [model_path, config_path, audit_path]
     diagnostics_path = output_directory / "diagnostics.json"
-    diagnostics_path.write_text(
-        json.dumps(
+    contents = {
+        model_path: serialized,
+        config_path: json.dumps(ir.metadata["source_config"], indent=2, sort_keys=True) + "\n",
+        audit_path: json.dumps(ir.metadata["artifacts"], indent=2, sort_keys=True) + "\n",
+        diagnostics_path: json.dumps(
             {
                 "analysis_report": ir.metadata.get("analysis_report"),
                 "module_tree": ir.raw_structure.get("modules"),
@@ -80,9 +73,8 @@ def write_outputs(
             sort_keys=True,
         )
         + "\n",
-        encoding="utf-8",
-    )
-    paths.append(diagnostics_path)
+    }
+    paths = [model_path, config_path, audit_path, diagnostics_path]
     preview = [
         f"# {ir.architecture} Hierarchy Preview",
         "",
@@ -96,18 +88,20 @@ def write_outputs(
     for graph in ir.root_graph.walk():
         rendered = mermaid(graph)
         path = output_directory / f"{graph.id}.mmd"
-        path.write_text(rendered, encoding="utf-8")
+        contents[path] = rendered
         paths.append(path)
         preview.extend([f"## {graph.id}", "", "```mermaid", rendered.rstrip(), "```", ""])
+    obsolete_paths = set()
     for obsolete_id in old_graph_ids - {graph.id for graph in ir.root_graph.walk()}:
         if obsolete_id.replace("_", "").isalnum():
-            (output_directory / f"{obsolete_id}.mmd").unlink(missing_ok=True)
+            obsolete_paths.add(output_directory / f"{obsolete_id}.mmd")
     preview_name = (
         "GPT2_PREVIEW.md"
         if ir.metadata.get("source_config", {}).get("model_type") == "gpt2"
         else output_directory.name.upper().replace("-", "_") + "_PREVIEW.md"
     )
     preview_path = preview_directory / preview_name
-    preview_path.write_text("\n".join(preview), encoding="utf-8")
+    contents[preview_path] = "\n".join(preview)
     paths.append(preview_path)
+    publish_files(contents, obsolete_paths)
     return paths

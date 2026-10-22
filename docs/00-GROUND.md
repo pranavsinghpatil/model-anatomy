@@ -77,3 +77,10 @@ inspection reports and safe terminal failure outcomes in one discovery view.
 Each displayed status, metric and report link comes from one identified source;
 benchmark history remains attributed separately. These compatibility measurements
 do not measure inference speed or task accuracy.
+
+
+Teammate CSV validations may enter the catalog as attributed external evidence
+with source commit/hash/row identity. Their report mode and completion contract
+remain explicit; they cannot create cached reports or overwrite validated native
+metrics. No-Safetensors and access-restricted observations are separate scope
+exclusions. See [Teammate integration](TEAMMATE_VV_INTEGRATION.md).

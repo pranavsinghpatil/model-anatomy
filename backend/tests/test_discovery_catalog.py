@@ -275,7 +275,9 @@ def test_discovery_endpoint_is_available_alongside_legacy_catalog_routes(tmp_pat
     assert "/api/v1/catalog" in paths and "/api/v1/benchmarks/catalog" in paths
     endpoint = next(route.endpoint for route in app.routes if route.path == "/api/v1/catalog/discovery")
     body = endpoint()
-    assert set(body) == {"results", "total", "status_counts", "generated_at", "benchmark_publication_id"}
+    assert set(body) == {
+        "results", "total", "status_counts", "generated_at", "benchmark_publication_id", "external_publications",
+    }
     benchmark_endpoint = next(route.endpoint for route in app.routes if route.path == "/api/v1/benchmarks/catalog")
     try:
         benchmark_endpoint()

@@ -148,6 +148,19 @@ class InspectionFailure(Base):
     finished_at: Mapped[float] = mapped_column(Float, index=True)
 
 
+class ExternalValidationPublication(Base):
+    """Immutable, sanitized observations imported from an external validation run."""
+    __tablename__ = "external_validation_publications"
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    source_repository: Mapped[str] = mapped_column(String(512), index=True)
+    source_commit: Mapped[str] = mapped_column(String(40))
+    source_path: Mapped[str] = mapped_column(String(512))
+    csv_sha256: Mapped[str] = mapped_column(String(64))
+    metadata_json: Mapped[dict] = mapped_column("metadata", JSON)
+    rows: Mapped[list] = mapped_column(JSON)
+    created_at: Mapped[float] = mapped_column(Float, index=True)
+
+
 class Blob(Base):
     __tablename__ = "analysis_blobs"
     digest: Mapped[str] = mapped_column(String(64), primary_key=True)

@@ -19,6 +19,12 @@ const number = (value: number | null | undefined) =>
   value == null ? "Unknown" : value.toLocaleString();
 
 function statusLabel(status: string) {
+  if (status === "reported_complete")
+    return "Reported complete · module anatomy";
+  if (status === "reported_partial") return "Reported partial · module anatomy";
+  if (status === "out_of_scope") return "Outside scope · no Safetensors/access";
+  if (status === "reported_failure")
+    return "Reported failure · teammate validation";
   if (status === "completed") return "Complete static report";
   if (status === "partial") return "Partial graph";
   if (status === "inspected") return "Artifacts inspected";
@@ -36,16 +42,19 @@ function statusLabel(status: string) {
 }
 
 function successful(item: DiscoveryCatalogResult) {
+  if (item.source === "external_validation") return false;
   return ["completed", "partial", "inspected"].includes(item.status);
 }
 
 function provenanceLabel(item: DiscoveryCatalogResult) {
+  if (item.source === "external_validation") return "Teammate CSV";
   if (item.source === "benchmark") return "Benchmark attempt";
   if (!successful(item)) return "Inspection attempt";
   return item.stored_report_id ? "Saved inspection" : "Inspection outcome";
 }
 
 function outcomeLabel(item: DiscoveryCatalogResult) {
+  if (item.source === "external_validation") return statusLabel(item.status);
   return item.source === "inspection" && !successful(item)
     ? `Recorded failure · ${statusLabel(item.status)}`
     : statusLabel(item.status);
@@ -55,6 +64,19 @@ function dateTime(value: string | null | undefined) {
   if (!value) return "Unknown";
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? value : date.toLocaleString();
+}
+
+function publicationFileUrl(
+  repository: string | null | undefined,
+  commit: string | null | undefined,
+  path: string | null | undefined,
+) {
+  if (!repository || !commit || !path) return null;
+  const encodedPath = path
+    .split("/")
+    .map((segment) => encodeURIComponent(segment))
+    .join("/");
+  return `${repository.replace(/\/$/, "")}/blob/${encodeURIComponent(commit)}/${encodedPath}`;
 }
 
 function hfUrl(item: DiscoveryCatalogResult) {
@@ -76,12 +98,53 @@ function recordKey(item: DiscoveryCatalogResult) {
   ].join("|");
 }
 
+function scopeStatus(item: DiscoveryCatalogResult) {
+  if (item.scope_status) return item.scope_status;
+  if (item.status === "out_of_scope") return "out_of_scope";
+  if (
+    item.external_observations?.some(
+      (observation) => observation.status === "out_of_scope",
+    )
+  )
+    return "out_of_scope";
+  if (
+    (item.source === "external_validation" &&
+      ["reported_complete", "reported_partial", "reported_failure"].includes(
+        item.status,
+      )) ||
+    item.external_observations?.some((observation) =>
+      ["reported_complete", "reported_partial", "reported_failure"].includes(
+        observation.status ?? "",
+      ),
+    )
+  )
+    return "in_scope";
+  return "unknown";
+}
+
+function hasOutOfScopeExternalHistory(item: DiscoveryCatalogResult) {
+  return (
+    item.external_observations?.some(
+      (observation) => observation.status === "out_of_scope",
+    ) ?? false
+  );
+}
+
+function scopeReasonLabel(reason: string | null | undefined) {
+  if (reason === "no_safetensors" || reason === "safetensors_unavailable")
+    return "Safetensors unavailable";
+  if (reason === "access_restricted") return "Access restricted";
+  return reason ? reason.replaceAll("_", " ") : "Unknown";
+}
+
 export default function Catalog() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("all");
   const [outcome, setOutcome] = useState("all");
+  const [scope, setScope] = useState("all");
+  const [source, setSource] = useState("all");
   const [page, setPage] = useState(0);
   const [openingId, setOpeningId] = useState<string | null>(null);
   const [actionError, setActionError] = useState("");
@@ -134,15 +197,27 @@ export default function Catalog() {
         return (
           matchesQuery &&
           (category === "all" || item.category === category) &&
-          (outcome === "all" || item.status === outcome)
+          (outcome === "all" || item.status === outcome) &&
+          (scope === "all" ||
+            scopeStatus(item) === scope ||
+            (scope === "out_of_scope" && hasOutOfScopeExternalHistory(item)) ||
+            (scope === "unknown" && scopeStatus(item) === "unknown")) &&
+          (source === "all" ||
+            (source === "external" &&
+              (item.source === "external_validation" ||
+                (item.external_observations?.length ?? 0) > 0)) ||
+            (source === "native" && item.source !== "external_validation"))
         );
       }),
-    [results, normalizedQuery, category, outcome],
+    [results, normalizedQuery, category, outcome, scope, source],
   );
   const pageCount = Math.ceil(filtered.length / pageSize);
   const visible = filtered.slice(page * pageSize, (page + 1) * pageSize);
 
-  useEffect(() => setPage(0), [normalizedQuery, category, outcome]);
+  useEffect(
+    () => setPage(0),
+    [normalizedQuery, category, outcome, scope, source],
+  );
 
   const startInspection = (item: DiscoveryCatalogResult) => {
     navigate(`/app?model=${encodeURIComponent(hfUrl(item))}`);
@@ -168,6 +243,19 @@ export default function Catalog() {
       ...results.map((item) => item.status),
     ]),
   ].sort();
+  const scopeCounts = results.reduce(
+    (counts, item) => {
+      if (
+        scopeStatus(item) === "out_of_scope" ||
+        hasOutOfScopeExternalHistory(item)
+      )
+        counts.out_of_scope += 1;
+      if (scopeStatus(item) === "in_scope") counts.in_scope += 1;
+      if (scopeStatus(item) === "unknown") counts.unknown += 1;
+      return counts;
+    },
+    { in_scope: 0, out_of_scope: 0, unknown: 0 },
+  );
   const errorText =
     catalog.error instanceof ApiError
       ? catalog.error.message
@@ -238,6 +326,40 @@ export default function Catalog() {
               ))}
             </div>
           )}
+          {catalog.data?.external_publications?.map((publication, index) => {
+            const counts = publication.source_counts;
+            const publicationUrl = publicationFileUrl(
+              publication.source_repository,
+              publication.source_commit,
+              publication.source_path,
+            );
+            const inScope = counts?.observation_statuses
+              ? Object.entries(counts.observation_statuses)
+                  .filter(([status]) => status !== "out_of_scope")
+                  .reduce((sum, [, count]) => sum + count, 0)
+              : null;
+            return (
+              <p
+                className="benchmark-disclaimer"
+                key={`${publication.csv_sha256 ?? index}`}
+              >
+                Teammate CSV validation: {number(counts?.input_rows)} input rows
+                · {number(counts?.unique_repository_ids)} unique repositories ·{" "}
+                {number(inScope)} in scope ·{" "}
+                {number(counts?.observation_statuses?.out_of_scope)} outside
+                scope.
+                {publicationUrl && (
+                  <>
+                    {" "}
+                    Source:{" "}
+                    <a href={publicationUrl} target="_blank" rel="noreferrer">
+                      pinned CSV source
+                    </a>
+                  </>
+                )}
+              </p>
+            );
+          })}
 
           {actionError && (
             <p className="benchmark-action-error" role="alert">
@@ -335,6 +457,55 @@ export default function Catalog() {
                     ))}
                   </select>
                 </label>
+                <label>
+                  CSV scope and history
+                  <select
+                    aria-label="Filter by external scope"
+                    value={scope}
+                    onChange={(event) => setScope(event.target.value)}
+                  >
+                    <option value="all">All scope ({results.length})</option>
+                    <option value="in_scope">
+                      In scope (CSV) ({scopeCounts.in_scope})
+                    </option>
+                    <option value="out_of_scope">
+                      Outside scope (CSV/history) ({scopeCounts.out_of_scope})
+                    </option>
+                    <option value="unknown">
+                      No recorded exclusion ({scopeCounts.unknown})
+                    </option>
+                  </select>
+                </label>
+                <label>
+                  Evidence source
+                  <select
+                    aria-label="Filter by evidence source"
+                    value={source}
+                    onChange={(event) => setSource(event.target.value)}
+                  >
+                    <option value="all">All evidence ({results.length})</option>
+                    <option value="native">
+                      Saved and benchmark (
+                      {
+                        results.filter(
+                          (item) => item.source !== "external_validation",
+                        ).length
+                      }
+                      )
+                    </option>
+                    <option value="external">
+                      Teammate CSV (
+                      {
+                        results.filter(
+                          (item) =>
+                            item.source === "external_validation" ||
+                            (item.external_observations?.length ?? 0) > 0,
+                        ).length
+                      }
+                      )
+                    </option>
+                  </select>
+                </label>
               </div>
 
               <p className="benchmark-result-count" aria-live="polite">
@@ -378,6 +549,28 @@ export default function Catalog() {
                       item.benchmark_observations ?? [];
                     const previousObservations =
                       item.previous_observations ?? [];
+                    const externalObservations =
+                      item.external_observations ?? [];
+                    const isExternal = item.source === "external_validation";
+                    const displayedExternalObservations =
+                      externalObservations.length > 0
+                        ? externalObservations
+                        : isExternal
+                          ? [
+                              {
+                                source_status: item.source_status,
+                                status: item.status,
+                                scope_reason: item.scope_reason,
+                                report_mode: item.report_mode,
+                                graph_count: item.graph_count,
+                                node_count: item.node_count,
+                                source_repository: item.source_repository,
+                                source_commit: item.source_commit,
+                                source_path: item.source_path,
+                                source_rows: item.source_rows,
+                              },
+                            ]
+                          : [];
                     return (
                       <article
                         key={recordKey(item)}
@@ -413,37 +606,66 @@ export default function Catalog() {
                             <code>{artifactPath}</code>
                           </p>
                         )}
-                        {item.explicit_artifact &&
+                        {!isExternal &&
+                          item.explicit_artifact &&
                           item.artifact_verified === false && (
                             <p className="benchmark-scope">
                               Requested artifact withheld
                             </p>
                           )}
-                        {!item.explicit_artifact &&
+                        {!isExternal &&
+                          !item.explicit_artifact &&
                           item.artifact === "model.safetensors" && (
                             <p className="benchmark-scope">
                               Automatic checkpoint selection
                             </p>
                           )}
+                        {(scopeStatus(item) === "out_of_scope" ||
+                          hasOutOfScopeExternalHistory(item)) && (
+                          <p className="benchmark-scope">
+                            CSV scope exclusion:{" "}
+                            {scopeReasonLabel(
+                              item.scope_status === "out_of_scope" ||
+                                item.status === "out_of_scope"
+                                ? item.scope_reason
+                                : item.external_observations?.find(
+                                    (observation) =>
+                                      observation.status === "out_of_scope",
+                                  )?.scope_reason,
+                            )}
+                          </p>
+                        )}
                         <div className="benchmark-facts">
                           <div>
                             <span>Architecture</span>
                             <strong>{item.architecture ?? "Unknown"}</strong>
                           </div>
                           <div>
-                            <span>Graphs</span>
+                            <span>
+                              {isExternal ? "Reported graphs" : "Graphs"}
+                            </span>
                             <strong>{number(item.graph_count)}</strong>
                           </div>
-                          <div>
-                            <span>Inspected tensors</span>
-                            <strong>{number(item.tensor_count)}</strong>
-                          </div>
-                          <div>
-                            <span>Unique parameters</span>
-                            <strong>
-                              {number(item.parameter_counts?.unique)}
-                            </strong>
-                          </div>
+                          {isExternal && item.node_count != null && (
+                            <div>
+                              <span>Reported nodes</span>
+                              <strong>{number(item.node_count)}</strong>
+                            </div>
+                          )}
+                          {!isExternal && (
+                            <div>
+                              <span>Inspected tensors</span>
+                              <strong>{number(item.tensor_count)}</strong>
+                            </div>
+                          )}
+                          {!isExternal && (
+                            <div>
+                              <span>Unique parameters</span>
+                              <strong>
+                                {number(item.parameter_counts?.unique)}
+                              </strong>
+                            </div>
+                          )}
                         </div>
                         <div className="benchmark-revision">
                           <span>
@@ -460,28 +682,39 @@ export default function Catalog() {
                           <button
                             type="button"
                             className="card-inspect-btn"
-                            disabled={inspect.isPending}
+                            disabled={
+                              inspect.isPending ||
+                              (isExternal &&
+                                scopeStatus(item) === "out_of_scope")
+                            }
                             onClick={() => openRecord(item)}
                             aria-label={
-                              item.stored_report_id
-                                ? openingId === item.stored_report_id
-                                  ? `Opening saved report for ${item.model_id}`
-                                  : `Open saved inspection for ${item.model_id}`
-                                : `${successful(item) ? "Inspect this revision" : item.explicit_artifact && item.artifact_verified === false ? "Inspect pinned repository" : "Retry inspection"} for ${item.model_id}`
+                              isExternal && scopeStatus(item) === "out_of_scope"
+                                ? `Outside inspection scope for ${item.model_id}`
+                                : item.stored_report_id
+                                  ? openingId === item.stored_report_id
+                                    ? `Opening saved report for ${item.model_id}`
+                                    : `Open saved inspection for ${item.model_id}`
+                                  : `${isExternal ? "Inspect with current engine" : item.explicit_artifact && item.artifact_verified === false ? "Inspect pinned repository" : successful(item) ? "Inspect this revision" : "Retry inspection"} for ${item.model_id}`
                             }
                           >
                             <span>
-                              {openingId === item.stored_report_id &&
-                              item.stored_report_id
-                                ? "Opening saved report…"
-                                : item.stored_report_id
-                                  ? "Open saved report"
-                                  : successful(item)
-                                    ? "Inspect this revision"
-                                    : item.explicit_artifact &&
-                                        item.artifact_verified === false
-                                      ? "Inspect pinned repository"
-                                      : "Retry inspection"}
+                              {isExternal &&
+                              scopeStatus(item) === "out_of_scope"
+                                ? "Outside inspection scope"
+                                : openingId === item.stored_report_id &&
+                                    item.stored_report_id
+                                  ? "Opening saved report…"
+                                  : item.stored_report_id
+                                    ? "Open saved report"
+                                    : isExternal
+                                      ? "Inspect with current engine"
+                                      : successful(item)
+                                        ? "Inspect this revision"
+                                        : item.explicit_artifact &&
+                                            item.artifact_verified === false
+                                          ? "Inspect pinned repository"
+                                          : "Retry inspection"}
                             </span>
                             <ArrowRight size={14} />
                           </button>
@@ -606,6 +839,70 @@ export default function Catalog() {
                                   </div>
                                 ),
                               )}
+                            </div>
+                          )}
+                          {displayedExternalObservations.length > 0 && (
+                            <div className="benchmark-diagnostic-notes">
+                              <h4>External validation history</h4>
+                              <ul>
+                                {displayedExternalObservations.map(
+                                  (observation, index) => {
+                                    const repo =
+                                      observation.source_repository ??
+                                      item.source_repository;
+                                    const commit =
+                                      observation.source_commit ??
+                                      item.source_commit;
+                                    const reference = publicationFileUrl(
+                                      repo,
+                                      commit,
+                                      observation.source_path ??
+                                        item.source_path,
+                                    );
+                                    return (
+                                      <li
+                                        key={`${commit ?? "unknown"}-${index}`}
+                                      >
+                                        {statusLabel(
+                                          observation.status ?? "unknown",
+                                        )}
+                                        {observation.report_mode
+                                          ? ` · mode ${observation.report_mode}`
+                                          : ""}
+                                        {observation.graph_count != null
+                                          ? ` · ${number(observation.graph_count)} reported graphs`
+                                          : ""}
+                                        {observation.node_count != null
+                                          ? ` · ${number(observation.node_count)} reported nodes`
+                                          : ""}
+                                        {observation.status ===
+                                          "out_of_scope" &&
+                                        observation.scope_reason
+                                          ? ` · ${scopeReasonLabel(observation.scope_reason)}`
+                                          : ""}
+                                        {reference ? (
+                                          <>
+                                            {" "}
+                                            ·{" "}
+                                            <a
+                                              href={reference}
+                                              target="_blank"
+                                              rel="noreferrer"
+                                            >
+                                              pinned CSV source
+                                            </a>
+                                          </>
+                                        ) : (
+                                          ""
+                                        )}
+                                        {observation.source_rows?.length
+                                          ? ` · CSV row${observation.source_rows.length > 1 ? "s" : ""} ${observation.source_rows.join(", ")}`
+                                          : ""}
+                                      </li>
+                                    );
+                                  },
+                                )}
+                              </ul>
                             </div>
                           )}
                           {benchmarkObservations.length > 0 && (

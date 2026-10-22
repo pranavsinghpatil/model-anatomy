@@ -14,6 +14,7 @@ from sqlalchemy import select
 
 from .database import BenchmarkCase, BenchmarkPublication, InspectionFailure, ModelReport
 from .errors import ServiceError
+from .external_validation import ExternalValidationService
 from .jobs import request_selector, timestamp
 
 TASK_TOKEN = re.compile(r"^[A-Za-z0-9_.:+-]{1,200}$")
@@ -215,9 +216,71 @@ class DiscoveryCatalogService:
             }
             candidates.setdefault(key, []).append(failure_entry)
 
+        external_publications = ExternalValidationService(self.db).latest()
+        external_by_key: dict[tuple, list[dict]] = {}
+        external_metadata = []
+        for publication in external_publications:
+            provenance = {
+                "source_repository": publication.source_repository,
+                "source_commit": publication.source_commit,
+                "source_path": publication.source_path,
+                "csv_sha256": publication.csv_sha256,
+            }
+            external_metadata.append({
+                **provenance,
+                "created_at": timestamp(publication.created_at),
+                "source_counts": publication.metadata_json.get("source_counts", {}),
+            })
+            for observation in publication.rows:
+                key = _key(
+                    observation["model_id"], observation["revision"],
+                    observation["artifact"], observation["explicit_artifact"],
+                )
+                external_by_key.setdefault(key, []).append({
+                    **observation, **provenance, "_publication_created_at": publication.created_at,
+                })
+
+        for key, observations in external_by_key.items():
+            if key in candidates:
+                continue
+            # When one repo/revision has conflicting source rows, show the newest dated
+            # source observation while retaining every row in external_observations.
+            latest = max(observations, key=lambda item: (
+                _epoch(item.get("source_started_at")), item["_publication_created_at"],
+            ))
+            # Reported external outcomes are discoverable, but carry no verified report or
+            # parameter/coverage claims. Graph counts are explicitly tagged as reported.
+            candidates[key] = [{
+                "model_id": latest["model_id"], "category": "unclassified",
+                "category_source": "unclassified", "revision": latest["revision"],
+                "reference": _pinned_reference(
+                    latest["model_id"], latest["revision"], "model.safetensors", False,
+                ),
+                "stored_report_id": None, "status": latest["status"],
+                "scope_reason": latest["scope_reason"], "source_status": latest["source_status"],
+                "source_reason_code": latest["source_reason_code"],
+                "report_mode": latest["report_mode"], "evidence_basis": "reported",
+                "source_repository": latest["source_repository"], "source_commit": latest["source_commit"],
+                "source_path": latest["source_path"], "csv_sha256": latest["csv_sha256"],
+                "source_rows": latest["source_rows"], "source_started_at": latest["source_started_at"],
+                "architecture": latest["architecture"], "declared_task": None,
+                "declared_task_source": None, "started_at": latest["source_started_at"],
+                "finished_at": None, "engine_version": latest["engine_version"],
+                "warning_count": None, "graph_count": latest["graph_count"],
+                "node_count": latest["node_count"], "tensor_count": None,
+                "parameter_counts": {"unique": None}, "coverage": {}, "dimensions": None,
+                "artifact": "model.safetensors", "explicit_artifact": False,
+                "artifact_verified": None, "source": "external_validation",
+                "diagnostic_notes": [], "reason_codes": [], "benchmark_observations": [],
+                "previous_observations": [], "_sort_time": latest["_publication_created_at"],
+            }]
+
         results = []
         for key, variants in candidates.items():
-            variants.sort(key=lambda item: (item["_sort_time"], item["source"] == "inspection", item.get("engine_version", "")), reverse=True)
+            variants.sort(key=lambda item: (
+                item.get("source") != "external_validation", item["_sort_time"],
+                item["source"] == "inspection", item.get("engine_version", ""),
+            ), reverse=True)
             winner = dict(variants[0])
             if winner.get("category") == "unclassified":
                 benchmark_category = next((variant.get("category") for variant in variants
@@ -242,6 +305,10 @@ class DiscoveryCatalogService:
             } for variant in variants[1:])
             if prior:
                 winner["previous_observations"] = prior[:20]
+            winner["external_observations"] = [
+                {name: value for name, value in observation.items() if name != "_publication_created_at"}
+                for observation in external_by_key.get(key, [])
+            ]
             if winner.get("source") == "inspection" and not winner.get("artifact_verified") and winner.get("explicit_artifact"):
                 actual_artifact = winner["artifact"]
                 winner["selection_id"] = _selection_id(actual_artifact, True)
@@ -257,4 +324,5 @@ class DiscoveryCatalogService:
         return {
             "results": results, "total": len(results), "status_counts": status_counts,
             "generated_at": generated_at, "benchmark_publication_id": publication_id,
+            "external_publications": external_metadata,
         }

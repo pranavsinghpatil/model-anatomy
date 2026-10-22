@@ -62,6 +62,53 @@ export type DiscoveryObservation = {
   stored_report_id?: string | null;
 };
 
+export type ExternalValidationObservation = {
+  source_status?: "complete" | "partial" | "fail" | string;
+  status?:
+    | "reported_complete"
+    | "reported_partial"
+    | "out_of_scope"
+    | "reported_failure"
+    | string;
+  scope_reason?:
+    | "no_safetensors"
+    | "safetensors_unavailable"
+    | "access_restricted"
+    | string
+    | null;
+  source_reason_code?: string | null;
+  artifact?: string | null;
+  explicit_artifact?: boolean;
+  source_started_at?: string | null;
+  report_mode?: string | null;
+  graph_count?: number | null;
+  node_count?: number | null;
+  evidence_basis?: "reported" | string;
+  source_repository?: string | null;
+  source_commit?: string | null;
+  source_path?: string | null;
+  source_rows?: number[];
+  csv_sha256?: string | null;
+};
+
+export type ExternalValidationPublication = {
+  source_repository?: string;
+  source_commit?: string;
+  source_path?: string;
+  csv_sha256?: string;
+  created_at?: string;
+  source_counts?: {
+    input_rows?: number;
+    unique_repository_ids?: number;
+    unique_observations?: number;
+    duplicate_input_rows?: number;
+    raw_statuses?: Record<string, number>;
+    observation_statuses?: Record<string, number>;
+    raw_reason_codes?: Record<string, number>;
+    observation_reason_codes?: Record<string, number>;
+  };
+};
+
 export type DiscoveryCatalogResult = {
   model_id: string;
   category: string;
@@ -87,7 +134,7 @@ export type DiscoveryCatalogResult = {
   category_source?: string | null;
   declared_task_source?: string | null;
   revision_source?: string | null;
-  source: "inspection" | "benchmark";
+  source: "inspection" | "benchmark" | "external_validation";
   run_kind?: "baseline" | "recheck";
   previous_observations?: DiscoveryObservation[];
   benchmark_observations?: DiscoveryObservation[];
@@ -95,6 +142,23 @@ export type DiscoveryCatalogResult = {
   diagnostic_notes?: string[];
   reason_codes?: string[];
   error?: { message?: string } | null;
+  source_status?: "complete" | "partial" | "fail" | string;
+  report_mode?: string | null;
+  scope_status?: "in_scope" | "out_of_scope" | string;
+  scope_reason?:
+    | "no_safetensors"
+    | "safetensors_unavailable"
+    | "access_restricted"
+    | string
+    | null;
+  evidence_basis?: "reported" | string;
+  source_repository?: string | null;
+  source_commit?: string | null;
+  source_path?: string | null;
+  source_rows?: number[];
+  csv_sha256?: string | null;
+  node_count?: number | null;
+  external_observations?: ExternalValidationObservation[];
 };
 
 export type DiscoveryCatalogResponse = {
@@ -103,6 +167,7 @@ export type DiscoveryCatalogResponse = {
   status_counts: Record<string, number>;
   generated_at: string;
   benchmark_publication_id: string | null;
+  external_publications?: ExternalValidationPublication[];
 };
 
 async function errorFrom(response: Response): Promise<ApiError> {

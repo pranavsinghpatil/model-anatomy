@@ -1,0 +1,78 @@
+{
+  "publication_id": "904a42a2dbd476814557f2dc18a03633c47b174fbae0397fc8386a6411a47d60",
+  "idempotent": true,
+  "counts": {
+    "input_rows": 163,
+    "unique_repository_ids": 162,
+    "unique_observations": 162,
+    "duplicate_input_rows": 1,
+    "raw_statuses": {
+      "complete": 48,
+      "fail": 105,
+      "partial": 10
+    },
+    "observation_statuses": {
+      "out_of_scope": 87,
+      "reported_complete": 48,
+      "reported_failure": 17,
+      "reported_partial": 10
+    },
+    "raw_reason_codes": {
+      "ArtifactError": 8,
+      "architecture_config_unavailable": 1,
+      "architecture_incomplete": 10,
+      "http_401": 7,
+      "native_architecture_unavailable": 8,
+      "none": 48,
+      "safetensors_unavailable": 81
+    },
+    "observation_reason_codes": {
+      "ArtifactError": 8,
+      "architecture_config_unavailable": 1,
+      "architecture_incomplete": 10,
+      "http_401": 7,
+      "native_architecture_unavailable": 8,
+      "none": 48,
+      "safetensors_unavailable": 80
+    }
+  },
+  "existing_evidence_preserved": {
+    "reports": true,
+    "benchmark_publications": true,
+    "benchmark_cases": true
+  },
+  "prior_reports": 400,
+  "discovery_total": 380,
+  "status_counts": {
+    "artifact_error": 2,
+    "partial": 88,
+    "completed": 19,
+    "inspected": 142,
+    "http_access": 4,
+    "out_of_scope": 78,
+    "reported_complete": 30,
+    "reported_failure": 9,
+    "reported_partial": 8
+  },
+  "external_observations": 162,
+  "external_primary_records": 125,
+  "benchmark_models": 250,
+  "after_native_inspection": {
+    "prior_reports": 400,
+    "current_reports": 401,
+    "new_reports": 1,
+    "existing_evidence_preserved": {
+      "reports": true,
+      "benchmark_publications": true,
+      "benchmark_cases": true
+    },
+    "active_jobs": 0,
+    "migration": "0005_external_validations",
+    "rls_enabled": true,
+    "browser_role_select": {
+      "anon": false,
+      "authenticated": false
+    }
+  },
+  "accepted_on": "2026-10-22"
+}

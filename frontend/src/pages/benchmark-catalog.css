@@ -238,6 +238,9 @@
   padding-left: 18px;
   color: #fcd34d;
 }
+.benchmark-details li {
+  overflow-wrap: anywhere;
+}
 .benchmark-coverage {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

@@ -121,6 +121,7 @@ class DiscoveryCatalogResponse(BaseModel):
     status_counts: dict[str, int]
     generated_at: str
     benchmark_publication_id: str | None
+    external_publications: list[dict[str, Any]] = Field(default_factory=list)
 
 
 class AnalysisQuality(BaseModel):

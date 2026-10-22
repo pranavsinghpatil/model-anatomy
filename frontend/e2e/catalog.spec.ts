@@ -198,6 +198,224 @@ test("saved reports reopen through inspectCatalog and discovery entries refresh 
   expect(discoveryRequests.length).toBeGreaterThan(1);
 });
 
+test("CSV observations preserve native report metrics and expose attributed history", async ({
+  page,
+}) => {
+  const native = {
+    ...records[0],
+    external_observations: [
+      {
+        status: "reported_partial",
+        source_status: "partial",
+        report_mode: "static_module_architecture",
+        graph_count: 2,
+        node_count: 38,
+        source_repository: "https://github.com/pranavsinghpatil/model-anatomy",
+        source_commit: "56ffad8f67afb83076c3067a90d846de1e88d83d",
+        source_path: "output/hf_model_parse_results.csv",
+        source_rows: [12],
+      },
+    ],
+  };
+  await catalogApi(page);
+  await page.route("**/api/v1/catalog/discovery", async (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(response([native])),
+    }),
+  );
+  await page.goto("/catalog");
+  await expect(page.getByRole("article")).toContainText(
+    "Complete static report",
+  );
+  await expect(page.getByRole("article")).toContainText("134,515,008");
+  await page.getByLabel("Filter by evidence source").selectOption("external");
+  await page.getByLabel("Filter by external scope").selectOption("in_scope");
+  await expect(page.getByRole("article")).toHaveCount(1);
+  await page.locator(".benchmark-details summary").click();
+  await expect(page.getByText("External validation history")).toBeVisible();
+  await expect(
+    page.getByText(
+      /Reported partial · module anatomy · mode static_module_architecture · 2 reported graphs · 38 reported nodes/,
+    ),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: "pinned CSV source" }),
+  ).toHaveAttribute(
+    "href",
+    "https://github.com/pranavsinghpatil/model-anatomy/blob/56ffad8f67afb83076c3067a90d846de1e88d83d/output/hf_model_parse_results.csv",
+  );
+});
+
+test("external CSV cards label reported metrics and route inspection to the pinned repository", async ({
+  page,
+}) => {
+  await mockService(page);
+  await page.route("**/api/v1/catalog/discovery", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        ...response([
+          {
+            model_id: "org/reported-model",
+            category: "text-generation",
+            revision: "commit-123",
+            reference:
+              "https://huggingface.co/org/reported-model/tree/commit-123",
+            stored_report_id: null,
+            status: "reported_complete",
+            source_status: "complete",
+            source: "external_validation",
+            report_mode: "static_module_architecture",
+            architecture: "Reported Decoder",
+            declared_task: null,
+            started_at: null,
+            finished_at: null,
+            engine_version: null,
+            warning_count: null,
+            graph_count: 1,
+            node_count: 24,
+            tensor_count: null,
+            parameter_counts: null,
+            source_repository: "https://github.com/example/model-validation",
+            source_commit: "a123456789012345678901234567890123456789",
+            source_path: "data/model validation.csv",
+            source_rows: [8],
+            evidence_basis: "reported",
+            external_observations: [
+              {
+                status: "reported_complete",
+                source_status: "complete",
+                report_mode: "static_module_architecture",
+                graph_count: 1,
+                node_count: 24,
+                source_repository:
+                  "https://github.com/example/model-validation",
+                source_commit: "a123456789012345678901234567890123456789",
+                source_path: "data/model validation.csv",
+                source_rows: [8],
+              },
+            ],
+          },
+        ]),
+        external_publications: [
+          {
+            source_repository: "https://github.com/example/model-validation",
+            source_commit: "a123456789012345678901234567890123456789",
+            source_path: "data/model validation.csv",
+            csv_sha256: "b".repeat(64),
+            source_counts: {
+              input_rows: 1,
+              unique_repository_ids: 1,
+              observation_statuses: { reported_complete: 1 },
+            },
+          },
+        ],
+      }),
+    }),
+  );
+  await page.goto("/catalog");
+  const card = page.getByRole("article");
+  await expect(card).toContainText("Reported complete · module anatomy");
+  await expect(card).toContainText("Teammate CSV");
+  await expect(card).toContainText("Reported graphs");
+  await expect(card).toContainText("Reported nodes");
+  await expect(card).not.toContainText("Inspected tensors");
+  await expect(card).not.toContainText("Unique parameters");
+  await page.getByLabel("Filter by external scope").selectOption("in_scope");
+  await expect(page.getByRole("article")).toHaveCount(1);
+  await page.locator(".benchmark-details summary").click();
+  await expect(
+    page.getByRole("heading", { name: "External validation history" }),
+  ).toBeVisible();
+  await expect(
+    page
+      .locator(".benchmark-details .benchmark-diagnostic-notes")
+      .last()
+      .locator("li"),
+  ).toHaveCount(1);
+  await expect(
+    card.getByRole("link", { name: "pinned CSV source" }),
+  ).toHaveAttribute(
+    "href",
+    "https://github.com/example/model-validation/blob/a123456789012345678901234567890123456789/data/model%20validation.csv",
+  );
+  await expect(
+    page.getByRole("link", { name: "pinned CSV source" }).first(),
+  ).toHaveAttribute(
+    "href",
+    "https://github.com/example/model-validation/blob/a123456789012345678901234567890123456789/data/model%20validation.csv",
+  );
+  await card
+    .getByRole("button", {
+      name: "Inspect with current engine for org/reported-model",
+    })
+    .click();
+  await expect(page).toHaveURL(
+    /\/app\?model=https%3A%2F%2Fhuggingface\.co%2Forg%2Freported-model%2Ftree%2Fcommit-123$/,
+  );
+});
+
+test("scope filter keeps inaccessible observations discoverable and separate", async ({
+  page,
+}) => {
+  await catalogApi(page);
+  const inScope = {
+    ...records[0],
+    model_id: "org/in-scope",
+    external_observations: [
+      {
+        status: "out_of_scope",
+        scope_reason: "no_safetensors",
+        report_mode: "static_module_architecture",
+        source_repository: "org/in-scope",
+        source_commit: "commit-456",
+        source_rows: [9],
+      },
+    ],
+  };
+  const excluded = {
+    ...records[1],
+    model_id: "org/restricted-model",
+    source: "external_validation" as const,
+    status: "out_of_scope",
+    source_status: "fail",
+    scope_status: "out_of_scope",
+    scope_reason: "access_restricted",
+    stored_report_id: null,
+  };
+  await page.route("**/api/v1/catalog/discovery", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(response([inScope, excluded])),
+    }),
+  );
+  await page.goto("/catalog");
+  await expect(page.getByRole("article")).toHaveCount(2);
+  await page
+    .getByLabel("Filter by external scope")
+    .selectOption("out_of_scope");
+  await expect(page.getByRole("article")).toHaveCount(2);
+  await expect(page.getByRole("article").last()).toContainText(
+    "Outside scope · no Safetensors/access",
+  );
+  await expect(page.getByRole("article").last()).toContainText(
+    "Access restricted",
+  );
+  await expect(page.getByRole("article").last()).toContainText(
+    "Reported graphs",
+  );
+  await expect(page.getByRole("article").first()).toContainText(
+    "Complete static report",
+  );
+  await expect(page.getByRole("article").first()).toContainText(
+    "CSV scope exclusion: Safetensors unavailable",
+  );
+});
+
 test("recorded inspection failure keeps its prior saved report and retry reference", async ({
   page,
 }) => {

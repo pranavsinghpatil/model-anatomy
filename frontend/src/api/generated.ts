@@ -541,6 +541,10 @@ export interface components {
       generated_at: string;
       /** Benchmark Publication Id */
       benchmark_publication_id: string | null;
+      /** External Publications */
+      external_publications?: {
+        [key: string]: unknown;
+      }[];
     };
     /** ErrorDetail */
     ErrorDetail: {

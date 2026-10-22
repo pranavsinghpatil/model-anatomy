@@ -1055,3 +1055,28 @@ existing report and benchmark APIs remain available to their existing consumers.
 No extraction rules, completeness thresholds or engine/cache identities change.
 
 See UNIFIED_MODEL_CATALOG.md for deterministic and live acceptance evidence.
+
+
+## D-066 - Integrate attributed teammate evidence and compatible export safety
+
+**2026-10-21 - user request to integrate useful feat/vv upgrades**
+
+Selectively integrate source CSVs and staged export publication from teammate
+commit 56ffad8f67afb83076c3067a90d846de1e88d83d. Retain source bytes and
+commit/hash/row provenance; persist a sanitized immutable external publication.
+Distinguish its module-topology completion contract from the current semantic
+engine. Existing report and benchmark observations keep their facts and links.
+No missing full report is synthesized from a CSV summary.
+
+Treat source no-Safetensors and HTTP401 cases as scope exclusions, separate from
+in-scope failures. Preserve the duplicate source row attribution and three
+unresolved revision identities. Verify checkpoint absence only through bounded
+pinned inventory metadata; never download or convert weights to expand scope.
+
+Keep current quota, catalog, registry, metadata security and source-fingerprinted
+native contracts. The incompatible Transformers5/module-topology replacement
+requires a distinct later contract and acceptance increment. The adapted export
+transaction changes filesystem publication only, preserves report semantics and
+restores the prior set on ordinary caught filesystem errors.
+
+See TEAMMATE_VV_INTEGRATION.md for exact counts, fingerprints and acceptance.
