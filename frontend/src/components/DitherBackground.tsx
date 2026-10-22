@@ -5,14 +5,10 @@ import { useEffect, useRef } from "react";
  * Values 0..63 normalized to [0, 1) by dividing by 64.
  */
 const BAYER_8X8 = [
-   0, 32,  8, 40,  2, 34, 10, 42,
-  48, 16, 56, 24, 50, 18, 58, 26,
-  12, 44,  4, 36, 14, 46,  6, 38,
-  60, 28, 52, 20, 62, 30, 54, 22,
-   3, 35, 11, 43,  1, 33,  9, 41,
-  51, 19, 59, 27, 49, 17, 57, 25,
-  15, 47,  7, 39, 13, 45,  5, 37,
-  63, 31, 55, 23, 61, 29, 53, 21,
+  0, 32, 8, 40, 2, 34, 10, 42, 48, 16, 56, 24, 50, 18, 58, 26, 12, 44, 4, 36,
+  14, 46, 6, 38, 60, 28, 52, 20, 62, 30, 54, 22, 3, 35, 11, 43, 1, 33, 9, 41,
+  51, 19, 59, 27, 49, 17, 57, 25, 15, 47, 7, 39, 13, 45, 5, 37, 63, 31, 55, 23,
+  61, 29, 53, 21,
 ];
 
 interface DitherBackgroundProps {
@@ -69,7 +65,11 @@ export function DitherBackground({
 
     // Helper: pack 32-bit unsigned ABGR
     const packABGR = (r: number, g: number, b: number, a: number = 255) =>
-      (((a & 0xff) << 24) | ((b & 0xff) << 16) | ((g & 0xff) << 8) | (r & 0xff)) >>> 0;
+      (((a & 0xff) << 24) |
+        ((b & 0xff) << 16) |
+        ((g & 0xff) << 8) |
+        (r & 0xff)) >>>
+      0;
 
     // Helper: smoothstep for silky continuous luminance and dither interpolation
     const smoothstep = (min: number, max: number, value: number) => {
@@ -78,10 +78,10 @@ export function DitherBackground({
     };
 
     // Harmonized cosmic obsidian & midnight royal sapphire palette
-    const colVoid = packABGR(4, 6, 20, 255);          // #040614 deep obsidian void ground
-    const colMid = packABGR(9, 14, 40, 255);          // #090e28 midnight navy
-    const colSapphire = packABGR(18, 26, 72, 255);    // #121a48 dark royal sapphire
-    const colCobalt = packABGR(37, 53, 117, 255);     // #253575 luminous celestial cobalt
+    const colVoid = packABGR(4, 6, 20, 255); // #040614 deep obsidian void ground
+    const colMid = packABGR(9, 14, 40, 255); // #090e28 midnight navy
+    const colSapphire = packABGR(18, 26, 72, 255); // #121a48 dark royal sapphire
+    const colCobalt = packABGR(37, 53, 117, 255); // #253575 luminous celestial cobalt
     const colStarlight = packABGR(74, 114, 212, 255); // #4a72d4 soft celestial starlight blue
     const colSpecular = packABGR(165, 200, 255, 255); // #a5c8ff soft icy specular stardust
 
@@ -97,7 +97,12 @@ export function DitherBackground({
           vx: (Math.random() - 0.5) * 0.0004,
           vy: -0.0004 - Math.random() * 0.001, // Zero gravity: continuous upward buoyancy
           baseVy: -0.0004 - Math.random() * 0.001,
-          colorType: typeRoll > 0.6 ? "specular" : typeRoll > 0.25 ? "starlight" : "cobalt",
+          colorType:
+            typeRoll > 0.6
+              ? "specular"
+              : typeRoll > 0.25
+                ? "starlight"
+                : "cobalt",
           size: Math.random() > 0.5 ? 2 : 1,
           twinklePhase: Math.random() * Math.PI * 2,
         });
@@ -113,7 +118,10 @@ export function DitherBackground({
       const displayH = parent ? parent.clientHeight : window.innerHeight;
 
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      const effectivePixelSize = Math.max(3, Math.round(pixelSize * (dpr > 1.5 ? 1 : 1)));
+      const effectivePixelSize = Math.max(
+        3,
+        Math.round(pixelSize * (dpr > 1.5 ? 1 : 1)),
+      );
 
       cols = Math.max(32, Math.ceil(displayW / effectivePixelSize));
       rows = Math.max(32, Math.ceil(displayH / effectivePixelSize));
@@ -121,7 +129,12 @@ export function DitherBackground({
       width = cols;
       height = rows;
 
-      if (!imgData || !buf32 || canvas.width !== width || canvas.height !== height) {
+      if (
+        !imgData ||
+        !buf32 ||
+        canvas.width !== width ||
+        canvas.height !== height
+      ) {
         canvas.width = width;
         canvas.height = height;
         imgData = ctx.createImageData(width, height);
@@ -188,18 +201,17 @@ export function DitherBackground({
           const l4 = Math.pow(Math.max(0, 1 - d4), 1.6) * 0.2;
 
           // Gentle, silky harmonic wave billows
-          const wave1 = Math.sin(nx * 4.2 + t * 0.5) * Math.cos(ny * 3.6 - t * 0.4) * 0.07;
+          const wave1 =
+            Math.sin(nx * 4.2 + t * 0.5) * Math.cos(ny * 3.6 - t * 0.4) * 0.07;
           const wave2 = Math.sin((nx + ny) * 6.2 - t * 0.6) * 0.04;
 
           // Gentle perimeter margin stippling
           const edgeDist = Math.min(nx, 1 - nx, ny, 1 - ny);
-          const edgeGlow = Math.pow(1 - Math.min(1, edgeDist * 2.8), 2.0) * 0.16;
+          const edgeGlow =
+            Math.pow(1 - Math.min(1, edgeDist * 2.8), 2.0) * 0.16;
 
           // Combined luminance: steady, calm ambient field
-          const lum = Math.max(
-            0,
-            l1 + l2 + l4 + wave1 + wave2 + edgeGlow,
-          );
+          const lum = Math.max(0, l1 + l2 + l4 + wave1 + wave2 + edgeGlow);
 
           // 8x8 Bayer matrix thresholding
           const bayerThreshold = BAYER_8X8[bayerRow | (x & 7)] * (1.0 / 64.0);
@@ -261,7 +273,12 @@ export function DitherBackground({
         const py = Math.floor(p.y * rows);
 
         if (px >= 1 && px < cols - 1 && py >= 1 && py < rows - 1) {
-          const pCol = p.colorType === "specular" ? colSpecular : p.colorType === "starlight" ? colStarlight : colCobalt;
+          const pCol =
+            p.colorType === "specular"
+              ? colSpecular
+              : p.colorType === "starlight"
+                ? colStarlight
+                : colCobalt;
           const pIdx = py * cols + px;
           buf32[pIdx] = pCol;
 
@@ -293,10 +310,7 @@ export function DitherBackground({
       className={`dither-background-container ${className}`}
       aria-hidden="true"
     >
-      <canvas
-        ref={canvasRef}
-        className="dither-canvas"
-      />
+      <canvas ref={canvasRef} className="dither-canvas" />
       <div className="dither-radial-vignette" />
       <div className="dither-grid-lines" />
     </div>

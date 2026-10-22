@@ -816,7 +816,9 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
-  transition: transform 140ms ease, box-shadow 140ms ease;
+  transition:
+    transform 140ms ease,
+    box-shadow 140ms ease;
 }
 .metric-header-row {
   display: flex;
@@ -844,28 +846,36 @@
   background: linear-gradient(180deg, #ffffff 0%, #fbfaff 100%);
   border-color: #e0e7ff;
 }
-:root[data-theme="light"] .overview-metric-card[data-metric="parameters"] .metric-icon {
+:root[data-theme="light"]
+  .overview-metric-card[data-metric="parameters"]
+  .metric-icon {
   color: #6366f1;
 }
 :root[data-theme="light"] .overview-metric-card[data-metric="status"] {
   background: linear-gradient(180deg, #ffffff 0%, #f0fdf4 100%);
   border-color: #bbf7d0;
 }
-:root[data-theme="light"] .overview-metric-card[data-metric="status"] .metric-icon {
+:root[data-theme="light"]
+  .overview-metric-card[data-metric="status"]
+  .metric-icon {
   color: #10b981;
 }
 :root[data-theme="light"] .overview-metric-card[data-metric="tensors"] {
   background: linear-gradient(180deg, #ffffff 0%, #f0f9ff 100%);
   border-color: #bae6fd;
 }
-:root[data-theme="light"] .overview-metric-card[data-metric="tensors"] .metric-icon {
+:root[data-theme="light"]
+  .overview-metric-card[data-metric="tensors"]
+  .metric-icon {
   color: #0284c7;
 }
 :root[data-theme="light"] .overview-metric-card[data-metric="revision"] {
   background: linear-gradient(180deg, #ffffff 0%, #fffdf5 100%);
   border-color: #fde68a;
 }
-:root[data-theme="light"] .overview-metric-card[data-metric="revision"] .metric-icon {
+:root[data-theme="light"]
+  .overview-metric-card[data-metric="revision"]
+  .metric-icon {
   color: #d97706;
 }
 .status-indicator-dot {
@@ -878,7 +888,8 @@
   animation: pulse-dot 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 @keyframes pulse-dot {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 1;
     transform: scale(1);
   }
@@ -997,9 +1008,15 @@
 :root[data-theme="light"] .distribution-bar {
   background: #e2e8f0;
 }
-.dist-seg.dist-blocks { background: #6366f1; }
-.dist-seg.dist-emb { background: #38bdf8; }
-.dist-seg.dist-head { background: #a855f7; }
+.dist-seg.dist-blocks {
+  background: #6366f1;
+}
+.dist-seg.dist-emb {
+  background: #38bdf8;
+}
+.dist-seg.dist-head {
+  background: #a855f7;
+}
 
 .distribution-legend {
   display: flex;
@@ -1017,9 +1034,15 @@
   height: 6px;
   border-radius: 50%;
 }
-.leg-dot.blocks { background: #6366f1; }
-.leg-dot.emb { background: #38bdf8; }
-.leg-dot.head { background: #a855f7; }
+.leg-dot.blocks {
+  background: #6366f1;
+}
+.leg-dot.emb {
+  background: #38bdf8;
+}
+.leg-dot.head {
+  background: #a855f7;
+}
 
 /* ==========================================================================
    Selected Node Visual Enhancements

@@ -14,7 +14,13 @@
   min-height: 54px;
   padding: 8px 20px;
   flex-shrink: 0;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.03) 0%, rgba(255, 255, 255, 0.005) 100%), var(--surface);
+  background:
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.03) 0%,
+      rgba(255, 255, 255, 0.005) 100%
+    ),
+    var(--surface);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
   border-bottom: 1px solid var(--border);
 }
@@ -39,7 +45,11 @@
   width: 28px;
   height: 28px;
   border-radius: 8px;
-  background: linear-gradient(135deg, rgba(99, 102, 241, 0.25) 0%, rgba(56, 189, 248, 0.15) 100%);
+  background: linear-gradient(
+    135deg,
+    rgba(99, 102, 241, 0.25) 0%,
+    rgba(56, 189, 248, 0.15) 100%
+  );
   border: 1px solid rgba(99, 102, 241, 0.35);
   box-shadow: 0 0 10px rgba(99, 102, 241, 0.25);
 }
@@ -59,11 +69,19 @@
   padding: 6px 12px;
   border: 1px solid var(--border);
   border-radius: 8px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0.01) 100%), var(--surface);
+  background:
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.04) 0%,
+      rgba(255, 255, 255, 0.01) 100%
+    ),
+    var(--surface);
   color: var(--text);
   font-size: 13px;
   font-weight: 500;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), var(--shadow-sm);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    var(--shadow-sm);
   transition:
     background-color 150ms ease,
     border-color 150ms ease,
@@ -72,7 +90,9 @@
 .model-switcher .button:hover {
   background: var(--soft);
   border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14), 0 2px 8px rgba(0, 0, 0, 0.2);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.14),
+    0 2px 8px rgba(0, 0, 0, 0.2);
 }
 .model-name {
   overflow: hidden;
@@ -146,12 +166,20 @@
   min-height: 36px;
   padding: 6px 14px;
   border: 1px solid var(--border);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0.01) 100%), var(--surface);
+  background:
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.04) 0%,
+      rgba(255, 255, 255, 0.01) 100%
+    ),
+    var(--surface);
   color: var(--text);
   border-radius: 8px;
   font-size: 13px;
   font-weight: 550;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), var(--shadow-sm);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    var(--shadow-sm);
   transition:
     background-color 150ms ease,
     border-color 150ms ease,
@@ -192,7 +220,9 @@
     0 0 20px rgba(99, 102, 241, 0.35);
   transform: translateY(-1px);
 }
-:root[data-theme="dark"] .workspace-header-actions [aria-label="Export analysis"]:hover {
+:root[data-theme="dark"]
+  .workspace-header-actions
+  [aria-label="Export analysis"]:hover {
   filter: brightness(1.12);
 }
 :root[data-theme="light"] .workspace-header {
@@ -204,26 +234,34 @@
   background: #ffffff;
   border: 1px solid #e2e8f0;
   color: #0f172a;
-  box-shadow: inset 0 1px 0 #ffffff, 0 1px 2px rgba(15, 23, 42, 0.04);
+  box-shadow:
+    inset 0 1px 0 #ffffff,
+    0 1px 2px rgba(15, 23, 42, 0.04);
 }
 :root[data-theme="light"] .model-switcher .button:hover {
   background: #f8fafc;
   border-color: #6366f1;
   color: #4f46e5;
-  box-shadow: inset 0 1px 0 #ffffff, 0 2px 6px rgba(99, 102, 241, 0.12);
+  box-shadow:
+    inset 0 1px 0 #ffffff,
+    0 2px 6px rgba(99, 102, 241, 0.12);
 }
 :root[data-theme="light"] .workspace-header-actions .button {
   background: #ffffff;
   border: 1px solid #e2e8f0;
   color: #0f172a;
-  box-shadow: inset 0 1px 0 #ffffff, 0 1px 2px rgba(15, 23, 42, 0.04);
+  box-shadow:
+    inset 0 1px 0 #ffffff,
+    0 1px 2px rgba(15, 23, 42, 0.04);
 }
 :root[data-theme="light"] .workspace-header-actions .button:hover {
   background: #f8fafc;
   border-color: #6366f1;
   color: #4f46e5;
 }
-:root[data-theme="light"] .workspace-header-actions [aria-label="Export analysis"] {
+:root[data-theme="light"]
+  .workspace-header-actions
+  [aria-label="Export analysis"] {
   background: linear-gradient(180deg, #4f46e5 0%, #4338ca 100%);
   border: 1px solid #3730a3;
   color: #ffffff;
@@ -232,7 +270,9 @@
     0 2px 6px rgba(67, 56, 202, 0.35),
     0 0 12px rgba(79, 70, 229, 0.2);
 }
-:root[data-theme="light"] .workspace-header-actions [aria-label="Export analysis"]:hover {
+:root[data-theme="light"]
+  .workspace-header-actions
+  [aria-label="Export analysis"]:hover {
   background: linear-gradient(180deg, #4338ca 0%, #3730a3 100%);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.45),

@@ -128,7 +128,9 @@ export function Overview({ detail }: { detail: AnalysisDetail }) {
         <div className="summary-specs-banner" aria-label="Model specifications">
           <div className="spec-cell">
             <span className="spec-label">Architecture Class</span>
-            <span className="spec-val font-mono">{detail.architecture ?? "Decoder-only Transformer"}</span>
+            <span className="spec-val font-mono">
+              {detail.architecture ?? "Decoder-only Transformer"}
+            </span>
           </div>
           <div className="spec-cell">
             <span className="spec-label">Extraction Pipeline</span>
@@ -137,7 +139,9 @@ export function Overview({ detail }: { detail: AnalysisDetail }) {
           <div className="spec-cell">
             <span className="spec-label">Input Tensors</span>
             <span className="spec-val font-mono">
-              {detail.input_names?.length ? detail.input_names.join(", ") : "token_ids"}
+              {detail.input_names?.length
+                ? detail.input_names.join(", ")
+                : "token_ids"}
             </span>
           </div>
           <div className="spec-cell">
@@ -189,7 +193,8 @@ export function Overview({ detail }: { detail: AnalysisDetail }) {
               <div>
                 <h3>Inspect Safetensors & files</h3>
                 <p>
-                  Zero-download tensor headers, shapes, and sharded weight offsets.
+                  Zero-download tensor headers, shapes, and sharded weight
+                  offsets.
                 </p>
               </div>
               <ArrowRight size={18} aria-hidden="true" />
@@ -263,7 +268,10 @@ export function Report({ detail }: { detail: AnalysisDetail }) {
         <Status status={detail.status} />
       </header>
 
-      <div className="report-audit-banner" aria-label="Inspection audit highlights">
+      <div
+        className="report-audit-banner"
+        aria-label="Inspection audit highlights"
+      >
         <div className="audit-score-card">
           <div className="audit-icon-wrapper" aria-hidden="true">
             <ShieldCheck size={24} />
@@ -278,7 +286,8 @@ export function Report({ detail }: { detail: AnalysisDetail }) {
                   : "Artifact Inspection"}
             </h3>
             <p>
-              Reconstructed directly from verified Safetensors headers and genuine PyTorch module definitions.
+              Reconstructed directly from verified Safetensors headers and
+              genuine PyTorch module definitions.
             </p>
           </div>
         </div>

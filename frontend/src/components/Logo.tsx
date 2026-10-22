@@ -12,7 +12,11 @@ type MarkProps = SVGProps<SVGSVGElement> & {
  * - Right facet: Artifact provenance & deterministic evidence (royal blue)
  * - Center: Neural junction core node
  */
-export function ModelAnatomyMark({ size = 24, className, ...props }: MarkProps) {
+export function ModelAnatomyMark({
+  size = 24,
+  className,
+  ...props
+}: MarkProps) {
   return (
     <svg
       width={size}

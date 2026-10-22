@@ -17,7 +17,12 @@
   color: var(--text);
   container-type: inline-size;
   background:
-    radial-gradient(ellipse 70% 55% at 50% 28%, rgba(99, 102, 241, 0.14) 0%, rgba(56, 189, 248, 0.05) 45%, transparent 75%),
+    radial-gradient(
+      ellipse 70% 55% at 50% 28%,
+      rgba(99, 102, 241, 0.14) 0%,
+      rgba(56, 189, 248, 0.05) 45%,
+      transparent 75%
+    ),
     var(--surface);
 }
 :root[data-theme="light"] .graph-canvas {
@@ -27,9 +32,22 @@
   --graph-semantic-edge: #4f46e5;
   --graph-mask: rgba(255, 255, 255, 0.94);
   background:
-    radial-gradient(ellipse 85% 55% at 50% -8%, rgba(99, 102, 241, 0.1) 0%, rgba(56, 189, 248, 0.04) 40%, transparent 75%),
-    radial-gradient(circle at 90% 85%, rgba(168, 85, 247, 0.03) 0%, transparent 45%),
-    radial-gradient(circle at 10% 90%, rgba(16, 185, 129, 0.03) 0%, transparent 45%),
+    radial-gradient(
+      ellipse 85% 55% at 50% -8%,
+      rgba(99, 102, 241, 0.1) 0%,
+      rgba(56, 189, 248, 0.04) 40%,
+      transparent 75%
+    ),
+    radial-gradient(
+      circle at 90% 85%,
+      rgba(168, 85, 247, 0.03) 0%,
+      transparent 45%
+    ),
+    radial-gradient(
+      circle at 10% 90%,
+      rgba(16, 185, 129, 0.03) 0%,
+      transparent 45%
+    ),
     #fafbfc;
 }
 .graph-header {
@@ -42,14 +60,22 @@
   gap: 10px;
   padding: 6px 12px;
   border-bottom: 1px solid var(--border);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.03) 0%, rgba(255, 255, 255, 0.005) 100%), var(--surface);
+  background:
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.03) 0%,
+      rgba(255, 255, 255, 0.005) 100%
+    ),
+    var(--surface);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
   backdrop-filter: blur(12px);
 }
 :root[data-theme="light"] .graph-header {
   background: rgba(255, 255, 255, 0.92);
   border-bottom: 1px solid rgba(203, 213, 225, 0.8);
-  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04), inset 0 1px 0 #ffffff;
+  box-shadow:
+    0 1px 3px rgba(15, 23, 42, 0.04),
+    inset 0 1px 0 #ffffff;
   backdrop-filter: blur(16px);
 }
 .graph-header-context {
@@ -109,7 +135,9 @@
   white-space: nowrap;
   font-size: 12px;
   font-weight: 500;
-  transition: color 150ms ease, background-color 150ms ease;
+  transition:
+    color 150ms ease,
+    background-color 150ms ease;
 }
 .breadcrumbs button:hover {
   color: var(--text);
@@ -195,7 +223,10 @@
   border-radius: 8px;
   background: var(--soft);
   color: var(--muted);
-  transition: border-color 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    background-color 160ms ease;
 }
 .graph-search:focus-within {
   border-color: var(--accent);
@@ -260,7 +291,9 @@
 .graph-canvas .react-flow__edge-path {
   stroke: var(--graph-edge);
   stroke-width: 1.75px;
-  transition: stroke 160ms cubic-bezier(0.16, 1, 0.3, 1), stroke-width 160ms cubic-bezier(0.16, 1, 0.3, 1);
+  transition:
+    stroke 160ms cubic-bezier(0.16, 1, 0.3, 1),
+    stroke-width 160ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 .graph-canvas .react-flow__edge:hover .react-flow__edge-path {
   stroke: var(--accent);
@@ -270,7 +303,9 @@
 .graph-canvas .react-flow__edge:focus .react-flow__edge-path {
   stroke: var(--accent);
   stroke-width: 2.5px;
-  filter: drop-shadow(0 0 6px color-mix(in srgb, var(--accent) 45%, transparent));
+  filter: drop-shadow(
+    0 0 6px color-mix(in srgb, var(--accent) 45%, transparent)
+  );
 }
 .graph-canvas .react-flow__edge-text {
   fill: var(--muted);
@@ -307,7 +342,13 @@
   gap: 10px;
   padding: 6px 14px;
   border-top: 1px solid var(--border);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.03) 0%, rgba(255, 255, 255, 0.005) 100%), var(--surface);
+  background:
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.03) 0%,
+      rgba(255, 255, 255, 0.005) 100%
+    ),
+    var(--surface);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
   backdrop-filter: blur(12px);
 }
@@ -335,14 +376,22 @@
   padding: 0 10px;
   border: 1px solid var(--border);
   border-radius: 6px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0.01) 100%), var(--surface);
+  background:
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.04) 0%,
+      rgba(255, 255, 255, 0.01) 100%
+    ),
+    var(--surface);
   color: var(--text);
   font: inherit;
   font-size: 12px;
   font-weight: 500;
   cursor: pointer;
   white-space: nowrap;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), var(--shadow-sm);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    var(--shadow-sm);
   transition: all 160ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 :root[data-theme="light"] .layout-direction {
@@ -361,7 +410,9 @@
 .layout-direction:hover:not(:disabled) {
   background: var(--soft);
   border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16), 0 2px 8px rgba(0, 0, 0, 0.25);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.16),
+    0 2px 8px rgba(0, 0, 0, 0.25);
   transform: translateY(-1px);
 }
 :root[data-theme="light"] .layout-direction:hover:not(:disabled) {
@@ -380,13 +431,17 @@
   color: #ffffff;
   background: color-mix(in srgb, var(--accent) 18%, var(--surface));
   border-color: var(--accent);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.15), 0 0 12px color-mix(in srgb, var(--accent) 30%, transparent);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.15),
+    0 0 12px color-mix(in srgb, var(--accent) 30%, transparent);
 }
 :root[data-theme="light"] .layout-direction.active {
   background: #eef2ff;
   border-color: #4f46e5;
   color: #4338ca;
-  box-shadow: inset 0 1px 0 #ffffff, 0 0 10px rgba(99, 102, 241, 0.18);
+  box-shadow:
+    inset 0 1px 0 #ffffff,
+    0 0 10px rgba(99, 102, 241, 0.18);
 }
 .zoom-readout {
   min-width: 46px;
@@ -416,7 +471,9 @@
   border-radius: 4px;
   background: transparent;
   color: var(--text);
-  transition: background-color 150ms ease, color 150ms ease;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease;
 }
 .graph-zoom .icon-button:hover,
 .graph-options-panel > .icon-button:hover {

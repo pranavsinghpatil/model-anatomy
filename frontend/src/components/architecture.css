@@ -110,7 +110,9 @@
   background: linear-gradient(90deg, #eff6ff 0%, #f5f3ff 100%);
   border: 1px solid #c7d2fe;
   color: #3730a3;
-  box-shadow: inset 3.5px 0 #4f46e5, 0 2px 6px rgba(79, 70, 229, 0.08);
+  box-shadow:
+    inset 3.5px 0 #4f46e5,
+    0 2px 6px rgba(79, 70, 229, 0.08);
 }
 
 :root[data-theme="light"] .component-select.selected strong {
@@ -179,7 +181,10 @@
   transition: all 150ms ease;
 }
 
-:root[data-theme="light"] .inspector-header > .panel-tabs > [role="tab"][data-state="active"] {
+:root[data-theme="light"]
+  .inspector-header
+  > .panel-tabs
+  > [role="tab"][data-state="active"] {
   background: #ffffff;
   color: #090d16;
   font-weight: 650;

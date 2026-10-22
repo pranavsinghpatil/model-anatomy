@@ -301,15 +301,37 @@ export function Inspector({
                 <CheckCircle2 size={11} /> SafeTensors Verified
               </span>
             </div>
-            <div className="distribution-bar" role="img" aria-label="Parameter allocation">
-              <div className="dist-seg dist-blocks" style={{ width: "68%" }} title="Layers / Blocks: ~68%" />
-              <div className="dist-seg dist-emb" style={{ width: "31%" }} title="Embeddings: ~31%" />
-              <div className="dist-seg dist-head" style={{ width: "1%" }} title="Head / Norm: ~1%" />
+            <div
+              className="distribution-bar"
+              role="img"
+              aria-label="Parameter allocation"
+            >
+              <div
+                className="dist-seg dist-blocks"
+                style={{ width: "68%" }}
+                title="Layers / Blocks: ~68%"
+              />
+              <div
+                className="dist-seg dist-emb"
+                style={{ width: "31%" }}
+                title="Embeddings: ~31%"
+              />
+              <div
+                className="dist-seg dist-head"
+                style={{ width: "1%" }}
+                title="Head / Norm: ~1%"
+              />
             </div>
             <div className="distribution-legend">
-              <span className="leg-item"><span className="leg-dot blocks" /> Layers 68%</span>
-              <span className="leg-item"><span className="leg-dot emb" /> Embeddings 31%</span>
-              <span className="leg-item"><span className="leg-dot head" /> Head/Norm 1%</span>
+              <span className="leg-item">
+                <span className="leg-dot blocks" /> Layers 68%
+              </span>
+              <span className="leg-item">
+                <span className="leg-dot emb" /> Embeddings 31%
+              </span>
+              <span className="leg-item">
+                <span className="leg-dot head" /> Head/Norm 1%
+              </span>
             </div>
           </div>
         ) : null}
@@ -339,9 +361,16 @@ export function Inspector({
         )}
         {resolved.parameter_count > 0 && analysis.parameter_count ? (
           <div className="node-share-banner">
-            <span className="node-share-number">{count(resolved.parameter_count)} parameters</span>
+            <span className="node-share-number">
+              {count(resolved.parameter_count)} parameters
+            </span>
             <span className="node-share-pct">
-              ({((resolved.parameter_count / analysis.parameter_count) * 100).toFixed(1)}% of model)
+              (
+              {(
+                (resolved.parameter_count / analysis.parameter_count) *
+                100
+              ).toFixed(1)}
+              % of model)
             </span>
           </div>
         ) : null}

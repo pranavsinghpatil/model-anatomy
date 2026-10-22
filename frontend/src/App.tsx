@@ -46,7 +46,10 @@ export function App() {
             <Route path="/" element={<Home />} />
             <Route path="/app" element={<Start />} />
             <Route path="/catalog" element={<Catalog />} />
-            <Route path="/app/catalog" element={<Navigate replace to="/catalog" />} />
+            <Route
+              path="/app/catalog"
+              element={<Navigate replace to="/catalog" />}
+            />
             <Route path="/app/analyses/:id" element={<Workspace />} />
             <Route
               path="*"

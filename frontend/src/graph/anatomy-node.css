@@ -2,9 +2,14 @@
   --node-tone: var(--muted);
   position: relative;
   padding: 0;
-  border: 1px solid color-mix(in srgb, var(--node-tone) 28%, rgba(255, 255, 255, 0.08));
+  border: 1px solid
+    color-mix(in srgb, var(--node-tone) 28%, rgba(255, 255, 255, 0.08));
   border-radius: 9px;
-  background: linear-gradient(180deg, rgba(22, 28, 44, 0.94) 0%, rgba(13, 17, 27, 0.98) 100%);
+  background: linear-gradient(
+    180deg,
+    rgba(22, 28, 44, 0.94) 0%,
+    rgba(13, 17, 27, 0.98) 100%
+  );
   backdrop-filter: blur(12px);
   color: var(--text);
   text-align: left;
@@ -136,12 +141,18 @@
   padding: 2px 7px;
   border: 1px solid rgba(251, 191, 36, 0.45);
   border-radius: 6px;
-  background: linear-gradient(180deg, rgba(251, 191, 36, 0.2) 0%, rgba(251, 191, 36, 0.08) 100%);
+  background: linear-gradient(
+    180deg,
+    rgba(251, 191, 36, 0.2) 0%,
+    rgba(251, 191, 36, 0.08) 100%
+  );
   color: #fbbf24;
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.02em;
-  box-shadow: 0 0 10px rgba(251, 191, 36, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  box-shadow:
+    0 0 10px rgba(251, 191, 36, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 .model-node .node-mini-param,
 .model-node .node-mini-shape {
@@ -221,9 +232,14 @@
   position: absolute;
   z-index: -1;
   inset: -5px 4px 5px;
-  border: 1px solid color-mix(in srgb, var(--node-tone) 35%, rgba(255, 255, 255, 0.08));
+  border: 1px solid
+    color-mix(in srgb, var(--node-tone) 35%, rgba(255, 255, 255, 0.08));
   border-radius: 9px;
-  background: linear-gradient(180deg, rgba(22, 28, 44, 0.8) 0%, rgba(13, 17, 27, 0.9) 100%);
+  background: linear-gradient(
+    180deg,
+    rgba(22, 28, 44, 0.8) 0%,
+    rgba(13, 17, 27, 0.9) 100%
+  );
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
   content: "";
   pointer-events: none;
@@ -282,7 +298,9 @@
   font-size: 12px;
   font-weight: 550;
   cursor: pointer;
-  transition: background-color 150ms ease, color 150ms ease;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease;
 }
 :root[data-theme="light"] .model-node .node-open {
   border-top: 1px solid #eef2f6;
@@ -368,12 +386,24 @@
   border-radius: 9px;
   border-style: dashed;
   border-width: 1.5px;
-  background: linear-gradient(180deg, rgba(56, 189, 248, 0.08) 0%, rgba(56, 189, 248, 0.02) 100%), var(--surface);
+  background:
+    linear-gradient(
+      180deg,
+      rgba(56, 189, 248, 0.08) 0%,
+      rgba(56, 189, 248, 0.02) 100%
+    ),
+    var(--surface);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 .model-node.category-boundary[data-kind="output"] {
   --node-tone: var(--category-output, var(--accent));
-  background: linear-gradient(180deg, rgba(52, 211, 153, 0.08) 0%, rgba(52, 211, 153, 0.02) 100%), var(--surface);
+  background:
+    linear-gradient(
+      180deg,
+      rgba(52, 211, 153, 0.08) 0%,
+      rgba(52, 211, 153, 0.02) 100%
+    ),
+    var(--surface);
 }
 .model-node.category-boundary::before {
   inset-block: 7px;
@@ -463,7 +493,10 @@
   border-radius: 50%;
   background: var(--muted);
   box-shadow: 0 0 4px rgba(0, 0, 0, 0.5);
-  transition: transform 140ms ease, background-color 140ms ease, box-shadow 140ms ease;
+  transition:
+    transform 140ms ease,
+    background-color 140ms ease,
+    box-shadow 140ms ease;
 }
 :root[data-theme="light"] .model-node .react-flow__handle {
   width: 9px;
