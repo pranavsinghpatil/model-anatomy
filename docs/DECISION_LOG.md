@@ -1080,3 +1080,33 @@ transaction changes filesystem publication only, preserves report semantics and
 restores the prior set on ordinary caught filesystem errors.
 
 See TEAMMATE_VV_INTEGRATION.md for exact counts, fingerprints and acceptance.
+
+
+## D-067 - Close T5 dtype and mask facts through reviewed metadata contracts
+
+**2026-10-22 - user request to implement the dynamic reconstruction approach**
+
+Use pinned current-engine diagnostics to choose a shared operator increment.
+T5-small, T5-base and Chronos-T5-small reproduce the same five cast/mask
+warnings with complete checkpoint ownership. Extend the abstract interpreter's
+bounded fact algebra instead of introducing model-ID shortcuts or reducing the
+completeness requirements. Native dtype properties require reviewed descriptor
+and source identity; derive permitted facts from registered meta metadata without
+executing descriptors, tensor computations or model forwards.
+
+Keep unknown dimensions, unsupported arguments and changed native implementations
+unproven. Preserve masks, branches and remaining warnings in the report. Compare
+the same pins across T5 variants, a shared audio control and canonical text
+controls; require unchanged source configuration and checkpoint inventory.
+Report the measured native scope separately from any forecasting or speech
+pipeline claim.
+
+Advance engine/cache identity to `2026.10.22.1`, retaining IR schema `1.1` and all
+prior reports/publications. New saved inspections must be discoverable and
+revisitable through the existing visitor-owned catalog flow. See
+`DYNAMIC_T5_FACTS.md` for contracts, measurements and remaining gaps.
+
+Live acceptance also repairs the catalog's obsolete architecture subpath. Use
+the workspace's existing query-based view route and select Artifacts for
+artifact-only reports. Browser checks must require the destination workspace to
+render; URL-only assertions cannot establish successful reopening.

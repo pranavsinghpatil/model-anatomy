@@ -102,7 +102,7 @@ async function catalogApi(
     route.fulfill({
       status: 200,
       contentType: "application/json",
-      body: JSON.stringify(analysisFor("saved-analysis")),
+      body: JSON.stringify(analysisFor()),
     }),
   );
   return requests;
@@ -178,7 +178,7 @@ test("saved reports reopen through inspectCatalog and discovery entries refresh 
     route.fulfill({
       status: 200,
       contentType: "application/json",
-      body: JSON.stringify(analysisFor("saved-analysis")),
+      body: JSON.stringify(analysisFor()),
     }),
   );
   await page.goto("/catalog");
@@ -187,15 +187,77 @@ test("saved reports reopen through inspectCatalog and discovery entries refresh 
       name: "Open saved inspection for HuggingFaceTB/SmolLM2-135M",
     })
     .click();
-  await expect(page).toHaveURL(
-    /\/app\/analyses\/saved-analysis\/architecture$/,
-  );
+  await expect(page).toHaveURL(/\/app\/analyses\/job-test\?view=architecture$/);
+  await expect(
+    page.getByRole("group", { name: "Architecture presentation" }),
+  ).toBeVisible();
   await page.goto("/catalog?view=stored");
   await expect(page.locator(".benchmark-card")).toHaveCount(2);
   includeNew = true;
   await page.getByRole("button", { name: "Refresh model catalog" }).click();
   await expect(page.getByText("org/new-inspection")).toBeVisible();
   expect(discoveryRequests.length).toBeGreaterThan(1);
+});
+
+test("saved artifact inspections open the artifacts workspace", async ({
+  page,
+}) => {
+  const job = {
+    ...analysisFor(),
+    status: "inspected" as const,
+    stage: "inspected",
+    architecture: null,
+    parameter_count: null,
+    root_graph_id: null,
+  };
+  const requests = await mockService(page, {
+    job,
+    artifactPages: [
+      {
+        kind: "artifact_inspection",
+        reason_code: "architecture_not_supported",
+        message: "Verified inventory without a reconstructed architecture.",
+        revision: job.revision!,
+        files: ["config.json"],
+        file_count: 1,
+        tensors: [],
+        tensor_count: 0,
+        checkpoint_tensor_element_count: null,
+        checkpoint_available: false,
+        source_config: {},
+        evidence: [],
+        offset: 0,
+        limit: 50,
+      },
+    ],
+  });
+  await page.route("**/api/v1/catalog/discovery", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(
+        response([{ ...records[0], status: "inspected", graph_count: 0 }]),
+      ),
+    }),
+  );
+  await page.route("**/api/v1/catalog/stored-smol/inspect", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(job),
+    }),
+  );
+  await page.goto("/catalog");
+  await page
+    .getByRole("button", {
+      name: "Open saved inspection for HuggingFaceTB/SmolLM2-135M",
+    })
+    .click();
+  await expect(page).toHaveURL(/\/app\/analyses\/job-test\?view=artifacts$/);
+  await expect(page.getByTestId("artifact-inspection")).toBeVisible();
+  expect(requests.some((request) => request.path.includes("/graphs/"))).toBe(
+    false,
+  );
 });
 
 test("CSV observations preserve native report metrics and expose attributed history", async ({
@@ -451,7 +513,7 @@ test("recorded inspection failure keeps its prior saved report and retry referen
       route.fulfill({
         status: 200,
         contentType: "application/json",
-        body: JSON.stringify(analysisFor("previous-analysis")),
+        body: JSON.stringify(analysisFor()),
       }),
   );
   await page.goto("/catalog");
@@ -471,9 +533,10 @@ test("recorded inspection failure keeps its prior saved report and retry referen
   await page
     .getByRole("button", { name: "Open previous saved report" })
     .click();
-  await expect(page).toHaveURL(
-    /\/app\/analyses\/previous-analysis\/architecture$/,
-  );
+  await expect(page).toHaveURL(/\/app\/analyses\/job-test\?view=architecture$/);
+  await expect(
+    page.getByRole("group", { name: "Architecture presentation" }),
+  ).toBeVisible();
 });
 
 test("unverified explicit artifacts stay withheld and retry at the pinned repository", async ({

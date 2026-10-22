@@ -162,7 +162,9 @@ export default function Catalog() {
     mutationFn: (reportId: string) => api.inspectCatalog(reportId),
     onSuccess: async (analysis) => {
       await queryClient.invalidateQueries({ queryKey: ["catalog"] });
-      navigate(`/app/analyses/${encodeURIComponent(analysis.id)}/architecture`);
+      navigate(
+        `/app/analyses/${encodeURIComponent(analysis.id)}?view=${analysis.status === "inspected" ? "artifacts" : "architecture"}`,
+      );
     },
     onError: (error) =>
       setActionError(

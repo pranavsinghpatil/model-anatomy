@@ -15,6 +15,12 @@ from .ir import TensorSpec
 
 _FLOAT_DTYPES = {"F16", "BF16", "F32", "F64"}
 _KNOWN_DTYPES = _FLOAT_DTYPES | {"BOOL", "U8", "I8", "I16", "I32", "I64"}
+_FLOAT_MAX = {
+    "F16": 65504.0,
+    "BF16": 3.3895313892515355e38,
+    "F32": 3.4028234663852886e38,
+    "F64": 1.7976931348623157e308,
+}
 
 
 def tensor_outputs(
@@ -34,6 +40,150 @@ def tensor_outputs(
 
     if method == "chunk":
         return _chunk_outputs(inputs, parameters)
+
+    if method == "clone":
+        if not _has_exact_inputs(inputs, {"input"}) or not _has_no_parameters(parameters):
+            return None
+        value = inputs["input"]
+        if not _valid_spec(value):
+            return None
+        return {"output": TensorSpec(_copy_shape(value.shape), value.dtype, "clone")}
+
+    if method == "triu":
+        if not _has_exact_inputs(inputs, {"input"}) or not _has_exact_keys(parameters, {"diagonal"}):
+            return None
+        value = inputs["input"]
+        if (
+            not _valid_spec(value)
+            or value.shape is None
+            or len(value.shape) < 2
+            or value.dtype not in _FLOAT_DTYPES
+            or type(parameters["diagonal"]) is not int
+        ):
+            return None
+        return {"output": TensorSpec(_copy_shape(value.shape), value.dtype, "triu")}
+
+    if method in {"gt", "eq", "float_bool_mul"}:
+        if not _has_exact_inputs(inputs, {"left", "right"}) or not _has_no_parameters(parameters):
+            return None
+        left, right = inputs["left"], inputs["right"]
+        if not all(_valid_spec(item) and item.shape is not None for item in (left, right)):
+            return None
+        shape = _broadcast_shapes(left.shape, right.shape)
+        if shape is _UNKNOWN:
+            return None
+        if (
+            method == "gt" and left.dtype == right.dtype == "I64"
+            or method == "eq" and left.dtype == right.dtype and left.dtype in _KNOWN_DTYPES
+        ):
+            dtype = "BOOL"
+        elif method == "float_bool_mul" and left.dtype in _FLOAT_DTYPES and right.dtype == "BOOL":
+            dtype = left.dtype
+        else:
+            return None
+        return {"output": TensorSpec(shape, dtype, method)}
+
+    if method == "float_int_add":
+        if not _has_exact_inputs(inputs, {"left", "right"}) or not _has_no_parameters(parameters):
+            return None
+        left, right = inputs["left"], inputs["right"]
+        if (
+            not _valid_spec(left)
+            or not _valid_spec(right)
+            or left.shape is None
+            or right.shape is None
+            or left.dtype not in _FLOAT_DTYPES
+            or right.dtype != "I64"
+        ):
+            return None
+        shape = _broadcast_shapes(left.shape, right.shape)
+        if shape is _UNKNOWN:
+            return None
+        return {"output": TensorSpec(shape, left.dtype, "float_int_add")}
+
+    if method == "scalar_left_sub":
+        if not _has_exact_inputs(inputs, {"input"}) or not _has_exact_keys(parameters, {"scalar"}):
+            return None
+        value = inputs["input"]
+        scalar = parameters["scalar"]
+        if (
+            not _valid_spec(value)
+            or value.shape is None
+            or value.dtype not in _FLOAT_DTYPES
+            or type(scalar) not in {int, float}
+            or not _representable_float(scalar, value.dtype)
+        ):
+            return None
+        return {"output": TensorSpec(_copy_shape(value.shape), value.dtype, "scalar_left_sub")}
+
+    if method == "eq_scalar":
+        if not _has_exact_inputs(inputs, {"input"}) or not _has_exact_keys(parameters, {"scalar"}):
+            return None
+        value = inputs["input"]
+        scalar = parameters["scalar"]
+        if (
+            not _valid_spec(value)
+            or value.shape is None
+            or value.dtype not in _FLOAT_DTYPES
+            or type(scalar) not in {int, float}
+            or not _representable_float(scalar, value.dtype)
+        ):
+            return None
+        return {"output": TensorSpec(_copy_shape(value.shape), "BOOL", "eq_scalar")}
+
+    if method == "expand":
+        if (
+            not _has_exact_inputs(inputs, {"input"})
+            or not _has_exact_keys(parameters, {"dimensions", "positive_symbols"})
+        ):
+            return None
+        value = inputs["input"]
+        dimensions = parameters["dimensions"]
+        positive_symbols = parameters["positive_symbols"]
+        if (
+            not _valid_spec(value)
+            or value.shape is None
+            or not _valid_expand_dimensions(dimensions)
+            or not _valid_positive_symbols(positive_symbols)
+            or not dimensions
+            or any(isinstance(axis, str) and axis not in positive_symbols for axis in dimensions)
+        ):
+            return None
+        shape = _expanded_shape(value.shape, dimensions)
+        if shape is None:
+            return None
+        return {"output": TensorSpec(shape, value.dtype, "expand")}
+
+    if method == "slice":
+        if not _has_exact_inputs(inputs, {"input"}) or not _has_exact_keys(parameters, {"indices"}):
+            return None
+        value = inputs["input"]
+        if not _valid_spec(value) or value.shape is None:
+            return None
+        shape = _slice_shape(value.shape, parameters["indices"])
+        if shape is None:
+            return None
+        return {"output": TensorSpec(shape, value.dtype, "slice")}
+
+    if method == "masked_fill":
+        if not _has_exact_inputs(inputs, {"input", "mask"}) or not _has_exact_keys(parameters, {"value"}):
+            return None
+        value, mask = inputs["input"], inputs["mask"]
+        fill = parameters["value"]
+        if (
+            not _valid_spec(value)
+            or not _valid_spec(mask)
+            or value.shape is None
+            or value.dtype not in _FLOAT_DTYPES
+            or mask.dtype != "BOOL"
+            or type(fill) not in {int, float}
+            or not _representable_float(fill, value.dtype)
+        ):
+            return None
+        broadcast = _broadcast_shapes(value.shape, mask.shape)
+        if broadcast is _UNKNOWN or broadcast != value.shape:
+            return None
+        return {"output": TensorSpec(_copy_shape(value.shape), value.dtype, "masked_fill")}
 
     if method == "clamp":
         if not _has_exact_inputs(inputs, {"input"}) or not _allowed_keys(parameters, {"min", "max"}):
@@ -275,6 +425,65 @@ def _broadcast_shapes(*shapes: list[int | str] | None) -> list[int | str] | obje
     return result
 
 
+def _expanded_shape(
+    input_shape: list[int | str], dimensions: list[int | str]
+) -> list[int | str] | None:
+    if len(dimensions) < len(input_shape):
+        return None
+    padded: list[int | str | None] = [None] * (len(dimensions) - len(input_shape)) + list(input_shape)
+    output: list[int | str] = []
+    for source, target in zip(padded, dimensions):
+        if source is None:
+            if target == -1:
+                return None
+            output.append(target)
+        elif target == -1:
+            output.append(source)
+        elif type(source) is int:
+            if source == target or source == 1:
+                output.append(target)
+            else:
+                return None
+        elif source == target or source == 1:
+            output.append(target)
+        else:
+            return None
+    return output
+
+
+def _slice_shape(shape: list[int | str], indices: Any) -> list[int | str] | None:
+    if not isinstance(indices, list) or not indices:
+        return None
+    result: list[int | str] = []
+    axis = 0
+    for index in indices:
+        if index is None:
+            result.append(1)
+            continue
+        if (
+            not isinstance(index, dict)
+            or set(index) != {"start", "stop", "step"}
+            or axis >= len(shape)
+        ):
+            return None
+        start, stop, step = index["start"], index["stop"], index["step"]
+        if (start is not None and (type(start) is not int or start != 0)) or (
+            step is not None and (type(step) is not int or step != 1)
+        ):
+            return None
+        dimension = shape[axis]
+        if stop is None or stop == dimension:
+            result.append(dimension)
+        elif type(dimension) is int and type(stop) is int and stop >= 0:
+            result.append(len(range(*slice(start, stop, step).indices(dimension))))
+        else:
+            return None
+        axis += 1
+    if axis != len(shape):
+        return None
+    return result
+
+
 def _valid_spec(value: Any) -> bool:
     if not isinstance(value, TensorSpec) or value.dtype not in _KNOWN_DTYPES:
         return False
@@ -295,6 +504,13 @@ def _valid_dimensions(dimensions: Any) -> bool:
             for axis in dimensions
         )
         and sum(axis == -1 for axis in dimensions) <= 1
+    )
+
+
+def _valid_expand_dimensions(dimensions: Any) -> bool:
+    return isinstance(dimensions, list) and all(
+        type(axis) is int and axis >= -1 or isinstance(axis, str) and axis.isidentifier()
+        for axis in dimensions
     )
 
 
@@ -377,6 +593,13 @@ def _product(values: list[int | str]) -> int:
 
 def _scalar_bound(value: Any) -> bool:
     return value is None or (type(value) in {int, float} and (type(value) is int or isfinite(value)))
+
+
+def _representable_float(value: float, dtype: str) -> bool:
+    try:
+        return isfinite(value) and abs(value) <= _FLOAT_MAX[dtype]
+    except (OverflowError, TypeError):
+        return False
 
 
 def _has_exact_inputs(inputs: Mapping[str, Any], expected: set[str]) -> bool:

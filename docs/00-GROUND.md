@@ -84,3 +84,8 @@ with source commit/hash/row identity. Their report mode and completion contract
 remain explicit; they cannot create cached reports or overwrite validated native
 metrics. No-Safetensors and access-restricted observations are separate scope
 exclusions. See [Teammate integration](TEAMMATE_VV_INTEGRATION.md).
+
+The October 22 dynamic T5 increment adds reviewed dtype and mask-operation facts
+and preserves the padding-update dependency into decoder execution. It improves
+four pinned T5 variants while retaining unresolved symbolic branches and
+auxiliary output shapes. See [T5 fact evidence](DYNAMIC_T5_FACTS.md).

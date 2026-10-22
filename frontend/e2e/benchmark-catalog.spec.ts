@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { analysisFor, mockService } from "./service";
 
 function report(count = 50): any {
   return {
@@ -175,6 +176,7 @@ test("pinned action opens the normal visitor-owned inspection flow with its refe
 test("stored report action inspects the persisted report and opens the visitor-owned result", async ({
   page,
 }) => {
+  await mockService(page);
   const catalog = report(1);
   catalog.results[0].stored_report_id = "persisted-report-123";
   await serveReport(page, { body: catalog });
@@ -199,7 +201,7 @@ test("stored report action inspects the persisted report and opens the visitor-o
       await route.fulfill({
         status: 200,
         contentType: "application/json",
-        body: JSON.stringify({ id: "visitor-owned-cached-analysis" }),
+        body: JSON.stringify(analysisFor()),
       });
     },
   );
@@ -212,9 +214,10 @@ test("stored report action inspects the persisted report and opens the visitor-o
   });
   await expect(opening).toBeDisabled();
   finishInspect?.();
-  await expect(page).toHaveURL(
-    /\/app\/analyses\/visitor-owned-cached-analysis\/architecture$/,
-  );
+  await expect(page).toHaveURL(/\/app\/analyses\/job-test\?view=architecture$/);
+  await expect(
+    page.getByRole("group", { name: "Architecture presentation" }),
+  ).toBeVisible();
   expect(inspectRequests).toBe(1);
   expect(unexpectedRequests).toEqual([]);
 });

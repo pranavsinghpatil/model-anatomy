@@ -32,6 +32,15 @@ DTYPES = {
     torch.bool: "BOOL",
 }
 MAX_STATIC_ITERATIONS = 128
+_TORCH_FINFO = torch.finfo
+_TORCH_FULL = torch.full
+_TORCH_TRIU = torch.triu
+_FINFO_MIN = {
+    torch.float16: -65504.0,
+    torch.bfloat16: -3.3895313892515355e38,
+    torch.float32: -3.4028234663852886e38,
+    torch.float64: -1.7976931348623157e308,
+}
 
 
 @dataclass
@@ -119,6 +128,8 @@ class StaticFlowAnalyzer:
         self.inputs = InputResolver(model)
         self.iterations = 0
         self.positive_symbols: set[str] = set()
+        self.source_method_name: str | None = None
+        self.source_method: Any = None
 
     def analyze(self) -> StaticFlow:
         try:
@@ -129,6 +140,7 @@ class StaticFlowAnalyzer:
         except (OSError, TypeError, SyntaxError, StopIteration) as exc:
             self.flow.warnings.append(f"Forward source unavailable: {type(exc).__name__}")
             return self.flow
+        self.source_method_name, self.source_method = "forward", method
         optional = {
             "attention_mask",
             "encoder_attention_mask",
@@ -574,6 +586,49 @@ class StaticFlowAnalyzer:
                 if name == "transpose":
                     parameters = {"dimensions": [parameters["dim0"], parameters["dim1"]]}
                 return self.tensor_event(node, name, {"input": receiver}, parameters, f"torch.Tensor.{name}")
+        if self.trusted_t5_tensor_source():
+            from .native_metadata_contracts import trusted_torch_tensor_method
+            if (
+                name == "clone"
+                and not node.args
+                and not node.keywords
+                and trusted_torch_tensor_method("clone")
+            ):
+                return self.tensor_event(node, "clone", {"input": receiver}, {}, "torch.Tensor.clone")
+            if name == "expand" and not node.keywords and not has_starred:
+                dimensions = [
+                    arguments[str(index)].constant
+                    if type(arguments[str(index)].constant) is int
+                    else arguments[str(index)].symbol
+                    for index in range(len(node.args))
+                ]
+                if len(dimensions) == 1 and arguments["0"].items is not None:
+                    dimensions = [
+                        value.constant if type(value.constant) is int else value.symbol
+                        for value in arguments["0"].items
+                    ]
+                if (
+                    trusted_torch_tensor_method("expand")
+                    and dimensions
+                    and all(type(value) is int or type(value) is str for value in dimensions)
+                ):
+                    return self.tensor_event(
+                        node,
+                        "expand",
+                        {"input": receiver},
+                        {"dimensions": dimensions, "positive_symbols": sorted(self.positive_symbols)},
+                        "torch.Tensor.expand",
+                    )
+            if name == "masked_fill" and len(node.args) == 2 and not node.keywords:
+                mask, fill_value = arguments["0"], arguments["1"].constant
+                if trusted_torch_tensor_method("masked_fill") and mask.spec is not None:
+                    return self.tensor_event(
+                        node,
+                        "masked_fill",
+                        {"input": receiver, "mask": mask},
+                        {"value": fill_value},
+                        "torch.Tensor.masked_fill",
+                    )
         if name in {"view", "reshape"} and not node.keywords:
             values = []
             for index, arg in enumerate(node.args):
@@ -606,6 +661,10 @@ class StaticFlowAnalyzer:
             or len(node.args) == 1
             and not node.keywords
         ):
+            from .native_metadata_contracts import trusted_torch_tensor_method
+
+            if not trusted_torch_tensor_method("to"):
+                return None
             target = arguments.get("dtype", arguments.get("device", arguments.get("0", StaticValue())))
             dtype = target.constant
             if isinstance(dtype, torch.dtype) and dtype in DTYPES:
@@ -629,6 +688,17 @@ class StaticFlowAnalyzer:
         if name in {"contiguous", "detach"} and not arguments:
             return StaticValue(list(receiver.refs), spec=receiver.spec)
         return None
+
+    def trusted_t5_tensor_source(self) -> bool:
+        if self.source_method_name == "invert_attention_mask":
+            from .native_metadata_contracts import trusted_t5_module_utils_helper
+
+            return trusted_t5_module_utils_helper(self.module, self.source_method_name, self.source_method)
+        if self.source_method_name not in {"forward", "_prepare_4d_causal_attention_mask_with_cache_position"}:
+            return False
+        from .native_metadata_contracts import trusted_t5_stack_method
+
+        return trusted_t5_stack_method(self.module, self.source_method_name, self.source_method)
 
     @staticmethod
     def bind_arguments(
@@ -665,6 +735,57 @@ class StaticFlowAnalyzer:
         ):
             return None
         function = self.source_callable(node.func)
+        if self.trusted_t5_tensor_source() and function is _TORCH_FULL and torch.full is _TORCH_FULL:
+            bound = self.bind_arguments(
+                node, arguments,
+                [("size", UNKNOWN), ("fill_value", UNKNOWN), ("dtype", UNKNOWN), ("device", UNKNOWN)],
+            )
+            if bound is not None:
+                size = bound["size"].items
+                dtype = bound["dtype"].constant
+                fill = bound["fill_value"].constant
+                dimensions = [item.constant if type(item.constant) is int else item.symbol for item in size or []]
+                if (
+                    size is not None
+                    and len(dimensions) >= 2
+                    and all(
+                        type(axis) is int and 0 <= axis <= 1_000_000
+                        or type(axis) is str and axis in self.positive_symbols
+                        for axis in dimensions
+                    )
+                    and type(dtype) is torch.dtype
+                    and dtype in _FINFO_MIN
+                    and type(fill) in {int, float}
+                    and (type(fill) is int or math.isfinite(fill))
+                    and abs(fill) <= abs(_FINFO_MIN[dtype])
+                    and bound["device"].category == "torch_device"
+                ):
+                    return self.event(
+                        node, None, "tensor_creation", "Full", arguments,
+                        {
+                            "method": "full", "callable": "torch.full", "runtime_verified": False,
+                            "contract": "torch_native_t5_full.v1",
+                            "output_port_specs": {
+                                "output": self.spec_data(TensorSpec(dimensions, DTYPES[dtype], "full"))
+                            },
+                        },
+                    )
+        if self.trusted_t5_tensor_source() and function is _TORCH_TRIU and torch.triu is _TORCH_TRIU:
+            bound = self.bind_arguments(node, arguments, [("input", UNKNOWN), ("diagonal", 0)])
+            if bound is not None:
+                return self.tensor_event(
+                    node, "triu", {"input": bound["input"]},
+                    {"diagonal": bound["diagonal"].constant}, "torch.triu",
+                )
+        if (
+            function is _TORCH_FINFO
+            and torch.finfo is _TORCH_FINFO
+            and len(node.args) == 1
+            and not node.keywords
+        ):
+            dtype = arguments["0"].constant
+            if type(dtype) is torch.dtype and dtype in _FINFO_MIN:
+                return StaticValue(fields={"min": StaticValue(constant=_FINFO_MIN[dtype])})
         if function is torch.arange:
             if len(node.args) not in (1, 2) or not {key for key in arguments if not key.isdecimal()} <= {
                 "dtype",
@@ -762,6 +883,43 @@ class StaticFlowAnalyzer:
     def assign(self, target: ast.AST, value: StaticValue) -> None:
         if isinstance(target, ast.Name):
             self.env[target.id] = value
+        elif isinstance(target, ast.Subscript) and isinstance(target.value, ast.Name):
+            name = target.value.id
+            base = self.env.get(name, StaticValue())
+            from .native_metadata_contracts import trusted_torch_tensor_method
+
+            full_slice = False
+            if (
+                self.trusted_t5_tensor_source()
+                and trusted_torch_tensor_method("__setitem__")
+                and base.spec is not None
+                and value.spec is not None
+                and base.spec.shape is not None
+                and base.spec.shape == value.spec.shape
+                and base.spec.dtype == value.spec.dtype
+            ):
+                axes = target.slice.elts if isinstance(target.slice, ast.Tuple) else [target.slice]
+                if len(axes) == len(base.spec.shape) and all(isinstance(axis, ast.Slice) for axis in axes):
+                    full_slice = True
+                    for dimension, axis in zip(base.spec.shape, axes):
+                        start = self.expression(axis.lower).constant if axis.lower is not None else None
+                        stop_value = self.expression(axis.upper) if axis.upper is not None else StaticValue(constant=None)
+                        stop = stop_value.constant if stop_value.constant is not UNKNOWN else stop_value.symbol if stop_value.symbol is not None else UNKNOWN
+                        step = self.expression(axis.step).constant if axis.step is not None else None
+                        if (
+                            start not in (None, 0)
+                            or type(start) is bool
+                            or step not in (None, 1)
+                            or type(step) is bool
+                            or stop is not None and (type(stop) not in {int, str} or stop != dimension)
+                        ):
+                            full_slice = False
+                            break
+            if full_slice:
+                self.env[name] = value
+            else:
+                self.flow.warnings.append(f"Tensor slice assignment to {name} is unresolved; facts invalidated")
+                self.env[name] = combine([base, value])
         elif isinstance(target, (ast.Tuple, ast.List)):
             if value.items is not None and len(target.elts) != len(value.items):
                 self.flow.warnings.append("Tuple unpacking arity disagrees with the proven source outputs")
@@ -907,6 +1065,44 @@ class StaticFlowAnalyzer:
     def operation(
         self, node: ast.AST, left: StaticValue, right: StaticValue, operator: ast.operator
     ) -> StaticValue:
+        if self.trusted_t5_tensor_source():
+            from .native_metadata_contracts import trusted_torch_tensor_method
+
+            if (
+                isinstance(operator, ast.Add)
+                and left.spec is not None
+                and right.spec is not None
+                and trusted_torch_tensor_method("__add__")
+            ):
+                result = self.tensor_event(
+                    node, "float_int_add", {"left": left, "right": right}, {}, "torch.Tensor.__add__"
+                )
+                if result is not None:
+                    return result
+            if (
+                isinstance(operator, ast.Mult)
+                and left.spec is not None
+                and right.spec is not None
+                and trusted_torch_tensor_method("__imul__" if isinstance(node, ast.AugAssign) else "__mul__")
+            ):
+                result = self.tensor_event(
+                    node, "float_bool_mul", {"left": left, "right": right}, {}, "torch.Tensor.__mul__"
+                )
+                if result is not None:
+                    return result
+            if (
+                isinstance(operator, ast.Sub)
+                and right.spec is not None
+                and type(left.constant) in {int, float}
+                and trusted_torch_tensor_method("__rsub__")
+            ):
+                result = self.tensor_event(
+                    node, "scalar_left_sub", {"input": right},
+                    {"scalar": left.constant}, "torch.Tensor.__rsub__",
+                )
+                if result is not None:
+                    return result
+                self.flow.warnings.append("Native T5 scalar-left tensor subtraction has no proven output contract")
         if (
             isinstance(operator, ast.Add)
             and left.items is not None
@@ -1035,6 +1231,21 @@ class StaticFlowAnalyzer:
         if name == "ndim" and value.spec is not None and value.spec.shape is not None:
             return StaticValue(constant=len(value.spec.shape))
         if name in {"shape", "dtype", "device", "ndim"}:
+            if name == "dtype" and value.module_path is not None:
+                from .native_metadata_contracts import native_module_attribute
+
+                module = self.model.get_submodule(value.module_path) if value.module_path else self.model
+                supported, native_value = native_module_attribute(module, name)
+                if supported:
+                    diagnostic = {
+                        "code": "native_module_attribute",
+                        "attribute": name,
+                        "module_class": f"{type(module).__module__}.{type(module).__name__}",
+                        "basis": "Source-fingerprinted native dtype property; homogeneous meta parameter metadata",
+                    }
+                    if diagnostic not in self.flow.diagnostics:
+                        self.flow.diagnostics.append(diagnostic)
+                    return StaticValue(constant=native_value)
             return StaticValue()
         if isinstance(value.constant, ModuleType):
             attribute = vars(value.constant).get(name, UNKNOWN)
@@ -1045,6 +1256,8 @@ class StaticFlowAnalyzer:
             ):
                 return StaticValue(constant=attribute)
             return self.primitive(attribute)
+        if value.fields is not None and name in value.fields:
+            return value.fields[name]
         if value.module_path is not None:
             path = f"{value.module_path}.{name}" if value.module_path else name
             if path in self.classifications:
@@ -1061,6 +1274,20 @@ class StaticFlowAnalyzer:
                 if isinstance(descriptor, (staticmethod, classmethod)) or inspect.isfunction(descriptor):
                     return StaticValue(module_path=value.module_path, method=name)
                 if isinstance(descriptor, property) or hasattr(type(descriptor), "__get__"):
+                    if name == "dtype":
+                        from .native_metadata_contracts import native_module_attribute
+
+                        supported, native_value = native_module_attribute(module, name)
+                        if supported:
+                            diagnostic = {
+                                "code": "native_module_attribute",
+                                "attribute": name,
+                                "module_class": f"{type(module).__module__}.{type(module).__name__}",
+                                "basis": "Source-fingerprinted native dtype property; homogeneous meta parameter metadata",
+                            }
+                            if diagnostic not in self.flow.diagnostics:
+                                self.flow.diagnostics.append(diagnostic)
+                            return StaticValue(constant=native_value)
                     return StaticValue()
                 attribute = descriptor
             if isinstance(attribute, torch.Tensor):
@@ -1319,6 +1546,51 @@ class StaticFlowAnalyzer:
                     result = combine(items)
                     result.items, result.category = items, value.category
                     return result
+            if isinstance(node.slice, (ast.Tuple, ast.Slice, ast.Constant)) and self.trusted_t5_tensor_source():
+                from .native_metadata_contracts import trusted_torch_tensor_method
+
+                value = self.expression(node.value)
+                if (
+                    trusted_torch_tensor_method("__getitem__")
+                    and value.spec is not None
+                    and value.spec.shape is not None
+                ):
+                    raw_indices = node.slice.elts if isinstance(node.slice, ast.Tuple) else [node.slice]
+                    indices = []
+                    supported = True
+                    for item in raw_indices:
+                        if isinstance(item, ast.Constant) and item.value is None:
+                            indices.append(None)
+                        elif isinstance(item, ast.Slice):
+                            start = self.expression(item.lower) if item.lower is not None else StaticValue(constant=None)
+                            stop = self.expression(item.upper) if item.upper is not None else StaticValue(constant=None)
+                            step = self.expression(item.step) if item.step is not None else StaticValue(constant=None)
+                            start_value = start.constant if start.constant is not UNKNOWN else start.symbol if start.symbol is not None else UNKNOWN
+                            stop_value = stop.constant if stop.constant is not UNKNOWN else stop.symbol if stop.symbol is not None else UNKNOWN
+                            step_value = step.constant if step.constant is not UNKNOWN else step.symbol if step.symbol is not None else UNKNOWN
+                            if (
+                                start_value is UNKNOWN
+                                or stop_value is UNKNOWN
+                                or step_value is UNKNOWN
+                                or
+                                start_value is not None and type(start_value) is not int
+                                or stop_value is not None and type(stop_value) not in (int, str)
+                                or step_value is not None and type(step_value) is not int
+                            ):
+                                supported = False
+                                break
+                            indices.append({"start": start_value, "stop": stop_value, "step": step_value})
+                        else:
+                            supported = False
+                            break
+                    if supported:
+                        return self.tensor_event(
+                            node,
+                            "slice",
+                            {"input": value},
+                            {"indices": indices},
+                            "torch.Tensor.__getitem__",
+                        )
             if getattr(self.model.config, "model_type", None) == "vit" and isinstance(node.slice, ast.Tuple):
                 value = self.expression(node.value)
                 indices = []
@@ -1382,6 +1654,34 @@ class StaticFlowAnalyzer:
             return join_values([*candidates, value]) if uncertain else value
         if isinstance(node, ast.Compare) and len(node.ops) == 1:
             left, right = self.expression(node.left), self.expression(node.comparators[0])
+            if self.trusted_t5_tensor_source():
+                from .native_metadata_contracts import trusted_torch_tensor_method
+
+                if (
+                    isinstance(node.ops[0], ast.Gt)
+                    and left.spec is not None
+                    and right.spec is not None
+                    and trusted_torch_tensor_method("__gt__")
+                ):
+                    result = self.tensor_event(
+                        node, "gt", {"left": left, "right": right}, {}, "torch.Tensor.__gt__"
+                    )
+                    if result is not None:
+                        return result
+                if isinstance(node.ops[0], ast.Eq) and trusted_torch_tensor_method("__eq__"):
+                    if left.spec is not None and right.spec is not None:
+                        result = self.tensor_event(
+                            node, "eq", {"left": left, "right": right}, {}, "torch.Tensor.__eq__"
+                        )
+                        if result is not None:
+                            return result
+                    if left.spec is not None and type(right.constant) in {int, float}:
+                        result = self.tensor_event(
+                            node, "eq_scalar", {"input": left},
+                            {"scalar": right.constant}, "torch.Tensor.__eq__",
+                        )
+                        if result is not None:
+                            return result
             if (
                 isinstance(left.constant, torch.dtype)
                 and isinstance(right.constant, torch.dtype)
@@ -1498,6 +1798,8 @@ class StaticFlowAnalyzer:
                     "squeeze",
                     "expand",
                     "flatten",
+                    "clone",
+                    "masked_fill",
                 }
             ):
                 if getattr(self.model.config, "model_type", None) == "vit" and name in {
@@ -1726,13 +2028,16 @@ class StaticFlowAnalyzer:
                 environment[name].fields = dict(value)
             else:
                 environment[name] = StaticValue()
-        old_env, old_output, old_globals, old_returned = (
+        old_env, old_output, old_globals, old_returned, old_method_name, old_method = (
             self.env,
             self.flow.outputs,
             self.source_globals,
             self.returned,
+            self.source_method_name,
+            self.source_method,
         )
         self.source_globals = method.__globals__
+        self.source_method_name, self.source_method = method_name, method
         self.returned = []
         self.env = environment
         self.depth += 1
@@ -1744,3 +2049,4 @@ class StaticFlowAnalyzer:
             self.env, self.flow.outputs = old_env, old_output
             self.source_globals = old_globals
             self.returned = old_returned
+            self.source_method_name, self.source_method = old_method_name, old_method

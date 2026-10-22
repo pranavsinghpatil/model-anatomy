@@ -207,3 +207,145 @@ def test_cast_preserves_known_dtype_even_when_shape_is_unknown():
     assert output is not None
     assert output["output"].shape is None
     assert output["output"].dtype == "F16"
+
+
+def test_clone_preserves_only_known_tensor_facts():
+    output = tensor_outputs("clone", {"input": spec(["B", 1, "S"], "BF16")}, {})
+    assert output is not None
+    assert output["output"].shape == ["B", 1, "S"]
+    assert output["output"].dtype == "BF16"
+    assert output["output"].semantic_name == "clone"
+    assert tensor_outputs("clone", {"input": spec([2], "custom")}, {}) is None
+    assert tensor_outputs("clone", {"input": spec([2])}, {"memory_format": "contiguous"}) is None
+
+
+@pytest.mark.parametrize(
+    ("input_shape", "dimensions", "expected"),
+    [
+        ([1, 1, 4, 8], ["B", 1, -1, -1], ["B", 1, 4, 8]),
+        (["B", 1, "S", "S"], ["B", 4, -1, -1], ["B", 4, "S", "S"]),
+        ([1, 4], [2, 4], [2, 4]),
+    ],
+)
+def test_expand_preserves_or_proves_broadcast_dimensions(input_shape, dimensions, expected):
+    positive = [axis for axis in dimensions if isinstance(axis, str)]
+    output = tensor_outputs(
+        "expand",
+        {"input": spec(input_shape)},
+        {"dimensions": dimensions, "positive_symbols": positive},
+    )
+    assert output is not None
+    assert output["output"].shape == expected
+
+
+def test_expand_rejects_invalid_or_unrelated_dimensions():
+    inputs = {"input": spec(["B", 2, 4])}
+    assert tensor_outputs("expand", inputs, {"dimensions": ["B", 3, 4], "positive_symbols": ["B"]}) is None
+    assert tensor_outputs("expand", inputs, {"dimensions": ["B", 2], "positive_symbols": ["B"]}) is None
+    assert tensor_outputs("expand", inputs, {"dimensions": ["C", 2, 4], "positive_symbols": ["B"]}) is None
+    assert tensor_outputs("expand", inputs, {"dimensions": ["B", 2, 4], "positive_symbols": []}) is None
+    assert tensor_outputs("expand", inputs, {"dimensions": ["B", -1, 4, -1], "positive_symbols": ["B"]}) is None
+    assert tensor_outputs("expand", {"input": spec(None)}, {"dimensions": ["B"], "positive_symbols": ["B"]}) is None
+
+
+def test_t5_slice_contract_tracks_new_axes_and_same_symbol_prefix_slice():
+    expanded = tensor_outputs(
+        "slice",
+        {"input": spec(["B", 1, "S", "S"], "F32")},
+        {
+            "indices": [
+                {"start": None, "stop": None, "step": None},
+                {"start": None, "stop": None, "step": None},
+                {"start": None, "stop": None, "step": None},
+                {"start": None, "stop": "S", "step": None},
+            ]
+        },
+    )
+    assert expanded is not None
+    assert expanded["output"].shape == ["B", 1, "S", "S"]
+    mask_view = tensor_outputs(
+        "slice",
+        {"input": spec(["B", "S"], "BOOL")},
+        {
+            "indices": [
+                {"start": None, "stop": None, "step": None},
+                None,
+                None,
+                {"start": None, "stop": None, "step": None},
+            ]
+        },
+    )
+    assert mask_view is not None
+    assert mask_view["output"].shape == ["B", 1, 1, "S"]
+    assert tensor_outputs("slice", {"input": spec(["B", "S"])}, {"indices": [None]}) is None
+
+
+def test_t5_slice_contract_rejects_boolean_start_and_step():
+    inputs = {"input": spec(["B", "S"], "BOOL")}
+    assert tensor_outputs(
+        "slice",
+        inputs,
+        {"indices": [{"start": True, "stop": None, "step": None}, {"start": None, "stop": None, "step": None}]},
+    ) is None
+    assert tensor_outputs(
+        "slice",
+        inputs,
+        {"indices": [{"start": None, "stop": None, "step": True}, {"start": None, "stop": None, "step": None}]},
+    ) is None
+
+
+def test_masked_fill_requires_boolean_broadcastable_mask_and_known_scalar():
+    inputs = {"input": spec(["B", 1, "S", "S"], "F32"), "mask": spec(["B", 1, 1, "S"], "BOOL")}
+    output = tensor_outputs("masked_fill", inputs, {"value": -3.4e38})
+    assert output is not None
+    assert output["output"].shape == inputs["input"].shape
+    assert output["output"].dtype == "F32"
+    assert tensor_outputs("masked_fill", inputs, {"value": None}) is None
+    assert tensor_outputs("masked_fill", {**inputs, "mask": spec(["B", 1, 1, "S"], "I32")}, {"value": 0}) is None
+    assert tensor_outputs("masked_fill", {**inputs, "mask": spec(["B", 2, 1, "S"], "BOOL")}, {"value": 0}) is None
+    assert tensor_outputs("masked_fill", inputs, {"value": float("inf")}) is None
+
+
+@pytest.mark.parametrize(
+    ("dtype", "value"),
+    [("F16", 65505), ("BF16", 3.4e38), ("F32", 3.5e38), ("F64", 1.8e308)],
+)
+def test_masked_fill_rejects_values_outside_input_float_range(dtype, value):
+    inputs = {
+        "input": spec(["B", "S"], dtype),
+        "mask": spec(["B", "S"], "BOOL"),
+    }
+    assert tensor_outputs("masked_fill", inputs, {"value": value}) is None
+
+
+def test_masked_fill_rejects_non_floating_input():
+    inputs = {"input": spec(["B", "S"], "I32"), "mask": spec(["B", "S"], "BOOL")}
+    assert tensor_outputs("masked_fill", inputs, {"value": -1}) is None
+
+
+def test_native_t5_mask_algebra_requires_proven_broadcast_and_dtypes():
+    integer = spec(["T"], "I64")
+    positions = spec(["T", 1], "I64")
+    comparison = tensor_outputs("gt", {"left": integer, "right": positions}, {})
+    assert comparison is not None and comparison["output"].shape == ["T", "T"]
+    assert comparison["output"].dtype == "BOOL"
+    assert tensor_outputs("gt", {"left": spec(["T"], "F32"), "right": positions}, {}) is None
+    assert tensor_outputs("gt", {"left": integer, "right": spec([1, "K"], "I64")}, {}) is None
+
+    product = tensor_outputs(
+        "float_bool_mul",
+        {"left": spec(["T", "T"], "F32"), "right": comparison["output"]},
+        {},
+    )
+    assert product is not None and product["output"].dtype == "F32"
+    assert tensor_outputs("float_bool_mul", {"left": integer, "right": comparison["output"]}, {}) is None
+    assert tensor_outputs("float_bool_mul", {"left": spec(["T", "T"], "F32"), "right": integer}, {}) is None
+
+    equal = tensor_outputs("eq_scalar", {"input": spec(["B", 1, "T", "T"], "F32")}, {"scalar": 0})
+    assert equal is not None and equal["output"].dtype == "BOOL"
+    assert tensor_outputs("eq_scalar", {"input": spec(["T"], "F16")}, {"scalar": float("inf")}) is None
+    assert tensor_outputs("scalar_left_sub", {"input": spec(["B", "T"], "F32")}, {"scalar": 1.0}) is not None
+    assert tensor_outputs("scalar_left_sub", {"input": integer}, {"scalar": 1.0}) is None
+    assert tensor_outputs("triu", {"input": spec(["T", "T"], "F32")}, {"diagonal": 1}) is not None
+    assert tensor_outputs("triu", {"input": spec(["T"], "F32")}, {"diagonal": 1}) is None
+    assert tensor_outputs("triu", {"input": spec(["T", "T"], "F32")}, {"diagonal": True}) is None
