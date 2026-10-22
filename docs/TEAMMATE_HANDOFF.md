@@ -1,8 +1,9 @@
-# Backend teammate handoff — October 22, 2026
+# Backend teammate handoff — October 23, 2026
 
 ## Review and integration
 
-The local checkout remains on `pranav/frontend-revamp`. PR
+The local checkout is now `codex/value-dtype-evidence`, created at the verified
+rank commit `f6a1ffc`. PR
 [#45](https://github.com/pranavsinghpatil/model-anatomy/pull/45) contains the
 helper-binding fix (`8283627`). The tensor-rank increment is a separate review
 on top of that commit, published as `codex/trusted-tensor-ranks` and targeting
@@ -11,13 +12,13 @@ on top of that commit, published as `codex/trusted-tensor-ranks` and targeting
 Earlier Cursor changes in the backend, frontend, deployment docs and local start
 script remain unstaged. They are not all included in either backend increment.
 Do not stage the whole working tree or overwrite those drafts. Review the small
-PR diffs and integrate the helper fix before the rank increment.
+PR diffs in order: helper binding, trusted ranks, then value-specific dtype.
 
 Read `00-GROUND.md`, `DECISION_LOG.md` and `BACKEND_RELIABILITY.md` before the next
 change. Artifact inventory is not an architecture graph, and mapped tensors alone
 do not prove complete source semantics.
 
-## What this increment changes
+## Previous increment: trusted ranks
 
 - `backend/model_anatomy/src/static_tensors.py` recognizes native PyTorch
   factories by callable identity, including imported aliases. It derives rank
@@ -30,7 +31,7 @@ do not prove complete source semantics.
 - Engine version `2026.10.22.2` prevents reuse of earlier cache results. Existing
   stored reports are immutable; submit a new inspection to exercise this engine.
 
-## Measured T5 boundary
+## Rank-increment T5 baseline (October 22)
 
 Target: `google-t5/t5-small` at immutable revision
 `df1b051c49625cf57a3d0d8d3863ed4d13564fe4`.
@@ -48,26 +49,56 @@ single-warning combined result must not be claimed for a clean checkout of the
 rank PR alone. Do not import the draft's global dtype shortcut just to remove
 those warnings.
 
+These are historical rank-stage counts, superseded by the value-specific dtype
+findings below. The old single-warning combined result was not proof that every
+dtype decision was correct.
+
 Local diagnostic snapshots are `.local/verification/t5-ranks-before.json` and
 `t5-ranks-after.json`; `t5-ranks-isolated.json` records the isolated review. They
 are evidence, never application fallback data.
 
-## Next teammate task: establish value-specific dtype facts
+## Current increment: value-specific dtype
 
-The existing unstaged `profile_dtype()` draft gives every `.dtype` access the
-first model parameter's dtype, including values after a cast. Do not use that as
-proof of a branch decision. It is deliberately outside the rank PR.
+The unsafe `.dtype` fallback is replaced: casts and explicit factory dtypes now
+control their own source conditions, parameters use their own metadata, and only
+agreeing joins retain dtype facts. Arbitrary `x`, unknown targets and opaque
+module/operator outputs remain unknown. The float16-cast and boolean-mask
+reproductions now choose the correct branch instead of the wrong branch with
+zero warnings. No model forward/helper is executed.
 
-1. Reproduce a wrong branch with an explicit native `.half()`, `.float()` or
-   `.to(dtype=...)` cast and with an integer/bool input or constructed mask.
-2. Track dtype per static value only when the native operation establishes it.
-   Keep an unknown dtype unknown; do not substitute the model's parameter dtype.
-3. Preserve both dependencies and a warning for an undecidable dtype condition.
-   Add deterministic tests against native meta-tensor dtype behavior, plus opaque
-   and shadowed-call regressions that prove no helper/forward execution.
-4. Repeat pinned T5 and the established canonical engine cases. Report any newly
-   exposed warnings honestly; do not delete warnings to recover a completion badge.
-5. Update engine cache identity, documentation and the PR with exact evidence.
+Engine version is `2026.10.23.1`. See [DTYPE_EVIDENCE.md](DTYPE_EVIDENCE.md) for
+the supported transfer rules, meta-tensor oracles and static-profile limits.
+Earlier broad dtype assertions in draft tests were corrected to require an
+unresolved result where evidence is absent.
+
+Current verification: **408 tests passed** in the combined tree and **404** in
+the isolated PR, each with 17 opt-in/platform skips and the existing Starlette
+deprecation warning. Both trees pass all **10 pinned engine/category cases**.
+The focused source-rule suite has 107 passing cases, including 39 dtype checks.
+Lint, scoped formatting, compilation and diff checks pass.
+
+Pinned T5 still has 41 graphs, 305 nodes, all 132 checkpoint tensors owned and
+zero payload reads. It now retains **25** actual warnings in the combined tree
+and **26** in the isolated PR, exposing unproven normalization/operator dtype
+and DenseReluDense cast conditions instead of assuming float32. The extra
+isolated warning is the earlier cache-type gap. The graph is still partial;
+its rank warnings remain closed. Current local snapshots are
+`.local/verification/t5-dtype-after.json` and `t5-dtype-isolated.json`.
+
+## Next teammate task: one proven module-output dtype path
+
+1. Reproduce where pinned T5 loses dtype evidence after normalization/module
+   calls. Select one concrete native path; do not treat every module output as
+   the first parameter's dtype.
+2. Establish its output dtype from a supported source rule or exact native
+   operation contract. Reject opaque/custom overrides and unsupported mixed
+   dtypes. Preserve unknown outputs and dependencies.
+3. Verify against native meta-tensor oracles, then repeat pinned T5 plus the
+   four canonical engine cases. Report the exact warning delta and zero payload
+   reads. A reduced warning count alone is not sufficient acceptance.
+4. Update cache identity, docs and the PR. Keep broad dtype propagation, runtime
+   autocast and general operator inference outside the increment unless required
+   by that measured path.
 
 Do not force the remaining `sequence_length != 1` condition from config context
 length: maximum capacity does not establish the actual input length. A later
@@ -79,7 +110,7 @@ both when symbolic, and document how the graph represents that distinction.
 From the repository root with engine/API/dev dependencies installed:
 
 ```powershell
-.venv/Scripts/python.exe -m pytest -q backend/tests/test_static_tensors.py backend/tests/test_static_helpers.py backend/tests/test_static_predicates.py
+.venv/Scripts/python.exe -m pytest -q backend/tests/test_static_dtypes.py backend/tests/test_static_tensors.py backend/tests/test_static_helpers.py backend/tests/test_static_predicates.py
 $env:RUN_HF_INTEGRATION = '1'
 .venv/Scripts/python.exe -m pytest -q backend/tests/test_engine_integration.py backend/tests/test_category_integration.py
 uv run --no-sync model-anatomy google-t5/t5-small --revision df1b051c49625cf57a3d0d8d3863ed4d13564fe4 --output .local/teammate/t5 --config-dir .local/teammate/t5-config --preview-dir .local/teammate/preview --inspect
@@ -89,7 +120,7 @@ The Windows API tests need local socket access. Restricted runs previously hung
 inside Windows `socketpair`; this is an environment constraint, not a reason to
 change application event-loop behavior.
 
-## Verification and outstanding acceptance
+## Historical rank verification and outstanding acceptance
 
 - Isolated snapshot: **365 passed, 17 skipped**, and all **10** pinned native/
   category acceptance cases passed separately. One existing Starlette/httpx

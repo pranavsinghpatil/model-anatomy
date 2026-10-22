@@ -133,3 +133,35 @@ one-token/multi-token input-profile handling for the remaining symbolic length
 condition. The [teammate handoff](TEAMMATE_HANDOFF.md) gives the review order,
 reproduction commands and acceptance criteria. Live web and deployment gates
 remain unverified by this engine increment.
+
+## October 23: value-specific dtype evidence
+
+Work continues on the user-requested new branch `codex/value-dtype-evidence`,
+based on rank commit `f6a1ffc`. The draft's unconditional model-dtype shortcut
+was demonstrably wrong after a half cast and for a boolean factory mask: both
+selected the wrong source branch with no warning. Both now select the correct
+branch, matching native meta-tensor dtype oracles.
+
+Dtype facts are attached to values from explicit input profiles, actual parameter
+metadata, supported factory arguments and cast contracts. Unknown generic inputs,
+opaque outputs, mixed joins and unresolved `.to` arguments stay unknown. Engine
+cache identity is `2026.10.23.1`. This increment does not establish all module or
+operator output dtypes, runtime autocast or every IR edge's runtime cast.
+
+Verification: **107 focused checks passed**, including 39 dtype cases. Full
+combined tree: **408 passed, 17 skipped**; isolated PR: **404 passed, 17 skipped**.
+Each tree also passed all **10 pinned engine/category cases**. Lint, scoped
+formatting, compilation and diff checks pass; the existing Starlette/httpx
+deprecation warning remains. Network/platform skips were not silently counted
+as passing tests.
+
+T5 preserves its graph and full checkpoint ownership with zero payload reads,
+but now exposes 25 combined-tree/26 isolated warnings instead of using the global
+dtype shortcut to hide unknown normalization and module outputs. The four
+canonical completed-profile models retain their strict checks. T5's remaining
+dtype, cache and symbolic-length conditions are explicit acceptance work.
+
+The [dtype evidence](DTYPE_EVIDENCE.md) and updated
+[teammate handoff](TEAMMATE_HANDOFF.md) define the next increment: prove one
+concrete native normalization/module-output dtype path, without broad assumptions
+about arbitrary outputs. Live web/browser and deployment checks remain separate.

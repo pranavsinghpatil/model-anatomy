@@ -820,3 +820,17 @@ separately because the earlier dtype/routing drafts remain unstaged. The next
 teammate gate is value-specific dtype tracking; see
 [TEAMMATE_HANDOFF.md](TEAMMATE_HANDOFF.md).
 
+## D-058 - Attach dtype evidence to values instead of every model expression
+**2026-10-23 - backend reliability increment**
+
+Source dtype conditions use established input-profile, referenced-parameter,
+trusted-factory and supported-cast facts. Agreeing conditional joins retain the
+fact; opaque dependencies and unknown targets cannot inherit the model's first
+parameter dtype. Generic inputs without an established profile remain unknown.
+
+This corrects the demonstrated float16-cast and boolean-mask branch failures.
+The engine cache identity advances to `2026.10.23.1`. It does not establish dtype
+after arbitrary normalization/module operations or certify runtime graph-edge
+casts. See [DTYPE_EVIDENCE.md](DTYPE_EVIDENCE.md) and the updated
+[TEAMMATE_HANDOFF.md](TEAMMATE_HANDOFF.md) for evidence and the next bounded gate.
+
