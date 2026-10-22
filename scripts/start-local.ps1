@@ -80,8 +80,10 @@ if ($Supabase) {
     if (-not (Test-Path -LiteralPath $EnvFile -PathType Leaf)) { throw 'Supabase profile environment file was not found.' }
     $profileJson = & $python -c 'import json,sys; sys.path.insert(0, sys.argv[1]); from scripts.supabase_profile import load_supabase_profile; print(json.dumps(load_supabase_profile(sys.argv[2])))' $repoRoot $EnvFile 2> (Join-Path $runDir 'profile-error.log')
     if ($LASTEXITCODE -ne 0) { throw 'Supabase profile configuration is invalid. See the redacted profile error log.' }
-    $profileSettings = $profileJson | ConvertFrom-Json -AsHashtable
-    foreach ($name in $profileSettings.Keys) { $settings[$name] = $profileSettings[$name] }
+    $profileSettings = $profileJson | ConvertFrom-Json
+    foreach ($property in $profileSettings.PSObject.Properties) {
+        $settings[$property.Name] = [string]$property.Value
+    }
 } else {
     $settings.MODEL_ANATOMY_DATABASE_URL = $databaseUrl
     $settings.DATABASE_URL = $databaseUrl
