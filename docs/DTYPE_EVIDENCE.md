@@ -79,8 +79,11 @@ dtype shortcut now require an unresolved result when no value evidence exists.
 - Ruff lint, scoped formatting, compilation and scoped diff checks pass.
 
 Local diagnostics are `.local/verification/t5-dtype-after.json` and
-`t5-dtype-isolated.json`. They are not application fallback data. Live web-worker
-and browser acceptance was not performed for this engine increment.
+`t5-dtype-isolated.json`. They are not application fallback data. A subsequent
+[fresh validation](VALIDATION_2026-10-23.md) repeats both full suites and pinned
+model gates, and adds real HTTP API/worker acceptance on both trees. SmolLM2-360M
+and ViT complete with zero warnings, real cold/cache results and zero payload
+reads. Browser and hosted deployment acceptance remain separate gates.
 
 ## Next gate
 

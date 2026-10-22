@@ -144,7 +144,9 @@ wall-clock window while other verification jobs were running. With those jobs
 finished, the full unmodified suite passed 369 tests in 45.37 seconds. This does
 not establish benchmark reliability under contention or hosted load capacity.
 
-Live web-worker/browser handoff and hosted deployment remain separate gates;
-engine tests do not establish them. Swin, Whisper, VideoMAE, SigLIP and the
-DeepSeek custom-architecture case still need their own measured semantic
-increments.
+The [October 23 validation](VALIDATION_2026-10-23.md) repeats both full suites and
+pinned-model gates, and verifies real HTTP API/worker cold/cache flows on both
+trees for SmolLM2-360M and ViT, each completed with zero warnings and zero payload
+reads. Live browser handoff and hosted deployment remain separate gates. Swin,
+Whisper, VideoMAE, SigLIP and the DeepSeek custom-architecture case still need
+their own measured semantic increments.
