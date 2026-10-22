@@ -90,6 +90,46 @@ fresh running web-worker/browser session.
 - Live HTTP/browser handoff and hosted deployment are separate acceptance gates;
   engine checks alone do not establish them.
 
-The immediate next gate is trustworthy tensor facts for the remaining T5 mask
-path. Broader category/custom support follows measured acceptance, one family
-and one mechanism at a time.
+The following increment closes the rank gate. Broader category/custom support
+continues through measured acceptance, one family and one mechanism at a time.
+
+## October 22: trusted tensor-factory rank facts
+
+The reader now recognizes native PyTorch tensor factories by callable identity,
+including imported aliases, rather than a final name such as `ones`. Supported
+size forms establish rank without inventing symbolic dimension values. Opaque,
+shadowed, dynamic and invalid forms retain dependency evidence and uncertainty.
+Shape-changing operations invalidate stale rank; nullable branch merges do not
+become non-null merely because they have a tensor dependency. Rules record a
+`rule_sha256` identity and explain their basis. No production factory/helper or
+forward method is called.
+
+Engine version is `2026.10.22.2`. In the combined working tree, the pinned T5
+mask-rank warning is gone: warnings fall from two to one, with unchanged 41
+graphs, 305 nodes, 132 tensors, 60,506,624 unique parameters, 15,536 header bytes
+and zero payload reads. The symbolic sequence-length condition remains.
+
+The isolated rank PR has the same graph/tensor counts and no mask-rank warning,
+but retains 22 other dtype/opaque-operation/cache/length warnings because the
+earlier Cursor drafts are excluded. It remains partial. This distinction is
+part of the acceptance evidence, not a reason to import the draft's global dtype
+assumptions.
+
+Verification: 40 new factory/rank checks include real meta-tensor rank oracles;
+the combined suite passed 369 tests with 17 skips, while the isolated suite
+passed 365 with 17 skips. Both passed all 10 pinned engine/category cases. Ruff,
+scoped formatting, compilation and scoped diff checks pass. An initial isolated
+ViT completion regression was fixed by preserving value identity through
+rank-preserving casts; the test expectation was retained and the full isolated
+rerun passed. One existing Starlette/httpx deprecation warning remains.
+
+A combined-tree rerun hit the existing HTTP-load benchmark's 0.3-second timing
+window while other verification jobs ran. The final full rerun without those
+jobs passed 369 tests; no benchmark expectation or application behavior changed.
+This is not evidence of hosted load capacity or timing stability under contention.
+
+The next bounded task is **value-specific dtype evidence**, followed by explicit
+one-token/multi-token input-profile handling for the remaining symbolic length
+condition. The [teammate handoff](TEAMMATE_HANDOFF.md) gives the review order,
+reproduction commands and acceptance criteria. Live web and deployment gates
+remain unverified by this engine increment.

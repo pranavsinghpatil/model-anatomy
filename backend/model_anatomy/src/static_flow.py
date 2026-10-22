@@ -16,6 +16,8 @@ from typing import Any
 import torch
 from transformers.utils.import_utils import is_torch_fx_proxy, is_torchdynamo_compiling
 
+from .static_tensors import TensorFactoryFact, analyze_tensor_factory_call
+
 UNKNOWN = object()
 
 
@@ -27,6 +29,13 @@ class StaticValue:
     method: str | None = None
     items: list[StaticValue] | None = None
     fields: dict[str, StaticValue] | None = None
+    # True when this value is a tensor produced by a factory. It is not a
+    # dataflow reference and it is distinct from None.
+    materialized: bool = False
+    # Rank of a constructed tensor, when the factory size is a tuple or list.
+    rank: int | None = None
+    # Dependencies from opaque operations do not establish the result identity.
+    identity_unknown: bool = False
 
 
 @dataclass
@@ -50,18 +59,32 @@ class StaticFlow:
     profile_assumptions: list[dict[str, Any]] = field(default_factory=list)
 
 
-def combine(values: list[StaticValue]) -> StaticValue:
-    return StaticValue(list(dict.fromkeys(ref for value in values for ref in value.refs)))
+def combine(values: list[StaticValue], preserve_tensor_facts: bool = False) -> StaticValue:
+    result = StaticValue(list(dict.fromkeys(ref for value in values for ref in value.refs)))
+    result.identity_unknown = any(value.identity_unknown for value in values)
+    if preserve_tensor_facts:
+        if any(value.constant is None for value in values) and not all(
+            value.constant is None for value in values
+        ):
+            result.identity_unknown = True
+        if values and all(value.materialized for value in values):
+            result.materialized = True
+        if values and all(value.rank is not None and value.rank == values[0].rank for value in values):
+            result.rank = values[0].rank
+    return result
 
 
 def merge_outputs(values: list[StaticValue]) -> StaticValue:
     if len(values) == 1:
         return values[0]
-    result = combine(values)
+    result = combine(values, preserve_tensor_facts=True)
     field_names = {name for value in values for name in (value.fields or {})}
     if field_names:
         result.fields = {
-            name: combine([value.fields[name] for value in values if value.fields and name in value.fields])
+            name: combine(
+                [value.fields[name] for value in values if value.fields and name in value.fields],
+                preserve_tensor_facts=True,
+            )
             for name in field_names
         }
     return result
@@ -212,7 +235,7 @@ class StaticFlowAnalyzer:
                     else:
                         for name in left.keys() | self.env.keys():
                             a, b = left.get(name, StaticValue()), self.env.get(name, StaticValue())
-                            self.env[name] = a if a == b else combine([a, b])
+                            self.env[name] = a if a == b else combine([a, b], preserve_tensor_facts=True)
                     for event in self.flow.events[start:]:
                         self.mark_conditional(event, ast.unparse(node.test))
                     if len(self.flow.events) > start or left_returns or right_returns or assignments_changed:
@@ -335,6 +358,16 @@ class StaticFlowAnalyzer:
                 }:
                     metadata["skip_argument"] = port
         return self.event(node, None, kind, label, {"left": left, "right": right}, metadata)
+
+    def constructed_tensor(self, fact: TensorFactoryFact, values: list[StaticValue]) -> StaticValue:
+        result = combine(values)
+        result.materialized = True
+        result.rank = fact.rank
+        result.identity_unknown = False
+        assumption = fact.assumption
+        if assumption not in self.flow.profile_assumptions:
+            self.flow.profile_assumptions.append(assumption)
+        return result
 
     def attribute(self, value: StaticValue, name: str) -> StaticValue:
         if name in {"shape", "dtype", "device", "ndim"}:
@@ -493,7 +526,9 @@ class StaticFlowAnalyzer:
         if isinstance(node, ast.Compare) and len(node.ops) == 1:
             left, right = self.expression(node.left), self.expression(node.comparators[0])
             if isinstance(node.ops[0], (ast.Is, ast.IsNot)) and right.constant is None:
-                if left.refs or left.module_path is not None:
+                if (
+                    left.refs or left.module_path is not None or left.materialized
+                ) and not left.identity_unknown:
                     return StaticValue(constant=isinstance(node.ops[0], ast.IsNot))
                 if left.constant is not UNKNOWN:
                     return StaticValue(constant=(left.constant is None) == isinstance(node.ops[0], ast.Is))
@@ -512,7 +547,10 @@ class StaticFlowAnalyzer:
             return (
                 self.expression(node.body if condition else node.orelse)
                 if condition is not UNKNOWN
-                else combine([self.expression(node.body), self.expression(node.orelse)])
+                else combine(
+                    [self.expression(node.body), self.expression(node.orelse)],
+                    preserve_tensor_facts=True,
+                )
             )
         if isinstance(node, ast.BinOp):
             return self.operation(node, self.expression(node.left), self.expression(node.right), node.op)
@@ -525,6 +563,8 @@ class StaticFlowAnalyzer:
             )
             name = ast.unparse(node.func).rsplit(".", 1)[-1]
             if isinstance(node.func, ast.Attribute) and name in {"size", "dim", "numel"}:
+                if name == "dim" and receiver is not None and receiver.rank is not None:
+                    return StaticValue(constant=receiver.rank)
                 return StaticValue()
             if isinstance(node.func, ast.Attribute) and name in {
                 "view",
@@ -570,7 +610,30 @@ class StaticFlowAnalyzer:
                         {"input": receiver},
                         {"method": name, "dimensions": values, "keyword_arguments": bool(node.keywords)},
                     )
-                return receiver
+                known_tensor = bool(
+                    (receiver.refs or receiver.materialized)
+                    and receiver.items is None
+                    and receiver.fields is None
+                    and not receiver.identity_unknown
+                )
+                shape_changes = {
+                    "view",
+                    "reshape",
+                    "transpose",
+                    "permute",
+                    "unsqueeze",
+                    "squeeze",
+                    "expand",
+                    "flatten",
+                }
+                if name not in shape_changes:
+                    return receiver
+                return StaticValue(
+                    refs=list(receiver.refs),
+                    materialized=known_tensor,
+                    rank=None,
+                    identity_unknown=not known_tensor,
+                )
             if name in {"enumerate", "iter"} and node.args:
                 return self.expression(node.args[0])
             arguments = {str(i): self.expression(arg) for i, arg in enumerate(node.args)}
@@ -580,6 +643,71 @@ class StaticFlowAnalyzer:
             predicate = self.canonical_predicate(node, arguments)
             if predicate is not None:
                 return predicate
+            argument_values = {
+                id(argument): arguments[str(index)] for index, argument in enumerate(node.args)
+            }
+            argument_values.update(
+                {
+                    id(keyword.value): arguments[keyword.arg]
+                    for keyword in node.keywords
+                    if keyword.arg is not None and keyword.arg in arguments
+                }
+            )
+
+            def value_for(expression: ast.expr) -> StaticValue | None:
+                if id(expression) in argument_values:
+                    return argument_values[id(expression)]
+                if isinstance(expression, ast.Name):
+                    return self.env.get(expression.id)
+                return None
+
+            def known_size_rank(expression: ast.expr) -> int | None:
+                value = value_for(expression)
+                if value is None or value.items is None:
+                    return None
+                if any(type(item.constant) is int and item.constant < 0 for item in value.items):
+                    return None
+                return len(value.items)
+
+            def known_tensor_fact(expression: ast.expr) -> tuple[bool, int | None]:
+                value = value_for(expression)
+                is_tensor = bool(
+                    value
+                    and value.items is None
+                    and value.fields is None
+                    and not value.identity_unknown
+                    and (value.materialized or value.refs)
+                )
+                return is_tensor, value.rank if is_tensor else None
+
+            factory = analyze_tensor_factory_call(
+                node,
+                {name: value for name, value in self.source_globals.items() if name not in self.env},
+                bool(
+                    receiver
+                    and receiver.items is None
+                    and receiver.fields is None
+                    and (receiver.refs or receiver.materialized)
+                    and not receiver.identity_unknown
+                ),
+                known_size_rank,
+                known_tensor_fact,
+            )
+            if factory is not None:
+                if factory.native:
+                    factory_values = list(arguments.values()) + [
+                        self.expression(keyword.value) for keyword in node.keywords if keyword.arg is None
+                    ]
+                    return self.constructed_tensor(factory, factory_values)
+                self.flow.warnings.append(
+                    f"Tensor factory unresolved: {ast.unparse(node.func)} ({factory.reason})"
+                )
+                dependencies = list(arguments.values()) + [
+                    self.expression(keyword.value) for keyword in node.keywords if keyword.arg is None
+                ]
+                result = combine(dependencies)
+                result.identity_unknown = True
+                return result
             if function.module_path is not None and function.method is None:
                 return self.event(node, function.module_path, "module", function.module_path, arguments)
             if function.method is not None and self.depth < 3:
@@ -639,6 +767,7 @@ class StaticFlowAnalyzer:
             if isinstance(node.func, ast.Attribute):
                 result = combine([receiver, *arguments.values()])
                 if result.refs:
+                    result.identity_unknown = True
                     self.flow.warnings.append(
                         f"Opaque call {ast.unparse(node.func)}: dependencies retained, transformation unverified"
                     )
@@ -672,6 +801,7 @@ class StaticFlowAnalyzer:
                 return result
             result = combine(list(arguments.values()))
             if result.refs:
+                result.identity_unknown = True
                 self.flow.warnings.append(
                     f"Opaque call {ast.unparse(node.func)}: dependencies retained, transformation unverified"
                 )

@@ -1,4 +1,4 @@
 """Cache identity changes whenever extraction behavior or report schemas change."""
 
-ENGINE_VERSION = "2026.10.22.1"
+ENGINE_VERSION = "2026.10.22.2"
 IR_SCHEMA_VERSION = "1.1"

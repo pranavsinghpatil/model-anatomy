@@ -15,6 +15,8 @@ revision, coverage checks, actual warnings, analysis scope and manual verificati
 
 [Backend reliability](BACKEND_RELIABILITY.md) records the current measured gap,
 the stepwise acceptance approach and the next reconstruction gate.
+[Teammate handoff](TEAMMATE_HANDOFF.md) contains review dependencies, reproduction
+commands and the next bounded backend task.
 
 [UI redesign](UI_REDESIGN.md) documents the application flow, design system,
 responsive workspace and validation requirements. Its annotated

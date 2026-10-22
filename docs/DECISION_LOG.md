@@ -805,3 +805,18 @@ results, isolated-snapshot checks and remaining gates are recorded in
 [BACKEND_RELIABILITY.md](BACKEND_RELIABILITY.md). The narrow increment excludes
 the previously uncommitted Cursor changes.
 
+## D-057 - Establish tensor-factory rank from native callable identity
+**2026-10-22 - backend reliability increment**
+
+Factory-derived tensor facts require native PyTorch callable identity and a
+supported argument form. Rank follows the supported factory contract, without
+assigning concrete values to symbolic dimensions. Opaque calls, unsupported
+shape changes and nullable merges cannot silently preserve those facts.
+
+The rank increment uses engine cache identity `2026.10.22.2`. It resolves the
+pinned T5 mask-rank condition without forcing the remaining symbolic length
+condition. Isolated-review and combined-working-tree evidence are recorded
+separately because the earlier dtype/routing drafts remain unstaged. The next
+teammate gate is value-specific dtype tracking; see
+[TEAMMATE_HANDOFF.md](TEAMMATE_HANDOFF.md).
+
