@@ -355,6 +355,15 @@
   align-items: center;
   gap: 16px;
 }
+.viewbar-findings {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
 .workspace-telemetry-ribbon {
   display: flex;
   align-items: center;

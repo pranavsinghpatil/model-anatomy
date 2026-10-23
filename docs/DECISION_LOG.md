@@ -1153,3 +1153,18 @@ The engine cache identity advances to `2026.10.23.1`. It does not establish dtyp
 after arbitrary normalization/module operations or certify runtime graph-edge
 casts. See [DTYPE_EVIDENCE.md](DTYPE_EVIDENCE.md) and the updated
 [TEAMMATE_HANDOFF.md](TEAMMATE_HANDOFF.md) for evidence and the next bounded gate.
+
+## D-071 - Keep input-value predicates unresolved without token evidence
+**2026-10-23 - top integration**
+
+The canonical input profile establishes shape and selected dtype facts, but it
+does not include token values. A static membership check such as `0 in input_ids`
+therefore remains unresolved. The earlier draft treated absence of token values
+as proof of absence and selected one branch; that was unsound. The integrated
+reader retains conditional dependencies and reports the uncertainty.
+
+The combined branch preserves the measured catalog, native graph contracts,
+value-specific dtype evidence, and the uncommitted frontend/backend work from
+the previous checkout. The catalog reports outcomes separately: a record does
+not imply a complete architecture graph. See
+[top integration validation](TOP_INTEGRATION_2026-10-23.md).

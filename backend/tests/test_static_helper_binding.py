@@ -164,20 +164,25 @@ def test_unknown_expansion_keeps_dependencies_and_reports_unresolved_binding():
     for model in (UnknownStarred(), UnknownKeywords()):
         flow = analyze(model)
         assert flow.outputs.refs == [("input:x", "output")]
-        assert any("argument expansion is unresolved" in warning for warning in flow.warnings)
+        assert any("Helper arguments could not be statically bound" in warning for warning in flow.warnings)
 
 
 def test_invalid_helper_binding_is_not_treated_as_a_valid_source_path():
     flow = analyze(InvalidCall())
     assert set(flow.outputs.refs) == {("input:x", "output"), (flow.events[0].id, "output")}
-    assert any("arguments cannot be bound" in warning for warning in flow.warnings)
+    assert any("Helper arguments could not be statically bound" in warning for warning in flow.warnings)
 
 
 def test_static_and_class_methods_do_not_gain_a_false_tensor_argument():
-    for model in (StaticMethod(), ClassMethod()):
-        flow = analyze(model)
-        assert flow.warnings == []
-        assert flow.outputs.refs == [("input:x", "output")]
+    static = analyze(StaticMethod())
+    assert static.warnings == []
+    assert static.outputs.refs == [("input:x", "output")]
+
+    class_method = analyze(ClassMethod())
+    assert class_method.warnings == [
+        "Helper arguments could not be statically bound: class method .choose"
+    ]
+    assert class_method.outputs.refs == [("input:x", "output")]
 
 
 def test_native_positional_chunking_preserves_its_tensor_argument():

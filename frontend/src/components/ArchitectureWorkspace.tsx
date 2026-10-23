@@ -515,6 +515,7 @@ export function ArchitectureWorkspace({
               analysis={analysis}
               analysisId={analysis.id}
               graphId={graph.id}
+              nodes={graph.nodes}
               node={selected}
               openGraph={open}
               citation={citation}

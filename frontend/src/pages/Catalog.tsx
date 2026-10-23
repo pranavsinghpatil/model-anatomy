@@ -10,6 +10,7 @@ import {
   type DiscoveryCatalogResponse,
 } from "../api/client";
 import { DitherBackground } from "../components/DitherBackground";
+import { ErrorNotice } from "../components/Common";
 import { EntryHeader, PageFooter } from "./Entry";
 import "./benchmark-catalog.css";
 import "./entry.css";

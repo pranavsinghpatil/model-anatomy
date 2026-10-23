@@ -2209,30 +2209,19 @@ class StaticFlowAnalyzer:
                         f"Opaque call {ast.unparse(node.func)}: dependencies retained, transformation unverified"
                     )
                 return result
-            if name[0].isupper() and any(
-                key in arguments
-                for key in (
-                    "logits",
-                    "last_hidden_state",
-                    "pooler_output",
-                    "logits_per_image",
-                    "logits_per_text",
-                )
-            ):
-                fields = {
-                    key: value
-                    for key, value in arguments.items()
-                    if key
-                    in {
-                        "logits",
-                        "last_hidden_state",
-                        "pooler_output",
-                        "logits_per_image",
-                        "logits_per_text",
-                        "text_embeds",
-                        "image_embeds",
-                    }
-                }
+            output_fields = {
+                "logits",
+                "prediction_logits",
+                "seq_relationship_logits",
+                "last_hidden_state",
+                "pooler_output",
+                "logits_per_image",
+                "logits_per_text",
+                "text_embeds",
+                "image_embeds",
+            }
+            if name[0].isupper() and any(key in arguments for key in output_fields):
+                fields = {key: value for key, value in arguments.items() if key in output_fields}
                 result = combine(list(fields.values()))
                 result.fields = fields
                 return result

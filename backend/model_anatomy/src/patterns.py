@@ -96,7 +96,10 @@ class SemanticAnalyzer:
         if not path:
             return result("model", 1.0, "native PreTrainedModel root")
         if name in {"lm_head", "cls", "predictions", "embed_out", "output_projection"} and (
-            isinstance(module, torch.nn.Linear) or "mlm" in class_name or "prediction" in class_name
+            isinstance(module, torch.nn.Linear)
+            or "mlm" in class_name
+            or "prediction" in class_name
+            or "lm_head" in descendant_kinds
         ):
             return result("lm_head", 0.95, "task-head context and projection topology")
         if "classifier" in name and (isinstance(module, (torch.nn.Linear, torch.nn.Sequential)) or children):
@@ -137,7 +140,12 @@ class SemanticAnalyzer:
                 0.98,
                 "affine projection type and parameter dimensions",
             )
-        if "pool" in class_name and (not children or "pooling" in type(module).__module__):
+        if ("pool" in class_name or name == "pooler") and (
+            not children
+            or "pooling" in type(module).__module__
+            or "projection" in descendant_kinds
+            and descendant_kinds <= {"projection", "activation", "dropout", "layer_norm", "normalization"}
+        ):
             return result("pooling", 0.98, "pooling implementation and ownership context")
         if isinstance(module, torch.nn.Identity):
             return result("identity", 1.0, "isinstance(nn.Identity)")

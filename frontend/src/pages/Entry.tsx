@@ -9,7 +9,7 @@ import {
   ShieldCheck,
   Database,
 } from "lucide-react";
-import { api } from "../api/client";
+import { analysisHref, api } from "../api/client";
 import { ErrorNotice, Loading, Status } from "../components/Common";
 import { Button, ThemeControl } from "../components/ui";
 import { ModelAnatomyMark } from "../components/Logo";
@@ -67,7 +67,7 @@ export function PageFooter() {
 
           {/* Column 2: Architecture Views */}
           <div className="footer-col">
-            <h4 className="footer-col-title">Inspection Views</h4>
+            <h4 className="footer-col-title">Inspection</h4>
             <ul className="footer-nav-list">
               <li>
                 <a href="/#blueprint">Architecture Graph</a>
@@ -195,7 +195,7 @@ export function EntryHeader() {
           </nav>
         </div>
         <nav className="entry-header-actions" aria-label="Page controls">
-          <Link className="entry-history-link" to="/catalog">
+          <Link className="entry-history-link" to="/#recent">
             <History size={14} />
             <span>Your analyses</span>
           </Link>
@@ -244,8 +244,7 @@ export function Start() {
         window.location.pathname !== submissionPath.current
       )
         return;
-      const view = job.status === "inspected" ? "artifacts" : "architecture";
-      void navigate(`/app/analyses/${encodeURIComponent(job.id)}?view=${view}`);
+      void navigate(analysisHref(job));
     },
   });
 
@@ -260,7 +259,7 @@ export function Start() {
               <div className="entry-announcement-badge">
                 <span className="entry-badge-dot" />
                 <span>Tensor &amp; Architecture Inspection Studio</span>
-                <span className="badge-ver">v1.0</span>
+                <span className="badge-ver">preview</span>
               </div>
               <h1 id="entry-title">
                 See how a <br />
@@ -564,23 +563,25 @@ export function Start() {
           </div>
         </details>
 
-        {jobs.length > 0 && (
-          <section
-            className="entry-recent"
-            id="recent"
-            aria-labelledby="recent-title"
-          >
-            <div className="entry-section-heading">
-              <div>
-                <h2 id="recent-title">Recent analyses</h2>
-              </div>
-              <span className="entry-recent-count">
-                {`${jobs.length} ${jobs.length === 1 ? "analysis" : "analyses"}`}
-              </span>
+        <section
+          className="entry-recent"
+          id="recent"
+          aria-labelledby="recent-title"
+        >
+          <div className="entry-section-heading">
+            <div>
+              <h2 id="recent-title">Recent analyses</h2>
             </div>
-            <p className="entry-recent-copy">
-              Your submitted analyses. Select one to continue.
-            </p>
+            <span className="entry-recent-count">
+              {`${jobs.length} ${jobs.length === 1 ? "analysis" : "analyses"}`}
+            </span>
+          </div>
+          <p className="entry-recent-copy">
+            {jobs.length > 0
+              ? "Your submitted analyses. Select one to continue."
+              : "No analyses in this session yet. Submit a public model above. Results stay on this browser."}
+          </p>
+          {jobs.length > 0 && (
             <div className="entry-table-wrap">
               <table className="entry-table">
                 <thead>
@@ -600,7 +601,7 @@ export function Start() {
                       <td>
                         <Link
                           className="entry-model-link"
-                          to={`/app/analyses/${encodeURIComponent(job.id)}?view=${job.status === "inspected" ? "artifacts" : "architecture"}`}
+                          to={analysisHref(job)}
                         >
                           <span>
                             <strong>{job.model_id}</strong>
@@ -629,7 +630,7 @@ export function Start() {
                       <td>
                         <Link
                           className="entry-continue"
-                          to={`/app/analyses/${encodeURIComponent(job.id)}?view=${job.status === "inspected" ? "artifacts" : "architecture"}`}
+                          to={analysisHref(job)}
                           aria-label={`Continue analysis of ${job.model_id}`}
                         >
                           Continue <ArrowRight size={14} />
@@ -640,8 +641,8 @@ export function Start() {
                 </tbody>
               </table>
             </div>
-          </section>
-        )}
+          )}
+        </section>
       </main>
       <PageFooter />
     </div>

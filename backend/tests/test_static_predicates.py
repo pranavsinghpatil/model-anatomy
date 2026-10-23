@@ -217,6 +217,23 @@ def test_calls_after_one_sided_return_remain_conditional(model_class, condition)
     ]
 
 
+class CacheMarker:
+    pass
+
+
+class CacheGuard(NativeGuards):
+    def forward(self, x, past_key_values=None):
+        if isinstance(past_key_values, CacheMarker):
+            return x + x
+        return self.layer(x)
+
+
+def test_isinstance_none_is_false_for_any_class_without_execution():
+    flow = analyze(CacheGuard())
+    assert flow.warnings == []
+    assert [event.module_path for event in flow.events] == ["layer"]
+
+
 def test_named_assignment_in_native_mask_guard_is_resolved_from_canonical_none():
     flow = analyze(NamedMaskGuard())
     assert flow.warnings == []
@@ -235,3 +252,74 @@ def test_decorated_forward_uses_original_source_globals_without_execution():
     assert flow.warnings == []
     assert [event.module_path for event in flow.events] == ["layer"]
     assert len(flow.profile_assumptions) == 1
+
+
+class SynthesizedMask(NativeGuards):
+    def forward(self, x, attention_mask=None):
+        if attention_mask is None:
+            attention_mask = torch.ones(2, 2)
+        if attention_mask is not None:
+            return self.layer(x)
+        return x + x
+
+
+class Float16Clamp(NativeGuards):
+    def forward(self, x):
+        if x.dtype == torch.float16:
+            return x + x
+        return self.layer(x)
+
+
+class UnknownTokenMembership(NativeGuards):
+    def forward(self, x):
+        if 0 in x:
+            return x + x
+        return self.layer(x)
+
+
+def test_unknown_token_membership_does_not_invent_input_values():
+    flow = analyze(UnknownTokenMembership())
+    assert any("Conditional source path is unresolved: 0 in x" in warning for warning in flow.warnings)
+    assert not any(item.get("predicate") == "token membership" for item in flow.profile_assumptions)
+
+
+def test_synthesized_attention_mask_is_a_tensor_for_later_none_checks():
+    flow = analyze(SynthesizedMask())
+    assert flow.warnings == []
+    assert [(event.kind, event.module_path) for event in flow.events] == [
+        ("tensor_creation", None), ("module", "layer")
+    ]
+    assert flow.events[0].metadata["contract"] == "torch_static_creation.v1"
+
+
+def test_unknown_generic_input_dtype_does_not_inherit_parameter_profile():
+    flow = analyze(Float16Clamp())
+    assert any("x.dtype == torch.float16" in warning for warning in flow.warnings)
+    assert [event.module_path for event in flow.events] == [None, "layer"]
+    assert not any(item["predicate"] == "tensor.dtype" for item in flow.profile_assumptions)
+
+
+def test_t5_canonical_mask_and_float_guard_are_not_left_unresolved():
+    from model_anatomy.src.registry import instantiate_native, load_native_config
+
+    model, _ = instantiate_native(
+        load_native_config(
+            {
+                "model_type": "t5",
+                "architectures": ["T5ForConditionalGeneration"],
+                "vocab_size": 64,
+                "d_model": 16,
+                "d_kv": 8,
+                "d_ff": 32,
+                "num_layers": 1,
+                "num_decoder_layers": 1,
+                "num_heads": 2,
+            }
+        )
+    )
+    paths = {path: SimpleNamespace(kind="backbone") for path, _ in model.named_modules()}
+    encoder = StaticFlowAnalyzer(model, "encoder", paths).analyze()
+    block = StaticFlowAnalyzer(model, "decoder.block.0", paths).analyze()
+    assert not any("attention_mask is not None" in warning for warning in encoder.warnings)
+    # The native normalization contract now carries the activation dtype.
+    assert not any("hidden_states.dtype == torch.float16" in warning for warning in block.warnings)

@@ -136,6 +136,7 @@ def inspect_native_model(
         pass
     checkpoint_names: dict[str, str] = {}
     name_conversions = {}
+    legacy_norm = {".gamma": ".weight", ".beta": ".bias"}
     for name in checkpoint.tensors:
         converted = name
         conversion_steps = []
@@ -153,6 +154,18 @@ def inspect_native_model(
                         "source_sha256": legacy_source_sha256,
                     }
                 )
+        if converted == name:
+            for old, new in legacy_norm.items():
+                if not name.endswith(old):
+                    continue
+                target = name[: -len(old)] + new
+                module_names = {target, prefix + target, target.removeprefix(prefix)}
+                if target not in checkpoint.tensors and module_names & named.keys():
+                    converted = target
+                    conversion_steps.append(
+                        {"source": "PyTorch LayerNorm stores gamma and beta as weight and bias"}
+                    )
+                break
         if converted != name:
             name_conversions[name] = {"target": converted, **conversion_steps[-1]}
             if len(conversion_steps) > 1:
@@ -169,6 +182,10 @@ def inspect_native_model(
     for name, parameter in named.items():
         aliases.setdefault(id(parameter), []).append(name)
     warnings = []
+    if not checkpoint.tensors:
+        warnings.append(
+            "No Safetensors checkpoint was available. The module graph comes from the native configuration; tensor ownership was not established."
+        )
     parameters = {}
     for name, parameter in named.items():
         shared = aliases[id(parameter)]
@@ -177,7 +194,7 @@ def inspect_native_model(
             if tuple(parameter.shape) != checkpoint.tensors[tensor_name].shape:
                 raise ArtifactError(f"Checkpoint/module shape mismatch: {tensor_name}")
         if name == shared[0]:
-            if not stored:
+            if not stored and checkpoint.tensors:
                 warnings.append(f"No checkpoint tensor matched model parameter {name}")
             elif len(stored) > 1:
                 warnings.append(

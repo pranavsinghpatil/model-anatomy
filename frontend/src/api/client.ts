@@ -365,6 +365,13 @@ export const pending = (status?: string) =>
   status === "queued" || status === "running";
 export const graphReady = (status?: string) =>
   status === "completed" || status === "partial";
+
+/** Workspace URL for a job. Pending jobs carry `awaiting` so the progress screen can hand off. */
+export function analysisHref(job: { id: string; status: string }) {
+  const view = job.status === "inspected" ? "artifacts" : "architecture";
+  const awaiting = pending(job.status) ? "&awaiting=1" : "";
+  return `/app/analyses/${encodeURIComponent(job.id)}?view=${view}${awaiting}`;
+}
 export const retryQuery = (count: number, error: Error) =>
   count < 1 &&
   (!(error instanceof ApiError) || error.status === 0 || error.status >= 500);

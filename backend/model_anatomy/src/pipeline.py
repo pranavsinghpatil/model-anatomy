@@ -13,10 +13,59 @@ import requests
 
 from .artifact_inspection import build_artifact_inspection, has_adapter_tensors
 from .artifacts import AmbiguousCheckpointError, InspectionBudgetError, MetadataClient, parse_reference
-from .errors import UnsupportedModelError
+from .errors import ArtifactError, UnsupportedModelError
 from .ir import Evidence, ModelIR
 from .profile import config_filename, native_dimensions, repository_profile
 from .version import ENGINE_VERSION
+
+
+def _unmapped_checkpoint_tensors(raw: dict) -> list[str]:
+    return [name for name, item in raw["checkpoint_extras"].items() if item["kind"] == "unmapped"]
+
+
+def _align_architecture_with_checkpoint(config, checkpoint, model, selection, raw):
+    """Use a native class that owns checkpoint tensors the declared class leaves out."""
+    unmapped = _unmapped_checkpoint_tensors(raw)
+    if not unmapped or not checkpoint.tensors:
+        return model, selection, raw
+    from .facts import inspect_native_model
+    from .registry import construct_native, native_auto_candidates
+
+    best = None
+    for _auto_name, auto_class, model_name in native_auto_candidates(config):
+        if model_name == type(model).__name__:
+            continue
+        try:
+            alternate = construct_native(config, auto_class)
+            alternate_raw = inspect_native_model(alternate, checkpoint)
+        except (UnsupportedModelError, ArtifactError):
+            continue
+        alternate_unmapped = _unmapped_checkpoint_tensors(alternate_raw)
+        if len(alternate_unmapped) >= len(unmapped):
+            continue
+        matched = sum(
+            parameter["parameter_count"]
+            for name, parameter in alternate_raw["parameters"].items()
+            if name == parameter["canonical_parameter"] and parameter["checkpoint_matched"]
+        )
+        if best is None or len(alternate_unmapped) < best[0] or (
+            len(alternate_unmapped) == best[0] and matched > best[1]
+        ):
+            best = (len(alternate_unmapped), matched, alternate, alternate_raw, auto_class, model_name)
+    if best is None:
+        return model, selection, raw
+    _count, _matched, model, raw, auto_class, model_name = best
+    declared = selection.get("model_class")
+    selection = {
+        **selection,
+        "auto_class": auto_class.__name__,
+        "model_class": model_name,
+        "checkpoint_alignment": (
+            f"The declared architecture {declared} leaves {len(unmapped)} checkpoint tensors without a module. "
+            f"The graph uses {model_name}, which owns those tensors."
+        ),
+    }
+    return model, selection, raw
 
 
 def reconstruct(
@@ -116,36 +165,14 @@ def reconstruct(
             native_error = exc
             profile["architecture_blockers"].append(str(exc)[:1024])
 
-    if not has_safetensors:
-        if not allow_artifact_inspection:
-            from .errors import ArtifactError
+    if not has_safetensors and not allow_artifact_inspection:
+        from .errors import ArtifactError
 
-            raise ArtifactError("Repository has no Safetensors checkpoint; it is outside the target scope")
-        if has_gguf or reference.filename.endswith(".gguf"):
-            try:
-                checkpoint = client.checkpoint(reference, revision)
-            except AmbiguousCheckpointError:
-                return inspect_artifacts(
-                    reference,
-                    revision,
-                    files,
-                    client.audit,
-                    audit_start=audit_start,
-                    config_data=config_data,
-                    checkpoint=None,
-                    reason_code="checkpoint_selection_required",
-                )
-            except InspectionBudgetError:
-                return inspect_artifacts(
-                    reference,
-                    revision,
-                    files,
-                    client.audit,
-                    audit_start=audit_start,
-                    config_data=config_data,
-                    checkpoint=None,
-                    reason_code="metadata_budget_exceeded",
-                )
+        raise ArtifactError("Repository has no Safetensors checkpoint; it is outside the target scope")
+    if not has_safetensors and (has_gguf or reference.filename.endswith(".gguf")):
+        try:
+            checkpoint = client.checkpoint(reference, revision)
+        except AmbiguousCheckpointError:
             return inspect_artifacts(
                 reference,
                 revision,
@@ -153,15 +180,37 @@ def reconstruct(
                 client.audit,
                 audit_start=audit_start,
                 config_data=config_data,
-                checkpoint=checkpoint,
-                reason_code="gguf_header_only",
+                checkpoint=None,
+                reason_code="checkpoint_selection_required",
             )
+        except InspectionBudgetError:
+            return inspect_artifacts(
+                reference,
+                revision,
+                files,
+                client.audit,
+                audit_start=audit_start,
+                config_data=config_data,
+                checkpoint=None,
+                reason_code="metadata_budget_exceeded",
+            )
+        return inspect_artifacts(
+            reference,
+            revision,
+            files,
+            client.audit,
+            audit_start=audit_start,
+            config_data=config_data,
+            checkpoint=checkpoint,
+            reason_code="gguf_header_only",
+        )
+    if not has_safetensors and (adapter_config is not None or config is None or native_error is not None):
         reason = (
             "adapter_requires_base_model"
             if adapter_config is not None
             else "architecture_config_unavailable"
             if config_data is None
-            else "safetensors_unavailable"
+            else "native_architecture_unavailable"
         )
         return inspect_artifacts(
             reference,
@@ -173,39 +222,43 @@ def reconstruct(
             checkpoint=None,
             reason_code=reason,
         )
+    if not has_safetensors:
+        from .artifacts import CheckpointMetadata
 
-    try:
-        checkpoint = client.checkpoint(reference, revision)
-    except AmbiguousCheckpointError:
-        if not allow_artifact_inspection:
-            raise
-        return inspect_artifacts(
-            reference,
-            revision,
-            files,
-            client.audit,
-            audit_start=audit_start,
-            config_data=config_data,
-            checkpoint=None,
-            reason_code=(
-                "adapter_requires_base_model"
-                if adapter_config is not None
-                else "checkpoint_selection_required"
-            ),
-        )
-    except InspectionBudgetError:
-        if not allow_artifact_inspection:
-            raise
-        return inspect_artifacts(
-            reference,
-            revision,
-            files,
-            client.audit,
-            audit_start=audit_start,
-            config_data=config_data,
-            checkpoint=None,
-            reason_code="metadata_budget_exceeded",
-        )
+        checkpoint = CheckpointMetadata(tensors={}, shards={}, tensor_files={}, format="absent")
+    else:
+        try:
+            checkpoint = client.checkpoint(reference, revision)
+        except AmbiguousCheckpointError:
+            if not allow_artifact_inspection:
+                raise
+            return inspect_artifacts(
+                reference,
+                revision,
+                files,
+                client.audit,
+                audit_start=audit_start,
+                config_data=config_data,
+                checkpoint=None,
+                reason_code=(
+                    "adapter_requires_base_model"
+                    if adapter_config is not None
+                    else "checkpoint_selection_required"
+                ),
+            )
+        except InspectionBudgetError:
+            if not allow_artifact_inspection:
+                raise
+            return inspect_artifacts(
+                reference,
+                revision,
+                files,
+                client.audit,
+                audit_start=audit_start,
+                config_data=config_data,
+                checkpoint=None,
+                reason_code="metadata_budget_exceeded",
+            )
 
     if checkpoint.format == "gguf":
         return inspect_artifacts(
@@ -291,6 +344,7 @@ def reconstruct(
 
     config_url = reference.url(config_file, revision)
     raw = inspect_native_model(model, checkpoint)
+    model, selection, raw = _align_architecture_with_checkpoint(config, checkpoint, model, selection, raw)
     adapter = adapter_for(config.model_type)
     if adapter:
         adapter.refine_facts(raw, checkpoint, config_data)
@@ -449,6 +503,9 @@ def reconstruct(
             "Collapsed child graphs show a representative instance; all source paths and raw parameter records are retained",
         ],
     }
+    alignment = selection.get("checkpoint_alignment")
+    if isinstance(alignment, str):
+        metadata["limitations"].append(alignment)
     evidence = [
         Evidence("hf_config", "direct", config_url, {"revision": revision}),
         Evidence(

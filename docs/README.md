@@ -23,6 +23,8 @@ the stepwise acceptance approach and the next reconstruction gate.
 commands and the next bounded backend task.
 [Dtype evidence](DTYPE_EVIDENCE.md) describes the supported value-specific source
 facts and the limits of native input profiles.
+[Top integration validation](TOP_INTEGRATION_2026-10-23.md) records the combined
+branch, live catalog count and final checks.
 
 [UI redesign](UI_REDESIGN.md) documents the application flow, design system,
 responsive workspace and validation requirements. Its annotated

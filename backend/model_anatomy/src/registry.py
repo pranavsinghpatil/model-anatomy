@@ -356,9 +356,8 @@ def _task_routing_hint(config: PretrainedConfig) -> str | None:
     return "AutoModelForSeq2SeqLM"
 
 
-def instantiate_native(config: PretrainedConfig) -> tuple[torch.nn.Module, dict[str, Any]]:
-    auto_class, warnings = select_auto_class(config)
-    # Eager implementation exposes inspectable source; no attention is executed.
+def construct_native(config: PretrainedConfig, auto_class: type) -> torch.nn.Module:
+    """Build one native class on the meta device, without running forward."""
     config._attn_implementation = "eager"
     token = _CONSTRUCTING.set(True)
     handle = torch.nn.modules.module.register_module_forward_pre_hook(_forbid_forward)
@@ -384,6 +383,16 @@ def instantiate_native(config: PretrainedConfig) -> tuple[torch.nn.Module, dict[
         raise ArtifactError(
             "Native construction allocated non-meta model tensors; no CPU fallback is allowed"
         )
+    return model
+
+
+def native_auto_candidates(config: PretrainedConfig) -> list[tuple[str, type, str]]:
+    return _auto_model_candidates(config)
+
+
+def instantiate_native(config: PretrainedConfig) -> tuple[torch.nn.Module, dict[str, Any]]:
+    auto_class, warnings = select_auto_class(config)
+    model = construct_native(config, auto_class)
     return model, {
         "auto_class": auto_class.__name__,
         "model_class": type(model).__name__,

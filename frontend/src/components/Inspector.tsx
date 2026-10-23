@@ -6,7 +6,6 @@ import {
   ArrowLeft,
   ArrowRight,
   Boxes,
-  CheckCircle2,
   ChevronRight,
   Cpu,
   FileSearch,
@@ -113,10 +112,86 @@ function TensorRow({ tensor }: { tensor: TensorMetadata }) {
 
 export type InspectorTab = "module" | "tensors" | "evidence";
 
+function ParameterSplit({
+  total,
+  nodes,
+}: {
+  total: number;
+  nodes: GraphNode[];
+}) {
+  const parts = nodes
+    .filter((node) => node.parameter_count > 0)
+    .map((node) => ({
+      id: node.id,
+      label: nodeTitle(node),
+      count: node.parameter_count,
+    }))
+    .sort((a, b) => b.count - a.count);
+  if (!parts.length) return null;
+  const summed = parts.reduce((sum, part) => sum + part.count, 0);
+  const overlaps = summed > total * 1.02;
+  const partitions = summed >= total * 0.95 && summed <= total * 1.02;
+  const shown = parts.slice(0, 8);
+  return (
+    <div className="overview-distribution-section">
+      <div className="section-label-row">
+        <span className="distribution-label">Parameters in this graph</span>
+      </div>
+      {partitions ? (
+        <div
+          className="distribution-bar"
+          role="img"
+          aria-label="Parameter allocation"
+        >
+          {shown.map((part, index) => (
+            <div
+              key={part.id}
+              className="dist-seg"
+              style={{
+                width: `${(part.count / summed) * 100}%`,
+                background: [
+                  "#6366f1",
+                  "#38bdf8",
+                  "#a855f7",
+                  "#f59e0b",
+                  "#10b981",
+                ][index % 5],
+              }}
+              title={`${part.label}: ${count(part.count)}`}
+            />
+          ))}
+        </div>
+      ) : null}
+      <ul className="allocation-list">
+        {shown.map((part) => (
+          <li key={part.id}>
+            <span>{part.label}</span>
+            <strong>
+              {count(part.count)} · {((part.count / total) * 100).toFixed(1)}%
+            </strong>
+          </li>
+        ))}
+      </ul>
+      {parts.length > shown.length ? (
+        <p className="allocation-note">
+          {parts.length - shown.length} more components have parameters.
+        </p>
+      ) : null}
+      {overlaps ? (
+        <p className="allocation-note">
+          Component counts overlap when weights are tied. Percents use the
+          unique model total of {count(total)}.
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
 export function Inspector({
   analysis,
   analysisId,
   graphId,
+  nodes = [],
   node,
   openGraph,
   citation,
@@ -126,6 +201,7 @@ export function Inspector({
   analysis: AnalysisDetail;
   analysisId: string;
   graphId: string;
+  nodes?: GraphNode[];
   node: GraphNode | null;
   openGraph: (node: GraphNode) => void;
   citation: Citation | null;
@@ -294,46 +370,7 @@ export function Inspector({
           ) : null}
         </div>
         {analysis.parameter_count ? (
-          <div className="overview-distribution-section">
-            <div className="section-label-row">
-              <span className="distribution-label">Parameter Allocation</span>
-              <span className="distribution-verified">
-                <CheckCircle2 size={11} /> SafeTensors Verified
-              </span>
-            </div>
-            <div
-              className="distribution-bar"
-              role="img"
-              aria-label="Parameter allocation"
-            >
-              <div
-                className="dist-seg dist-blocks"
-                style={{ width: "68%" }}
-                title="Layers / Blocks: ~68%"
-              />
-              <div
-                className="dist-seg dist-emb"
-                style={{ width: "31%" }}
-                title="Embeddings: ~31%"
-              />
-              <div
-                className="dist-seg dist-head"
-                style={{ width: "1%" }}
-                title="Head / Norm: ~1%"
-              />
-            </div>
-            <div className="distribution-legend">
-              <span className="leg-item">
-                <span className="leg-dot blocks" /> Layers 68%
-              </span>
-              <span className="leg-item">
-                <span className="leg-dot emb" /> Embeddings 31%
-              </span>
-              <span className="leg-item">
-                <span className="leg-dot head" /> Head/Norm 1%
-              </span>
-            </div>
-          </div>
+          <ParameterSplit total={analysis.parameter_count} nodes={nodes} />
         ) : null}
         <div className="overview-hint-box">
           <FileSearch size={15} />
@@ -351,9 +388,6 @@ export function Inspector({
       <div className="inspector-heading">
         <div className="inspector-kind-row">
           <span className="eyebrow">{resolved.kind.replaceAll("_", " ")}</span>
-          <span className="safetensors-verified-chip">
-            <CheckCircle2 size={11} /> SafeTensors Verified
-          </span>
         </div>
         <h2>{nodeTitle(resolved)}</h2>
         {nodeTitle(resolved) !== resolved.label && (

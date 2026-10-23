@@ -21,7 +21,7 @@ import {
   Check,
   Copy,
 } from "lucide-react";
-import { api, graphReady, pending } from "../api/client";
+import { analysisHref, api, graphReady, pending } from "../api/client";
 import type { Citation, ExportFormat } from "../api/contract";
 import { ErrorNotice, Loading, Status } from "../components/Common";
 import { ModelAnatomyMark } from "../components/Logo";
@@ -97,18 +97,43 @@ function Workspace({ id }: { id: string }) {
   const previousStatus = useRef(detail?.status);
   const ready = graphReady(detail?.status) && !analysis.error;
   const viewParam = search.get("view");
+  const awaiting = search.get("awaiting") === "1";
+  const handoff =
+    awaiting && detail && !pending(detail.status)
+      ? detail.status === "inspected"
+        ? "artifacts"
+        : graphReady(detail.status)
+          ? "architecture"
+          : null
+      : null;
   const view =
+    handoff ??
     views.find((v) => v === viewParam) ??
     (artifact ? "artifacts" : "architecture");
   useEffect(() => {
-    if (pending(previousStatus.current) && detail && !pending(detail.status))
+    if (!detail) return;
+    const wasPending = pending(previousStatus.current);
+    previousStatus.current = detail.status;
+    if (wasPending && !pending(detail.status))
       void client.invalidateQueries({ queryKey: ["catalog"] });
-    if (artifact && pending(previousStatus.current))
-      setSearch({ view: "artifacts" }, { replace: true });
-    else if (detail && !views.some((v) => v === viewParam))
+    if (pending(detail.status)) return;
+    if (awaiting || wasPending) {
+      const next =
+        detail.status === "inspected"
+          ? "artifacts"
+          : graphReady(detail.status)
+            ? "architecture"
+            : (views.find((item) => item === viewParam) ?? "architecture");
+      const params = new URLSearchParams(search);
+      params.delete("awaiting");
+      params.set("view", next);
+      if (params.toString() !== search.toString())
+        setSearch(params, { replace: true });
+      return;
+    }
+    if (!views.some((v) => v === viewParam))
       setSearch({ view }, { replace: true });
-    previousStatus.current = detail?.status;
-  }, [detail, artifact, viewParam, view, setSearch, client]);
+  }, [detail, awaiting, viewParam, view, search, setSearch, client]);
   const graphId = state.path.at(-1)?.id ?? detail?.root_graph_id;
   const graph = useQuery({
     queryKey: ["graph", id, graphId],
@@ -132,9 +157,7 @@ function Workspace({ id }: { id: string }) {
         window.location.pathname !== submissionPath.current
       )
         return;
-      void navigate(
-        `/app/analyses/${encodeURIComponent(job.id)}?view=${job.status === "inspected" ? "artifacts" : "architecture"}`,
-      );
+      void navigate(analysisHref(job));
     },
   });
   async function download(format: ExportFormat) {
@@ -253,9 +276,7 @@ function Workspace({ id }: { id: string }) {
               .map((job) => (
                 <MenuItem
                   key={job.id}
-                  onSelect={() =>
-                    void navigate(`/app/analyses/${encodeURIComponent(job.id)}`)
-                  }
+                  onSelect={() => void navigate(analysisHref(job))}
                 >
                   {job.model_id}
                   <Status status={job.status} />
@@ -401,6 +422,12 @@ function Workspace({ id }: { id: string }) {
         <div className="workspace-view-options">
           {detail && ready && !artifact && (
             <>
+              {detail.status === "partial" && (
+                <Link to="?view=report" className="viewbar-findings">
+                  View findings
+                  <ChevronRight size={13} aria-hidden="true" />
+                </Link>
+              )}
               <div
                 className="workspace-telemetry-ribbon"
                 aria-label="Model telemetry summary"
@@ -487,9 +514,7 @@ function Workspace({ id }: { id: string }) {
                     )}
                   </dl>
                   <Link to="?view=report" className="context-report">
-                    {detail.status === "partial"
-                      ? "Partial reconstruction · view findings"
-                      : "Inspection findings"}
+                    Inspection findings
                     <ChevronRight size={13} aria-hidden="true" />
                   </Link>
                 </div>
@@ -552,11 +577,19 @@ function Workspace({ id }: { id: string }) {
               {view === "architecture" &&
                 (artifact ? (
                   <div className="page-state">
-                    <h1>Architecture unavailable</h1>
+                    <h1>No architecture graph</h1>
                     <p>
-                      This result contains verified repository artifacts and
-                      metadata. No architecture graph was reconstructed.
+                      {detail.inspection?.message ??
+                        "This result verified the repository artifacts at the pinned revision. No architecture graph was reconstructed."}
                     </p>
+                    <p>
+                      {detail.inspection
+                        ? `Verified ${count(detail.inspection.file_count)} repository files and ${count(detail.inspection.tensor_count)} tensor headers${detail.revision ? ` at revision ${detail.revision.slice(0, 12)}` : ""}.`
+                        : "Open the artifact inventory for the files and tensor headers that were verified."}
+                    </p>
+                    {detail.inspection?.reason_code && (
+                      <code>{detail.inspection.reason_code}</code>
+                    )}
                     <Link
                       className="button button-primary"
                       to="?view=artifacts"

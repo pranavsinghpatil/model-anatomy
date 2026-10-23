@@ -181,13 +181,25 @@ def test_missing_config_can_still_inventory_an_unambiguous_checkpoint():
     assert ir.tensors
 
 
-def test_missing_safetensors_returns_only_repository_files():
+def test_native_config_without_safetensors_still_reconstructs_the_module_graph():
     files = {"config.json", "pytorch_model.bin", "README.md"}
     ir = inspect(InspectionClient(files, GPT2_CONFIG))
-    assert_inventory_only(ir, "safetensors_unavailable")
-    assert ir.metadata["inspection"]["checkpoint_available"] is False
+    assert ir.architecture == "GPT2LMHeadModel"
+    assert ir.metadata.get("inspection") is None
+    assert ir.root_graph.nodes
+    def has_embedding(graph):
+        return any(
+            node.kind == "embedding" or node.child_graph is not None and has_embedding(node.child_graph)
+            for node in graph.nodes
+        )
+
+    assert has_embedding(ir.root_graph)
     assert ir.tensors == {}
-    assert ir.metadata["checkpoint_tensor_element_count"] is None
+    assert ir.metadata["artifacts"]["weight_payload_bytes_read"] == 0
+    assert ir.metadata["analysis_report"]["warnings"] == [
+        "No Safetensors checkpoint was available. The module graph comes from the native configuration; tensor ownership was not established."
+    ]
+    ir.root_graph.validate()
 
 
 def test_explicit_missing_safetensors_file_is_not_downgraded_to_inventory():

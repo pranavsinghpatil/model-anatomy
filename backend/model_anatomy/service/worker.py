@@ -137,6 +137,13 @@ def classify_failure(exc: BaseException) -> tuple[str, str, str, bool]:
         return "artifact_network", "Artifact provider temporarily unavailable", "failed", True
     if isinstance(exc, requests.HTTPError):
         status = exc.response.status_code if exc.response is not None else 0
+        if status in {401, 403}:
+            return (
+                "artifact_auth",
+                f"Hugging Face rejected artifact metadata access with HTTP {status}; check repository visibility or credentials",
+                "failed",
+                False,
+            )
         return (
             "artifact_http",
             f"Artifact provider returned HTTP {status}",
@@ -314,6 +321,10 @@ class Worker:
 
 
 def main() -> None:
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s %(levelname)s %(name)s %(message)s",
+    )
     worker = Worker(Settings())
     signal.signal(signal.SIGINT, worker.request_stop)
     signal.signal(signal.SIGTERM, worker.request_stop)
