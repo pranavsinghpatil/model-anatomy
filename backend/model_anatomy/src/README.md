@@ -1,73 +1,80 @@
 # Running Model Anatomy
 
-Run all commands from the project root, where `pyproject.toml` is located. Python 3.11 or later and `uv` are required.
+Run these commands from the project root, where `pyproject.toml` is located. Python 3.11 or later and `uv` are required.
 
-## Set up the environment
+## Install the dependencies you need
 
-For a new checkout, install the project and its dependencies:
+| Component | Command |
+| --- | --- |
+| CLI | `uv sync --frozen --extra engine` |
+| API | `uv sync --frozen --extra api` |
+| Worker, or API and worker in one environment | `uv sync --frozen --extra api --extra engine` |
 
-```bash
-uv sync
-```
+Skip installation when the required dependencies are already available. `uv run --no-sync` uses the existing environment. A plain `uv sync` does not select extras; keep the extras you need when synchronizing again. API startup does not require Torch. The optional `dev` extra is for development tools.
 
-If the environment is already installed and up to date, skip this step. The `--no-sync` option below uses the existing environment without updating dependencies. You can omit it to let `uv run` synchronize the environment automatically.
-
-## Inspect GPT-2
+## Inspect a model
 
 ```bash
 uv run --no-sync model-anatomy openai-community/gpt2 --inspect
-```
-
-The CLI reads Hugging Face configuration and Safetensors metadata, constructs the model on the meta device, and generates a static architecture representation. It does not download checkpoint weight payloads or execute a forward pass. Network access to Hugging Face is required.
-
-`--inspect` prints an additional coverage and diagnostics report in the terminal. It is optional; output files are generated with or without it.
-
-## Generated files
-
-For `openai-community/gpt2`, a successful run creates:
-
-| Path | Contents |
-| --- | --- |
-| `config/gpt2/config.json` | Snapshot of the model configuration from Hugging Face. |
-| `output/gpt2/model.json` | Hierarchical architecture IR, including tensor metadata and provenance. |
-| `output/gpt2/diagnostics.json` | Coverage, module information, and static analysis diagnostics. |
-| `output/gpt2/artifact_audit.json` | Resolved artifact metadata and Safetensors header inspection details. |
-| `output/gpt2/overview.mmd` | Top-level Mermaid graph. |
-| `output/gpt2/*.mmd` | Additional Mermaid graphs for nested components. |
-| `preview/GPT2_PREVIEW.md` | English Markdown preview containing the Mermaid graphs. |
-
-All paths are relative to the current working directory. Repeating the command updates the files for that model. The terminal also prints the model, revision, unique parameter count, header bytes read, and generated file paths.
-
-## Inspect another model
-
-Use a Hugging Face repository ID, rather than the configuration's `model_type`:
-
-```bash
 uv run --no-sync model-anatomy EleutherAI/gpt-neo-125m --inspect
 ```
 
-By default, repository IDs are lowercased and `/` becomes `--` for the config and output directory names. This example writes to `config/eleutherai--gpt-neo-125m/`, `output/eleutherai--gpt-neo-125m/`, and `preview/ELEUTHERAI__GPT_NEO_125M_PREVIEW.md`. GPT-2 uses the shorter `gpt2` directory name.
+Use a Hugging Face repository ID, rather than the configuration's `model_type`. Network access to Hugging Face is required. The CLI pins the repository revision, reads configuration and bounded Safetensors headers, constructs native modules on the meta device, and writes a static report. It never downloads checkpoint weight payloads or executes forward.
 
-Models must provide Safetensors artifacts and be supported by the installed native Transformers implementation. Models without Safetensors are outside the supported scope. Unsupported or custom model implementations can fail explicitly; static analysis may leave some shapes or components unknown.
+All models use the same pipeline, classification rules and filename rules. There is no GPT-2 adapter or shortened GPT-2 output directory. Models require a native Transformers architecture supported by the installed library and suitable Safetensors artifacts. Missing Safetensors and unsupported/custom architecture implementations fail explicitly. The CLI does not use the web worker's graph-free artifact-inspection fallback.
 
-## CLI arguments
+## Arguments
 
 ```bash
 uv run --no-sync model-anatomy --help
 ```
 
-| Argument | Purpose |
-| --- | --- |
-| `model` | Required Hugging Face repository ID or browser URL to a `model.safetensors` file. |
-| `--inspect` | Print the additional semantic coverage and diagnostics report. |
-| `--output DIR` | Write JSON and Mermaid files to this exact directory. |
-| `--config-dir DIR` | Write the configuration snapshot to this exact directory. |
-| `-h`, `--help` | Show CLI help. |
+| Argument | Purpose | Default |
+| --- | --- | --- |
+| `model` | Required repository ID or supported Hugging Face Safetensors browser URL. | Required |
+| `--inspect` | Print the analysis report, including coverage, warnings and source completeness checks. | Disabled |
+| `--revision SHA` | Pin an immutable 40-character commit SHA. | Resolve the requested repository revision |
+| `--output DIR` | Exact destination for JSON and Mermaid files. | `output/<slug>` |
+| `--config-dir DIR` | Exact destination for the configuration snapshot. | `config/<slug>` |
+| `--preview-dir DIR` | Directory for the English Markdown preview. | `preview` |
+| `-h`, `--help` | Print usage. | — |
 
-For example, choose separate output directories:
+`--no-sync` belongs to `uv run`, before `model-anatomy`. For example:
 
 ```bash
-uv run --no-sync model-anatomy openai-community/gpt2 --inspect --output output/gpt2-custom --config-dir config/gpt2-custom
+uv run --no-sync model-anatomy openai-community/gpt2 --inspect --output output/my-model --config-dir config/my-model --preview-dir preview
 ```
 
-The Markdown preview still goes to `preview/`. `--no-sync` is a `uv run` option, so it belongs before `model-anatomy`.
+## Generated files
+
+The slug is the repository ID lowercased with `/` replaced by `--`. For `openai-community/gpt2`, a successful run writes:
+
+| Path | Contents |
+| --- | --- |
+| `config/openai-community--gpt2/config.json` | Source configuration snapshot. |
+| `output/openai-community--gpt2/model.json` | Hierarchical IR, tensor metadata and provenance. |
+| `output/openai-community--gpt2/diagnostics.json` | Classification, source flow and completeness diagnostics. |
+| `output/openai-community--gpt2/artifact_audit.json` | Pinned artifact identity and metadata requests. |
+| `output/openai-community--gpt2/overview.mmd` | Root Mermaid graph. |
+| `output/openai-community--gpt2/*.mmd` | Nested Mermaid graphs. |
+| `preview/OPENAI_COMMUNITY__GPT2_<identity>_PREVIEW.md` | English hierarchy preview. |
+
+`<identity>` is the first 16 hexadecimal characters of SHA-256 over `model_id@revision`. The readable filename prefix is normalized from the model ID. Preview identity is independent of a custom output directory's basename; different models or revisions receive distinct names. The CLI prints the exact paths, resolved revision, parameter count and header bytes read. Paths are relative to the current working directory unless specified as absolute paths.
+
+Files under the former `output/gpt2/`, `config/gpt2/` and old preview names are not automatically migrated or deleted.
+
+## Reading diagnostics
+
+A successful CLI exit means a report was generated; it does not prove every computation was reconstructed. Review `analysis_report.warnings` and `analysis_report.source_completeness` in `model.json` or `diagnostics.json`, or print them with `--inspect`.
+
+Source completeness is separate from classification and tensor-shape coverage. It records module call sites found in inspected source, static invocations, unexplained operations, profile-excluded calls and structural nodes without invocation evidence. Its scope is the inspected source and representative repeated instances, not runtime coverage of every possible input or path. An empty denominator is unknown rather than 100 percent coverage.
+
+Unsupported source statements and expressions retain explicit diagnostics and dependency boundaries. Unsupported exception flow covers the whole `try`, including handlers, `else` and `finally`; these sections are not assumed inactive. Helper arguments bind by AST parameter name, including keyword-only arguments and literal defaults. Unresolved argument expansion remains unsupported. Profile assumptions and branch conditions retain source evidence.
+
+Static shapes are not operation-validity proofs. Repetition equivalence and attention-pattern configuration guards still have known limitations: computation-affecting attributes may be absent from equivalence signatures, and existing attention refinements are not fully proven for every configuration. These are separate pending fixes; high coverage must not be read as universal model support or verified execution.
+
+## Replacing an existing report
+
+All serialization and Mermaid rendering finish before publication. New files are staged beside their destinations, then each file is replaced atomically. Caught publication failures roll back previously replaced files, preserving the previous report set. Obsolete managed Mermaid files are removed as part of the same rollback-protected operation. An existing valid output directory belonging to another model is rejected.
+
+The config, output and preview directories do not form one filesystem transaction. This protects against ordinary caught write/rename failures, not process crashes, power loss or simultaneous writers. Use one writer per destination. If rollback itself fails, the error identifies retained recovery backups.

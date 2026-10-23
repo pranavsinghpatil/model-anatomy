@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from contextvars import ContextVar
+from copy import deepcopy
 from typing import Any
 
 import torch
@@ -10,6 +11,7 @@ from transformers import AutoConfig, PretrainedConfig
 
 from . import limits
 from .errors import ArtifactError, UnsupportedModelError
+from .native_provider import NativeResolutionError, config_class, implementation_evidence, model_candidates
 
 _CONSTRUCTING = ContextVar("model_anatomy_meta_construction", default=False)
 
@@ -51,10 +53,10 @@ _IMPLICIT_BACKBONE_STAGE_TYPES = {
 def _validate_embedded_config(data: dict[str, Any]) -> None:
     if not isinstance(data, dict):
         raise ArtifactError("Native configuration must be an object")
-    pending: list[tuple[Any, int, str | None]] = [(data, 0, None)]
+    pending: list[tuple[Any, int, str | None, bool]] = [(data, 0, None, True)]
     visited = 0
     while pending:
-        value, depth, inherited_stage_type = pending.pop()
+        value, depth, inherited_stage_type, construction_config = pending.pop()
         if not isinstance(value, (dict, list)):
             continue
         visited += 1
@@ -63,16 +65,15 @@ def _validate_embedded_config(data: dict[str, Any]) -> None:
         if depth > limits.MAX_CONFIG_NESTING_DEPTH:
             raise ArtifactError("Configuration exceeds the nested metadata depth limit")
         if isinstance(value, list):
-            pending.extend((item, depth + 1, None) for item in value if isinstance(item, (dict, list)))
+            pending.extend((item, depth + 1, None, False) for item in value if isinstance(item, (dict, list)))
             continue
 
-        if value.get("auto_map"):
-            raise UnsupportedModelError("Native configuration is required; remote code is disabled")
-        if value.get("use_pretrained_backbone") or value.get("pretrained"):
+        construction_config = construction_config or isinstance(value.get("model_type"), str)
+        if construction_config and (value.get("use_pretrained_backbone") or value.get("pretrained")):
             raise UnsupportedModelError(
                 "Pretrained backbone initialization is disabled; weights must not be loaded"
             )
-        if value.get("backbone") and value.get("backbone_config") is None:
+        if construction_config and value.get("backbone") and value.get("backbone_config") is None:
             raise UnsupportedModelError(
                 "External backbone resolution is disabled; embedded backbone_config is required"
             )
@@ -112,6 +113,7 @@ def _validate_embedded_config(data: dict[str, Any]) -> None:
                 item,
                 depth + 1,
                 implicit_stage_type if name == "backbone_config" else None,
+                construction_config and (name.endswith("_config") or name in {"encoder", "decoder"}),
             )
             for name, item in value.items()
             if isinstance(item, (dict, list))
@@ -121,14 +123,21 @@ def _validate_embedded_config(data: dict[str, Any]) -> None:
 def load_native_config(data: dict[str, Any]) -> PretrainedConfig:
     _validate_embedded_config(data)
     model_type = data.get("model_type")
-    if not isinstance(model_type, str) or data.get("auto_map"):
+    if not isinstance(model_type, str):
         raise UnsupportedModelError("A native Transformers config is required; remote code is disabled")
-    from transformers.models.auto.configuration_auto import CONFIG_MAPPING
-
-    if model_type not in CONFIG_MAPPING:
-        raise UnsupportedModelError(f"No native Transformers config for model_type={model_type}")
+    implementation = config_class(model_type)
+    pending = [(implementation, data, "config")]
+    while pending:
+        parent_class, values, path = pending.pop()
+        for name in getattr(parent_class, "sub_configs", {}):
+            nested = values.get(name)
+            if isinstance(nested, dict) and isinstance(nested.get("model_type"), str):
+                child = config_class(nested["model_type"], f"{path}.{name}")
+                pending.append((child, nested, f"{path}.{name}"))
     try:
         config = AutoConfig.for_model(model_type, **{k: v for k, v in data.items() if k != "model_type"})
+    except ImportError as exc:
+        raise NativeResolutionError("native_dependency_missing", "config_resolution", str(exc)) from exc
     except (KeyError, ValueError, TypeError) as exc:
         raise ArtifactError(f"Invalid native configuration: {exc}") from exc
     except RecursionError as exc:
@@ -162,7 +171,9 @@ def select_auto_class(config: PretrainedConfig) -> tuple[type, list[str]]:
 
     if architectures:
         declared = ", ".join(architectures)
-        raise UnsupportedModelError(f"No native AutoModel mapping for declared architecture(s): {declared}")
+        raise NativeResolutionError("native_model_missing", "model_resolution",
+            f"No native AutoModel mapping for declared architecture(s): {declared}",
+            declared_architectures=list(architectures), model_type=config.model_type)
 
     hint = _task_routing_hint(config)
     if hint is not None:
@@ -179,29 +190,7 @@ def select_auto_class(config: PretrainedConfig) -> tuple[type, list[str]]:
 
 
 def _auto_model_candidates(config: PretrainedConfig) -> list[tuple[str, type, str]]:
-    """Read upstream Auto mappings as names without resolving model implementations."""
-    from transformers.models.auto import modeling_auto
-
-    model_type = getattr(config, "model_type", None)
-    if not isinstance(model_type, str):
-        return []
-
-    candidates = []
-    for name, auto_class in vars(modeling_auto).items():
-        if not name.startswith("AutoModel") or not isinstance(auto_class, type):
-            continue
-        mapping = auto_class.__dict__.get("_model_mapping")
-        mapping_names = getattr(mapping, "_model_mapping", None)
-        if not isinstance(mapping_names, dict):
-            continue
-        model_names = mapping_names.get(model_type)
-        if isinstance(model_names, str):
-            candidates.append((name, auto_class, model_names))
-        elif isinstance(model_names, (list, tuple)) and all(
-            isinstance(model_name, str) for model_name in model_names
-        ):
-            candidates.extend((name, auto_class, model_name) for model_name in model_names)
-    return candidates
+    return model_candidates(config)
 
 
 def _task_routing_hint(config: PretrainedConfig) -> str | None:
@@ -215,21 +204,55 @@ def _task_routing_hint(config: PretrainedConfig) -> str | None:
 
 def instantiate_native(config: PretrainedConfig) -> tuple[torch.nn.Module, dict[str, Any]]:
     auto_class, warnings = select_auto_class(config)
+    try:
+        return _construct_native(config, auto_class.from_config, auto_class.__name__, warnings)
+    except ImportError as exc:
+        raise NativeResolutionError("native_dependency_missing", "model_resolution", str(exc)) from exc
+
+
+def instantiate_candidate(
+    config: PretrainedConfig, candidate: tuple[str, type, str]
+) -> tuple[torch.nn.Module, dict[str, Any]]:
+    """Resolve one upstream implementation without rewriting the publisher config."""
+    auto_name, auto_class, class_name = candidate
+    mapping = auto_class._model_mapping
+    implementations = mapping[type(config)]
+    if not isinstance(implementations, (tuple, list)):
+        implementations = (implementations,)
+    matches = [implementation for implementation in implementations
+               if implementation.__name__ == class_name]
+    if len(matches) != 1 or not matches[0].__module__.startswith("transformers."):
+        raise UnsupportedModelError("Candidate is not a unique native AutoModel implementation")
+    effective = deepcopy(config)
+    effective.architectures = [class_name]
+    model_class = matches[0]
+    return _construct_native(effective, model_class._from_config, auto_name, [], concrete=True)
+
+
+def _construct_native(
+    config: PretrainedConfig, factory: Any, auto_name: str, warnings: list[str], *, concrete: bool = False
+) -> tuple[torch.nn.Module, dict[str, Any]]:
+    """Keep every construction path under the same no-forward/meta-only guard."""
     # Eager implementation exposes inspectable source; no attention is executed.
     config._attn_implementation = "eager"
     token = _CONSTRUCTING.set(True)
     handle = torch.nn.modules.module.register_module_forward_pre_hook(_forbid_forward)
+    from .construction_guards import construction_guards
+
     try:
-        with torch.device("meta"):
-            model = auto_class.from_config(config, trust_remote_code=False)
+        with construction_guards(), torch.device("meta"):
+            model = factory(config) if concrete else factory(config, trust_remote_code=False)
             model.tie_weights()
             model.eval()
+    except UnsupportedModelError:
+        raise
     except (ValueError, TypeError) as exc:
         raise ArtifactError(f"Invalid native model configuration for {config.model_type}: {exc}") from exc
     except (ImportError, RuntimeError, NotImplementedError) as exc:
-        raise UnsupportedModelError(
-            f"Native meta construction failed for {config.model_type}: {exc}"
-        ) from exc
+        code = "native_dependency_missing" if isinstance(exc, ImportError) else "native_meta_construction_failed"
+        raise NativeResolutionError(code, "meta_construction",
+            f"Native meta construction failed for {config.model_type}: {exc}",
+            model_type=config.model_type, missing_package=getattr(exc, "name", None)) from exc
     finally:
         handle.remove()
         _CONSTRUCTING.reset(token)
@@ -240,9 +263,10 @@ def instantiate_native(config: PretrainedConfig) -> tuple[torch.nn.Module, dict[
             "Native construction allocated non-meta model tensors; no CPU fallback is allowed"
         )
     return model, {
-        "auto_class": auto_class.__name__,
+        "auto_class": auto_name,
         "model_class": type(model).__name__,
         "trust_remote_code": False,
         "device": "meta",
         "warnings": warnings,
+        "native_resolution": implementation_evidence(model),
     }

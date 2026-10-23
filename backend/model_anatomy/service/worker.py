@@ -15,6 +15,7 @@ import time
 from dataclasses import replace
 from uuid import uuid4
 
+from model_anatomy.dependencies import require_dependencies
 from model_anatomy.api.settings import Settings
 from model_anatomy.src.errors import AnatomyError, ArtifactError, UnsupportedModelError
 
@@ -97,6 +98,9 @@ def child_main(settings: Settings, job_id: str, owner: str) -> None:
         import requests
 
         from model_anatomy.src.artifacts import MetadataClient, parse_reference
+        from model_anatomy.src.native_provider import require_supported_provider
+
+        require_supported_provider()
 
         def reconstruct(*args, **kwargs):
             from model_anatomy.src.pipeline import reconstruct as engine_reconstruct
@@ -138,6 +142,10 @@ def classify_failure(exc: BaseException) -> tuple[str, str, str, bool]:
             "failed",
             status in {429, 502, 503, 504},
         )
+    from model_anatomy.src.native_provider import NativeResolutionError
+
+    if isinstance(exc, NativeResolutionError) and exc.diagnostic.get("code") == "provider_version_mismatch":
+        return "provider_version_mismatch", str(exc), "failed", False
     if isinstance(exc, UnsupportedModelError):
         return (
             "unsupported_model",
@@ -296,6 +304,7 @@ class Worker:
 
 
 def main() -> None:
+    require_dependencies("api", "engine", component="Worker")
     worker = Worker(Settings())
     signal.signal(signal.SIGINT, worker.request_stop)
     signal.signal(signal.SIGTERM, worker.request_stop)

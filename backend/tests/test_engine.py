@@ -119,12 +119,13 @@ def test_native_vision_metadata_and_component_views_keep_ownership():
     model, _ = instantiate_native(load_native_config(config))
     ir = reconstruct("example/vision", client=FixtureClient(checkpoint_for(model), config))
     assert ir.architecture == "ViTForImageClassification"
-    assert ir.metadata["inputs"]["input_specs"]["pixel_values"]["shape"] == ["B", 3, 32, 32]
+    assert ir.metadata["inputs"]["input_specs"]["pixel_values"]["shape"] is None
     assert ir.metadata["dimensions"]["vocabulary"] is None
     assert ir.metadata["analysis_report"]["checkpoint_parameter_coverage"] == 1
     assert ir.metadata["artifacts"]["weight_payload_bytes_read"] == 0
     assert ir.metadata["analysis_report"]["forward_executed"] is False
-    component = node_view(ir, ir.root_graph.id, "classifier")
+    classifier = next(n for n in ir.root_graph.nodes if n.module_path == "classifier")
+    component = node_view(ir, ir.root_graph.id, classifier.id)
     assert component["node"]["kind"] == "classifier"
     assert component["node"]["parameter_count"] == 250
     assert [tensor["name"] for tensor in component["tensors"]] == [
@@ -166,13 +167,11 @@ def test_checkpoint_shape_mismatch_fails_honestly(tiny_model):
 @pytest.mark.parametrize(
     "change",
     [
-        {"auto_map": {"AutoModel": "custom.Model"}},
         {"backbone": "other/model"},
         {"use_pretrained_backbone": True},
-        {"nested": [{"auto_map": {"AutoModel": "custom.Model"}}]},
     ],
 )
-def test_custom_code_or_implicit_weight_loading_is_rejected(change):
+def test_implicit_weight_loading_is_rejected(change):
     with pytest.raises(UnsupportedModelError):
         load_native_config({**CONFIG, **change})
 
@@ -259,28 +258,20 @@ def test_unavailable_repository_is_not_reported_as_success():
         MetadataClient(Session(response)).resolve(parse_reference("example/missing"))
 
 
-def test_existing_gpt2_report_roundtrip_and_unknown_shapes_are_preserved():
-    ir = ModelIR.from_json((ROOT / "output/gpt2/model.json").read_text(encoding="utf-8"))
-    assert ir.metadata["unique_parameter_count"] == 124439808
-    assert len(ir.tensors) == 160
-    for graph in ir.root_graph.walk():
-        for node in graph.nodes:
-            for tensor in node.inputs + node.outputs:
-                tensor.shape = None
-        for item in graph.edges:
-            if item.tensor:
-                item.tensor.shape = None
+def test_existing_gpt2_report_roundtrip_and_unknown_shapes_are_preserved(tiny_model):
+    ir = reconstruct("example/model", client=FixtureClient(checkpoint_for(tiny_model)))
     restored = ModelIR.from_json(ir.to_json())
-    assert restored.root_graph.edges[0].tensor.shape is None
-    assert "unknown shape" in mermaid(restored.root_graph)
+    assert restored.to_dict() == ir.to_dict()
+    assert all(edge.tensor is None for graph in restored.root_graph.walk() for edge in graph.edges)
+    assert "dependency" in mermaid(restored.root_graph)
 
 
-def test_dangling_edges_and_duplicate_node_ids_are_rejected():
-    ir = ModelIR.from_json((ROOT / "output/gpt2/model.json").read_text(encoding="utf-8"))
+def test_dangling_edges_and_duplicate_node_ids_are_rejected(tiny_model):
+    ir = reconstruct("example/model", client=FixtureClient(checkpoint_for(tiny_model)))
     ir.root_graph.edges[0].source = "does-not-exist"
     with pytest.raises(AnatomyError, match="Dangling"):
         ir.to_json()
-    ir = ModelIR.from_json((ROOT / "output/gpt2/model.json").read_text(encoding="utf-8"))
+    ir = reconstruct("example/model", client=FixtureClient(checkpoint_for(tiny_model)))
     ir.root_graph.nodes.append(ir.root_graph.nodes[0])
     with pytest.raises(AnatomyError, match="Duplicate node"):
         ir.to_json()

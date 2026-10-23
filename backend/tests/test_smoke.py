@@ -1,4 +1,4 @@
-from model_anatomy.ir.schema import Graph, ModelIR
+from model_anatomy.src.ir import Graph, ModelIR
 
 
 def test_ir_smoke():

@@ -544,6 +544,14 @@ export interface components {
       components: components["schemas"]["ModelComponent"][];
       /** Architecture Blockers */
       architecture_blockers: string[];
+      /** Native Resolution */
+      native_resolution?: {
+        [key: string]: unknown;
+      } | null;
+      /** Component Discovery */
+      component_discovery?: {
+        [key: string]: unknown;
+      }[];
       /** Metadata Basis */
       metadata_basis: string;
     };
