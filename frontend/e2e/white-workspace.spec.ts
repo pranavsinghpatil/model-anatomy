@@ -11,11 +11,11 @@ test("new visitors get white appearance and a canvas without an open navigator",
   await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
   await expect(page.locator("html")).toHaveCSS(
     "background-color",
-    "rgb(248, 249, 251)",
+    "rgb(248, 250, 252)",
   );
-  await expect(page.locator(".graph-canvas > .react-flow")).toHaveCSS(
+  await expect(page.locator(".graph-canvas")).toHaveCSS(
     "background-color",
-    "rgb(255, 255, 255)",
+    "rgb(250, 251, 252)",
   );
   await expect(
     page.getByRole("button", { name: "Open components", exact: true }),

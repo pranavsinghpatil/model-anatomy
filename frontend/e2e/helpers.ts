@@ -1,7 +1,7 @@
 import type { Page } from "@playwright/test";
 import { expect } from "@playwright/test";
 
-export const UI_SCALE = 0.75;
+export const UI_SCALE = 0.9;
 export const MIN_READABLE_NODE_FONT_SIZE = 11.8 * UI_SCALE;
 
 export function hasNoHorizontalOverflow() {

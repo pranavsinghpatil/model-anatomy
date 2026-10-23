@@ -309,7 +309,7 @@
   display: flex;
   align-items: stretch;
   align-self: stretch;
-  gap: 22px;
+  gap: 20px;
   min-width: 0;
 }
 .workspace-nav-highlight {
@@ -532,7 +532,7 @@
     padding-inline: 20px;
   }
   .primary-views {
-    gap: 22px;
+    gap: 20px;
   }
   .workspace-view-options {
     gap: 14px;

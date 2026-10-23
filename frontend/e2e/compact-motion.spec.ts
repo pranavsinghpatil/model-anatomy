@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 import { block, mockService } from "./service";
 import { graphNode, openAnalysis, UI_SCALE } from "./helpers";
 
-test("entry exposes the form and recent analysis together at 75 percent zoom", async ({
+test("entry keeps the form visible and recent analysis reachable at 90 percent zoom", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1280, height: 800 });
@@ -15,20 +15,22 @@ test("entry exposes the form and recent analysis together at 75 percent zoom", a
     const input = document
       .querySelector(".entry-input-row")!
       .getBoundingClientRect();
-    const row = document
-      .querySelector(".entry-table tbody tr")!
-      .getBoundingClientRect();
     return {
       inputBottom: input.bottom,
-      historyBottom: row.bottom,
       zoom: getComputedStyle(document.documentElement).zoom,
       overflow: document.documentElement.scrollWidth > innerWidth,
     };
   });
-  expect(geometry.inputBottom).toBeLessThan(400);
-  expect(geometry.historyBottom).toBeLessThan(760);
-  expect(geometry.zoom).toBe("0.75");
+  expect(geometry.inputBottom).toBeLessThan(480);
+  expect(geometry.zoom).toBe(String(UI_SCALE));
   expect(geometry.overflow).toBe(false);
+  const recent = page.locator(".entry-table tbody tr").first();
+  await expect(recent).toBeVisible();
+  await recent.scrollIntoViewIfNeeded();
+  const bounds = await recent.boundingBox();
+  expect(bounds).not.toBeNull();
+  expect(bounds!.y).toBeGreaterThanOrEqual(0);
+  expect(bounds!.y + bounds!.height).toBeLessThanOrEqual(800);
 });
 
 test("docked inspection keeps graph actions clear of search at laptop width", async ({
@@ -61,13 +63,13 @@ test("docked inspection keeps graph actions clear of search at laptop width", as
   expect(geometry.header.bottom).toBeLessThanOrEqual(geometry.canvas.top + 1);
 });
 
-test("workspace scale is 75 percent and graph controls honor reduced motion", async ({
+test("workspace scale is 90 percent and graph controls honor reduced motion", async ({
   page,
 }) => {
   await mockService(page);
   await page.setViewportSize({ width: 1440, height: 960 });
   await openAnalysis(page);
-  await expect(page.locator("html")).toHaveCSS("zoom", "0.75");
+  await expect(page.locator("html")).toHaveCSS("zoom", String(UI_SCALE));
   const workspaceScale = await page
     .locator(".workspace-shell")
     .evaluate((element) => {

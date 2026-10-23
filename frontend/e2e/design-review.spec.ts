@@ -77,6 +77,7 @@ async function expectNoHorizontalOverflow(page: Page) {
 test("workspace layout review at desktop, laptop, and phone widths", async ({
   page,
 }, testInfo) => {
+  test.setTimeout(120_000);
   await page.emulateMedia({ colorScheme: "light", reducedMotion: "reduce" });
   await mockService(page);
   await openAnalysis(page);

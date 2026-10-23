@@ -41,8 +41,24 @@ unsupported, and failed models retain their honest statuses.
 - Ruff and Python compile check: passed.
 - Changed desktop browser suites: **45 passed**. See
   `.local/validation-frontend-e2e-final.log`.
+- After the combined UI exposed stale scale and color assertions, the affected
+  desktop/mobile suites passed **14 tests**, and the shared anatomy scale check
+  passed **2 tests**. The workspace navigation gap was reduced to prevent a
+  three-pixel horizontal overflow; the current UI scale remains 90%.
 - `git diff --check`: passed.
 
-The repository-wide Prettier check reports pre-existing formatting differences
-across many untouched files; it is not used as evidence that this integration
-passes formatting. The combined branch was built and run from its own worktree.
+The Windows checkout's CRLF conversion makes a repository-wide Prettier check
+report broad differences; CI on Linux isolated one actual formatting mismatch,
+which was fixed. The changed UI files pass Prettier. The combined branch was
+built and run from its own worktree.
+
+## Branch and PR cleanup
+
+After confirming their heads were ancestors of `codex/top-all-preserved`, PRs
+#27 and #30–32 were closed and 19 redundant remote branches were deleted with
+exact-SHA leases. `feat/vv`, `codex/integrate-vv-updates`, the active top branch,
+and the original dirty checkout branch were preserved. PRs #2, #24, #28, and
+#33 retain commits absent from the top branch and remain open. Existing local
+worktrees with checked-out branches were left intact, including the running
+older previews; four un-checked-out local refs already contained by the top
+branch were removed.
