@@ -16,6 +16,17 @@ and publication ID `947cbb5fb2274c8d2fd9b928c7bd1972c48f67d80220198199be8c8c32db
 The browser catalog displayed 381 records, 24 per page, with provenance and
 outcome filters. Local launch logs are under `.local/app-v1/supabase/`.
 
+A subsequent Supabase DNS/connection interruption caused the original worker to
+exit while releasing its PostgreSQL advisory lock. The worker now retries only
+database transport failures with a 1–30 second backoff, closes the stale engine,
+and reacquires the lifetime lock and worker lease before handling jobs. SQL,
+lease, and configuration errors still fail immediately. The replacement worker's
+log is `.local/app-v1/supabase/worker-reconnect-error.log`; the original
+failure is retained in `worker-error.log`. After restart, `/health` again
+reported database, storage, and worker true, and the catalog still returned
+381 records. This is a local runtime check, not a guarantee against future
+network outages.
+
 These are catalog records, not 381 complete graphs. At validation time the API
 reported 19 completed static reports, 89 partial graphs, 143 artifact
 inspections, and separately attributed external/benchmark outcomes. Restricted,
@@ -23,8 +34,9 @@ unsupported, and failed models retain their honest statuses.
 
 ## Verification
 
-- Backend suite: **943 passed, 22 skipped**; one external Starlette/httpx
-  deprecation warning. See `.local/validation-backend-pytest-final.log`.
+- Backend suite after the reconnect fix: **945 passed, 22 skipped**; one
+  external Starlette/httpx deprecation warning. The prior suite log is
+  `.local/validation-backend-pytest-final.log`.
 - Frontend type check and production build: passed.
 - Ruff and Python compile check: passed.
 - Changed desktop browser suites: **45 passed**. See

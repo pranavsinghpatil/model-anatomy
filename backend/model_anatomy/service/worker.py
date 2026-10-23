@@ -15,6 +15,8 @@ import time
 from dataclasses import replace
 from uuid import uuid4
 
+from sqlalchemy.exc import DBAPIError, OperationalError
+
 from model_anatomy.api.settings import Settings
 from model_anatomy.src.errors import AnatomyError, ArtifactError, UnsupportedModelError
 
@@ -23,6 +25,18 @@ from .errors import ServiceError
 from .jobs import JobService, cache_key
 
 logger = logging.getLogger("model_anatomy.worker")
+
+
+def database_connection_lost(exc: BaseException, *, sqlite: bool) -> bool:
+    """Retry transport loss, never a server-reported SQL or local SQLite error."""
+    return (
+        not sqlite
+        and isinstance(exc, DBAPIError)
+        and (
+            exc.connection_invalidated
+            or (isinstance(exc, OperationalError) and getattr(exc.orig, "sqlstate", None) is None)
+        )
+    )
 
 
 def enforce_limits(settings: Settings) -> None:
@@ -271,10 +285,25 @@ class Worker:
             process.close()
 
     def run(self, *, once=False) -> None:
-        self.service.initialize()
+        backoff = 1.0
         try:
-            with self.service.db.worker_lock():
-                self.run_locked(once=once)
+            while not self.stopping:
+                try:
+                    self.service.initialize()
+                    with self.service.db.worker_lock():
+                        self.run_locked(once=once)
+                    return
+                except DBAPIError as exc:
+                    if not database_connection_lost(exc, sqlite=self.service.db.sqlite):
+                        raise
+                    if self.process:
+                        stop_process(self.process)
+                    self.service.db.engine.dispose()
+                    logger.warning("database connection lost; worker reconnecting in %.0f seconds", backoff)
+                    if once:
+                        raise
+                    time.sleep(backoff)
+                    backoff = min(30.0, backoff * 2)
         finally:
             self.service.db.engine.dispose()
 

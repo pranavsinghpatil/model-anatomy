@@ -3,18 +3,26 @@ import os
 import subprocess
 import sys
 import time
+from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
 from sqlalchemy import inspect
+from sqlalchemy.exc import OperationalError
 
 from model_anatomy.api.settings import Settings
 from model_anatomy.service.errors import ServiceError
 from model_anatomy.service.jobs import JobService, cache_key
 from model_anatomy.service.views import load_ir
-from model_anatomy.service.worker import Worker, classify_failure, enforce_limits, execute_job
+from model_anatomy.service.worker import (
+    Worker,
+    classify_failure,
+    database_connection_lost,
+    enforce_limits,
+    execute_job,
+)
 
 
 @dataclass
@@ -349,6 +357,61 @@ def test_idle_worker_does_not_steal_another_live_lease(tmp_path, monkeypatch):
     assert service.worker_available()
     service.release_worker("other")
     service.db.engine.dispose()
+
+
+def test_worker_reacquires_lock_and_lease_after_database_transport_loss(monkeypatch):
+    import model_anatomy.service.worker as worker_module
+
+    class TransportError(Exception):
+        sqlstate = None
+
+    disconnected = OperationalError("SELECT pg_advisory_unlock", {}, TransportError("DNS failure"))
+    calls = []
+
+    @contextmanager
+    def worker_lock():
+        calls.append("lock")
+        yield
+        if calls.count("lock") == 1:
+            raise disconnected
+
+    db = SimpleNamespace(
+        sqlite=False,
+        worker_lock=worker_lock,
+        engine=SimpleNamespace(dispose=lambda: calls.append("dispose")),
+    )
+    service = SimpleNamespace(db=db, initialize=lambda: calls.append("initialize"))
+    worker = Worker(Settings(), service=service)
+    monkeypatch.setattr(worker, "run_locked", lambda **kwargs: calls.append("lease_and_work"))
+    monkeypatch.setattr(worker_module.time, "sleep", lambda seconds: calls.append(("sleep", seconds)))
+
+    worker.run()
+
+    assert calls == [
+        "initialize",
+        "lock",
+        "lease_and_work",
+        "dispose",
+        ("sleep", 1.0),
+        "initialize",
+        "lock",
+        "lease_and_work",
+        "dispose",
+    ]
+
+
+def test_worker_database_retry_rejects_sql_errors_and_sqlite():
+    class ServerError(Exception):
+        sqlstate = "42P01"
+
+    class TransportError(Exception):
+        sqlstate = None
+
+    server_error = OperationalError("SELECT", {}, ServerError("undefined table"))
+    transport_error = OperationalError("SELECT", {}, TransportError("connection failed"))
+    assert database_connection_lost(transport_error, sqlite=False)
+    assert not database_connection_lost(server_error, sqlite=False)
+    assert not database_connection_lost(transport_error, sqlite=True)
 
 
 @pytest.mark.skipif(sys.platform != "linux", reason="Production meta-import memory gate requires real Linux")
