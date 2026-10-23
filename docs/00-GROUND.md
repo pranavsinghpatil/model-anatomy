@@ -59,6 +59,10 @@ module ownership, execution-order or semantic-coverage claim. Malformed metadata
 still fails validation. The CLI remains strict unless artifact inspection is
 explicitly requested internally by the web worker.
 
+If a valid Safetensors index exceeds the tensor-record budget, the report may
+show its declared tensor-name and shard counts separately from verified headers.
+An index declaration alone does not establish that shard headers agree with it.
+
 ## Product sequence
 
 ```text

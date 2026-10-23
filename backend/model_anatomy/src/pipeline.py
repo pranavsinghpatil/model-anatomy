@@ -183,7 +183,7 @@ def reconstruct(
                 checkpoint=None,
                 reason_code="checkpoint_selection_required",
             )
-        except InspectionBudgetError:
+        except InspectionBudgetError as exc:
             return inspect_artifacts(
                 reference,
                 revision,
@@ -193,6 +193,7 @@ def reconstruct(
                 config_data=config_data,
                 checkpoint=None,
                 reason_code="metadata_budget_exceeded",
+                declared_checkpoint_index=exc.index_summary,
             )
         return inspect_artifacts(
             reference,
@@ -246,7 +247,7 @@ def reconstruct(
                     else "checkpoint_selection_required"
                 ),
             )
-        except InspectionBudgetError:
+        except InspectionBudgetError as exc:
             if not allow_artifact_inspection:
                 raise
             return inspect_artifacts(
@@ -258,6 +259,7 @@ def reconstruct(
                 config_data=config_data,
                 checkpoint=None,
                 reason_code="metadata_budget_exceeded",
+                declared_checkpoint_index=exc.index_summary,
             )
 
     if checkpoint.format == "gguf":

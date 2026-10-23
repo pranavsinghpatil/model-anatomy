@@ -247,6 +247,24 @@ export function ArtifactInspection({
         </div>
       </dl>
 
+      {page?.declared_checkpoint_index && (
+        <section
+          className="artifact-reason"
+          aria-label="Checkpoint index declaration"
+        >
+          <strong>Checkpoint index declaration</strong>
+          <p>
+            The pinned index lists{" "}
+            {count(page.declared_checkpoint_index.declared_tensor_names)} tensor
+            names across {count(page.declared_checkpoint_index.declared_shards)}{" "}
+            shard files; the inspection limit is{" "}
+            {count(page.declared_checkpoint_index.tensor_record_limit)} tensor
+            records. These are index declarations, not verified shard headers or
+            model parameters.
+          </p>
+        </section>
+      )}
+
       {!architecture && (
         <details className="artifact-scope-disclosure">
           <summary>What this inspection establishes</summary>

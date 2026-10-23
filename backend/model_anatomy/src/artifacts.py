@@ -139,6 +139,10 @@ class AmbiguousCheckpointError(ArtifactError):
 class InspectionBudgetError(ArtifactError):
     """Well-formed checkpoint metadata exceeded a configured inspection budget."""
 
+    def __init__(self, message: str, *, index_summary: dict[str, Any] | None = None):
+        super().__init__(message)
+        self.index_summary = index_summary
+
 
 def _unique_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
     result: dict[str, Any] = {}
@@ -377,7 +381,18 @@ class MetadataClient:
             ):
                 raise ArtifactError("Safetensors index references invalid or missing shard files")
             if len(mapping) > limits.MAX_CHECKPOINT_TENSORS:
-                raise InspectionBudgetError("Checkpoint index exceeds the supported tensor record count")
+                raise InspectionBudgetError(
+                    "Checkpoint index exceeds the supported tensor record count",
+                    index_summary={
+                        "url": reference.url(index_name, revision),
+                        "canonical_sha256": hashlib.sha256(
+                            json.dumps(index, sort_keys=True).encode()
+                        ).hexdigest(),
+                        "declared_tensor_names": len(mapping),
+                        "declared_shards": len(shard_names),
+                        "tensor_record_limit": limits.MAX_CHECKPOINT_TENSORS,
+                    },
+                )
         else:
             index = None
             filename = reference.filename

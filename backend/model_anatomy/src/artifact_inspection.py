@@ -68,6 +68,7 @@ def build_artifact_inspection(
     checkpoint: CheckpointMetadata | None,
     reason_code: str,
     model_profile: dict[str, Any] | None = None,
+    declared_checkpoint_index: dict[str, Any] | None = None,
 ) -> ModelIR:
     """Return only pinned file and validated Safetensors-header facts."""
     message = INSPECTION_MESSAGES[reason_code]
@@ -126,6 +127,8 @@ def build_artifact_inspection(
         ),
         "requests": audit[audit_start:],
     }
+    if declared_checkpoint_index is not None:
+        artifacts["declared_checkpoint_index"] = declared_checkpoint_index
     has_gguf_ranges = any(item.get("format") == "gguf" for item in audit[audit_start:])
     if checkpoint is None and has_gguf_ranges:
         # A malformed declaration can make bounded prefetch cross the real
@@ -224,6 +227,18 @@ def build_artifact_inspection(
             {"revision": revision, "files": sorted(files)},
         )
     ]
+    if declared_checkpoint_index is not None:
+        evidence.append(
+            Evidence(
+                "hf_checkpoint_index",
+                "direct",
+                declared_checkpoint_index["url"],
+                {
+                    **declared_checkpoint_index,
+                    "scope": "index_declaration_only; shard_headers_not_verified",
+                },
+            )
+        )
     if config_data is not None:
         evidence.append(
             Evidence(

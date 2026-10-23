@@ -266,3 +266,53 @@ test("actual extraction warnings remain visible separately from scope", async ({
     }),
   ).not.toContainText(analysis.limitations[0]);
 });
+
+test("artifact report explains index declarations and native blockers without graph claims", async ({
+  page,
+}) => {
+  const analysis = {
+    ...analysisFor("job-test"),
+    status: "inspected" as const,
+    stage: "inspected",
+    architecture: null,
+    root_graph_id: null,
+    parameter_count: null,
+    warnings: [],
+    inspection: {
+      kind: "artifact_inspection" as const,
+      reason_code: "metadata_budget_exceeded",
+      message: "Checkpoint metadata exceeds the configured inspection budget.",
+      file_count: 83,
+      tensor_count: 0,
+      checkpoint_tensor_element_count: null,
+      checkpoint_available: true,
+      architecture_blockers: [
+        "No native Transformers config for model_type=deepseek_v41",
+      ],
+      declared_checkpoint_index: {
+        url:
+          "https://huggingface.co/example/model/resolve/" +
+          "a".repeat(40) +
+          "/model.safetensors.index.json",
+        canonical_sha256: "b".repeat(64),
+        declared_tensor_names: 96085,
+        declared_shards: 48,
+        tensor_record_limit: 20000,
+      },
+    },
+  };
+  await mockService(page, { job: analysis });
+  await openAnalysis(page, analysis.id, "report");
+  const report = page.locator(".report-page");
+  await expect(report).toContainText("96,085");
+  await expect(report).toContainText(
+    "No native Transformers config for model_type=deepseek_v41",
+  );
+  await expect(report).toContainText("Shard headers were not verified");
+  await expect(report).not.toContainText(
+    "Reconstructed directly from verified Safetensors headers",
+  );
+  await expect(report).not.toContainText(
+    "No incomplete-check details returned.",
+  );
+});

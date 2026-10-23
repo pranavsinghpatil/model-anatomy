@@ -53,6 +53,9 @@ def artifact_view(ir: ModelIR, offset: int = 0, limit: int = 50) -> dict:
         # Availability describes the whole checkpoint, independent of this page.
         # Preserve an explicit false value for artifact-only/incomplete inspections.
         "checkpoint_available": inspection.get("checkpoint_available", bool(ir.tensors)),
+        "declared_checkpoint_index": ir.metadata.get("artifacts", {}).get(
+            "declared_checkpoint_index"
+        ),
         "checkpoint_format": ir.metadata.get("artifacts", {}).get("checkpoint_format"),
         "selected_file_tensor_element_count": ir.metadata.get("artifacts", {}).get(
             "selected_file_tensor_element_count"

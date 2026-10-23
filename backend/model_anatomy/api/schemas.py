@@ -136,6 +136,14 @@ class AnalysisQuality(BaseModel):
     mode: str | None = None
 
 
+class DeclaredCheckpointIndex(BaseModel):
+    url: str
+    canonical_sha256: str
+    declared_tensor_names: int = Field(ge=0)
+    declared_shards: int = Field(ge=0)
+    tensor_record_limit: int = Field(ge=0)
+
+
 class InspectionSummary(BaseModel):
     kind: Literal["artifact_inspection"]
     reason_code: str
@@ -144,6 +152,8 @@ class InspectionSummary(BaseModel):
     tensor_count: int
     checkpoint_tensor_element_count: int | None
     checkpoint_available: bool
+    declared_checkpoint_index: DeclaredCheckpointIndex | None = None
+    architecture_blockers: list[str] = Field(default_factory=list)
 
 
 class AnalysisDetail(BaseModel):
@@ -278,6 +288,7 @@ class ArtifactInspectionResponse(BaseModel):
     tensor_count: int
     checkpoint_tensor_element_count: int | None
     checkpoint_available: bool
+    declared_checkpoint_index: DeclaredCheckpointIndex | None = None
     checkpoint_format: str | None = None
     selected_file_tensor_element_count: int | None = None
     selected_file_split_metadata: dict[str, int] | None = None

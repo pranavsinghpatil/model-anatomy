@@ -138,6 +138,10 @@ def ir_summary(data: dict) -> dict:
                 "tensor_count": len(data.get("tensors", {})),
                 "checkpoint_tensor_element_count": metadata.get("checkpoint_tensor_element_count"),
                 "checkpoint_available": inspection.get("checkpoint_available", False),
+                "declared_checkpoint_index": metadata.get("artifacts", {}).get(
+                    "declared_checkpoint_index"
+                ),
+                "architecture_blockers": (profile or {}).get("architecture_blockers", []),
             },
         }
     report = metadata.get("analysis_report", {})

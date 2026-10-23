@@ -5,8 +5,9 @@ import pytest
 from fastapi.testclient import TestClient
 
 from model_anatomy.api.app import COOKIE, create_app
+from model_anatomy.api.schemas import ArtifactInspectionResponse, InspectionSummary
 from model_anatomy.api.settings import Settings
-from model_anatomy.service.jobs import cache_key
+from model_anatomy.service.jobs import cache_key, ir_summary
 from model_anatomy.service.views import artifact_view
 from model_anatomy.src.ir import Evidence, Graph, ModelIR
 
@@ -103,6 +104,53 @@ def test_gguf_artifact_view_preserves_selected_split_file_scope(inspected):
     assert page["checkpoint_tensor_element_count"] is None
     assert page["selected_file_tensor_element_count"] == 12
     assert page["selected_file_split_metadata"]["split.count"] == 2
+
+
+def test_declared_index_counts_remain_distinct_in_public_views():
+    declared = {
+        "url": "https://huggingface.co/publisher/adapter/resolve/" + "a" * 40 + "/model.safetensors.index.json",
+        "canonical_sha256": "b" * 64,
+        "declared_tensor_names": 96_085,
+        "declared_shards": 48,
+        "tensor_record_limit": 20_000,
+    }
+    ir = ModelIR(
+        "publisher/model",
+        "Unavailable",
+        Graph("architecture_unavailable", [], []),
+        metadata={
+            "revision": "a" * 40,
+            "inspection": {
+                "kind": "artifact_inspection",
+                "reason_code": "metadata_budget_exceeded",
+                "message": "Checkpoint index exceeds the tensor budget.",
+                "files": ["model.safetensors.index.json"],
+                "checkpoint_available": True,
+            },
+            "artifacts": {"declared_checkpoint_index": declared},
+            "model_profile": {
+                "repository_kind": "transformers",
+                "declared_task": None,
+                "declared_library": "transformers",
+                "config_model_type": "unknown",
+                "declared_architectures": [],
+                "formats": ["safetensors"],
+                "selected_file": None,
+                "selected_config": "config.json",
+                "components": [],
+                "architecture_blockers": ["No native config"],
+                "metadata_basis": "repository_metadata",
+            },
+            "analysis_report": {"mode": "artifact_inspection", "warnings": []},
+        },
+    )
+    summary = ir_summary(ir.to_dict())["inspection"]
+    artifact = artifact_view(ir)
+    InspectionSummary.model_validate(summary)
+    ArtifactInspectionResponse.model_validate(artifact)
+    assert summary["tensor_count"] == artifact["tensor_count"] == 0
+    assert summary["declared_checkpoint_index"] == artifact["declared_checkpoint_index"] == declared
+    assert summary["architecture_blockers"] == ["No native config"]
 
 
 def test_artifact_results_do_not_expose_fake_graphs_or_spend_ai_quota(inspected):

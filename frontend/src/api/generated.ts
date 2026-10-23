@@ -377,6 +377,8 @@ export interface components {
       checkpoint_tensor_element_count: number | null;
       /** Checkpoint Available */
       checkpoint_available: boolean;
+      declared_checkpoint_index?:
+        components["schemas"]["DeclaredCheckpointIndex"] | null;
       /** Checkpoint Format */
       checkpoint_format?: string | null;
       /** Selected File Tensor Element Count */
@@ -513,6 +515,19 @@ export interface components {
        * @default false
        */
       refresh: boolean;
+    };
+    /** DeclaredCheckpointIndex */
+    DeclaredCheckpointIndex: {
+      /** Url */
+      url: string;
+      /** Canonical Sha256 */
+      canonical_sha256: string;
+      /** Declared Tensor Names */
+      declared_tensor_names: number;
+      /** Declared Shards */
+      declared_shards: number;
+      /** Tensor Record Limit */
+      tensor_record_limit: number;
     };
     /** Dimensions */
     Dimensions: {
@@ -694,6 +709,10 @@ export interface components {
       checkpoint_tensor_element_count: number | null;
       /** Checkpoint Available */
       checkpoint_available: boolean;
+      declared_checkpoint_index?:
+        components["schemas"]["DeclaredCheckpointIndex"] | null;
+      /** Architecture Blockers */
+      architecture_blockers?: string[];
     };
     /** ModelComponent */
     ModelComponent: {

@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "captured_at": "2026-10-23",
+  "method": "Pinned, metadata-only reconstruct(..., allow_artifact_inspection=True); no weight payload reads",
+  "engine_version": "2026.10.23.4",
+  "model_id": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+  "revision": "1bae0e1088993b9b82de08f59de5be5a34e42170",
+  "prior_visitor_report_id": "a63acf9030994eda97dd90a6fd21088b",
+  "result": {
+    "reason_code": "metadata_budget_exceeded",
+    "declared_index": {
+      "canonical_sha256": "abc09b0491e66b9f1c3d9dd635896523f2eaef3ca3904a91cfaa216390de7ba4",
+      "tensor_names": 96085,
+      "shard_files": 48,
+      "tensor_record_limit": 20000,
+      "scope": "index declaration; shard headers not verified"
+    },
+    "verified_tensor_headers": 0,
+    "graph_nodes": 0,
+    "weight_payload_bytes_read": 0,
+    "native_blockers": [
+      "No native Transformers config for model_type=deepseek_v41"
+    ]
+  },
+  "interpretation": "The index budget and missing native config are independent blockers. No architecture or model parameter count is established."
+}

@@ -341,6 +341,47 @@ def test_valid_checkpoint_budget_limit_becomes_inventory_only_when_opted_in():
     assert ir.metadata["source_config"] == UNKNOWN_CONFIG
 
 
+def test_budgeted_index_retains_declared_counts_without_claiming_verified_tensors(monkeypatch):
+    monkeypatch.setattr(limits, "MAX_CHECKPOINT_TENSORS", 2)
+    files = {"config.json", "model.safetensors.index.json", "one.safetensors", "two.safetensors"}
+    index = {"weight_map": {"a": "one.safetensors", "b": "one.safetensors", "c": "two.safetensors"}}
+
+    class IndexedClient(InspectionClient):
+        def json(self, url, max_bytes=1024 * 1024):
+            self.audit.append({"url": url, "bytes_read": 100, "status": 200})
+            return index if url.endswith(".index.json") else UNKNOWN_CONFIG
+
+        checkpoint = MetadataClient.checkpoint
+
+        def safetensors(self, url):
+            pytest.fail("Shard headers must not be fetched after the index budget is exceeded")
+
+    ir = inspect(IndexedClient(files, UNKNOWN_CONFIG))
+    assert_inventory_only(ir, "metadata_budget_exceeded")
+    declared = ir.metadata["artifacts"]["declared_checkpoint_index"]
+    assert declared["declared_tensor_names"] == 3
+    assert declared["declared_shards"] == 2
+    assert declared["tensor_record_limit"] == 2
+    assert declared["canonical_sha256"]
+    assert ir.metadata["checkpoint_tensor_element_count"] is None
+    assert ir.tensors == {}
+    assert any(item.source == "hf_checkpoint_index" for item in ir.evidence)
+
+
+def test_budgeted_index_does_not_hide_missing_shard(monkeypatch):
+    monkeypatch.setattr(limits, "MAX_CHECKPOINT_TENSORS", 1)
+
+    class InvalidIndexClient(InspectionClient):
+        def json(self, url, max_bytes=1024 * 1024):
+            return {"weight_map": {"a": "missing.safetensors", "b": "missing.safetensors"}} if url.endswith(".index.json") else UNKNOWN_CONFIG
+
+        checkpoint = MetadataClient.checkpoint
+
+    client = InvalidIndexClient({"config.json", "model.safetensors.index.json"}, UNKNOWN_CONFIG)
+    with pytest.raises(ArtifactError, match="invalid or missing shard"):
+        inspect(client)
+
+
 def test_inventory_budget_audit_retains_bytes_read_before_the_limit():
     from model_anatomy.src.artifact_inspection import build_artifact_inspection
 

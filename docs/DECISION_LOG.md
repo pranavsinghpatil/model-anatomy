@@ -1182,3 +1182,17 @@ dimensions; retain all unresolved flow warnings and partial outcomes.
 Advance engine identity to `2026.10.23.3`. Two pinned Pythia variants reach
 complete semantic/module classification but remain partial on tensor flow.
 See [GPT-NeoX role evidence](DYNAMIC_GPT_NEOX_ROLES.md).
+
+## D-073 - Preserve checkpoint-index declarations when tensor inspection is budgeted
+
+**2026-10-23 - inspection transparency increment**
+
+A validated, pinned Safetensors index may exceed the tensor-record budget before
+any shard header can be read. Preserve only its source URL, canonical digest,
+declared tensor-name and shard counts, and the configured limit in a distinct
+index-declaration field. Keep verified tensor count at zero and make no graph,
+parameter, ownership, or shard-header claim. Invalid shard paths still fail.
+Show the separate native-architecture blocker and avoid completed-sounding
+language on artifact-only reports. Advance engine/cache identity to
+`2026.10.23.4`; earlier reports remain immutable. See
+[inspection failure diagnosis](INSPECTION_FAILURE_DIAGNOSIS_2026-10-23.md).

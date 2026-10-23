@@ -286,8 +286,9 @@ export function Report({ detail }: { detail: AnalysisDetail }) {
                   : "Artifact Inspection"}
             </h3>
             <p>
-              Reconstructed directly from verified Safetensors headers and
-              genuine PyTorch module definitions.
+              {artifact
+                ? "Pinned repository artifacts were inspected. No native architecture graph was reconstructed."
+                : "Architecture facts come from inspected checkpoint metadata and native PyTorch module definitions."}
             </p>
           </div>
         </div>
@@ -297,7 +298,7 @@ export function Report({ detail }: { detail: AnalysisDetail }) {
             <strong className="stat-value">
               {q?.semantic_coverage != null
                 ? `${(q.semantic_coverage * 100).toFixed(0)}%`
-                : "Standard"}
+                : "Not measured"}
             </strong>
           </div>
           <div className="audit-mini-stat">
@@ -346,10 +347,46 @@ export function Report({ detail }: { detail: AnalysisDetail }) {
               <dd>{count(inspection?.tensor_count)}</dd>
             </div>
             <div>
-              <dt>Checkpoint selected</dt>
+              <dt>Checkpoint artifacts present</dt>
               <dd>{inspection?.checkpoint_available ? "Yes" : "No"}</dd>
             </div>
+            {inspection?.declared_checkpoint_index && (
+              <>
+                <div>
+                  <dt>Index-declared tensor names</dt>
+                  <dd>
+                    {count(
+                      inspection.declared_checkpoint_index
+                        .declared_tensor_names,
+                    )}
+                  </dd>
+                </div>
+                <div>
+                  <dt>Index-declared shard files</dt>
+                  <dd>
+                    {count(
+                      inspection.declared_checkpoint_index.declared_shards,
+                    )}
+                  </dd>
+                </div>
+                <div>
+                  <dt>Tensor inspection limit</dt>
+                  <dd>
+                    {count(
+                      inspection.declared_checkpoint_index.tensor_record_limit,
+                    )}
+                  </dd>
+                </div>
+              </>
+            )}
           </dl>
+          {inspection?.declared_checkpoint_index && (
+            <p className="report-boundary">
+              Index declarations come from the pinned index JSON. Shard headers
+              were not verified for this result, so these are not inspected
+              tensor or parameter counts.
+            </p>
+          )}
           <p className="report-boundary">
             No architecture graph or semantic coverage is available for this
             result. Tensor element totals do not establish unique model
@@ -398,6 +435,24 @@ export function Report({ detail }: { detail: AnalysisDetail }) {
                 <li key={i}>{warning}</li>
               ))}
             </ul>
+          ) : artifact ? (
+            <>
+              <p>
+                No extraction warnings were recorded because architecture
+                extraction did not run.
+              </p>
+              <ul>
+                {(inspection?.architecture_blockers ?? []).map((blocker, i) => (
+                  <li key={`blocker-${i}`}>{blocker}</li>
+                ))}
+                {!inspection?.architecture_blockers?.length && (
+                  <li>
+                    {inspection?.message ??
+                      "Architecture reconstruction unavailable."}
+                  </li>
+                )}
+              </ul>
+            </>
           ) : (
             <p className="clean-status-notice">
               <CheckCircle2 size={15} aria-hidden="true" />
@@ -415,7 +470,7 @@ export function Report({ detail }: { detail: AnalysisDetail }) {
               This report is partial; no specific incomplete-check details were
               returned.
             </p>
-          ) : (
+          ) : artifact ? null : (
             <p className="clean-status-notice">
               <CheckCircle2 size={15} aria-hidden="true" />
               <span>No incomplete-check details returned.</span>
