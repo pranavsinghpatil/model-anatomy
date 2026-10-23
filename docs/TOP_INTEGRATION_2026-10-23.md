@@ -55,7 +55,7 @@ built and run from its own worktree.
 ## Branch and PR cleanup
 
 After confirming their heads were ancestors of `codex/top-all-preserved`, PRs
-#27 and #30–32 were closed and 19 redundant remote branches were deleted with
+#27 and #30–32 were closed and 20 redundant remote branches were deleted with
 exact-SHA leases. `feat/vv`, `codex/integrate-vv-updates`, the active top branch,
 and the original dirty checkout branch were preserved. PRs #2, #24, #28, and
 #33 retain commits absent from the top branch and remain open. Existing local
