@@ -42,6 +42,13 @@ weight-payload bytes. The index declaration had canonical JSON SHA256
 The bounded machine-readable observation is
 `docs/benchmarks/inspection-diagnosis-2026-10-23.json`.
 
+After restarting the local Supabase-backed API and worker on engine
+`2026.10.23.4`, a visitor-owned submission through the app completed as
+`2643aca98c5b44219e7798710a50f669`. The live Artifacts view displayed
+96,085 index-declared names, 48 shard files and zero inspected tensor headers.
+The Report view displayed the 20,000-record limit, “Not measured” coverage,
+and the independent missing-native-config blocker. The graph remained absent.
+
 ## This increment and acceptance boundary
 
 The resolver now retains an index-only declaration summary after validating

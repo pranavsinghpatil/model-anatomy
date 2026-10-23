@@ -6,6 +6,7 @@
   "model_id": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
   "revision": "1bae0e1088993b9b82de08f59de5be5a34e42170",
   "prior_visitor_report_id": "a63acf9030994eda97dd90a6fd21088b",
+  "live_new_visitor_report_id": "2643aca98c5b44219e7798710a50f669",
   "result": {
     "reason_code": "metadata_budget_exceeded",
     "declared_index": {
