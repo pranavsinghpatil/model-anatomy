@@ -1110,3 +1110,46 @@ Live acceptance also repairs the catalog's obsolete architecture subpath. Use
 the workspace's existing query-based view route and select Artifacts for
 artifact-only reports. Browser checks must require the destination workspace to
 render; URL-only assertions cannot establish successful reopening.
+## D-068 - Bind static-source helpers by their Python parameter contract
+**2026-10-22 - backend reliability increment**
+
+Static helpers keep their first argument; instance helpers bind their receiver
+separately. Explicit keywords bind by parameter name and omitted literal defaults
+remain available. Invalid bindings, class methods and dynamic argument expansions
+retain dependencies and report uncertainty. Helpers are never executed.
+
+This closes a concrete parser defect seen in T5's native causal-mask helper,
+without assuming its symbolic sequence length or mask rank. Engine cache identity
+advances to `2026.10.22.1`; saved reports remain immutable. Measured before/after
+results, isolated-snapshot checks and remaining gates are recorded in
+[BACKEND_RELIABILITY.md](BACKEND_RELIABILITY.md). The narrow increment excludes
+the previously uncommitted Cursor changes.
+
+## D-069 - Establish tensor-factory rank from native callable identity
+**2026-10-22 - backend reliability increment**
+
+Factory-derived tensor facts require native PyTorch callable identity and a
+supported argument form. Rank follows the supported factory contract, without
+assigning concrete values to symbolic dimensions. Opaque calls, unsupported
+shape changes and nullable merges cannot silently preserve those facts.
+
+The rank increment uses engine cache identity `2026.10.22.2`. It resolves the
+pinned T5 mask-rank condition without forcing the remaining symbolic length
+condition. Isolated-review and combined-working-tree evidence are recorded
+separately because the earlier dtype/routing drafts remain unstaged. The next
+teammate gate is value-specific dtype tracking; see
+[TEAMMATE_HANDOFF.md](TEAMMATE_HANDOFF.md).
+
+## D-070 - Attach dtype evidence to values instead of every model expression
+**2026-10-23 - backend reliability increment**
+
+Source dtype conditions use established input-profile, referenced-parameter,
+trusted-factory and supported-cast facts. Agreeing conditional joins retain the
+fact; opaque dependencies and unknown targets cannot inherit the model's first
+parameter dtype. Generic inputs without an established profile remain unknown.
+
+This corrects the demonstrated float16-cast and boolean-mask branch failures.
+The engine cache identity advances to `2026.10.23.1`. It does not establish dtype
+after arbitrary normalization/module operations or certify runtime graph-edge
+casts. See [DTYPE_EVIDENCE.md](DTYPE_EVIDENCE.md) and the updated
+[TEAMMATE_HANDOFF.md](TEAMMATE_HANDOFF.md) for evidence and the next bounded gate.

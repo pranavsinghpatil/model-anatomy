@@ -19,6 +19,8 @@ from transformers.utils.import_utils import is_torch_fx_proxy, is_torchdynamo_co
 
 from .inputs import InputResolver
 from .ir import TensorSpec
+from .static_dtypes import cast_dtype, factory_dtype
+from .static_tensors import TensorFactoryFact, analyze_tensor_factory_call
 from .tensor_contracts import tensor_outputs
 
 UNKNOWN = object()
@@ -55,6 +57,10 @@ class StaticValue:
     symbol: str | None = None
     port_specs: dict[str, TensorSpec] | None = None
     category: str | None = None
+    materialized: bool = False
+    rank: int | None = None
+    identity_unknown: bool = False
+    dtype: Any = UNKNOWN
 
 
 @dataclass
@@ -79,12 +85,31 @@ class StaticFlow:
     diagnostics: list[dict[str, Any]] = field(default_factory=list)
 
 
-def combine(values: list[StaticValue]) -> StaticValue:
-    return StaticValue(list(dict.fromkeys(ref for value in values for ref in value.refs)))
+def combine(values: list[StaticValue], preserve_tensor_facts: bool = False) -> StaticValue:
+    result = StaticValue(list(dict.fromkeys(ref for value in values for ref in value.refs)))
+    result.identity_unknown = any(value.identity_unknown for value in values)
+    if (
+        values
+        and preserve_tensor_facts
+        and not result.identity_unknown
+        and values[0].dtype is not UNKNOWN
+        and all(value.dtype == values[0].dtype for value in values)
+    ):
+        result.dtype = values[0].dtype
+    if preserve_tensor_facts:
+        if any(value.constant is None for value in values) and not all(
+            value.constant is None for value in values
+        ):
+            result.identity_unknown = True
+        if values and all(value.materialized for value in values):
+            result.materialized = True
+        if values and all(value.rank is not None and value.rank == values[0].rank for value in values):
+            result.rank = values[0].rank
+    return result
 
 
 def join_values(values: list[StaticValue]) -> StaticValue:
-    result = combine(values)
+    result = combine(values, preserve_tensor_facts=True)
     if values and all(value.spec is not None for value in values):
         first = values[0].spec
         if all(value.spec.shape == first.shape and value.spec.dtype == first.dtype for value in values):
@@ -196,6 +221,16 @@ class StaticFlowAnalyzer:
     def input(self, name: str) -> StaticValue:
         spec = self.inputs.spec(name, self.path)
         value = StaticValue([(f"input:{name}", "output")], spec=spec)
+        if spec.dtype in DTYPES.values():
+            value.dtype = next(key for key, code in DTYPES.items() if code == spec.dtype)
+        elif name in {
+            "pixel_values", "pixel_values_videos", "video_pixel_values",
+            "input_features", "input_values", "hidden_states", "position_bias",
+            "encoder_hidden_states", "key_value_states",
+        }:
+            value.dtype = self.input_profile_dtype()
+        elif name in {"input_ids", "decoder_input_ids", "position_ids", "token_type_ids"}:
+            value.dtype = torch.int64
         self.flow.inputs[name] = value
         self.positive_symbols.update(size for size in spec.shape or [] if type(size) is str)
         assumption = {
@@ -277,10 +312,19 @@ class StaticFlowAnalyzer:
         if ports:
             outputs = {port: TensorSpec(**spec) for port, spec in ports.items()}
             if "output" in outputs:
-                return StaticValue([(identifier, "output")], spec=outputs["output"])
+                spec = outputs["output"]
+                dtype = next((key for key, code in DTYPES.items() if code == spec.dtype), UNKNOWN)
+                return StaticValue([(identifier, "output")], spec=spec, dtype=dtype)
             if (metadata or {}).get("output_arity") == len(outputs):
                 items = [
-                    StaticValue([(identifier, str(index))], spec=outputs[str(index)])
+                    StaticValue(
+                        [(identifier, str(index))],
+                        spec=outputs[str(index)],
+                        dtype=next(
+                            (key for key, code in DTYPES.items() if code == outputs[str(index)].dtype),
+                            UNKNOWN,
+                        ),
+                    )
                     for index in range(len(outputs))
                 ]
                 return StaticValue(
@@ -291,7 +335,9 @@ class StaticFlowAnalyzer:
                 )
             return StaticValue([(identifier, "output")], port_specs=outputs)
         if path is not None:
-            return StaticValue([(identifier, "output")], spec=self.module_spec(path, arguments))
+            spec = self.module_spec(path, arguments)
+            dtype = next((key for key, code in DTYPES.items() if spec is not None and code == spec.dtype), UNKNOWN)
+            return StaticValue([(identifier, "output")], spec=spec, dtype=dtype)
         return StaticValue([(identifier, "output")])
 
     def container_member_outputs(
@@ -552,9 +598,13 @@ class StaticFlowAnalyzer:
     def tensor_method(
         self, node: ast.Call, receiver: StaticValue, arguments: dict[str, StaticValue]
     ) -> StaticValue | None:
-        if receiver.spec is None or not isinstance(node.func, ast.Attribute):
+        if not isinstance(node.func, ast.Attribute):
             return None
         name = node.func.attr
+        if name in {"dim", "ndimension"} and not arguments and receiver.rank is not None:
+            return StaticValue(constant=receiver.rank)
+        if receiver.spec is None:
+            return None
         has_starred = any(isinstance(arg, ast.Starred) for arg in node.args)
         has_expansion = any(keyword.arg is None for keyword in node.keywords)
         if (has_starred or has_expansion) and name not in {"view", "reshape"}:
@@ -1218,7 +1268,124 @@ class StaticFlowAnalyzer:
                     metadata["skip_argument"] = port
         return self.event(node, None, kind, label, {"left": left, "right": right}, metadata)
 
+    def input_profile_dtype(self) -> Any:
+        """Declared floating input profile; never a fallback for arbitrary values."""
+        try:
+            return next(self.model.parameters()).dtype
+        except StopIteration:
+            config = getattr(self.model, "config", None)
+            declared = getattr(config, "torch_dtype", None) if config is not None else None
+            if isinstance(declared, str):
+                declared = getattr(torch, declared, None)
+            if isinstance(declared, torch.dtype):
+                return declared
+            return UNKNOWN
+
+    def constructed_tensor(
+        self, fact: TensorFactoryFact, values: list[StaticValue], dtype: torch.dtype | None = None
+    ) -> StaticValue:
+        result = combine(values)
+        result.materialized = True
+        result.rank = fact.rank
+        result.identity_unknown = False
+        result.dtype = dtype if dtype is not None else UNKNOWN
+        assumption = fact.assumption
+        if assumption not in self.flow.profile_assumptions:
+            self.flow.profile_assumptions.append(assumption)
+        return result
+
+    def factory_value(
+        self, node: ast.Call, receiver: StaticValue | None, arguments: dict[str, StaticValue]
+    ) -> StaticValue | None:
+        values_by_node = {
+            id(argument): arguments[str(index)] for index, argument in enumerate(node.args)
+        }
+        values_by_node.update(
+            {
+                id(keyword.value): arguments[keyword.arg]
+                for keyword in node.keywords
+                if keyword.arg is not None and keyword.arg in arguments
+            }
+        )
+
+        def value_for(expression: ast.expr) -> StaticValue | None:
+            if id(expression) in values_by_node:
+                return values_by_node[id(expression)]
+            if isinstance(expression, ast.Name):
+                return self.env.get(expression.id)
+            return None
+
+        def known_size_rank(expression: ast.expr) -> int | None:
+            value = value_for(expression)
+            if value is None or value.items is None:
+                return None
+            if any(type(item.constant) is int and item.constant < 0 for item in value.items):
+                return None
+            return len(value.items)
+
+        def known_tensor_fact(expression: ast.expr) -> tuple[bool, int | None]:
+            value = value_for(expression)
+            is_tensor = bool(
+                value
+                and value.items is None
+                and value.fields is None
+                and not value.identity_unknown
+                and (value.materialized or value.refs)
+            )
+            rank = value.rank if value is not None else None
+            if rank is None and value is not None and value.spec is not None and value.spec.shape is not None:
+                rank = len(value.spec.shape)
+            return is_tensor, rank if is_tensor else None
+
+        factory = analyze_tensor_factory_call(
+            node,
+            {name: value for name, value in self.source_globals.items() if name not in self.env},
+            bool(
+                receiver
+                and receiver.items is None
+                and receiver.fields is None
+                and (receiver.refs or receiver.materialized)
+                and not receiver.identity_unknown
+            ),
+            known_size_rank,
+            known_tensor_fact,
+        )
+        if factory is None:
+            return None
+        values = list(arguments.values())
+        if not factory.native:
+            self.flow.warnings.append(
+                f"Tensor factory unresolved: {ast.unparse(node.func)} ({factory.reason})"
+            )
+            result = combine(values)
+            result.identity_unknown = True
+            return result
+        prototype = receiver.dtype if receiver is not None and factory.name.startswith("new_") else UNKNOWN
+        if factory.name.endswith("_like"):
+            source = arguments.get("0", arguments.get("input"))
+            prototype = source.dtype if source is not None else UNKNOWN
+        fill = arguments.get("1", arguments.get("fill_value"))
+        dtype_value = arguments.get("dtype")
+        explicit = any(keyword.arg == "dtype" for keyword in node.keywords) and not (
+            dtype_value is not None and dtype_value.constant is None
+        )
+        dtype = factory_dtype(
+            factory.name,
+            prototype=None if prototype is UNKNOWN else prototype,
+            explicit_dtype=(
+                dtype_value.constant
+                if dtype_value is not None and isinstance(dtype_value.constant, torch.dtype)
+                else None
+            ),
+            explicit_dtype_present=explicit,
+            full_value=fill.constant if fill is not None else None,
+            full_value_known=fill is not None and fill.constant is not UNKNOWN,
+        )
+        return self.constructed_tensor(factory, values, dtype)
+
     def attribute(self, value: StaticValue, name: str) -> StaticValue:
+        if name == "dtype" and value.dtype is not UNKNOWN and not value.identity_unknown:
+            return StaticValue(constant=value.dtype)
         if name == "dtype" and value.spec is not None and value.spec.dtype is not None:
             dtype = next((key for key, code in DTYPES.items() if code == value.spec.dtype), UNKNOWN)
             return StaticValue(constant=dtype)
@@ -1230,6 +1397,8 @@ class StaticFlowAnalyzer:
             return StaticValue(category="torch_device")
         if name == "ndim" and value.spec is not None and value.spec.shape is not None:
             return StaticValue(constant=len(value.spec.shape))
+        if name == "ndim" and value.rank is not None and not value.identity_unknown:
+            return StaticValue(constant=value.rank)
         if name in {"shape", "dtype", "device", "ndim"}:
             if name == "dtype" and value.module_path is not None:
                 from .native_metadata_contracts import native_module_attribute
@@ -1296,6 +1465,7 @@ class StaticFlowAnalyzer:
                     spec=TensorSpec(
                         list(attribute.shape), DTYPES.get(attribute.dtype), "native_tensor_metadata"
                     ),
+                    dtype=attribute.dtype,
                 )
             if inspect.ismethod(attribute) or inspect.isfunction(attribute):
                 return StaticValue(module_path=value.module_path, method=name)
@@ -1496,6 +1666,8 @@ class StaticFlowAnalyzer:
     def expression(self, node: ast.AST | None) -> StaticValue:
         if node is None:
             return StaticValue(constant=None)
+        if isinstance(node, ast.Starred):
+            return self.expression(node.value)
         if isinstance(node, ast.Constant):
             return StaticValue(constant=node.value)
         if isinstance(node, ast.Name):
@@ -1530,6 +1702,8 @@ class StaticFlowAnalyzer:
             if all(type(key.constant) is str for key in keys):
                 result.fields = {key.constant: value for key, value in zip(keys, values)}
             return result
+        if isinstance(node, ast.Dict):
+            return combine([self.expression(value) for value in node.values])
         if isinstance(node, ast.Subscript):
             if isinstance(node.slice, ast.Slice):
                 value = self.expression(node.value)
@@ -1687,6 +1861,17 @@ class StaticFlowAnalyzer:
                 and isinstance(right.constant, torch.dtype)
                 and isinstance(node.ops[0], (ast.Eq, ast.NotEq, ast.Is, ast.IsNot))
             ):
+                if isinstance(node.left, ast.Attribute) and node.left.attr == "dtype":
+                    assumption = {
+                        "predicate": "tensor.dtype",
+                        "rule_sha256": hashlib.sha256(b"value-specific-dtype-evidence-v1").hexdigest(),
+                        "value": str(left.constant),
+                        "comparison": ast.unparse(node),
+                        "compared_dtype": str(right.constant),
+                        "basis": "Known dtype on the inspected value",
+                    }
+                    if assumption not in self.flow.profile_assumptions:
+                        self.flow.profile_assumptions.append(assumption)
                 same = left.constant is right.constant
                 return StaticValue(
                     constant=not same if isinstance(node.ops[0], (ast.NotEq, ast.IsNot)) else same
@@ -1709,6 +1894,23 @@ class StaticFlowAnalyzer:
                     return StaticValue(constant=isinstance(node.ops[0], ast.IsNot))
                 if left.constant is not UNKNOWN:
                     return StaticValue(constant=(left.constant is None) == isinstance(node.ops[0], ast.Is))
+            if (
+                isinstance(node.ops[0], (ast.Eq, ast.NotEq))
+                and isinstance(left.constant, torch.dtype)
+                and isinstance(right.constant, torch.dtype)
+            ):
+                equal = left.constant == right.constant
+                assumption = {
+                    "predicate": "tensor.dtype",
+                    "rule_sha256": hashlib.sha256(b"value-specific-dtype-evidence-v1").hexdigest(),
+                    "value": str(left.constant),
+                    "comparison": ast.unparse(node),
+                    "compared_dtype": str(right.constant),
+                    "basis": "This value has a known dtype from its input contract, parameter metadata, or a supported cast rule",
+                }
+                if assumption not in self.flow.profile_assumptions:
+                    self.flow.profile_assumptions.append(assumption)
+                return StaticValue(constant=equal if isinstance(node.ops[0], ast.Eq) else not equal)
             if (
                 left.constant is not UNKNOWN
                 and right.constant is not UNKNOWN
@@ -1831,13 +2033,41 @@ class StaticFlowAnalyzer:
                         {"input": receiver},
                         {"method": name, "dimensions": values, "keyword_arguments": bool(node.keywords)},
                     )
+                if name in {"to", "type_as", "float", "half"}:
+                    positional = [arguments[str(index)] for index in range(len(node.args))]
+                    dtype_arg = arguments.get("dtype")
+                    known_tensor = bool(
+                        receiver and (receiver.refs or receiver.materialized)
+                        and receiver.items is None and receiver.fields is None
+                        and not receiver.identity_unknown
+                    )
+                    result = combine([receiver, *arguments.values()])
+                    result.materialized = receiver.materialized
+                    result.rank = receiver.rank
+                    result.identity_unknown = not known_tensor
+                    result.dtype = UNKNOWN
+                    if known_tensor and not any(isinstance(arg, ast.Starred) for arg in node.args) and not any(
+                        keyword.arg is None for keyword in node.keywords
+                    ):
+                        target = cast_dtype(
+                            name,
+                            None if receiver.dtype is UNKNOWN else receiver.dtype,
+                            [value.constant for value in positional] if name == "to" else (),
+                            dtype_keyword=(dtype_arg.constant if dtype_arg is not None and isinstance(dtype_arg.constant, torch.dtype) else None),
+                            dtype_keyword_present="dtype" in arguments,
+                            dtype_keyword_none=dtype_arg is not None and dtype_arg.constant is None,
+                            type_as_dtype=positional[0].dtype if positional and isinstance(positional[0].dtype, torch.dtype) else None,
+                            positional_is_tensor=bool(positional and (positional[0].refs or positional[0].materialized) and not positional[0].identity_unknown),
+                        )
+                        result.dtype = target if target is not None else UNKNOWN
+                    return result
                 self.flow.warnings.append(f"Tensor transform {name} has no proven output contract")
                 dtype = (
                     receiver.spec.dtype
                     if receiver.spec is not None and name not in {"to", "type_as", "float", "half"}
                     else None
                 )
-                return self.event(
+                result = self.event(
                     node,
                     None,
                     "tensor_operation",
@@ -1851,12 +2081,57 @@ class StaticFlowAnalyzer:
                         },
                     },
                 )
+                known_tensor = bool(
+                    receiver
+                    and (receiver.refs or receiver.materialized)
+                    and receiver.items is None
+                    and receiver.fields is None
+                    and not receiver.identity_unknown
+                )
+                positional = [arguments[str(index)] for index in range(len(node.args))]
+                dtype_arg = arguments.get("dtype")
+                target_dtype = cast_dtype(
+                    name,
+                    None if receiver.dtype is UNKNOWN else receiver.dtype,
+                    [value.constant for value in positional] if name == "to" else (),
+                    dtype_keyword=(
+                        dtype_arg.constant
+                        if dtype_arg is not None and isinstance(dtype_arg.constant, torch.dtype)
+                        else None
+                    ),
+                    dtype_keyword_present="dtype" in arguments,
+                    dtype_keyword_none=dtype_arg is not None and dtype_arg.constant is None,
+                    type_as_dtype=(
+                        positional[0].dtype
+                        if positional and isinstance(positional[0].dtype, torch.dtype)
+                        else None
+                    ),
+                    positional_is_tensor=bool(
+                        positional
+                        and (positional[0].refs or positional[0].materialized)
+                        and not positional[0].identity_unknown
+                    ),
+                )
+                if known_tensor and not any(isinstance(arg, ast.Starred) for arg in node.args) and not any(
+                    keyword.arg is None for keyword in node.keywords
+                ):
+                    result.dtype = target_dtype if target_dtype is not None else UNKNOWN
+                    result.materialized = receiver.materialized
+                    if name in {"to", "type_as", "float", "half", "contiguous", "clone"}:
+                        result.rank = receiver.rank
+                else:
+                    result.dtype = UNKNOWN
+                    result.identity_unknown = True
+                return result
             predicate = self.canonical_predicate(node, arguments)
             if predicate is not None:
                 return predicate
             tensor = self.torch_operation(node, arguments)
             if tensor is not None:
                 return tensor
+            factory = self.factory_value(node, receiver, arguments)
+            if factory is not None:
+                return factory
             functional = self.functional_operation(node, arguments)
             if functional is not None:
                 return functional
@@ -1929,6 +2204,7 @@ class StaticFlowAnalyzer:
             if isinstance(node.func, ast.Attribute):
                 result = combine([receiver, *arguments.values()])
                 if result.refs:
+                    result.identity_unknown = True
                     self.flow.warnings.append(
                         f"Opaque call {ast.unparse(node.func)}: dependencies retained, transformation unverified"
                     )
@@ -1962,6 +2238,7 @@ class StaticFlowAnalyzer:
                 return result
             result = combine(list(arguments.values()))
             if result.refs:
+                result.identity_unknown = True
                 self.flow.warnings.append(
                     f"Opaque call {ast.unparse(node.func)}: dependencies retained, transformation unverified"
                 )
@@ -1982,6 +2259,11 @@ class StaticFlowAnalyzer:
         module = self.model.get_submodule(path) if path else self.model
         try:
             descriptor = inspect.getattr_static(type(module), method_name)
+            if isinstance(descriptor, classmethod):
+                self.flow.warnings.append(
+                    f"Helper arguments could not be statically bound: class method {path}.{method_name}"
+                )
+                return combine(dependencies)
             method = inspect.unwrap(
                 descriptor.__func__
                 if isinstance(descriptor, (staticmethod, classmethod))
@@ -1999,7 +2281,9 @@ class StaticFlowAnalyzer:
             any(isinstance(arg, ast.Starred) for arg in node.args)
             or any(keyword.arg is None for keyword in node.keywords)
         ):
-            self.flow.warnings.append(f"Helper argument expansion is unresolved: {path}.{method_name}")
+            self.flow.warnings.append(
+                f"Helper arguments could not be statically bound: {ast.unparse(node.func)}"
+            )
             return combine(dependencies)
         try:
             receiver = (
@@ -2011,7 +2295,7 @@ class StaticFlowAnalyzer:
             bound.apply_defaults()
         except (ValueError, TypeError):
             self.flow.warnings.append(
-                f"Helper arguments cannot be bound: {path}.{method_name}; dependencies only"
+                f"Helper arguments could not be statically bound: {ast.unparse(node.func)}"
             )
             return combine(dependencies)
         environment = {}

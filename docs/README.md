@@ -17,6 +17,12 @@ The [120-repository matrix](HUNDRED_MODEL_BENCHMARK.md) describes cross-family
 validation and its limits. [Family reconstruction strategies](MODEL_FAMILY_STRATEGIES.md)
 sets separate acceptance gates for native models, diffusion, audio/video, RL,
 adapters and GGUF.
+[Backend reliability](BACKEND_RELIABILITY.md) records the current measured gap,
+the stepwise acceptance approach and the next reconstruction gate.
+[Teammate handoff](TEAMMATE_HANDOFF.md) contains review dependencies, reproduction
+commands and the next bounded backend task.
+[Dtype evidence](DTYPE_EVIDENCE.md) describes the supported value-specific source
+facts and the limits of native input profiles.
 
 [UI redesign](UI_REDESIGN.md) documents the application flow, design system,
 responsive workspace and validation requirements. Its annotated
