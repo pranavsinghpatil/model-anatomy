@@ -38,9 +38,7 @@ test("component detail tabs keep separate readable targets", async ({
     }),
   );
   expect(bounds).toHaveLength(3);
-  expect(bounds.every((box) => box.width >= 60 && box.height >= 38)).toBe(
-    true,
-  );
+  expect(bounds.every((box) => box.width >= 60 && box.height >= 38)).toBe(true);
   expect(bounds[0].right).toBeLessThanOrEqual(bounds[1].x + 1);
   expect(bounds[1].right).toBeLessThanOrEqual(bounds[2].x + 1);
   await tabs.getByRole("tab", { name: /^Tensors/ }).click();
