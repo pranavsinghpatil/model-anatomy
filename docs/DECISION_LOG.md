@@ -1168,3 +1168,17 @@ value-specific dtype evidence, and the uncommitted frontend/backend work from
 the previous checkout. The catalog reports outcomes separately: a record does
 not imply a complete architecture graph. See
 [top integration validation](TOP_INTEGRATION_2026-10-23.md).
+
+## D-072 - Classify GPT-NeoX components from verified native topology
+
+**2026-10-23 - dynamic graph coverage increment**
+
+Classify fused QKV attention only when `query_key_value` and `dense` are native
+linear projections with the 3H/H dimensions, and classify the GPT-NeoX MLP
+only when expansion, activation and contraction agree. The existing layer
+rule then identifies decoder blocks. Reject lookalikes with mismatched
+dimensions; retain all unresolved flow warnings and partial outcomes.
+
+Advance engine identity to `2026.10.23.3`. Two pinned Pythia variants reach
+complete semantic/module classification but remain partial on tensor flow.
+See [GPT-NeoX role evidence](DYNAMIC_GPT_NEOX_ROLES.md).

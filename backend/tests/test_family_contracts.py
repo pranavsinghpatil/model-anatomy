@@ -6,6 +6,7 @@ import json
 from types import SimpleNamespace
 
 import pytest
+import torch
 
 from model_anatomy.api.schemas import AnalysisDetail, GraphResponse, NodeInspection
 from model_anatomy.service.jobs import ir_summary, job_detail
@@ -16,7 +17,9 @@ from model_anatomy.src.artifacts import (
     MetadataClient,
     parse_safetensors_header,
 )
+from model_anatomy.src.facts import inspect_native_model
 from model_anatomy.src.ir import ModelIR
+from model_anatomy.src.patterns import SemanticAnalyzer
 from model_anatomy.src.pipeline import reconstruct
 from model_anatomy.src.registry import instantiate_native, load_native_config
 
@@ -290,3 +293,37 @@ def test_native_family_reconstructs_with_trustworthy_graph_and_api_views(
     assert inspection.node.parameter_count > 0
     assert inspection.tensor_count > 0
     assert all(tensor.name in ir.tensors for tensor in inspection.tensors)
+
+
+def test_gpt_neox_fused_attention_and_mlp_roles_require_verified_topology():
+    config = {
+        "model_type": "gpt_neox",
+        "architectures": ["GPTNeoXForCausalLM"],
+        "vocab_size": 32,
+        "hidden_size": 16,
+        "intermediate_size": 64,
+        "num_hidden_layers": 1,
+        "num_attention_heads": 2,
+        "max_position_embeddings": 16,
+    }
+    model, _ = instantiate_native(load_native_config(config))
+    checkpoint = header_only_checkpoint(model)
+    ir = reconstruct("fixtures/gpt_neox", client=HeaderFixtureClient(config, checkpoint))
+    classifications = ir.raw_structure["semantic_diagnostics"]["classifications"]
+    assert classifications["gpt_neox.layers.0.attention"]["kind"] == "self_attention"
+    assert classifications["gpt_neox.layers.0.mlp"]["kind"] == "feed_forward"
+    assert classifications["gpt_neox.layers.0"]["kind"] == "decoder_block"
+    assert not ir.raw_structure["semantic_diagnostics"]["unknown_components"]
+    assert ir.metadata["analysis_report"]["checkpoint_parameter_coverage"] == 1
+    graph_kinds = {node.kind for graph in ir.root_graph.walk() for node in graph.nodes}
+    assert {"self_attention", "feed_forward", "decoder_block"} <= graph_kinds
+
+    # Similar names with incompatible projection dimensions are not evidence.
+    attention = model.gpt_neox.layers[0].attention
+    attention.query_key_value = torch.nn.Linear(16, 32, device="meta")
+    mlp = model.gpt_neox.layers[0].mlp
+    mlp.dense_4h_to_h = torch.nn.Linear(32, 16, device="meta")
+    altered = SemanticAnalyzer(model, inspect_native_model(model, CheckpointMetadata({}, {}, {})))
+    assert altered.classifications["gpt_neox.layers.0.attention"].kind == "unknown"
+    assert altered.classifications["gpt_neox.layers.0.mlp"].kind == "unknown"
+    assert altered.classifications["gpt_neox.layers.0"].kind == "unknown"

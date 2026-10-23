@@ -168,7 +168,17 @@ class SemanticAnalyzer:
             for names in ({"q_proj", "k_proj", "v_proj"}, {"query", "key", "value"}, {"q", "k", "v"})
         )
         fused = "c_attn" in child_names and "c_proj" in child_names
-        if qkv or fused:
+        # GPT-NeoX and compatible native modules store Q, K and V in one
+        # projection. The dimensions establish three equal hidden-width
+        # outputs; the name alone does not establish an attention module.
+        neox_fused = (
+            child_names == {"query_key_value", "dense"}
+            and isinstance(getattr(module, "query_key_value", None), torch.nn.Linear)
+            and isinstance(getattr(module, "dense", None), torch.nn.Linear)
+            and module.query_key_value.in_features == module.dense.in_features == module.dense.out_features
+            and module.query_key_value.out_features == 3 * module.dense.in_features
+        )
+        if qkv or fused or neox_fused:
             cross = record["attributes"].get("is_cross_attention") or "cross" in name or "encdec" in name
             return result(
                 "cross_attention" if cross else "self_attention",
@@ -177,6 +187,18 @@ class SemanticAnalyzer:
             )
         if any(names.issubset(child_names) for names in ({"c_fc", "c_proj"}, {"fc1", "fc2"}, {"wi", "wo"})):
             return result("feed_forward", 0.97, "expansion/contraction projections with activation subtree")
+        if child_names == {"dense_h_to_4h", "dense_4h_to_h", "act"}:
+            up = getattr(module, "dense_h_to_4h", None)
+            down = getattr(module, "dense_4h_to_h", None)
+            if (
+                isinstance(up, torch.nn.Linear)
+                and isinstance(down, torch.nn.Linear)
+                and self.classifications[f"{path}.act" if path else "act"].kind == "activation"
+                and up.in_features == down.out_features
+                and up.out_features == down.in_features
+                and up.out_features > up.in_features
+            ):
+                return result("feed_forward", 0.98, "matched expansion/activation/contraction topology")
         if "projection" in descendant_kinds and "activation" in descendant_kinds and "intermediate" in name:
             return result(
                 "feed_forward",
