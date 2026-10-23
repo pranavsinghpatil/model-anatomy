@@ -63,6 +63,30 @@ def test_latest_verified_inspection_replaces_case_metrics_and_keeps_benchmark_pr
     jobs.db.engine.dispose()
 
 
+def test_inspected_catalog_exposes_the_saved_budget_reason_instead_of_native_failure(tmp_path):
+    jobs = JobService(Settings(data_dir=tmp_path))
+    jobs.initialize()
+    with jobs.db.write() as session:
+        session.add(ModelReport(
+            id="r" * 64, cache_identity="c" * 64,
+            model_id="deepseek-ai/DeepSeek-V4.1-Flash-1017", request_revision="main",
+            revision="a" * 40, engine_version="engine-old", schema_version="1.1",
+            artifact="model.safetensors", explicit_artifact=False,
+            blob_digest="b" * 64, inspected_at=1_800_000_000,
+            summary={
+                "result_status": "inspected", "graph_count": 0, "tensor_count": 0,
+                "inspection": {"reason_code": "metadata_budget_exceeded"},
+            },
+        ))
+
+    row = DiscoveryCatalogService(jobs).get_catalog()["results"][0]
+    assert row["reason_codes"] == ["metadata_budget_exceeded"]
+    assert "metadata exceeds the configured inspection budget" in row["diagnostic_notes"][0]
+    assert "native Transformers implementation" not in row["diagnostic_notes"][0]
+    assert row["graph_count"] == 0 and row["tensor_count"] == 0
+    jobs.db.engine.dispose()
+
+
 def test_terminal_failure_is_durable_and_public_view_excludes_private_job_identity(tmp_path):
     jobs = JobService(Settings(data_dir=tmp_path), clock=lambda: 1000)
     jobs.initialize()

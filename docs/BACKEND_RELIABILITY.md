@@ -4,6 +4,27 @@ This log tracks measured reconstruction gaps and the next bounded change. The
 Cursor transcript is historical context; it is not fresh acceptance evidence.
 The ground and decision log remain the product's source of truth.
 
+## October 23: large DeepSeek checkpoint reporting
+
+The saved inspection for `deepseek-ai/DeepSeek-V4.1-Flash-1017` at revision
+`1bae0e1088993b9b82de08f59de5be5a34e42170` has zero graph nodes and zero
+verified tensor headers because it stopped at `metadata_budget_exceeded`. The
+pinned public index is 7,470,294 bytes and declares 96,085 tensor names across
+48 shards. The shard count is within the engine's 64-shard limit; the declared
+tensor count exceeds its 20,000-record limit. The index declaration alone does
+not verify tensor headers, ownership, parameter counts or a graph.
+
+Catalog discovery now preserves the saved inspection reason instead of replacing
+it with a generic native-architecture diagnosis. The artifact view directs the
+visitor to select a pinned shard for bounded header inspection and labels that
+result as one-shard evidence. A live inspection of
+`model-00001-of-00048.safetensors` at the same revision returned an `inspected`
+report with 263 verified tensor headers and no graph. Local Transformers 4.57.0
+and 4.57.6 environments have no native `deepseek_v41` config mapping. This
+increment does not raise resource limits or claim whole-model support. Native
+construction and complete checkpoint coverage require separate, measured work.
+Existing saved reports remain immutable.
+
 ## Working approach
 
 1. Reproduce a concrete failing model at an immutable revision. Record the graph,

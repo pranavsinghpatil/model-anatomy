@@ -96,6 +96,58 @@ test("GGUF selection submits the exact pinned file rather than guessing a varian
   );
 });
 
+test("metadata budget result offers pinned shard inspection with explicit scope", async ({
+  page: browser,
+}) => {
+  const shard = "model-00001-of-00048.safetensors";
+  const job = {
+    ...analysisFor(),
+    model_id: "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+    revision,
+    status: "inspected" as const,
+    stage: "inspected",
+    root_graph_id: null,
+    architecture: null,
+    parameter_count: null,
+  };
+  const requests = await mockService(browser, {
+    job,
+    artifactPages: [
+      {
+        ...page(0, ["model.safetensors.index.json", shard], []),
+        tensor_count: 0,
+        reason_code: "metadata_budget_exceeded",
+      },
+    ],
+  });
+  await openAnalysis(browser, job.id, "artifacts");
+  const inspection = browser.getByTestId("artifact-inspection");
+  await expect(
+    inspection.getByTestId("checkpoint-selection-callout"),
+  ).toContainText("its tensors are not a whole-model result");
+  await expect(
+    inspection.getByRole("button", {
+      name: "Inspect model.safetensors.index.json (Safetensors index)",
+      exact: true,
+    }),
+  ).toHaveCount(0);
+  await inspection
+    .getByRole("button", {
+      name: `Inspect ${shard} (Safetensors checkpoint)`,
+      exact: true,
+    })
+    .click();
+  await expect
+    .poll(() =>
+      requests
+        .filter((request) => request.method === "POST")
+        .map((request) => request.body),
+    )
+    .toContainEqual({
+      model: `https://huggingface.co/${job.model_id}/blob/${revision}/${shard}`,
+    });
+});
+
 test("declared repository profile and nested Safetensors index remain selectable", async ({
   page: browser,
 }) => {

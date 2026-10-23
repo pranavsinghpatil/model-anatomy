@@ -12,6 +12,8 @@ from urllib.parse import quote
 
 from sqlalchemy import select
 
+from model_anatomy.src.artifact_inspection import INSPECTION_MESSAGES
+
 from .database import BenchmarkCase, BenchmarkPublication, InspectionFailure, ModelReport
 from .errors import ServiceError
 from .external_validation import ExternalValidationService
@@ -52,9 +54,17 @@ def _pinned_reference(model_id: str, revision: str | None, artifact: str, explic
     return f"https://huggingface.co/{model_id}/tree/{revision}"
 
 
+def _inspection_reason(summary: dict) -> str | None:
+    inspection = summary.get("inspection")
+    reason = inspection.get("reason_code") if isinstance(inspection, dict) else None
+    return reason if isinstance(reason, str) and reason in INSPECTION_MESSAGES else None
+
+
 def _diagnostics(status: str, summary: dict | None = None) -> list[str]:
     if status == "inspected":
-        return ["Native architecture reconstruction is unavailable; verified artifacts were inspected."]
+        reason = _inspection_reason(summary or {})
+        message = INSPECTION_MESSAGES.get(reason) if reason else None
+        return [message or "Verified artifacts were inspected; an architecture graph was not reconstructed."]
     if status in {"partial", "completed"}:
         coverage = (summary or {}).get("quality", {})
         return ["The recorded static coverage is incomplete."] if status == "partial" and any(
@@ -158,6 +168,8 @@ class DiscoveryCatalogService:
             if status not in {"completed", "partial", "inspected"}:
                 continue
             task = _safe_task(summary.get("declared_task"))
+            inspection_reason = _inspection_reason(summary) if status == "inspected" else None
+            reason_codes = [inspection_reason] if inspection_reason else []
             finished = timestamp(latest.inspected_at)
             observations = [
                 {"status": (r.summary or {}).get("result_status", "partial"),
@@ -188,7 +200,7 @@ class DiscoveryCatalogService:
                     or bool((summary.get("inspection") or {}).get("checkpoint_available"))
                 ) if latest.explicit_artifact else None,
                 "explicit_artifact": latest.explicit_artifact, "source": "inspection",
-                "diagnostic_notes": _diagnostics(status, summary), "reason_codes": [],
+                "diagnostic_notes": _diagnostics(status, summary), "reason_codes": reason_codes,
                 "previous_observations": observations,
                 "benchmark_observations": [], "_sort_time": latest.inspected_at,
             }

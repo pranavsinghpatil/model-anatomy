@@ -141,8 +141,11 @@ export function ArtifactInspection({
       false);
   const checkpointSelectionRequired =
     reasonCode === "checkpoint_selection_required";
+  const metadataBudgetExceeded = reasonCode === "metadata_budget_exceeded";
   const selectionRequired =
-    checkpointSelectionRequired || pipelineSelectionRequired;
+    checkpointSelectionRequired ||
+    pipelineSelectionRequired ||
+    metadataBudgetExceeded;
   const inspectionError =
     filesInspection.error ?? tensorsInspection.error ?? undefined;
   const filteredFiles = (filesPage?.files ?? []).filter((file) =>
@@ -266,12 +269,16 @@ export function ArtifactInspection({
             <h3 id="artifact-selection-title">
               {pipelineSelectionRequired
                 ? "Choose the checkpoint for the component you want to inspect."
-                : "Choose a checkpoint file to read its tensor headers."}
+                : metadataBudgetExceeded
+                  ? "Choose one Safetensors file for a bounded header inspection."
+                  : "Choose a checkpoint file to read its tensor headers."}
             </h3>
             <p>
               {pipelineSelectionRequired
                 ? "This repository declares multiple pipeline components. Nothing was selected automatically."
-                : "Several checkpoint variants are present, so no variant was selected automatically."}
+                : metadataBudgetExceeded
+                  ? "The full checkpoint exceeds the metadata budget. An individual file can be inspected if its header fits; its tensors are not a whole-model result."
+                  : "Several checkpoint variants are present, so no variant was selected automatically."}
             </p>
             {pipelineSelectionRequired && (
               <code>pipeline_components_require_selection</code>
@@ -384,16 +391,19 @@ export function ArtifactInspection({
                             )}
                             {fileKind && <small>{fileKind}</small>}
                           </div>
-                          {href && fileKind && (
-                            <IconButton
-                              label={`Inspect ${file} (${fileKind})`}
-                              disabled={inspectionDisabled}
-                              onClick={() => onInspectFile(href)}
-                            >
-                              <ScanSearch size={16} />
-                              <span>Inspect</span>
-                            </IconButton>
-                          )}
+                          {href &&
+                            fileKind &&
+                            (!metadataBudgetExceeded ||
+                              file.endsWith(".safetensors")) && (
+                              <IconButton
+                                label={`Inspect ${file} (${fileKind})`}
+                                disabled={inspectionDisabled}
+                                onClick={() => onInspectFile(href)}
+                              >
+                                <ScanSearch size={16} />
+                                <span>Inspect</span>
+                              </IconButton>
+                            )}
                         </li>
                       );
                     })}
