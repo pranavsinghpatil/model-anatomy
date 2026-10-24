@@ -274,6 +274,8 @@ export interface components {
       inspection?: components["schemas"]["InspectionSummary"] | null;
       verified_checkpoint_headers?:
         components["schemas"]["VerifiedCheckpointHeaders"] | null;
+      verified_checkpoint_names?:
+        components["schemas"]["VerifiedCheckpointNames"] | null;
     };
     /** AnalysisError */
     AnalysisError: {
@@ -355,6 +357,8 @@ export interface components {
       inspection?: components["schemas"]["InspectionSummary"] | null;
       verified_checkpoint_headers?:
         components["schemas"]["VerifiedCheckpointHeaders"] | null;
+      verified_checkpoint_names?:
+        components["schemas"]["VerifiedCheckpointNames"] | null;
     };
     /** ArtifactInspectionResponse */
     ArtifactInspectionResponse: {
@@ -385,6 +389,8 @@ export interface components {
         components["schemas"]["DeclaredCheckpointIndex"] | null;
       verified_checkpoint_headers?:
         components["schemas"]["VerifiedCheckpointHeaders"] | null;
+      verified_checkpoint_names?:
+        components["schemas"]["VerifiedCheckpointNames"] | null;
       /** Checkpoint Format */
       checkpoint_format?: string | null;
       /** Selected File Tensor Element Count */
@@ -870,6 +876,47 @@ export interface components {
       tensor_element_count_including_scales: number;
       /** Header Bytes Read By Audit */
       header_bytes_read_by_audit: number;
+      /**
+       * Weight Payload Bytes Read By Audit
+       * @constant
+       */
+      weight_payload_bytes_read_by_audit: 0;
+    };
+    /** VerifiedCheckpointNames */
+    VerifiedCheckpointNames: {
+      /**
+       * Basis
+       * @constant
+       */
+      basis: "previously_audited_publisher_state_keys";
+      /** Index Sha256 */
+      index_sha256: string;
+      /** Name Audit Document Sha256 */
+      name_audit_document_sha256: string;
+      /** State Key Count */
+      state_key_count: number;
+      /** Component Count */
+      component_count: number;
+      /**
+       * Unmatched State Key Count
+       * @constant
+       */
+      unmatched_state_key_count: 0;
+      /**
+       * Converter Renamed Names
+       * @constant
+       */
+      converter_renamed_names: 0;
+      /**
+       * Converter Skipped Names
+       * @constant
+       */
+      converter_skipped_names: 0;
+      /**
+       * Converter Name Collisions
+       * @constant
+       */
+      converter_name_collisions: 0;
       /**
        * Weight Payload Bytes Read By Audit
        * @constant

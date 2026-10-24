@@ -158,6 +158,33 @@ the compact name evidence to a new exact-pin report and expose the per-component
 counts as name evidence, while keeping those stronger claims unknown. The three
 new graph nodes advance engine/cache identity to `2026.10.24.4`.
 
+## Follow-up: binding the prior name audit to new reports
+
+Engine `2026.10.24.5` bundles the compact name inventory with SHA-256
+`8f0f95214ad0dbafcf5ac1031deaba3d062b943ecfe86cd83678a9d44ace6512`.
+A fresh report at the reviewed model/revision can cite it only after the prior
+header audit is bound and the exact index identity, 48 shard / 96,085 name
+counts, reviewed source/config/converter digests, graph component paths and
+both aggregate count sums agree. The worker does not rerun the 96,085-name
+offline audit. An unavailable, changed or inconsistent bundle leaves the name
+evidence unbound with an explicit reason code.
+
+The Report and Artifacts views now separate this prior state-key correspondence
+from verified header counts and individual tensor records. A graph component
+with matched names shows its own count and audit citation. The report remains
+`partial`, with zero retained tensor records, unknown parameter count and shape
+coverage, and `reference_order` links rather than runtime dataflow. Saved older
+reports remain immutable. The next gate is per-name header shape/type evidence
+that can be tied to these associations without loading weight payloads.
+
+A fresh metadata-only inspection of the exact pinned revision with engine
+`2026.10.24.5` returned a `partial` report with 52 root nodes, 45
+`reference_order` links, both prior audits bound, 96,085 matched names across
+632 closest components, zero retained tensor records, unknown parameter count,
+and zero weight payload bytes read. The request audit records successful reads
+of the repository metadata, config and 7,470,294-byte index only. The full
+local IR and request log are retained under ignored `.local/verification/`.
+
 ## vv branch audit
 
 PR [#48](https://github.com/pranavsinghpatil/model-anatomy/pull/48) merged

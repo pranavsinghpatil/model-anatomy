@@ -223,3 +223,11 @@ these name counts per graph component. Keep that field distinct from verified
 tensor records, element totals and parameter count. Historical visitor reports
 stay immutable. Follow with per-name header shape/type association only after
 the name field is accepted; do not infer runtime dataflow from source order.
+
+The next `codex/deepseek-name-report` branch binds the completed name audit only
+to new exact-pin, header-bound reports. It adds a separate summary and per-node
+name counts with citations; tensor records and parameter totals stay empty and
+unknown. The next teammate acceptance gate is to verify individual header
+shape/type descriptors against the same state-key inventory and source-declared
+module slots under a bounded metadata path, then decide which parameter totals
+are meaningful in the presence of quantization scales and tied weights.

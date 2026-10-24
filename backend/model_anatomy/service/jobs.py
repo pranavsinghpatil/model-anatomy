@@ -206,6 +206,9 @@ def ir_summary(data: dict) -> dict:
         "verified_checkpoint_headers": metadata.get("artifacts", {}).get(
             "verified_checkpoint_headers"
         ),
+        "verified_checkpoint_names": metadata.get("artifacts", {}).get(
+            "verified_checkpoint_names"
+        ),
     }
 
 
@@ -233,6 +236,7 @@ def job_detail(job: Job, summary: dict | None = None) -> dict:
         "cached": job.cached,
         "inspection": summary.get("inspection"),
         "verified_checkpoint_headers": summary.get("verified_checkpoint_headers"),
+        "verified_checkpoint_names": summary.get("verified_checkpoint_names"),
     }
 
 

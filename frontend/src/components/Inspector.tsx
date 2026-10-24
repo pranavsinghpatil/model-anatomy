@@ -384,6 +384,7 @@ export function Inspector({
   const resolved = detail.data?.node ?? node;
   const sourceTopology =
     analysis.quality?.mode === "publisher_reference_topology";
+  const checkpointNameCount = resolved.metadata?.checkpoint_state_key_count;
   const evidence = detail.data?.evidence ?? resolved.evidence;
   return (
     <div className="inspector" data-testid="inspector">
@@ -494,6 +495,12 @@ export function Inspector({
                   {sourceTopology ? "Unknown" : count(resolved.parameter_count)}
                 </strong>
               </div>
+              {typeof checkpointNameCount === "number" && (
+                <div className="inspector-stat">
+                  <span>Matched checkpoint names</span>
+                  <strong>{count(checkpointNameCount)}</strong>
+                </div>
+              )}
               <section className="inspector-section">
                 <h3>Source modules</h3>
                 {resolved.source_modules.length ? (

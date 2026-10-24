@@ -59,6 +59,9 @@ def artifact_view(ir: ModelIR, offset: int = 0, limit: int = 50) -> dict:
         "verified_checkpoint_headers": ir.metadata.get("artifacts", {}).get(
             "verified_checkpoint_headers"
         ),
+        "verified_checkpoint_names": ir.metadata.get("artifacts", {}).get(
+            "verified_checkpoint_names"
+        ),
         "checkpoint_format": ir.metadata.get("artifacts", {}).get("checkpoint_format"),
         "selected_file_tensor_element_count": ir.metadata.get("artifacts", {}).get(
             "selected_file_tensor_element_count"

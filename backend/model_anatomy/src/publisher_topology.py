@@ -373,6 +373,8 @@ def build_reviewed_topology(
     artifact_ir.metadata["engine_version"] = ENGINE_VERSION
     artifact_ir.evidence.extend(_source(reference, name) for name in REVIEWED_SOURCE_SHA256)
     from .checkpoint_audit_binding import bind_pinned_header_audit
+    from .checkpoint_name_binding import bind_pinned_name_audit
 
     bind_pinned_header_audit(artifact_ir, reference, revision, files)
+    bind_pinned_name_audit(artifact_ir, reference, revision)
     return artifact_ir

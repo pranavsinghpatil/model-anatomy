@@ -1267,3 +1267,15 @@ its value transformations remain unverified. The audit is offline and does not
 upgrade historical reports, parameter count, shapes, dataflow or runtime
 coverage. The three new graph nodes advance engine/cache identity to
 `2026.10.24.4`. See [publisher topology evidence](PUBLISHER_SOURCE_TOPOLOGY.md).
+
+## D-078 - Bind prior state-key correspondence to new partial reports
+
+**2026-10-24 - DeepSeek report-name increment**
+
+Package the completed exact-pin name inventory as a digest-pinned resource. Bind
+it only after the prior header audit is bound and its index digest, shard/name
+counts, reviewed config and source hashes, converter hash, component paths and
+aggregate counts all agree. Show the prior name match in the report and closest
+graph components as a separate evidence category. Do not create individual
+tensor records, parameter totals, shape coverage or runtime-flow claims. Older
+reports remain immutable. Advance engine/cache identity to `2026.10.24.5`.

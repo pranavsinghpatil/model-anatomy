@@ -278,6 +278,29 @@ export function ArtifactInspection({
         </section>
       )}
 
+      {page?.verified_checkpoint_names && (
+        <section
+          className="artifact-reason"
+          aria-label="Publisher checkpoint-name audit"
+        >
+          <strong>Source-reviewed checkpoint-name match</strong>
+          <p>
+            A separate pinned audit matched all{" "}
+            {count(page.verified_checkpoint_names.state_key_count)} checkpoint
+            names to {count(page.verified_checkpoint_names.component_count)}
+            closest reference components. This is name evidence; this report
+            retains no individual tensor records, and parameter totals and
+            converter output values remain unverified.
+          </p>
+          <p>
+            Name audit SHA-256:{" "}
+            <code>
+              {page.verified_checkpoint_names.name_audit_document_sha256}
+            </code>
+          </p>
+        </section>
+      )}
+
       {page?.declared_checkpoint_index && (
         <section
           className="artifact-reason"

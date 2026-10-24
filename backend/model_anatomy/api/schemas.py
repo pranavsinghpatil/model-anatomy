@@ -155,6 +155,19 @@ class VerifiedCheckpointHeaders(BaseModel):
     weight_payload_bytes_read_by_audit: Literal[0]
 
 
+class VerifiedCheckpointNames(BaseModel):
+    basis: Literal["previously_audited_publisher_state_keys"]
+    index_sha256: str
+    name_audit_document_sha256: str
+    state_key_count: int = Field(gt=0)
+    component_count: int = Field(gt=0)
+    unmatched_state_key_count: Literal[0]
+    converter_renamed_names: Literal[0]
+    converter_skipped_names: Literal[0]
+    converter_name_collisions: Literal[0]
+    weight_payload_bytes_read_by_audit: Literal[0]
+
+
 class InspectionSummary(BaseModel):
     kind: Literal["artifact_inspection"]
     reason_code: str
@@ -189,6 +202,7 @@ class AnalysisDetail(BaseModel):
     input_names: list[str] = Field(default_factory=list)
     inspection: InspectionSummary | None = None
     verified_checkpoint_headers: VerifiedCheckpointHeaders | None = None
+    verified_checkpoint_names: VerifiedCheckpointNames | None = None
 
 
 class AnalysisSummary(AnalysisDetail):
@@ -302,6 +316,7 @@ class ArtifactInspectionResponse(BaseModel):
     checkpoint_available: bool
     declared_checkpoint_index: DeclaredCheckpointIndex | None = None
     verified_checkpoint_headers: VerifiedCheckpointHeaders | None = None
+    verified_checkpoint_names: VerifiedCheckpointNames | None = None
     checkpoint_format: str | None = None
     selected_file_tensor_element_count: int | None = None
     selected_file_split_metadata: dict[str, int] | None = None

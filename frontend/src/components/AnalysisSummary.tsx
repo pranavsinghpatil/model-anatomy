@@ -248,6 +248,7 @@ export function Report({ detail }: { detail: AnalysisDetail }) {
   const artifact = detail.status === "inspected";
   const sourceTopology = q?.mode === "publisher_reference_topology";
   const headerAudit = detail.verified_checkpoint_headers;
+  const nameAudit = detail.verified_checkpoint_names;
   const inspection = detail.inspection;
   const checks: [string, string | number][] = [
     ["Semantic coverage", coverage(q?.semantic_coverage)],
@@ -304,7 +305,9 @@ export function Report({ detail }: { detail: AnalysisDetail }) {
                 ? "Pinned repository artifacts were inspected. No native architecture graph was reconstructed."
                 : sourceTopology
                   ? headerAudit
-                    ? "This partial graph comes from reviewed publisher source. A separate pinned audit verified shard headers; tensor ownership and runtime flow remain unverified."
+                    ? nameAudit
+                      ? "This partial graph comes from reviewed publisher source. Separate pinned audits verified shard headers and checkpoint-name correspondence; shapes, parameter totals, and runtime flow remain unverified."
+                      : "This partial graph comes from reviewed publisher source. A separate pinned audit verified shard headers; tensor ownership and runtime flow remain unverified."
                     : "This partial graph comes from reviewed publisher source. Checkpoint shard headers and tensor ownership are unverified."
                   : "Architecture facts come from inspected checkpoint metadata and native PyTorch module definitions."}
             </p>
@@ -351,6 +354,27 @@ export function Report({ detail }: { detail: AnalysisDetail }) {
           </p>
           <p>
             Index SHA-256: <code>{headerAudit.index_sha256}</code>
+          </p>
+        </section>
+      )}
+
+      {nameAudit && (
+        <section
+          className="report-section"
+          aria-label="Publisher checkpoint-name audit"
+        >
+          <h2>Checkpoint names matched to reference components</h2>
+          <p>
+            A separate source-reviewed audit matched all{" "}
+            {count(nameAudit.state_key_count)} checkpoint state-key names to{" "}
+            {count(nameAudit.component_count)} closest reference components at
+            this exact index. There were zero unmatched, renamed, skipped, or
+            colliding names. Individual tensor shapes, parameter totals, and
+            converter output values remain unverified.
+          </p>
+          <p>
+            Name audit SHA-256:{" "}
+            <code>{nameAudit.name_audit_document_sha256}</code>
           </p>
         </section>
       )}
