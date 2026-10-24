@@ -250,7 +250,7 @@ def reconstruct(
         except InspectionBudgetError as exc:
             if not allow_artifact_inspection:
                 raise
-            return inspect_artifacts(
+            artifact_ir = inspect_artifacts(
                 reference,
                 revision,
                 files,
@@ -261,6 +261,13 @@ def reconstruct(
                 reason_code="metadata_budget_exceeded",
                 declared_checkpoint_index=exc.index_summary,
             )
+            if config_data is not None and exc.index_summary is not None:
+                from .publisher_topology import build_reviewed_topology
+
+                return build_reviewed_topology(
+                    reference, revision, files, config_data, artifact_ir
+                ) or artifact_ir
+            return artifact_ir
 
     if checkpoint.format == "gguf":
         return inspect_artifacts(

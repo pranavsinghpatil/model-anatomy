@@ -63,6 +63,13 @@ If a valid Safetensors index exceeds the tensor-record budget, the report may
 show its declared tensor-name and shard counts separately from verified headers.
 An index declaration alone does not establish that shard headers agree with it.
 
+For one exact reviewed DeepSeek V4.1 revision, an oversized index may yield a
+separate **publisher reference topology**. This partial graph identifies modules
+and reference order from pinned, source-reviewed publisher code, with the exact
+configuration hash as its gate. It is not a verified checkpoint graph: shard
+headers, tensor ownership, parameter totals, shapes and runtime dataflow stay
+unknown. See `PUBLISHER_SOURCE_TOPOLOGY.md`.
+
 ## Product sequence
 
 ```text

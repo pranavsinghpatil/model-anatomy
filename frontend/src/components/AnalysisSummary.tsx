@@ -18,6 +18,8 @@ import "./analysis-summary.css";
 
 export function Overview({ detail }: { detail: AnalysisDetail }) {
   const artifact = detail.status === "inspected";
+  const sourceTopology =
+    detail.quality?.mode === "publisher_reference_topology";
   const inspection = detail.inspection;
   const modelName = detail.model_id.split("/").at(-1) ?? detail.model_id;
 
@@ -134,19 +136,29 @@ export function Overview({ detail }: { detail: AnalysisDetail }) {
           </div>
           <div className="spec-cell">
             <span className="spec-label">Extraction Pipeline</span>
-            <span className="spec-val">Deterministic PyTorch IR</span>
+            <span className="spec-val">
+              {sourceTopology
+                ? "Reviewed publisher source · partial"
+                : "Deterministic PyTorch IR"}
+            </span>
           </div>
           <div className="spec-cell">
             <span className="spec-label">Input Tensors</span>
             <span className="spec-val font-mono">
               {detail.input_names?.length
                 ? detail.input_names.join(", ")
-                : "token_ids"}
+                : sourceTopology
+                  ? "Not verified"
+                  : "token_ids"}
             </span>
           </div>
           <div className="spec-cell">
             <span className="spec-label">Evidence Provenance</span>
-            <span className="spec-val">Safetensors Range-Stream</span>
+            <span className="spec-val">
+              {sourceTopology
+                ? "Pinned config and publisher source"
+                : "Safetensors Range-Stream"}
+            </span>
           </div>
         </div>
       )}
@@ -234,6 +246,7 @@ const bool = (value: boolean | null | undefined) =>
 export function Report({ detail }: { detail: AnalysisDetail }) {
   const q = detail.quality;
   const artifact = detail.status === "inspected";
+  const sourceTopology = q?.mode === "publisher_reference_topology";
   const inspection = detail.inspection;
   const checks: [string, string | number][] = [
     ["Semantic coverage", coverage(q?.semantic_coverage)],
@@ -288,7 +301,9 @@ export function Report({ detail }: { detail: AnalysisDetail }) {
             <p>
               {artifact
                 ? "Pinned repository artifacts were inspected. No native architecture graph was reconstructed."
-                : "Architecture facts come from inspected checkpoint metadata and native PyTorch module definitions."}
+                : sourceTopology
+                  ? "This partial graph comes from reviewed publisher source. Checkpoint shard headers and tensor ownership are unverified."
+                  : "Architecture facts come from inspected checkpoint metadata and native PyTorch module definitions."}
             </p>
           </div>
         </div>
@@ -414,7 +429,9 @@ export function Report({ detail }: { detail: AnalysisDetail }) {
           <p>
             {artifact
               ? "The result records a pinned repository inventory and any bounded checkpoint headers that were safe to inspect. It does not reconstruct an architecture."
-              : "Static inspection describes artifact-backed structure. Coverage does not establish runtime correctness or every possible execution path."}
+              : sourceTopology
+                ? "The pinned configuration and reviewed publisher source describe reference modules and their order. This result does not verify runtime flow or checkpoint ownership."
+                : "Static inspection describes artifact-backed structure. Coverage does not establish runtime correctness or every possible execution path."}
           </p>
           {detail.limitations?.length ? (
             <ul>

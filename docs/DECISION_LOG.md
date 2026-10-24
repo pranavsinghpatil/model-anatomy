@@ -1196,3 +1196,17 @@ Show the separate native-architecture blocker and avoid completed-sounding
 language on artifact-only reports. Advance engine/cache identity to
 `2026.10.23.4`; earlier reports remain immutable. See
 [inspection failure diagnosis](INSPECTION_FAILURE_DIAGNOSIS_2026-10-23.md).
+
+## D-074 - Expose an exact-pin publisher reference topology as partial
+
+**2026-10-24 - DeepSeek source-topology increment**
+
+For `deepseek-ai/DeepSeek-V4.1-Flash-1017` at revision
+`1bae0e1088993b9b82de08f59de5be5a34e42170`, a reviewed config digest and
+publisher source hashes gate a bounded text, MoE, speculative and vision module
+graph. The code is read for review, never executed. Edges describe source order,
+not runtime tensor flow. Keep the validated index declaration while leaving
+shard-header verification, parameter count, tensor ownership and graph shapes
+unknown. Other revisions and altered configs remain artifact-only. Advance
+engine/cache identity to `2026.10.24.1`; existing saved reports remain immutable.
+See [publisher topology evidence](PUBLISHER_SOURCE_TOPOLOGY.md).

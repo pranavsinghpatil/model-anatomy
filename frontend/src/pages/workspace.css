@@ -510,6 +510,20 @@
   flex-direction: column;
   overflow: hidden;
 }
+.source-topology-notice {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+  padding: 9px 20px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 12px;
+}
+.source-topology-notice strong {
+  color: var(--text);
+}
 @media (max-width: 1023px) {
   .workspace-arch-pill {
     display: none;

@@ -94,6 +94,8 @@ function Workspace({ id }: { id: string }) {
   });
   const detail = analysis.data;
   const artifact = detail?.status === "inspected";
+  const sourceTopology =
+    detail?.quality?.mode === "publisher_reference_topology";
   const previousStatus = useRef(detail?.status);
   const ready = graphReady(detail?.status) && !analysis.error;
   const viewParam = search.get("view");
@@ -606,6 +608,17 @@ function Workspace({ id }: { id: string }) {
                   </div>
                 ) : graph.data ? (
                   <>
+                    {sourceTopology && (
+                      <div className="source-topology-notice" role="note">
+                        <strong>Publisher reference topology · partial</strong>
+                        <span>
+                          Components come from reviewed source at this revision.
+                          Checkpoint tensors, parameter totals, and runtime
+                          dataflow are not verified. Dashed links show reference
+                          order only.
+                        </span>
+                      </div>
+                    )}
                     <ArchitectureWorkspace
                       analysis={detail}
                       graph={graph.data}

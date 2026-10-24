@@ -206,8 +206,16 @@ export function AnatomyScene({
             <dl>
               <div>
                 <dt>Parameters</dt>
-                <dd title={count(current.parameter_count)}>
-                  {count(current.parameter_count, true)}
+                <dd
+                  title={
+                    analysis.quality?.mode === "publisher_reference_topology"
+                      ? "Unverified"
+                      : count(current.parameter_count)
+                  }
+                >
+                  {analysis.quality?.mode === "publisher_reference_topology"
+                    ? "Unknown"
+                    : count(current.parameter_count, true)}
                 </dd>
               </div>
               <div>

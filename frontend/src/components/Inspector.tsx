@@ -382,6 +382,8 @@ export function Inspector({
       </div>
     );
   const resolved = detail.data?.node ?? node;
+  const sourceTopology =
+    analysis.quality?.mode === "publisher_reference_topology";
   const evidence = detail.data?.evidence ?? resolved.evidence;
   return (
     <div className="inspector" data-testid="inspector">
@@ -425,8 +427,8 @@ export function Inspector({
         <Tabs.List className="panel-tabs" aria-label="Component detail views">
           <Tabs.Trigger value="module">Component</Tabs.Trigger>
           <Tabs.Trigger value="tensors">
-            Tensors{" "}
-            {detail.data && (
+            {sourceTopology ? "Tensors unverified" : "Tensors"}{" "}
+            {detail.data && !sourceTopology && (
               <span>{count(detail.data.tensor_count, true)}</span>
             )}
           </Tabs.Trigger>
@@ -456,7 +458,9 @@ export function Inspector({
                   ))
                 ) : (
                   <p className="empty-copy">
-                    No input specifications returned.
+                    {sourceTopology
+                      ? "Input shape not verified."
+                      : "No input specifications returned."}
                   </p>
                 )}
               </section>
@@ -472,14 +476,22 @@ export function Inspector({
                   ))
                 ) : (
                   <p className="empty-copy">
-                    No output specifications returned.
+                    {sourceTopology
+                      ? "Output shape not verified."
+                      : "No output specifications returned."}
                   </p>
                 )}
               </section>
               <div className="inspector-stat">
                 <span>Parameters</span>
-                <strong title={count(resolved.parameter_count)}>
-                  {count(resolved.parameter_count)}
+                <strong
+                  title={
+                    sourceTopology
+                      ? "Unverified"
+                      : count(resolved.parameter_count)
+                  }
+                >
+                  {sourceTopology ? "Unknown" : count(resolved.parameter_count)}
                 </strong>
               </div>
               <section className="inspector-section">
@@ -499,11 +511,17 @@ export function Inspector({
                     </div>
                   </details>
                 ) : (
-                  <p className="empty-copy">Unknown</p>
+                  <p className="empty-copy">
+                    {sourceTopology
+                      ? "Checkpoint ownership not verified."
+                      : "Unknown"}
+                  </p>
                 )}
               </section>
               <details className="metadata">
-                <summary>Module path</summary>
+                <summary>
+                  {sourceTopology ? "Publisher reference path" : "Module path"}
+                </summary>
                 <code className="inspector-long-path">
                   {resolved.module_path ?? "Unknown module path"}
                 </code>
