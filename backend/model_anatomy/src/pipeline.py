@@ -515,6 +515,13 @@ def reconstruct(
     alignment = selection.get("checkpoint_alignment")
     if isinstance(alignment, str):
         metadata["limitations"].append(alignment)
+    if any(
+        item.get("code") == "reviewed_native_mask_alias"
+        for item in metadata["analysis_report"]["static_flow_diagnostics"]
+    ):
+        metadata["limitations"].append(
+            "Native mask factory identity is verified; mask values and attention-mask dataflow are not reconstructed"
+        )
     evidence = [
         Evidence("hf_config", "direct", config_url, {"revision": revision}),
         Evidence(

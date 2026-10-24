@@ -14,6 +14,7 @@ from types import ModuleType
 from typing import Any
 
 import torch
+from transformers.masking_utils import create_causal_mask, create_sliding_window_causal_mask
 from transformers.pytorch_utils import apply_chunking_to_forward
 from transformers.utils.import_utils import is_torch_fx_proxy, is_torchdynamo_compiling
 
@@ -42,6 +43,10 @@ _FINFO_MIN = {
     torch.bfloat16: -3.3895313892515355e38,
     torch.float32: -3.4028234663852886e38,
     torch.float64: -1.7976931348623157e308,
+}
+_REVIEWED_MASK_FACTORY_SHA256 = {
+    create_causal_mask: "caff3398aa6047ed9f16653cb95330b7c66f171a24b73864ae6f511dbd741e09",
+    create_sliding_window_causal_mask: "b73336c4b96b0a62461d2e4fdcb57ba3ec57c0c974ccbcbe9cca082e90bd9ae2",
 }
 
 
@@ -2170,6 +2175,35 @@ class StaticFlowAnalyzer:
                         )
                 self.flow.warnings.append("Chunked helper arguments are unresolved; dependencies only")
                 return combine(list(arguments.values()))
+            if name == "mask_function":
+                selected = self.source_callable(node.func)
+                expected_sha256 = (
+                    _REVIEWED_MASK_FACTORY_SHA256.get(selected)
+                    if inspect.isfunction(selected)
+                    else None
+                )
+                if expected_sha256 is not None and not any(
+                    isinstance(arg, ast.Starred) for arg in node.args
+                ) and not any(keyword.arg is None for keyword in node.keywords):
+                    try:
+                        source_sha256 = hashlib.sha256(inspect.getsource(selected).encode()).hexdigest()
+                        inspect.signature(selected).bind(
+                            *[arguments[str(index)] for index in range(len(node.args))],
+                            **{key: value for key, value in arguments.items() if not key.isdecimal()},
+                        )
+                    except (OSError, TypeError, ValueError):
+                        pass
+                    else:
+                        if source_sha256 == expected_sha256:
+                            diagnostic = {
+                                "code": "reviewed_native_mask_alias",
+                                "callable": f"{selected.__module__}.{selected.__qualname__}",
+                                "source_sha256": source_sha256,
+                                "basis": "Exact callable and source identify the native mask factory; mask values are outside this static module graph",
+                            }
+                            if diagnostic not in self.flow.diagnostics:
+                                self.flow.diagnostics.append(diagnostic)
+                            return StaticValue()
             if name.startswith("create_") and name.endswith("mask"):
                 return StaticValue()
             if name in {"matmul", "bmm", "einsum", "cat", "stack"} and self.source_callable(

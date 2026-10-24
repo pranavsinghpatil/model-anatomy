@@ -23,6 +23,7 @@ CONTRACT_SOURCE_SHA256 = {
     "transformers.models.t5.modeling_t5": "ee1a043f5c03c684a2bbb0213ea3b3f8be272a03ab884bdca57c31e7315e7b7e",
     "transformers.models.whisper.modeling_whisper": "851c78f1aa62f84ed0d0a4dfded478a05c98f43d26732b56fea2d4acc79728b8",
     "transformers.models.llama.modeling_llama": "31bf660a663259134324bc65da4e155951dc89c5ca46471d2325a9938e859e26",
+    "transformers.models.mistral.modeling_mistral": "3fbb6202376a1fdf57166d199dd4d43f81226b1e0634ec8b61dcb1ade7de153e",
     "transformers.models.vit.modeling_vit": "069e0958c10e806551a2e1d2421cd26e6bff21f7c65aeb9f0f3c0dbde1a88ca5",
     "transformers.models.qwen2.modeling_qwen2": "a59fa06524227361fb401baf4d177124a27aec146bc01ec931235a9abbab17cb",
     "transformers.models.qwen3.modeling_qwen3": "4b95c371fd26d40c69083dab36ac1eafd8cf82b415a0bb827275097c5ad2305b",
@@ -101,6 +102,25 @@ def native_module_outputs(module: nn.Module, input_spec: TensorSpec) -> dict[str
             port = "output"
         elif type(module) is llama.LlamaRMSNorm:
             width = input_spec.shape[-1] if _llama_norm(module, input_spec, llama) else None
+            port = "output"
+        else:
+            return None
+    elif family == "transformers.models.mistral.modeling_mistral":
+        from transformers.models.mistral import modeling_mistral as mistral
+
+        if not _rank_three(input_spec):
+            return None
+        if type(module) is mistral.MistralAttention:
+            width = _mistral_attention(module, input_spec, mistral)
+            port = "0"
+        elif type(module) is mistral.MistralMLP:
+            width = _mistral_mlp(module, input_spec, mistral)
+            port = "output"
+        elif type(module) is mistral.MistralRMSNorm:
+            width = input_spec.shape[-1] if _mistral_norm(module, input_spec, mistral) else None
+            port = "output"
+        elif type(module) is mistral.MistralDecoderLayer:
+            width = _mistral_layer(module, input_spec, mistral)
             port = "output"
         else:
             return None
@@ -547,6 +567,86 @@ def _llama_norm(module: nn.Module, spec: TensorSpec, llama: object) -> bool:
         and math.isfinite(module.variance_epsilon)
         and module.variance_epsilon > 0
     )
+
+
+def _mistral_attention(module: nn.Module, spec: TensorSpec, mistral: object) -> int | None:
+    width, dtype = spec.shape[-1], _TORCH_DTYPES[spec.dtype]
+    config = getattr(module, "config", None)
+    if type(config) is not mistral.MistralConfig or config._attn_implementation != "eager":
+        return None
+    heads, kv_heads = config.num_attention_heads, config.num_key_value_heads
+    head_dim = getattr(module, "head_dim", None)
+    if (
+        not _safe_module(module)
+        or not _trusted_source(type(module), type(module).__module__)
+        or config.hidden_size != width
+        or type(heads) is not int or heads <= 0
+        or type(kv_heads) is not int or kv_heads <= 0 or heads % kv_heads
+        or type(head_dim) is not int or head_dim <= 0
+        or module.num_key_value_groups != heads // kv_heads
+        or module.scaling != head_dim ** -0.5
+        or module.is_causal is not True
+        or type(module.attention_dropout) not in (int, float)
+        or not 0 <= module.attention_dropout <= 1
+    ):
+        return None
+    query_width, kv_width = heads * head_dim, kv_heads * head_dim
+    return width if (
+        _linear(module.q_proj, width, query_width, dtype)
+        and _linear(module.k_proj, width, kv_width, dtype)
+        and _linear(module.v_proj, width, kv_width, dtype)
+        and _linear(module.o_proj, query_width, width, dtype)
+    ) else None
+
+
+def _mistral_mlp(module: nn.Module, spec: TensorSpec, mistral: object) -> int | None:
+    width, dtype = spec.shape[-1], _TORCH_DTYPES[spec.dtype]
+    config = getattr(module, "config", None)
+    intermediate = getattr(module, "intermediate_size", None)
+    if (
+        not _safe_module(module)
+        or not _trusted_source(type(module), type(module).__module__)
+        or type(config) is not mistral.MistralConfig
+        or config.hidden_size != width
+        or config.intermediate_size != intermediate
+        or module.hidden_size != width
+        or type(intermediate) is not int or intermediate <= 0
+        or not _native_activation(getattr(module, "act_fn", None))
+    ):
+        return None
+    return width if (
+        _linear(module.gate_proj, width, intermediate, dtype)
+        and _linear(module.up_proj, width, intermediate, dtype)
+        and _linear(module.down_proj, intermediate, width, dtype)
+    ) else None
+
+
+def _mistral_norm(module: nn.Module, spec: TensorSpec, mistral: object) -> bool:
+    epsilon = getattr(module, "variance_epsilon", None)
+    return (
+        type(module) is mistral.MistralRMSNorm
+        and _safe_module(module)
+        and _trusted_source(type(module), type(module).__module__)
+        and tuple(module.weight.shape) == (spec.shape[-1],)
+        and module.weight.dtype == _TORCH_DTYPES[spec.dtype]
+        and type(epsilon) in (int, float)
+        and math.isfinite(epsilon)
+        and epsilon > 0
+    )
+
+
+def _mistral_layer(module: nn.Module, spec: TensorSpec, mistral: object) -> int | None:
+    width = spec.shape[-1]
+    attention = getattr(module, "self_attn", None)
+    mlp = getattr(module, "mlp", None)
+    norms = (getattr(module, "input_layernorm", None), getattr(module, "post_attention_layernorm", None))
+    return width if (
+        type(attention) is mistral.MistralAttention
+        and _mistral_attention(attention, spec, mistral) == width
+        and type(mlp) is mistral.MistralMLP
+        and _mistral_mlp(mlp, spec, mistral) == width
+        and all(_mistral_norm(norm, spec, mistral) for norm in norms)
+    ) else None
 
 
 def _vit_attention(module: nn.Module, spec: TensorSpec, vit: object) -> int | None:

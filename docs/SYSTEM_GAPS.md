@@ -5,6 +5,16 @@ in the dated sections below. "Tested" means there is a pinned real-model
 engine or live HTTP acceptance path; a generic code path or fixture is not proof
 that a model family works end to end.
 
+## October 24 Mistral-family recheck
+
+Fresh pinned Mistral-7B-Instruct-v0.3 and Zephyr-7b-beta metadata runs meet the
+complete **canonical static-report** gate after reviewed mask-alias and
+hidden-state-port contracts. See [the measurements and limits](MISTRAL_STATIC_CLOSURE.md).
+The broader catalog still contains historical partial observations from older
+engines; this two-model result does not change their status or establish runtime
+behavior. Each model needs a fresh submission or attributed recheck to reflect
+new extraction rules.
+
 ## October 19 Cross-Family Matrix
 
 All 120 distinct pinned repositories were attempted, followed by 22 targeted

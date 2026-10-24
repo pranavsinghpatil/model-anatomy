@@ -1279,3 +1279,23 @@ aggregate counts all agree. Show the prior name match in the report and closest
 graph components as a separate evidence category. Do not create individual
 tensor records, parameter totals, shape coverage or runtime-flow claims. Older
 reports remain immutable. Advance engine/cache identity to `2026.10.24.5`.
+
+## D-079 - Prove Mistral hidden-state ports and identify native mask aliases
+
+**2026-10-24 - decoder static-coverage increment**
+
+For exact native Mistral modules, source-hashed output contracts establish the
+hidden-state ports of attention, MLP, RMSNorm and decoder layer after checking
+their configuration, projections, parameters and eager-attention structure. A
+local `mask_function` alias is recognized only when it resolves to one of two
+reviewed Transformers mask factories, its source digest and call signature match,
+and no dynamic argument expansion is present. The report records that callable
+identity as a diagnostic; it does not claim a mask-value or runtime trace.
+
+Fresh pinned Mistral-7B-Instruct-v0.3 and Zephyr-7b-beta metadata runs each meet
+the complete static-report gate: all four coverage ratios are 1, no extraction
+warnings or unknown/unmapped records, 291 verified tensor headers, and zero
+weight-payload bytes read. Other model families and older saved partial reports
+are unchanged. Advance engine/cache identity to `2026.10.24.6` so a new
+submission does not reuse a report from the previous extractor. See
+[Mistral static closure](MISTRAL_STATIC_CLOSURE.md).
