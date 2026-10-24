@@ -1,9 +1,14 @@
 """HTTP boundary for metadata jobs; never import or run model extraction here."""
 
 import logging
+import threading
 from contextlib import asynccontextmanager
+from pathlib import Path
+from time import monotonic
 from uuid import uuid4
 
+from alembic.config import Config as AlembicConfig
+from alembic.script import ScriptDirectory
 from fastapi import FastAPI, Query, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
@@ -14,6 +19,8 @@ from sqlalchemy.exc import SQLAlchemyError
 from starlette.exceptions import HTTPException
 
 from model_anatomy.service.ai import ExplanationService
+from model_anatomy.service.benchmark_catalog import BenchmarkCatalogService
+from model_anatomy.service.discovery_catalog import DiscoveryCatalogService
 from model_anatomy.service.errors import ServiceError
 from model_anatomy.service.jobs import JobService
 from model_anatomy.service.views import artifact_view, export, graph_view, load_ir, node_view
@@ -22,7 +29,10 @@ from .schemas import (
     AnalysesResponse,
     AnalysisDetail,
     ArtifactInspectionResponse,
+    BenchmarkCatalogResponse,
+    CatalogResponse,
     CreateAnalysis,
+    DiscoveryCatalogResponse,
     ErrorResponse,
     GraphResponse,
     Health,
@@ -40,17 +50,15 @@ COOKIE = "model_anatomy_visitor"
 def create_app(settings: Settings | None = None, *, service=None, explanation=None) -> FastAPI:
     config = settings if settings is not None else Settings()
     jobs = service or JobService(config)
+    benchmark_catalog = BenchmarkCatalogService(jobs)
+    discovery_catalog = DiscoveryCatalogService(jobs)
     ai = explanation or ExplanationService(config)
+    initialization_lock = threading.Lock()
+    retry_initialization_at = 0.0
 
     @asynccontextmanager
     async def lifespan(app):
-        try:
-            jobs.initialize()
-            verify_migrations()
-            app.state.service_ready = True
-        except (ServiceError, SQLAlchemyError, OSError):
-            app.state.service_ready = False
-            logger.error("service initialization unavailable")
+        initialize_service()
         yield
         jobs.db.engine.dispose()
         if explanation is None:
@@ -75,6 +83,8 @@ def create_app(settings: Settings | None = None, *, service=None, explanation=No
     )
     app.state.service_ready = False
     app.state.jobs = jobs
+    app.state.benchmark_catalog = benchmark_catalog
+    app.state.discovery_catalog = discovery_catalog
     app.state.explanation = ai
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=config.allowed_hosts, www_redirect=False)
     app.add_middleware(
@@ -94,14 +104,39 @@ def create_app(settings: Settings | None = None, *, service=None, explanation=No
         )
 
     def verify_migrations():
-        if config.environment == "production":
+        if not jobs.db.sqlite:
             with jobs.db.read() as session:
                 revisions = session.execute(text("SELECT version_num FROM alembic_version")).scalars().all()
-                if revisions != ["0001_durable_jobs"]:
+                migration_config = AlembicConfig(str(Path(__file__).resolve().parents[3] / "alembic.ini"))
+                expected = sorted(ScriptDirectory.from_config(migration_config).get_heads())
+                if sorted(revisions) != expected:
                     raise ServiceError(503, "migrations_required", "Run Alembic upgrade head before serving")
 
+    def initialize_service() -> bool:
+        nonlocal retry_initialization_at
+        if app.state.service_ready:
+            return True
+        if not initialization_lock.acquire(blocking=False):
+            return False
+        try:
+            if app.state.service_ready:
+                return True
+            if monotonic() < retry_initialization_at:
+                return False
+            try:
+                jobs.initialize()
+                verify_migrations()
+            except (ServiceError, SQLAlchemyError, OSError):
+                retry_initialization_at = monotonic() + 5
+                logger.error("service initialization unavailable")
+                return False
+            app.state.service_ready = True
+            return True
+        finally:
+            initialization_lock.release()
+
     def require_service():
-        if not app.state.service_ready:
+        if not initialize_service():
             raise ServiceError(503, "service_unavailable", "Job database or private storage is unavailable")
 
     def guest(request: Request) -> str:
@@ -242,7 +277,26 @@ def create_app(settings: Settings | None = None, *, service=None, explanation=No
         ),
     )
     def create_analysis(body: CreateAnalysis, request: Request):
-        return jobs.create(guest(request), body.model)
+        return jobs.create(guest(request), body.model, refresh=body.refresh)
+
+    @app.get("/api/v1/catalog", response_model=CatalogResponse)
+    def catalog(request: Request, q: str = Query(default="", max_length=128), offset: int = Query(default=0, ge=0), limit: int = Query(default=24, ge=1, le=100)):
+        require_service()
+        return jobs.catalog(q, offset, limit)
+
+    @app.get("/api/v1/benchmarks/catalog", response_model=BenchmarkCatalogResponse, response_model_exclude_unset=True)
+    def get_benchmark_catalog():
+        require_service()
+        return benchmark_catalog.get_catalog()
+
+    @app.get("/api/v1/catalog/discovery", response_model=DiscoveryCatalogResponse)
+    def get_discovery_catalog():
+        require_service()
+        return discovery_catalog.get_catalog()
+
+    @app.post("/api/v1/catalog/{report_id}/inspect", response_model=AnalysisDetail)
+    def inspect_catalog_item(report_id: str, request: Request):
+        return jobs.inspect_registry(guest(request), report_id)
 
     @app.get("/api/v1/analyses/{analysis_id}", response_model=AnalysisDetail)
     def get_analysis(analysis_id: str, request: Request):

@@ -40,7 +40,7 @@ import {
   type Crumb,
   type GraphLayoutPreference,
 } from "../state/workspace";
-import type { Dispatch, SetStateAction } from "react";
+import type { Dispatch, ReactNode, SetStateAction } from "react";
 import "./architecture.css";
 import "../anatomy/anatomy.css";
 import { defaultAnatomyView } from "../anatomy/model";
@@ -244,104 +244,129 @@ export function ArchitectureWorkspace({
       {outline}
     </aside>
   );
-  const canvas = (
-    <div className="architecture-canvas-region">
-      <div className="graph-topbar">
-        {!desktop ? (
-          <Drawer
-            open={drawer}
-            onOpenChange={setDrawer}
-            title="Components"
-            trigger={
-              <Button
-                className="components-trigger"
-                aria-label="Open components"
-              >
-                <ListTree size={16} />
-                <span className="wide-label">Components</span>
-              </Button>
-            }
-          >
-            {outline}
-          </Drawer>
-        ) : (
-          !state.navigationOpen && (
-            <Button
-              className="components-trigger"
-              aria-label="Open components"
-              onClick={() => setState((s) => ({ ...s, navigationOpen: true }))}
-            >
-              <ListTree size={16} />
-            </Button>
-          )
-        )}
-        <nav className="breadcrumbs" aria-label="Graph path">
-          {crumbs.map((crumb, index) => (
-            <span key={crumb.id}>
-              {index > 0 && <ChevronRight size={13} />}
-              <button
-                aria-current={index === crumbs.length - 1 ? "page" : undefined}
-                onClick={() => {
-                  setEdge(null);
-                  onClearCitation();
-                  setState((s) => ({
-                    ...s,
-                    path: crumbs.slice(0, index + 1),
-                    inspectorOpen: false,
-                  }));
-                }}
-              >
-                {crumb.label}
-              </button>
-            </span>
-          ))}
-        </nav>
-        <div
-          className="scene-switcher"
-          role="group"
-          aria-label="Architecture presentation"
-        >
+  const componentsControl = !desktop ? (
+    <Drawer
+      open={drawer}
+      onOpenChange={setDrawer}
+      title="Components"
+      trigger={
+        <Button className="components-trigger" aria-label="Open components">
+          <ListTree size={16} />
+          <span>Components</span>
+        </Button>
+      }
+    >
+      {outline}
+    </Drawer>
+  ) : (
+    !state.navigationOpen && (
+      <Button
+        className="components-trigger"
+        aria-label="Open components"
+        onClick={() => setState((s) => ({ ...s, navigationOpen: true }))}
+      >
+        <ListTree size={16} />
+        <span>Components</span>
+      </Button>
+    )
+  );
+  const graphPath = (
+    <nav className="breadcrumbs" aria-label="Graph path">
+      {crumbs.map((crumb, index) => (
+        <span key={crumb.id}>
+          {index > 0 && <ChevronRight size={13} />}
           <button
-            aria-pressed={scene === "graph"}
-            onClick={() => changeScene("graph")}
-          >
-            <Network size={13} /> Graph
-          </button>
-          <button
-            aria-pressed={scene === "anatomy"}
-            onClick={() => changeScene("anatomy")}
-          >
-            <Box size={13} /> Anatomy
-          </button>
-        </div>
-        <div className="graph-panel-actions">
-          <Button
-            variant="ghost"
-            aria-label="Model questions"
+            aria-current={index === crumbs.length - 1 ? "page" : undefined}
             onClick={() => {
-              setState((s) => ({ ...s, questions: true, inspectorOpen: true }));
-              focusPanel();
+              setEdge(null);
+              onClearCitation();
+              setState((s) => ({
+                ...s,
+                path: crumbs.slice(0, index + 1),
+                inspectorOpen: false,
+              }));
             }}
           >
-            <MessageSquare size={17} />
-          </Button>
-          <Button
-            variant="ghost"
-            aria-label={
-              state.inspectorOpen
-                ? "Close analysis panel"
-                : "Open analysis panel"
-            }
-            onClick={() =>
-              state.inspectorOpen
-                ? close()
-                : setState((s) => ({ ...s, inspectorOpen: true }))
-            }
-          >
-            <PanelRightOpen size={17} />
-          </Button>
-        </div>
+            {crumb.label}
+          </button>
+        </span>
+      ))}
+    </nav>
+  );
+  const presentation = (
+    <div
+      className="scene-switcher"
+      role="group"
+      aria-label="Architecture presentation"
+    >
+      <button
+        aria-pressed={scene === "graph"}
+        onClick={() => changeScene("graph")}
+      >
+        <Network size={13} /> Graph
+      </button>
+      <button
+        aria-pressed={scene === "anatomy"}
+        onClick={() => changeScene("anatomy")}
+      >
+        <Box size={13} /> Anatomy
+      </button>
+    </div>
+  );
+  const panelActions = (
+    <div className="graph-panel-actions">
+      <Button
+        variant="ghost"
+        aria-label="Model questions"
+        onClick={() => {
+          setState((s) => ({ ...s, questions: true, inspectorOpen: true }));
+          focusPanel();
+        }}
+      >
+        <MessageSquare size={17} />
+        <span>Questions</span>
+      </Button>
+      <Button
+        variant="ghost"
+        aria-label={
+          state.inspectorOpen ? "Close analysis panel" : "Open analysis panel"
+        }
+        onClick={() =>
+          state.inspectorOpen
+            ? close()
+            : setState((s) => ({ ...s, inspectorOpen: true }))
+        }
+      >
+        {state.inspectorOpen ? (
+          <PanelRightClose size={16} />
+        ) : (
+          <PanelRightOpen size={16} />
+        )}
+        <span>{state.inspectorOpen ? "Hide details" : "Show details"}</span>
+      </Button>
+    </div>
+  );
+  const graphHeader = (search: ReactNode) => (
+    <div className="graph-header">
+      <div className="graph-header-context">
+        {componentsControl}
+        {graphPath}
+        {presentation}
+        {panelActions}
       </div>
+      {search}
+    </div>
+  );
+  const canvas = (
+    <div className="architecture-canvas-region">
+      {scene === "anatomy" && (
+        <div className="graph-topbar">
+          {componentsControl}
+          {graphPath}
+          {presentation}
+          {panelActions}
+        </div>
+      )}
       {scene === "anatomy" ? (
         <SceneBoundary key={graph.id} technical={() => changeScene("graph")}>
           <Suspense
@@ -381,6 +406,19 @@ export function ArchitectureWorkspace({
           selectedEdge={edge}
           select={select}
           open={open}
+          header={graphHeader}
+          legend={
+            <>
+              <span>
+                <i />
+                Dataflow
+              </span>
+              <span>
+                <i className="structural" />
+                Structural relation
+              </span>
+            </>
+          }
           viewport={state.viewports[graph.id]}
           onViewportChange={viewport}
           layoutPreference={
@@ -404,21 +442,6 @@ export function ArchitectureWorkspace({
           }}
         />
       )}
-      {scene === "graph" && (
-        <footer className="graph-footer">
-          <span>
-            <i />
-            Dataflow
-          </span>
-          <span>
-            <i className="structural" />
-            Structural relation
-          </span>
-          <span title={graph.id}>
-            Select a component to inspect · arrow opens nested graph
-          </span>
-        </footer>
-      )}
     </div>
   );
   const inspector = (
@@ -427,24 +450,6 @@ export function ArchitectureWorkspace({
       ref={panelRef}
       aria-label="Inspector"
     >
-      <div className="panel-heading">
-        {!docked && (
-          <Button variant="ghost" onClick={close}>
-            <ArrowLeft size={16} />
-            Back to graph
-          </Button>
-        )}
-        <h2>
-          {state.questions ? "Questions" : edge ? "Connection" : "Inspector"}
-        </h2>
-        <Button
-          variant="ghost"
-          aria-label="Close analysis panel"
-          onClick={close}
-        >
-          <PanelRightClose size={16} />
-        </Button>
-      </div>
       <Tabs.Root
         className="inspector-panel-tabs"
         value={state.questions ? "questions" : "details"}
@@ -452,10 +457,26 @@ export function ArchitectureWorkspace({
           setState((s) => ({ ...s, questions: value === "questions" }))
         }
       >
-        <Tabs.List className="panel-tabs" aria-label="Analysis panels">
-          <Tabs.Trigger value="details">Details</Tabs.Trigger>
-          <Tabs.Trigger value="questions">Questions</Tabs.Trigger>
-        </Tabs.List>
+        <div className="inspector-header">
+          <h2 className="sr-only">Inspector</h2>
+          {!docked && (
+            <Button className="inspector-back" variant="ghost" onClick={close}>
+              <ArrowLeft size={16} />
+              Back to graph
+            </Button>
+          )}
+          <Tabs.List className="panel-tabs" aria-label="Analysis panels">
+            <Tabs.Trigger value="details">Details</Tabs.Trigger>
+            <Tabs.Trigger value="questions">Questions</Tabs.Trigger>
+          </Tabs.List>
+          <Button
+            variant="ghost"
+            aria-label="Close analysis panel"
+            onClick={close}
+          >
+            <PanelRightClose size={16} />
+          </Button>
+        </div>
         <Tabs.Content
           value="details"
           className="inspector-scroll"
@@ -494,6 +515,7 @@ export function ArchitectureWorkspace({
               analysis={analysis}
               analysisId={analysis.id}
               graphId={graph.id}
+              nodes={graph.nodes}
               node={selected}
               openGraph={open}
               citation={citation}

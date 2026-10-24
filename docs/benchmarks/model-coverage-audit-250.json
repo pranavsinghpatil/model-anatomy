@@ -1,0 +1,81 @@
+{
+  "artifact_inspection": {
+    "model_count": 142,
+    "mutually_exclusive_reason_cohorts": {
+      "adapter_requires_base_model": 1,
+      "architecture_config_unavailable": 6,
+      "checkpoint_selection_required": 20,
+      "gguf_header_only": 4,
+      "metadata_budget_exceeded": 1,
+      "native_architecture_unavailable": 49,
+      "other": 0,
+      "pipeline_components_require_selection": 12,
+      "safetensors_unavailable": 49
+    },
+    "report_reason_code_counts": {
+      "adapter_requires_base_model": 1,
+      "architecture_config_unavailable": 6,
+      "checkpoint_selection_required": 20,
+      "gguf_header_only": 4,
+      "metadata_budget_exceeded": 1,
+      "native_architecture_unavailable": 49,
+      "pipeline_components_require_selection": 12,
+      "safetensors_unavailable": 49
+    }
+  },
+  "failures": [
+    {
+      "cause_type": "HTTPError",
+      "model_id": "meta-llama/Llama-3.2-1B-Instruct",
+      "pin": "9213176726f574b556790deb65791e0c5aa438b6",
+      "stage": "reconstruction"
+    },
+    {
+      "cause_type": "ArtifactError",
+      "model_id": "coqui/XTTS-v2",
+      "pin": "6c2b0d75eae4b7047358e3b6bd9325f857d43f77",
+      "stage": "reconstruction"
+    },
+    {
+      "cause_type": "HTTPError",
+      "model_id": "black-forest-labs/FLUX.1-schnell",
+      "pin": "741f7c3ce8b383c54771c7003378a50191e9efe9",
+      "stage": "reconstruction"
+    },
+    {
+      "cause_type": "HTTPError",
+      "model_id": "DeepFloyd/IF-I-XL-v1.0",
+      "pin": "c03d510e9b75bce9f9db5bb85148c1402ad7e694",
+      "stage": "reconstruction"
+    },
+    {
+      "cause_type": "HTTPError",
+      "model_id": "meta-llama/Prompt-Guard-86M",
+      "pin": "1209add6ca7d9c1d815171b8e5571587fe3e7b03",
+      "stage": "reconstruction"
+    }
+  ],
+  "partial": {
+    "incomplete_coverage_metric_counts": {
+      "checkpoint_parameter_coverage": 4,
+      "module_semantic_coverage": 54,
+      "semantic_coverage": 54,
+      "tensor_shape_coverage": 49
+    },
+    "model_count": 87,
+    "overlapping_warning_cohorts": {
+      "opaque_calls": 64,
+      "unresolved_source_branches": 67
+    },
+    "warning_evidence": "verified_full_reports"
+  },
+  "record_count": 500,
+  "schema_version": 1,
+  "status_counts": {
+    "completed": 16,
+    "failed": 5,
+    "inspected": 142,
+    "partial": 87
+  },
+  "unique_model_count": 250
+}

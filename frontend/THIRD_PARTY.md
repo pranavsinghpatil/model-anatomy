@@ -32,7 +32,14 @@ installed packages and copied into `public/licenses/` for distribution.
 
 Other runtime dependencies retain their upstream package licenses. No Pro
 component or paid service is required by this interface. Inspiration references
-are recorded in `docs/UI_REDESIGN.md`; no third-party visual assets are copied.
+are recorded in `docs/UI_REDESIGN.md`.
+
+The patterned backdrop adapts Magic UI's free DotPattern. Copy feedback and
+workspace navigation adapt SmoothUI's free Button Copy and Fluid Hover Highlight.
+Exact upstream revisions, source paths, modifications and full MIT notices are
+recorded in `THIRD_PARTY_NOTICES.md` and distributed in
+`public/licenses/UI-components-MIT.txt`. Motion supplies the animation runtime;
+its MIT notice is distributed in `public/licenses/Motion-MIT.txt`.
 
 The optional isometric Anatomy presentation is an original implementation inspired
 by the object-first, bounded figure guidance in Ryan's Anatomy illustration skill:

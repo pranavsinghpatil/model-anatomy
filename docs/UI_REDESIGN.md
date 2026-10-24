@@ -11,10 +11,12 @@ visitor's analyses. Recent analyses require an explicit continuation action.
 `/app/analyses/:id?view=overview|architecture|artifacts|report` identifies the
 selected analysis and primary view; old `/?analysis=...` links redirect.
 
-Research and Learn both default to Architecture. Once a workspace
-view is selected, changing mode preserves the view, graph path, selection,
-inspector tab and viewport. Session memory is keyed by analysis and graph; theme
-and mode alone persist in local storage. No reports are placed in local storage.
+There is one inspection flow. Learn/Research controls, conditional guide footer
+and the mode preference were removed at the user's request on October 17.
+Component explanations remain available on demand in the inspector. Session
+memory is keyed by analysis and graph; only theme persists in local storage.
+No reports are placed in local storage. The whole interface uses 75% page scale;
+graph zoom remains independent. Historical validation below predates this change.
 
 Overview presents identity, applicable dimensions and next actions. Architecture
 provides an accessible component list, current-graph search, graph, connections
@@ -27,27 +29,32 @@ The original [desktop and mobile wireframes](design/workspace-wireframes.svg) re
 the first design. The implemented tool-first revision is described in
 [CANVAS_WORKSPACE.md](CANVAS_WORKSPACE.md); it removes the marketing/start split.
 
-At 1280px the component navigator starts at 240px; the inspector opens at 360px.
+At 1280px the component navigator can open at 240px; it starts collapsed for new
+analyses. The inspector opens at 360px.
 Keyboard-operable separators resize the panels while preserving graph state.
 At 1024–1279px a Radix dialog contains the navigator while the inspector remains
 docked. Below 1024px selection opens a separate inspector view with Back to graph.
 Panel scroll areas contain long details. Graph controls reserve their own space.
-The full submission form appears only on Start.
+The full submission form appears on the unified entry screen. The October 16
+[art-direction revision](FRONTEND_ART_DIRECTION.md) moves workspace views into
+horizontal navigation and improves typography throughout the inspection screens.
+The subsequent [white workspace revision](WHITE_WORKSPACE.md) replaces the stacked
+toolbars with a single local graph bar and bottom dock.
 
 ## Design tokens and component states
 
 | Role | Light | Dark |
 | --- | --- | --- |
-| Background | #F5F7F8 | #101619 |
-| Surface | #FFFFFF | #172025 |
-| Text | #172126 | #E8EFF2 |
-| Secondary text | #52616B | #A3B2BA |
-| Accent | #0F766E | #5ED2C0 |
-| Text on accent | #FFFFFF | #082B25 |
+| Background | #F8F9FB | #141518 |
+| Surface | #FFFFFF | #1B1D21 |
+| Text | #17191C | #F1F2F4 |
+| Secondary text | #5C626B | #AEB3BC |
+| Accent | #222B35 | #DCE4F0 |
+| Text on accent | #FFFFFF | #17191C |
 
 Inter Variable and JetBrains Mono Variable are bundled locally through Fontsource.
 Spacing follows a 4px scale. Surfaces use thin borders and restrained radii.
-System appearance is the default. Light/Dark override it and are remembered.
+Light appearance is the default. Explicit Light/Dark/System choices are remembered.
 Focus rings, selected labels, status text and dashed structural connections
 supplement color. Reduced motion disables CSS animation and animated graph moves.
 
@@ -70,10 +77,10 @@ estimates. Nested graphs load on demand. Artifact and component tensor pages sta
 bounded at 50 records. Graph connections preserve relation types and evidence;
 repeated blocks open only their reported representative graph.
 
-Learn guidance is authored general information for established component kinds.
+On-demand component definitions are authored general information for established component kinds.
 Model-specific labels, shapes and evidence come from the API. Unknown kinds retain
 an explicit unknown-purpose statement. Shape symbols are guidance, not inferred
-numeric dimensions. Artifact-only guidance contains no architecture learning steps.
+numeric dimensions. The former global reading guide and Learn/Research modes are removed.
 
 ## Reference and dependency choices
 

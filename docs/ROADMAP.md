@@ -1,8 +1,17 @@
 # Roadmap and release train
 
-**Last updated:** 2026-10-13 · **External deadline:** [2026-10-30 10:00 PDT](https://nebiusglobalaihackathon.devpost.com/rules) (22:30 IST)
+**Last updated:** 2026-10-19 · **External deadline:** [2026-10-30 10:00 PDT](https://nebiusglobalaihackathon.devpost.com/rules) (22:30 IST)
 
 ## Current truth
+
+The October 19 compatibility increment attempts 120 distinct pinned Hugging Face
+repositories, then reruns 22 affected/control cases after measured fixes. Latest
+observations are ten complete static reports, 45 partial graphs, 61 artifact-only
+inspections, three gated-file blocks and one invalid JSON configuration. This is
+baseline plus targeted follow-up evidence, not universal support or a full rerun
+on the new engine. The backend remains healthy on port 8000. See
+[the matrix and verification record](HUNDRED_MODEL_BENCHMARK.md) and
+[family-specific next gates](MODEL_FAMILY_STRATEGIES.md).
 
 The real static engine is integrated from `feat/vv`, with committed regression
 tests and fresh pinned-model acceptance for GPT-2, SmolLM2-135M, Qwen3-4B and ViT. Resolver,

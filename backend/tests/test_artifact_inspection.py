@@ -5,8 +5,9 @@ import json
 
 import pytest
 import requests
+import torch
 
-from model_anatomy.src import limits
+from model_anatomy.src import limits, registry
 from model_anatomy.src.artifacts import (
     AmbiguousCheckpointError,
     CheckpointMetadata,
@@ -111,6 +112,47 @@ def test_unknown_native_architecture_has_only_verified_inventory():
     assert "semantic_coverage" not in ir.metadata["analysis_report"]
 
 
+def test_foreign_diffusers_config_reaches_inventory_without_transformers_dimension_rules():
+    client = InspectionClient(
+        {"config.json", "diffusion_pytorch_model.safetensors"},
+        {"_class_name": "UNet2DConditionModel", "num_attention_heads": None},
+        checkpoint_with_tensor(),
+    )
+
+    ir = inspect(client)
+
+    assert_inventory_only(ir, "native_architecture_unavailable")
+    assert ir.metadata["model_profile"]["config_model_type"] is None
+
+
+def test_forward_guard_remains_unsupported_and_pipeline_falls_back_to_inventory(monkeypatch):
+    class ForwardProbe(torch.nn.Module):
+        def forward(self, inputs):
+            return inputs
+
+    class FakeAutoModel:
+        @classmethod
+        def from_config(cls, config, trust_remote_code=False):
+            model = ForwardProbe()
+            model(torch.ones(1))
+            return model
+
+    monkeypatch.setattr(registry, "select_auto_class", lambda config: (FakeAutoModel, []))
+    client = InspectionClient(
+        {"config.json", "model.safetensors"},
+        GPT2_CONFIG,
+        checkpoint_with_tensor(),
+    )
+
+    ir = inspect(client)
+
+    assert_inventory_only(ir, "native_architecture_unavailable")
+    assert any(
+        "Native construction attempted forward execution" in blocker
+        for blocker in ir.metadata["model_profile"]["architecture_blockers"]
+    )
+
+
 def test_adapter_config_requires_base_and_keeps_header_evidence():
     files = {"adapter_config.json", "adapter_model.safetensors", "README.md"}
     client = InspectionClient(files, checkpoint=checkpoint_with_tensor("base_model.lora_A.weight"))
@@ -139,13 +181,25 @@ def test_missing_config_can_still_inventory_an_unambiguous_checkpoint():
     assert ir.tensors
 
 
-def test_missing_safetensors_returns_only_repository_files():
+def test_native_config_without_safetensors_still_reconstructs_the_module_graph():
     files = {"config.json", "pytorch_model.bin", "README.md"}
     ir = inspect(InspectionClient(files, GPT2_CONFIG))
-    assert_inventory_only(ir, "safetensors_unavailable")
-    assert ir.metadata["inspection"]["checkpoint_available"] is False
+    assert ir.architecture == "GPT2LMHeadModel"
+    assert ir.metadata.get("inspection") is None
+    assert ir.root_graph.nodes
+    def has_embedding(graph):
+        return any(
+            node.kind == "embedding" or node.child_graph is not None and has_embedding(node.child_graph)
+            for node in graph.nodes
+        )
+
+    assert has_embedding(ir.root_graph)
     assert ir.tensors == {}
-    assert ir.metadata["checkpoint_tensor_element_count"] is None
+    assert ir.metadata["artifacts"]["weight_payload_bytes_read"] == 0
+    assert ir.metadata["analysis_report"]["warnings"] == [
+        "No Safetensors checkpoint was available. The module graph comes from the native configuration; tensor ownership was not established."
+    ]
+    ir.root_graph.validate()
 
 
 def test_explicit_missing_safetensors_file_is_not_downgraded_to_inventory():
@@ -285,6 +339,47 @@ def test_valid_checkpoint_budget_limit_becomes_inventory_only_when_opted_in():
     assert ir.metadata["inspection"]["selected_checkpoint_files"] == []
     assert ir.metadata["checkpoint_tensor_element_count"] is None
     assert ir.metadata["source_config"] == UNKNOWN_CONFIG
+
+
+def test_budgeted_index_retains_declared_counts_without_claiming_verified_tensors(monkeypatch):
+    monkeypatch.setattr(limits, "MAX_CHECKPOINT_TENSORS", 2)
+    files = {"config.json", "model.safetensors.index.json", "one.safetensors", "two.safetensors"}
+    index = {"weight_map": {"a": "one.safetensors", "b": "one.safetensors", "c": "two.safetensors"}}
+
+    class IndexedClient(InspectionClient):
+        def json(self, url, max_bytes=1024 * 1024):
+            self.audit.append({"url": url, "bytes_read": 100, "status": 200})
+            return index if url.endswith(".index.json") else UNKNOWN_CONFIG
+
+        checkpoint = MetadataClient.checkpoint
+
+        def safetensors(self, url):
+            pytest.fail("Shard headers must not be fetched after the index budget is exceeded")
+
+    ir = inspect(IndexedClient(files, UNKNOWN_CONFIG))
+    assert_inventory_only(ir, "metadata_budget_exceeded")
+    declared = ir.metadata["artifacts"]["declared_checkpoint_index"]
+    assert declared["declared_tensor_names"] == 3
+    assert declared["declared_shards"] == 2
+    assert declared["tensor_record_limit"] == 2
+    assert declared["canonical_sha256"]
+    assert ir.metadata["checkpoint_tensor_element_count"] is None
+    assert ir.tensors == {}
+    assert any(item.source == "hf_checkpoint_index" for item in ir.evidence)
+
+
+def test_budgeted_index_does_not_hide_missing_shard(monkeypatch):
+    monkeypatch.setattr(limits, "MAX_CHECKPOINT_TENSORS", 1)
+
+    class InvalidIndexClient(InspectionClient):
+        def json(self, url, max_bytes=1024 * 1024):
+            return {"weight_map": {"a": "missing.safetensors", "b": "missing.safetensors"}} if url.endswith(".index.json") else UNKNOWN_CONFIG
+
+        checkpoint = MetadataClient.checkpoint
+
+    client = InvalidIndexClient({"config.json", "model.safetensors.index.json"}, UNKNOWN_CONFIG)
+    with pytest.raises(ArtifactError, match="invalid or missing shard"):
+        inspect(client)
 
 
 def test_inventory_budget_audit_retains_bytes_read_before_the_limit():

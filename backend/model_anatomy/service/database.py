@@ -4,7 +4,20 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
 
-from sqlalchemy import JSON, Boolean, Float, Integer, String, create_engine, event, inspect, select, text
+from sqlalchemy import (
+    JSON,
+    Boolean,
+    Float,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    create_engine,
+    event,
+    inspect,
+    select,
+    text,
+)
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column
 
 from .errors import ServiceError
@@ -62,6 +75,7 @@ class Job(Base):
     cancel_requested: Mapped[bool] = mapped_column(Boolean, default=False)
     blob_digest: Mapped[str | None] = mapped_column(String(64), index=True)
     cached: Mapped[bool] = mapped_column(Boolean, default=False)
+    refresh_requested: Mapped[bool] = mapped_column(Boolean, default=False)
     summary: Mapped[dict] = mapped_column(JSON, default=dict)
     error: Mapped[dict | None] = mapped_column(JSON)
 
@@ -71,6 +85,80 @@ class CacheEntry(Base):
     key: Mapped[str] = mapped_column(String(64), primary_key=True)
     blob_digest: Mapped[str] = mapped_column(String(64), index=True)
     expires_at: Mapped[float] = mapped_column(Float, index=True)
+
+
+class ModelReport(Base):
+    """Durable registry identity for a successfully inspected private report blob."""
+    __tablename__ = "model_reports"
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    cache_identity: Mapped[str] = mapped_column(String(64), index=True)
+    model_id: Mapped[str] = mapped_column(String(256), index=True)
+    request_revision: Mapped[str] = mapped_column(String(256), index=True)
+    revision: Mapped[str] = mapped_column(String(40), index=True)
+    engine_version: Mapped[str] = mapped_column(String(128))
+    schema_version: Mapped[str] = mapped_column(String(16))
+    artifact: Mapped[str] = mapped_column(String(512))
+    explicit_artifact: Mapped[bool] = mapped_column(Boolean)
+    blob_digest: Mapped[str] = mapped_column(String(64), index=True)
+    summary: Mapped[dict] = mapped_column(JSON)
+    inspected_at: Mapped[float] = mapped_column(Float, index=True)
+
+
+class BenchmarkRun(Base):
+    """Immutable portable source payload for one measured benchmark run."""
+    __tablename__ = "benchmark_runs"
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    payload: Mapped[dict] = mapped_column(JSON)
+    created_at: Mapped[float] = mapped_column(Float, index=True)
+
+
+class BenchmarkPublication(Base):
+    """Content-addressed publication metadata and ordered source run references."""
+    __tablename__ = "benchmark_publications"
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    metadata_json: Mapped[dict] = mapped_column("metadata", JSON)
+    run_ids: Mapped[list] = mapped_column(JSON)
+    created_at: Mapped[float] = mapped_column(Float, index=True)
+
+
+class BenchmarkCase(Base):
+    """Public-safe case evidence belonging to an immutable publication."""
+    __tablename__ = "benchmark_cases"
+    __table_args__ = (Index("ix_benchmark_cases_publication_ordinal", "publication_id", "ordinal"),)
+    publication_id: Mapped[str] = mapped_column(
+        String(64), ForeignKey("benchmark_publications.id", ondelete="CASCADE"), primary_key=True
+    )
+    model_id: Mapped[str] = mapped_column(String(256), primary_key=True)
+    ordinal: Mapped[int] = mapped_column(Integer)
+    data: Mapped[dict] = mapped_column(JSON)
+
+
+class InspectionFailure(Base):
+    """Public-safe terminal outcome for an inspection that produced no report."""
+    __tablename__ = "inspection_failures"
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    model_id: Mapped[str] = mapped_column(String(256), index=True)
+    revision: Mapped[str | None] = mapped_column(String(40), index=True)
+    revision_source: Mapped[str | None] = mapped_column(String(16))
+    artifact: Mapped[str] = mapped_column(String(512))
+    explicit_artifact: Mapped[bool] = mapped_column(Boolean)
+    status: Mapped[str] = mapped_column(String(32), index=True)
+    engine_version: Mapped[str] = mapped_column(String(128))
+    started_at: Mapped[float] = mapped_column(Float)
+    finished_at: Mapped[float] = mapped_column(Float, index=True)
+
+
+class ExternalValidationPublication(Base):
+    """Immutable, sanitized observations imported from an external validation run."""
+    __tablename__ = "external_validation_publications"
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    source_repository: Mapped[str] = mapped_column(String(512), index=True)
+    source_commit: Mapped[str] = mapped_column(String(40))
+    source_path: Mapped[str] = mapped_column(String(512))
+    csv_sha256: Mapped[str] = mapped_column(String(64))
+    metadata_json: Mapped[dict] = mapped_column("metadata", JSON)
+    rows: Mapped[list] = mapped_column(JSON)
+    created_at: Mapped[float] = mapped_column(Float, index=True)
 
 
 class Blob(Base):
@@ -100,11 +188,15 @@ class Database:
                 connection.execute("PRAGMA journal_mode=WAL")
 
     def initialize(self, *, create: bool) -> None:
-        if create:
+        if create and self.sqlite:
             Base.metadata.create_all(self.engine)
             # Preserve early local databases created before retention fields were introduced.
             inspector = inspect(self.engine)
             with self.engine.begin() as connection:
+                if "refresh_requested" not in {c["name"] for c in inspector.get_columns("analysis_jobs")}:
+                    connection.execute(
+                        text("ALTER TABLE analysis_jobs ADD COLUMN refresh_requested BOOLEAN NOT NULL DEFAULT FALSE")
+                    )
                 if "last_seen_at" not in {c["name"] for c in inspector.get_columns("guests")}:
                     connection.execute(
                         text("ALTER TABLE guests ADD COLUMN last_seen_at FLOAT NOT NULL DEFAULT 0")

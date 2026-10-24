@@ -3,6 +3,7 @@ import {
   expectGraphFramed,
   expectReadableGraph,
   graphNode,
+  hasNoHorizontalOverflow,
   openAnalysis,
   openNestedGraph,
   showDetails,
@@ -97,6 +98,9 @@ test("whole architecture opens framed with a readable inspection view and revers
     ).toBeVisible();
     await page.keyboard.press("Escape");
   } else {
+    await page
+      .getByRole("button", { name: "Open components", exact: true })
+      .click();
     await expect(
       page.getByRole("complementary", { name: /component/i }),
     ).toBeVisible();
@@ -208,14 +212,22 @@ test("click and keyboard edge selection expose the original relationship", async
 test("opening a nested graph clears a previously selected connection", async ({
   page,
 }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
   await mockService(page);
   await openAnalysis(page);
   await expect(page.getByTestId("graph-canvas")).toBeVisible();
+  await expectGraphFramed(page);
   await clickVisibleEdge(page, page.locator(".react-flow__edge").first());
   const inspector = page.getByRole("complementary", { name: "Inspector" });
   await expect(
-    inspector.getByRole("heading", { name: "Connection" }),
+    inspector.getByRole("heading", {
+      name:
+        rootGraph.edges[0].label ??
+        rootGraph.edges[0].relation.replaceAll("_", " "),
+      exact: true,
+    }),
   ).toBeVisible();
+  await expect(inspector).toContainText("Source component");
 
   const back = page.getByRole("button", { name: "Back to graph", exact: true });
   if (await back.isVisible()) await back.click();
@@ -243,7 +255,7 @@ test("opening a nested graph clears a previously selected connection", async ({
   const nestedNode = graphs.get(block.child_graph_id!)!.nodes[0];
   await graphNode(page, nestedNode.label);
   await expect(
-    inspector.getByRole("heading", { name: "Inspector" }),
+    inspector.getByRole("tablist", { name: "Analysis panels" }),
   ).toBeVisible();
   await expect(inspector).not.toContainText("Source component");
 });
@@ -301,20 +313,10 @@ test("nested navigation preserves each graph viewport through resize and reduced
   await page.getByRole("button", { name: "Fit graph" }).click();
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.addStyleTag({ content: "html { zoom: 2; }" });
-  await expect
-    .poll(() =>
-      page.evaluate(
-        () =>
-          Math.max(
-            document.documentElement.scrollWidth,
-            document.body.scrollWidth,
-          ) <= window.innerWidth,
-      ),
-    )
-    .toBe(true);
+  await expect.poll(() => page.evaluate(hasNoHorizontalOverflow)).toBe(true);
 });
 
-test("503 health disables new analysis without hiding recent reports", async ({
+test("worker-offline health still opens a stored inspection", async ({
   page,
   isMobile,
 }) => {
@@ -336,15 +338,18 @@ test("503 health disables new analysis without hiding recent reports", async ({
   await expect(
     page
       .getByRole("status")
-      .filter({ hasText: "New analyses are unavailable" }),
-  ).toContainText("Worker unavailable");
+      .filter({ hasText: "Stored inspection service available" }),
+  ).toContainText("Stored inspection service available");
   await page
     .getByLabel("Hugging Face model", { exact: true })
     .fill("org/model");
   await expect(
     page.getByRole("button", { name: "Inspect model", exact: true }),
-  ).toBeDisabled();
-  await openAnalysis(page);
+  ).toBeEnabled();
+  await page
+    .getByRole("button", { name: "Inspect model", exact: true })
+    .click();
+  await expect(page).toHaveURL(/\/app\/analyses\/job-test\?view=architecture$/);
   await expect(page.getByTestId("graph-canvas")).toBeVisible();
   await expect(page.getByRole("heading", { level: 1 })).toContainText(
     analysisFor().model_id,
@@ -355,12 +360,51 @@ test("503 health disables new analysis without hiding recent reports", async ({
     page.getByText("AI service unavailable", { exact: true }),
   ).toBeVisible();
   expect(requests.filter((request) => request.method === "POST")).toHaveLength(
-    0,
+    1,
   );
+  expect(requests.find((request) => request.method === "POST")?.body).toEqual({
+    model: "org/model",
+  });
   expect(requests.some((request) => request.path === "/health")).toBe(true);
   expect(
     requests.some((request) => request.path.includes("capabilities")),
   ).toBe(false);
+});
+
+test("worker-offline cache miss returns the service error without a fallback", async ({
+  page,
+}) => {
+  const requests = await mockService(page, {
+    postStatus: 503,
+    postError: "worker_unavailable",
+    health: {
+      status: "degraded",
+      api_version: "v1",
+      checks: { database: true, storage: true, worker: false },
+      analysis_available: false,
+      ai_available: false,
+      storage_backend: "local",
+      reason: "Worker unavailable",
+    },
+  });
+  await page.goto("/app");
+  await page
+    .getByLabel("Hugging Face model", { exact: true })
+    .fill("org/cache-miss");
+  await expect(
+    page.getByRole("button", { name: "Inspect model", exact: true }),
+  ).toBeEnabled();
+  await page
+    .getByRole("button", { name: "Inspect model", exact: true })
+    .click();
+  await expect(page.getByRole("alert")).toContainText(
+    "Analysis could not be started",
+  );
+  await expect(page).toHaveURL(/\/app$/);
+  await expect(page.getByTestId("graph-canvas")).toHaveCount(0);
+  expect(requests.find((request) => request.method === "POST")?.body).toEqual({
+    model: "org/cache-miss",
+  });
 });
 
 test("new visitor starts with an empty workspace", async ({
@@ -429,8 +473,8 @@ for (const healthError of ["network", "invalid"] as const)
     await expect(
       page
         .getByRole("status")
-        .filter({ hasText: "New analyses are unavailable" }),
-    ).toContainText("New analyses are unavailable");
+        .filter({ hasText: "Stored inspections are unavailable" }),
+    ).toContainText("Stored inspections are unavailable");
     await page
       .getByLabel("Hugging Face model", { exact: true })
       .fill("org/model");
@@ -634,6 +678,9 @@ test("partial and symbolic dimensions remain honest", async ({
   await openAnalysis(page, "job-test", "overview");
   await expect(page.locator(".model-metrics")).toContainText("0");
   await expect(page.locator(".model-metrics")).toContainText("Unknown");
+  await expect(
+    page.getByRole("link", { name: "View findings", exact: true }),
+  ).toBeVisible();
   await page.getByRole("link", { name: "Architecture", exact: true }).click();
   await expect(page.getByTestId("graph-canvas")).toBeVisible();
   await expect(

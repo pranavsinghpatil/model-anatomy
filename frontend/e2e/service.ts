@@ -96,6 +96,7 @@ export type Scenario = {
   getStatus?: number;
   graphError?: boolean;
   pollComplete?: boolean;
+  pollResult?: "completed" | "partial" | "inspected";
   symbolic?: boolean;
   paginated?: boolean;
   artifactPages?: ArtifactInspectionResponse[];
@@ -169,13 +170,38 @@ export async function mockService(page: Page, scenario: Scenario = {}) {
             : "Analysis not found",
         );
       if (id === "job-test") {
-        if (scenario.pollComplete && ++polls > 1)
+        if (scenario.pollComplete && ++polls > 1) {
+          const status = scenario.pollResult ?? "completed";
           job = {
             ...job,
-            status: "completed",
-            stage: "completed",
-            root_graph_id: rootGraph.id,
+            status,
+            stage: status,
+            root_graph_id: status === "inspected" ? null : rootGraph.id,
+            ...(status === "partial"
+              ? {
+                  partial_reasons: [
+                    "Tensor shape comparison could not be completed.",
+                  ],
+                }
+              : {}),
+            ...(status === "inspected"
+              ? {
+                  architecture: null,
+                  parameter_count: null,
+                  inspection: {
+                    kind: "artifact_inspection" as const,
+                    reason_code: "architecture_not_supported",
+                    message:
+                      "Artifact metadata is available; no architecture graph was produced.",
+                    file_count: 1,
+                    tensor_count: 0,
+                    checkpoint_tensor_element_count: null,
+                    checkpoint_available: false,
+                  },
+                }
+              : {}),
           };
+        }
         return json(job);
       }
       return error(404, "not_found", "Analysis not found");

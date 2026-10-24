@@ -3,3 +3,7 @@ preview/** linguist-generated=true
 uv.lock linguist-generated=true
 frontend/package-lock.json linguist-generated=true
 frontend/src/api/generated.ts linguist-generated=true
+
+# Preserve audited upstream bytes, including mixed newlines and diagnostic whitespace.
+/output/hf_model_parse_results.csv -text -whitespace
+/data/hf_model_ids.csv -text -whitespace

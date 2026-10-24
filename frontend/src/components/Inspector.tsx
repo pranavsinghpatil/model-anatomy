@@ -2,11 +2,14 @@ import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import * as Tabs from "@radix-ui/react-tabs";
 import {
+  Activity,
   ArrowLeft,
   ArrowRight,
   Boxes,
   ChevronRight,
+  Cpu,
   FileSearch,
+  GitCommit,
   Layers,
 } from "lucide-react";
 import { api } from "../api/client";
@@ -25,7 +28,7 @@ import {
   valueText,
 } from "../format";
 import { ErrorNotice, IconButton, Loading, Warnings } from "./Common";
-import { componentPurpose } from "./LearnGuide";
+import { componentPurpose } from "./component-purpose";
 import "./inspection.css";
 import { nodeTitle } from "../graph/presentation";
 
@@ -109,10 +112,86 @@ function TensorRow({ tensor }: { tensor: TensorMetadata }) {
 
 export type InspectorTab = "module" | "tensors" | "evidence";
 
+function ParameterSplit({
+  total,
+  nodes,
+}: {
+  total: number;
+  nodes: GraphNode[];
+}) {
+  const parts = nodes
+    .filter((node) => node.parameter_count > 0)
+    .map((node) => ({
+      id: node.id,
+      label: nodeTitle(node),
+      count: node.parameter_count,
+    }))
+    .sort((a, b) => b.count - a.count);
+  if (!parts.length) return null;
+  const summed = parts.reduce((sum, part) => sum + part.count, 0);
+  const overlaps = summed > total * 1.02;
+  const partitions = summed >= total * 0.95 && summed <= total * 1.02;
+  const shown = parts.slice(0, 8);
+  return (
+    <div className="overview-distribution-section">
+      <div className="section-label-row">
+        <span className="distribution-label">Parameters in this graph</span>
+      </div>
+      {partitions ? (
+        <div
+          className="distribution-bar"
+          role="img"
+          aria-label="Parameter allocation"
+        >
+          {shown.map((part, index) => (
+            <div
+              key={part.id}
+              className="dist-seg"
+              style={{
+                width: `${(part.count / summed) * 100}%`,
+                background: [
+                  "#6366f1",
+                  "#38bdf8",
+                  "#a855f7",
+                  "#f59e0b",
+                  "#10b981",
+                ][index % 5],
+              }}
+              title={`${part.label}: ${count(part.count)}`}
+            />
+          ))}
+        </div>
+      ) : null}
+      <ul className="allocation-list">
+        {shown.map((part) => (
+          <li key={part.id}>
+            <span>{part.label}</span>
+            <strong>
+              {count(part.count)} · {((part.count / total) * 100).toFixed(1)}%
+            </strong>
+          </li>
+        ))}
+      </ul>
+      {parts.length > shown.length ? (
+        <p className="allocation-note">
+          {parts.length - shown.length} more components have parameters.
+        </p>
+      ) : null}
+      {overlaps ? (
+        <p className="allocation-note">
+          Component counts overlap when weights are tied. Percents use the
+          unique model total of {count(total)}.
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
 export function Inspector({
   analysis,
   analysisId,
   graphId,
+  nodes = [],
   node,
   openGraph,
   citation,
@@ -122,12 +201,15 @@ export function Inspector({
   analysis: AnalysisDetail;
   analysisId: string;
   graphId: string;
+  nodes?: GraphNode[];
   node: GraphNode | null;
   openGraph: (node: GraphNode) => void;
   citation: Citation | null;
   tab?: InspectorTab;
   onTabChange?: (tab: InspectorTab) => void;
 }) {
+  const [guideOpen, setGuideOpen] = useState(false);
+  useEffect(() => setGuideOpen(false), [analysisId, graphId, node?.id]);
   const [internalTab, setInternalTab] = useState<InspectorTab>("module");
   const selectedTab = tab ?? internalTab;
   const changeTab = (value: string) => {
@@ -228,31 +310,114 @@ export function Inspector({
     );
   if (!node)
     return (
-      <div className="panel-empty">
-        <FileSearch size={28} />
-        <strong>Component details</strong>
-        <p>No component selected</p>
+      <div className="panel-empty model-overview-panel" data-testid="inspector">
+        <div className="overview-header-badge">
+          <Layers size={14} />
+          <span>Model Architecture Overview</span>
+        </div>
+        <h3 className="overview-model-title">{analysis.model_id}</h3>
+        {analysis.architecture && (
+          <p className="overview-model-arch">
+            <code>{analysis.architecture}</code>
+          </p>
+        )}
+        <div className="overview-metrics-grid">
+          {analysis.parameter_count !== null &&
+          analysis.parameter_count !== undefined ? (
+            <div className="overview-metric-card" data-metric="parameters">
+              <div className="metric-header-row">
+                <span className="overview-metric-label">Parameters</span>
+                <Cpu size={14} className="metric-icon" />
+              </div>
+              <strong className="overview-metric-value">
+                {count(analysis.parameter_count)}
+              </strong>
+            </div>
+          ) : null}
+          {analysis.status ? (
+            <div className="overview-metric-card" data-metric="status">
+              <div className="metric-header-row">
+                <span className="overview-metric-label">Status</span>
+                <Activity size={14} className="metric-icon" />
+              </div>
+              <strong className="overview-metric-value status-value">
+                <span className="status-indicator-dot" />
+                {analysis.status}
+              </strong>
+            </div>
+          ) : null}
+          {analysis.inspection?.tensor_count ? (
+            <div className="overview-metric-card" data-metric="tensors">
+              <div className="metric-header-row">
+                <span className="overview-metric-label">Tensors</span>
+                <Layers size={14} className="metric-icon" />
+              </div>
+              <strong className="overview-metric-value">
+                {analysis.inspection.tensor_count}
+              </strong>
+            </div>
+          ) : null}
+          {analysis.revision ? (
+            <div className="overview-metric-card" data-metric="revision">
+              <div className="metric-header-row">
+                <span className="overview-metric-label">Revision</span>
+                <GitCommit size={14} className="metric-icon" />
+              </div>
+              <strong className="overview-metric-value">
+                {analysis.revision.slice(0, 8)}
+              </strong>
+            </div>
+          ) : null}
+        </div>
+        {analysis.parameter_count ? (
+          <ParameterSplit total={analysis.parameter_count} nodes={nodes} />
+        ) : null}
+        <div className="overview-hint-box">
+          <FileSearch size={15} />
+          <span>
+            Select any component in the graph or component tree to inspect its
+            shapes, weights, and tensor byte offsets.
+          </span>
+        </div>
       </div>
     );
   const resolved = detail.data?.node ?? node;
+  const sourceTopology =
+    analysis.quality?.mode === "publisher_reference_topology";
+  const checkpointNameCount = resolved.metadata?.checkpoint_state_key_count;
   const evidence = detail.data?.evidence ?? resolved.evidence;
   return (
     <div className="inspector" data-testid="inspector">
       <div className="inspector-heading">
-        <span className="eyebrow">{resolved.kind.replaceAll("_", " ")}</span>
+        <div className="inspector-kind-row">
+          <span className="eyebrow">{resolved.kind.replaceAll("_", " ")}</span>
+        </div>
         <h2>{nodeTitle(resolved)}</h2>
         {nodeTitle(resolved) !== resolved.label && (
           <code className="inspector-native-type">{resolved.label}</code>
         )}
-        <div className="inspector-definition">
-          <span className="definition-label">Component kind guide</span>
+        {resolved.parameter_count > 0 && analysis.parameter_count ? (
+          <div className="node-share-banner">
+            <span className="node-share-number">
+              {count(resolved.parameter_count)} parameters
+            </span>
+            <span className="node-share-pct">
+              (
+              {(
+                (resolved.parameter_count / analysis.parameter_count) *
+                100
+              ).toFixed(1)}
+              % of model)
+            </span>
+          </div>
+        ) : null}
+        <details
+          className="inspector-definition"
+          open={guideOpen}
+          onToggle={(event) => setGuideOpen(event.currentTarget.open)}
+        >
+          <summary>About this component type</summary>
           <p className="inspector-purpose">{componentPurpose(resolved)}</p>
-        </div>
-        <details className="metadata">
-          <summary>Module path</summary>
-          <code className="inspector-long-path">
-            {resolved.module_path ?? "Unknown module path"}
-          </code>
         </details>
       </div>
       <Tabs.Root
@@ -263,8 +428,8 @@ export function Inspector({
         <Tabs.List className="panel-tabs" aria-label="Component detail views">
           <Tabs.Trigger value="module">Component</Tabs.Trigger>
           <Tabs.Trigger value="tensors">
-            Tensors{" "}
-            {detail.data && (
+            {sourceTopology ? "Tensors unverified" : "Tensors"}{" "}
+            {detail.data && !sourceTopology && (
               <span>{count(detail.data.tensor_count, true)}</span>
             )}
           </Tabs.Trigger>
@@ -294,7 +459,9 @@ export function Inspector({
                   ))
                 ) : (
                   <p className="empty-copy">
-                    No input specifications returned.
+                    {sourceTopology
+                      ? "Input shape not verified."
+                      : "No input specifications returned."}
                   </p>
                 )}
               </section>
@@ -310,16 +477,30 @@ export function Inspector({
                   ))
                 ) : (
                   <p className="empty-copy">
-                    No output specifications returned.
+                    {sourceTopology
+                      ? "Output shape not verified."
+                      : "No output specifications returned."}
                   </p>
                 )}
               </section>
               <div className="inspector-stat">
                 <span>Parameters</span>
-                <strong title={count(resolved.parameter_count)}>
-                  {count(resolved.parameter_count)}
+                <strong
+                  title={
+                    sourceTopology
+                      ? "Unverified"
+                      : count(resolved.parameter_count)
+                  }
+                >
+                  {sourceTopology ? "Unknown" : count(resolved.parameter_count)}
                 </strong>
               </div>
+              {typeof checkpointNameCount === "number" && (
+                <div className="inspector-stat">
+                  <span>Matched checkpoint names</span>
+                  <strong>{count(checkpointNameCount)}</strong>
+                </div>
+              )}
               <section className="inspector-section">
                 <h3>Source modules</h3>
                 {resolved.source_modules.length ? (
@@ -337,9 +518,21 @@ export function Inspector({
                     </div>
                   </details>
                 ) : (
-                  <p className="empty-copy">Unknown</p>
+                  <p className="empty-copy">
+                    {sourceTopology
+                      ? "Checkpoint ownership not verified."
+                      : "Unknown"}
+                  </p>
                 )}
               </section>
+              <details className="metadata">
+                <summary>
+                  {sourceTopology ? "Publisher reference path" : "Module path"}
+                </summary>
+                <code className="inspector-long-path">
+                  {resolved.module_path ?? "Unknown module path"}
+                </code>
+              </details>
               <details className="metadata">
                 <summary>Component metadata</summary>
                 <dl className="properties">

@@ -37,6 +37,7 @@ class CreateAnalysis(BaseModel):
         max_length=512,
         description="Hugging Face repository ID or HTTPS URL to inspect.",
     )
+    refresh: bool = False
 
 
 class Question(BaseModel):
@@ -71,6 +72,58 @@ class Dimensions(BaseModel):
     vocabulary: int | None = None
 
 
+class CatalogItem(BaseModel):
+    id: str
+    model_id: str
+    revision: str
+    architecture: str | None
+    status: Literal["completed", "partial", "inspected"]
+    parameter_count: int | None
+    dimensions: Dimensions
+    engine_version: str
+    schema_version: str
+    artifact: str
+    explicit_artifact: bool
+    inspected_at: str
+
+
+class CatalogResponse(BaseModel):
+    models: list[CatalogItem]
+    total: int
+    offset: int
+    limit: int
+
+
+class BenchmarkCatalogResponse(BaseModel):
+    """Measured publication; case dictionaries are allowlisted by the catalog service."""
+
+    schema_version: Literal[1]
+    generated_at: str
+    engine_version: str
+    manifest_sha256: str
+    manifest_hash_encoding: Literal["canonical-json-v1"]
+    method: str
+    status_counts: dict[str, int]
+    results: list[dict[str, Any]]
+    runs: list[dict[str, Any]]
+    baseline_cases: int | None = None
+    recheck_attempts: int | None = None
+    engine_versions: list[str] | None = None
+    runner_sha256: str | None = None
+    engine_source_sha256: str | None = None
+    baseline_runner_sha256: str | None = None
+    baseline_engine_source_sha256: str | None = None
+
+
+class DiscoveryCatalogResponse(BaseModel):
+    results: list[dict[str, Any]]
+    total: int
+    status_counts: dict[str, int]
+    generated_at: str
+    benchmark_publication_id: str | None
+    external_publications: list[dict[str, Any]] = Field(default_factory=list)
+
+
 class AnalysisQuality(BaseModel):
     architecture_scope: str | None = None
     semantic_coverage: float | None = Field(default=None, ge=0, le=1)
@@ -84,6 +137,38 @@ class AnalysisQuality(BaseModel):
     mode: str | None = None
 
 
+class DeclaredCheckpointIndex(BaseModel):
+    url: str
+    canonical_sha256: str
+    declared_tensor_names: int = Field(ge=0)
+    declared_shards: int = Field(ge=0)
+    tensor_record_limit: int = Field(ge=0)
+
+
+class VerifiedCheckpointHeaders(BaseModel):
+    basis: Literal["previously_verified_pinned_header_audit"]
+    index_sha256: str
+    audit_document_sha256: str
+    shard_count: int = Field(gt=0)
+    tensor_count: int = Field(gt=0)
+    tensor_element_count_including_scales: int = Field(gt=0)
+    header_bytes_read_by_audit: int = Field(gt=0)
+    weight_payload_bytes_read_by_audit: Literal[0]
+
+
+class VerifiedCheckpointNames(BaseModel):
+    basis: Literal["previously_audited_publisher_state_keys"]
+    index_sha256: str
+    name_audit_document_sha256: str
+    state_key_count: int = Field(gt=0)
+    component_count: int = Field(gt=0)
+    unmatched_state_key_count: Literal[0]
+    converter_renamed_names: Literal[0]
+    converter_skipped_names: Literal[0]
+    converter_name_collisions: Literal[0]
+    weight_payload_bytes_read_by_audit: Literal[0]
+
+
 class InspectionSummary(BaseModel):
     kind: Literal["artifact_inspection"]
     reason_code: str
@@ -92,6 +177,8 @@ class InspectionSummary(BaseModel):
     tensor_count: int
     checkpoint_tensor_element_count: int | None
     checkpoint_available: bool
+    declared_checkpoint_index: DeclaredCheckpointIndex | None = None
+    architecture_blockers: list[str] = Field(default_factory=list)
 
 
 class AnalysisDetail(BaseModel):
@@ -115,6 +202,8 @@ class AnalysisDetail(BaseModel):
     dimensions: Dimensions
     input_names: list[str] = Field(default_factory=list)
     inspection: InspectionSummary | None = None
+    verified_checkpoint_headers: VerifiedCheckpointHeaders | None = None
+    verified_checkpoint_names: VerifiedCheckpointNames | None = None
 
 
 class AnalysisSummary(AnalysisDetail):
@@ -228,6 +317,9 @@ class ArtifactInspectionResponse(BaseModel):
     tensor_count: int
     checkpoint_tensor_element_count: int | None
     checkpoint_available: bool
+    declared_checkpoint_index: DeclaredCheckpointIndex | None = None
+    verified_checkpoint_headers: VerifiedCheckpointHeaders | None = None
+    verified_checkpoint_names: VerifiedCheckpointNames | None = None
     checkpoint_format: str | None = None
     selected_file_tensor_element_count: int | None = None
     selected_file_split_metadata: dict[str, int] | None = None

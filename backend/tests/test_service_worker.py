@@ -3,19 +3,26 @@ import os
 import subprocess
 import sys
 import time
+from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
 from sqlalchemy import inspect
+from sqlalchemy.exc import OperationalError
 
 from model_anatomy.api.settings import Settings
-from model_anatomy.service.database import Job
 from model_anatomy.service.errors import ServiceError
 from model_anatomy.service.jobs import JobService, cache_key
 from model_anatomy.service.views import load_ir
-from model_anatomy.service.worker import Worker, classify_failure, enforce_limits, execute_job
+from model_anatomy.service.worker import (
+    Worker,
+    classify_failure,
+    database_connection_lost,
+    enforce_limits,
+    execute_job,
+)
 
 
 @dataclass
@@ -35,10 +42,31 @@ class MetadataMock:
         return self.revision
 
 
+class MemoryStorage:
+    def __init__(self):
+        self.objects = {}
+
+    def put(self, data):
+        import hashlib
+        digest = hashlib.sha256(data).hexdigest()
+        self.objects[digest] = data
+        return digest
+
+    def get(self, digest):
+        return self.objects[digest]
+
+    def delete(self, digest):
+        self.objects.pop(digest, None)
+
+    def check(self):
+        pass
+
+
 def test_resolve_once_before_extraction_and_cache_hit_skips_engine(tmp_path):
     settings = Settings(data_dir=tmp_path, guest_jobs_per_hour=5)
     service = JobService(settings)
     service.initialize()
+    service.storage = MemoryStorage()
     service.acquire_worker("w")
     guest, _ = service.guest(None)
     ir = load_ir((Path(__file__).resolve().parents[2] / "output/gpt2/model.json").read_bytes())
@@ -58,19 +86,33 @@ def test_resolve_once_before_extraction_and_cache_hit_skips_engine(tmp_path):
     service.claim("w")
     execute_job(service, first, "w", metadata, reconstruct, parse)
     second = service.create(guest, "gpt2")["id"]
-    service.claim("w")
-    execute_job(service, second, "w", metadata, reconstruct, parse)
+    assert service.get(second, guest).status == "partial"
+    assert service.get(second, guest).attempts == 0
     assert len(calls) == 1
-    assert len(metadata.resolved) == 2
+    assert len(metadata.resolved) == 1
     assert service.get(second, guest).cached is True
     assert service.get(first, guest).blob_digest == service.get(second, guest).blob_digest
-    third = service.create(guest, "gpt2")["id"]
+    third = service.create(guest, "gpt2", refresh=True)["id"]
     service.claim("w")
-    with service.db.write() as session:
-        session.get(Job, third).revision = ir.metadata["revision"]
     execute_job(service, third, "w", metadata, reconstruct, parse)
-    assert metadata.resolved[-1].revision == ir.metadata["revision"]
+    assert len(calls) == 2
+    assert len(metadata.resolved) == 2
+    assert metadata.resolved[-1].revision == "main"
+    assert service.get(third, guest).cached is False
     service.db.engine.dispose()
+
+
+def test_worker_requests_ignore_global_netrc_credentials(tmp_path, monkeypatch):
+    import requests
+
+    netrc = tmp_path / "credentials"
+    netrc.parent.mkdir(parents=True, exist_ok=True)
+    netrc.write_text("machine huggingface.co login private-user password private-token\n")
+    monkeypatch.setenv("NETRC", str(netrc))
+    session = requests.Session()
+    session.trust_env = False
+    prepared = session.prepare_request(requests.Request("GET", "https://huggingface.co/api/models/acme/public"))
+    assert "Authorization" not in prepared.headers
 
 
 def sleeping_child(settings, job_id, owner):
@@ -218,6 +260,87 @@ def test_idle_worker_recovers_expired_lease_after_computer_suspend(tmp_path, mon
     assert not service.worker_available()
 
 
+@pytest.mark.parametrize("error", [ServiceError(503, "storage_unavailable", "SECRET"), OSError("SECRET")])
+def test_cleanup_outage_does_not_stop_queued_work(tmp_path, monkeypatch, caplog, error):
+    service = JobService(Settings(data_dir=tmp_path))
+    service.initialize()
+    worker = Worker(service.settings, service=service)
+    assert service.acquire_worker(worker.owner)
+    guest, _ = service.guest(None)
+    job_id = service.create(guest, "gpt2")["id"]
+    processed = []
+
+    def unavailable():
+        raise error
+
+    def process(claimed):
+        assert service.worker_available()
+        processed.append(claimed)
+        service.fail(claimed, worker.owner, "test_result", "Test result", status="unsupported")
+
+    monkeypatch.setattr(service, "cleanup", unavailable)
+    monkeypatch.setattr(worker, "run_job", process)
+    worker.run(once=True)
+    assert processed == [job_id]
+    assert service.get(job_id, guest).status == "unsupported"
+    assert "retention cleanup deferred" in caplog.text
+    assert "SECRET" not in caplog.text
+    service.db.engine.dispose()
+
+
+def test_cleanup_retries_back_off_and_recover_without_worker_restart(tmp_path, monkeypatch):
+    import model_anatomy.service.worker as worker_module
+
+    service = JobService(Settings(data_dir=tmp_path))
+    worker = Worker(service.settings, service=service)
+    now = [0.0]
+    attempts = []
+    cleanup = service.cleanup
+
+    def retry_cleanup():
+        attempts.append(now[0])
+        if len(attempts) <= 7:
+            raise ServiceError(503, "storage_unavailable", "Temporary outage")
+        cleanup()
+        worker.request_stop()
+
+    def advance(seconds):
+        now[0] += seconds
+
+    monkeypatch.setattr(worker_module.time, "monotonic", lambda: now[0])
+    monkeypatch.setattr(worker_module.time, "sleep", advance)
+    monkeypatch.setattr(service, "cleanup", retry_cleanup)
+    worker.run()
+    assert attempts == [0, 1, 3, 7, 15, 31, 61, 91]
+    assert not service.worker_available()
+
+
+def test_idle_cleanup_can_outlive_lease_without_stopping_worker(tmp_path, monkeypatch):
+    now = [1000.0]
+    service = JobService(Settings(data_dir=tmp_path), clock=lambda: now[0])
+    worker = Worker(service.settings, service=service)
+
+    def slow_cleanup():
+        now[0] += service.settings.lease_seconds + 1
+
+    monkeypatch.setattr(service, "cleanup", slow_cleanup)
+    worker.run(once=True)
+    assert not service.worker_available()
+
+
+def test_cleanup_configuration_errors_are_not_silently_retried(tmp_path, monkeypatch):
+    service = JobService(Settings(data_dir=tmp_path))
+    worker = Worker(service.settings, service=service)
+
+    def invalid_storage():
+        raise ServiceError(503, "private_storage_required", "Invalid storage configuration")
+
+    monkeypatch.setattr(service, "cleanup", invalid_storage)
+    with pytest.raises(ServiceError) as exc:
+        worker.run(once=True)
+    assert exc.value.code == "private_storage_required"
+
+
 def test_idle_worker_does_not_steal_another_live_lease(tmp_path, monkeypatch):
     service = JobService(Settings(data_dir=tmp_path))
     worker = Worker(service.settings, service=service)
@@ -234,6 +357,61 @@ def test_idle_worker_does_not_steal_another_live_lease(tmp_path, monkeypatch):
     assert service.worker_available()
     service.release_worker("other")
     service.db.engine.dispose()
+
+
+def test_worker_reacquires_lock_and_lease_after_database_transport_loss(monkeypatch):
+    import model_anatomy.service.worker as worker_module
+
+    class TransportError(Exception):
+        sqlstate = None
+
+    disconnected = OperationalError("SELECT pg_advisory_unlock", {}, TransportError("DNS failure"))
+    calls = []
+
+    @contextmanager
+    def worker_lock():
+        calls.append("lock")
+        yield
+        if calls.count("lock") == 1:
+            raise disconnected
+
+    db = SimpleNamespace(
+        sqlite=False,
+        worker_lock=worker_lock,
+        engine=SimpleNamespace(dispose=lambda: calls.append("dispose")),
+    )
+    service = SimpleNamespace(db=db, initialize=lambda: calls.append("initialize"))
+    worker = Worker(Settings(), service=service)
+    monkeypatch.setattr(worker, "run_locked", lambda **kwargs: calls.append("lease_and_work"))
+    monkeypatch.setattr(worker_module.time, "sleep", lambda seconds: calls.append(("sleep", seconds)))
+
+    worker.run()
+
+    assert calls == [
+        "initialize",
+        "lock",
+        "lease_and_work",
+        "dispose",
+        ("sleep", 1.0),
+        "initialize",
+        "lock",
+        "lease_and_work",
+        "dispose",
+    ]
+
+
+def test_worker_database_retry_rejects_sql_errors_and_sqlite():
+    class ServerError(Exception):
+        sqlstate = "42P01"
+
+    class TransportError(Exception):
+        sqlstate = None
+
+    server_error = OperationalError("SELECT", {}, ServerError("undefined table"))
+    transport_error = OperationalError("SELECT", {}, TransportError("connection failed"))
+    assert database_connection_lost(transport_error, sqlite=False)
+    assert not database_connection_lost(server_error, sqlite=False)
+    assert not database_connection_lost(transport_error, sqlite=True)
 
 
 @pytest.mark.skipif(sys.platform != "linux", reason="Production meta-import memory gate requires real Linux")

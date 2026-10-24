@@ -42,6 +42,74 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/catalog": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Catalog */
+    get: operations["catalog_api_v1_catalog_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/benchmarks/catalog": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get Benchmark Catalog */
+    get: operations["get_benchmark_catalog_api_v1_benchmarks_catalog_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/catalog/discovery": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get Discovery Catalog */
+    get: operations["get_discovery_catalog_api_v1_catalog_discovery_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/catalog/{report_id}/inspect": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Inspect Catalog Item */
+    post: operations["inspect_catalog_item_api_v1_catalog__report_id__inspect_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/analyses/{analysis_id}": {
     parameters: {
       query?: never;
@@ -204,6 +272,10 @@ export interface components {
       /** Input Names */
       input_names?: string[];
       inspection?: components["schemas"]["InspectionSummary"] | null;
+      verified_checkpoint_headers?:
+        components["schemas"]["VerifiedCheckpointHeaders"] | null;
+      verified_checkpoint_names?:
+        components["schemas"]["VerifiedCheckpointNames"] | null;
     };
     /** AnalysisError */
     AnalysisError: {
@@ -283,6 +355,10 @@ export interface components {
       /** Input Names */
       input_names?: string[];
       inspection?: components["schemas"]["InspectionSummary"] | null;
+      verified_checkpoint_headers?:
+        components["schemas"]["VerifiedCheckpointHeaders"] | null;
+      verified_checkpoint_names?:
+        components["schemas"]["VerifiedCheckpointNames"] | null;
     };
     /** ArtifactInspectionResponse */
     ArtifactInspectionResponse: {
@@ -309,6 +385,12 @@ export interface components {
       checkpoint_tensor_element_count: number | null;
       /** Checkpoint Available */
       checkpoint_available: boolean;
+      declared_checkpoint_index?:
+        components["schemas"]["DeclaredCheckpointIndex"] | null;
+      verified_checkpoint_headers?:
+        components["schemas"]["VerifiedCheckpointHeaders"] | null;
+      verified_checkpoint_names?:
+        components["schemas"]["VerifiedCheckpointNames"] | null;
       /** Checkpoint Format */
       checkpoint_format?: string | null;
       /** Selected File Tensor Element Count */
@@ -324,6 +406,96 @@ export interface components {
       } | null;
       /** Evidence */
       evidence: components["schemas"]["Evidence"][];
+      /** Offset */
+      offset: number;
+      /** Limit */
+      limit: number;
+    };
+    /**
+     * BenchmarkCatalogResponse
+     * @description Measured publication; case dictionaries are allowlisted by the catalog service.
+     */
+    BenchmarkCatalogResponse: {
+      /**
+       * Schema Version
+       * @constant
+       */
+      schema_version: 1;
+      /** Generated At */
+      generated_at: string;
+      /** Engine Version */
+      engine_version: string;
+      /** Manifest Sha256 */
+      manifest_sha256: string;
+      /**
+       * Manifest Hash Encoding
+       * @constant
+       */
+      manifest_hash_encoding: "canonical-json-v1";
+      /** Method */
+      method: string;
+      /** Status Counts */
+      status_counts: {
+        [key: string]: number;
+      };
+      /** Results */
+      results: {
+        [key: string]: unknown;
+      }[];
+      /** Runs */
+      runs: {
+        [key: string]: unknown;
+      }[];
+      /** Baseline Cases */
+      baseline_cases?: number | null;
+      /** Recheck Attempts */
+      recheck_attempts?: number | null;
+      /** Engine Versions */
+      engine_versions?: string[] | null;
+      /** Runner Sha256 */
+      runner_sha256?: string | null;
+      /** Engine Source Sha256 */
+      engine_source_sha256?: string | null;
+      /** Baseline Runner Sha256 */
+      baseline_runner_sha256?: string | null;
+      /** Baseline Engine Source Sha256 */
+      baseline_engine_source_sha256?: string | null;
+    };
+    /** CatalogItem */
+    CatalogItem: {
+      /** Id */
+      id: string;
+      /** Model Id */
+      model_id: string;
+      /** Revision */
+      revision: string;
+      /** Architecture */
+      architecture: string | null;
+      /**
+       * Status
+       * @enum {string}
+       */
+      status: "completed" | "partial" | "inspected";
+      /** Parameter Count */
+      parameter_count: number | null;
+      dimensions: components["schemas"]["Dimensions"];
+      /** Engine Version */
+      engine_version: string;
+      /** Schema Version */
+      schema_version: string;
+      /** Artifact */
+      artifact: string;
+      /** Explicit Artifact */
+      explicit_artifact: boolean;
+      /** Inspected At */
+      inspected_at: string;
+    };
+    /** CatalogResponse */
+    CatalogResponse: {
+      /** Models */
+      models: components["schemas"]["CatalogItem"][];
+      /** Total */
+      total: number;
       /** Offset */
       offset: number;
       /** Limit */
@@ -350,6 +522,24 @@ export interface components {
        * @description Hugging Face repository ID or HTTPS URL to inspect.
        */
       model: string;
+      /**
+       * Refresh
+       * @default false
+       */
+      refresh: boolean;
+    };
+    /** DeclaredCheckpointIndex */
+    DeclaredCheckpointIndex: {
+      /** Url */
+      url: string;
+      /** Canonical Sha256 */
+      canonical_sha256: string;
+      /** Declared Tensor Names */
+      declared_tensor_names: number;
+      /** Declared Shards */
+      declared_shards: number;
+      /** Tensor Record Limit */
+      tensor_record_limit: number;
     };
     /** Dimensions */
     Dimensions: {
@@ -361,6 +551,27 @@ export interface components {
       layers?: number | null;
       /** Vocabulary */
       vocabulary?: number | null;
+    };
+    /** DiscoveryCatalogResponse */
+    DiscoveryCatalogResponse: {
+      /** Results */
+      results: {
+        [key: string]: unknown;
+      }[];
+      /** Total */
+      total: number;
+      /** Status Counts */
+      status_counts: {
+        [key: string]: number;
+      };
+      /** Generated At */
+      generated_at: string;
+      /** Benchmark Publication Id */
+      benchmark_publication_id: string | null;
+      /** External Publications */
+      external_publications?: {
+        [key: string]: unknown;
+      }[];
     };
     /** ErrorDetail */
     ErrorDetail: {
@@ -510,6 +721,10 @@ export interface components {
       checkpoint_tensor_element_count: number | null;
       /** Checkpoint Available */
       checkpoint_available: boolean;
+      declared_checkpoint_index?:
+        components["schemas"]["DeclaredCheckpointIndex"] | null;
+      /** Architecture Blockers */
+      architecture_blockers?: string[];
     };
     /** ModelComponent */
     ModelComponent: {
@@ -649,6 +864,72 @@ export interface components {
       dtype: string | null;
       /** Semantic Name */
       semantic_name: string;
+    };
+    /** VerifiedCheckpointHeaders */
+    VerifiedCheckpointHeaders: {
+      /**
+       * Basis
+       * @constant
+       */
+      basis: "previously_verified_pinned_header_audit";
+      /** Index Sha256 */
+      index_sha256: string;
+      /** Audit Document Sha256 */
+      audit_document_sha256: string;
+      /** Shard Count */
+      shard_count: number;
+      /** Tensor Count */
+      tensor_count: number;
+      /** Tensor Element Count Including Scales */
+      tensor_element_count_including_scales: number;
+      /** Header Bytes Read By Audit */
+      header_bytes_read_by_audit: number;
+      /**
+       * Weight Payload Bytes Read By Audit
+       * @constant
+       */
+      weight_payload_bytes_read_by_audit: 0;
+    };
+    /** VerifiedCheckpointNames */
+    VerifiedCheckpointNames: {
+      /**
+       * Basis
+       * @constant
+       */
+      basis: "previously_audited_publisher_state_keys";
+      /** Index Sha256 */
+      index_sha256: string;
+      /** Name Audit Document Sha256 */
+      name_audit_document_sha256: string;
+      /** State Key Count */
+      state_key_count: number;
+      /** Component Count */
+      component_count: number;
+      /**
+       * Unmatched State Key Count
+       * @constant
+       */
+      unmatched_state_key_count: 0;
+      /**
+       * Converter Renamed Names
+       * @constant
+       */
+      converter_renamed_names: 0;
+      /**
+       * Converter Skipped Names
+       * @constant
+       */
+      converter_skipped_names: 0;
+      /**
+       * Converter Name Collisions
+       * @constant
+       */
+      converter_name_collisions: 0;
+      /**
+       * Weight Payload Bytes Read By Audit
+       * @constant
+       */
+      weight_payload_bytes_read_by_audit: 0;
     };
   };
   responses: never;
@@ -822,6 +1103,308 @@ export interface operations {
     responses: {
       /** @description Successful Response */
       202: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AnalysisDetail"];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Conflict */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Gone */
+      410: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Unprocessable Entity */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Too Many Requests */
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Service Unavailable */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  catalog_api_v1_catalog_get: {
+    parameters: {
+      query?: {
+        q?: string;
+        offset?: number;
+        limit?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CatalogResponse"];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Conflict */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Gone */
+      410: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Unprocessable Entity */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Too Many Requests */
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Service Unavailable */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  get_benchmark_catalog_api_v1_benchmarks_catalog_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["BenchmarkCatalogResponse"];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Conflict */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Gone */
+      410: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Unprocessable Entity */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Too Many Requests */
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Service Unavailable */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  get_discovery_catalog_api_v1_catalog_discovery_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DiscoveryCatalogResponse"];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Conflict */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Gone */
+      410: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Unprocessable Entity */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Too Many Requests */
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Service Unavailable */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  inspect_catalog_item_api_v1_catalog__report_id__inspect_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        report_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
         headers: {
           [name: string]: unknown;
         };

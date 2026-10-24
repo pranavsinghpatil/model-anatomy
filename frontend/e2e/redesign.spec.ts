@@ -1,19 +1,9 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
-import { graphNode, openAnalysis } from "./helpers";
+import { graphNode, hasNoHorizontalOverflow, openAnalysis } from "./helpers";
 import { analysisFor, embedding, mockService } from "./service";
 
 const widths = [320, 390, 768, 1024, 1440, 1920];
-
-async function setMode(
-  page: import("@playwright/test").Page,
-  mode: "Learn" | "Research",
-) {
-  const control = page.getByRole("group", { name: "Experience mode" });
-  const button = control.getByRole("button", { name: mode, exact: true });
-  await button.click();
-  await expect(button).toHaveAttribute("aria-pressed", "true");
-}
 
 async function setTheme(
   page: import("@playwright/test").Page,
@@ -27,12 +17,11 @@ async function setTheme(
   );
 }
 
-test("mode and theme preferences persist across workspace contexts", async ({
+test("theme preference persists across workspace contexts", async ({
   page,
 }) => {
   await mockService(page);
   await page.goto("/app");
-  await setMode(page, "Research");
   await setTheme(page, "Dark");
 
   for (const view of [
@@ -47,11 +36,6 @@ test("mode and theme preferences persist across workspace contexts", async ({
       page.getByRole("link", { name: title, exact: true }),
     ).toHaveAttribute("aria-current", "page");
     await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
-    await expect(
-      page
-        .getByRole("group", { name: "Experience mode" })
-        .getByRole("button", { name: "Research" }),
-    ).toHaveAttribute("aria-pressed", "true");
   }
 
   await page.goto("/");
@@ -59,14 +43,9 @@ test("mode and theme preferences persist across workspace contexts", async ({
   await setTheme(page, "Light");
   await page.goto("/app");
   await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
-  await expect(
-    page
-      .getByRole("group", { name: "Experience mode" })
-      .getByRole("button", { name: "Research" }),
-  ).toHaveAttribute("aria-pressed", "true");
 });
 
-test("responsive workspace stays in bounds and accessible across themes and modes", async ({
+test("responsive workspace stays in bounds and accessible across themes", async ({
   page,
 }) => {
   test.setTimeout(180_000);
@@ -74,12 +53,6 @@ test("responsive workspace stays in bounds and accessible across themes and mode
   await page.setViewportSize({ width: widths[0], height: 900 });
   await openAnalysis(page, "job-test", "architecture");
   await expect(page.getByTestId("graph-canvas")).toBeVisible();
-  const combinations = [
-    { theme: "Light", mode: "Learn" },
-    { theme: "Light", mode: "Research" },
-    { theme: "Dark", mode: "Learn" },
-    { theme: "Dark", mode: "Research" },
-  ] as const;
   for (const [widthIndex, width] of widths.entries()) {
     await page.setViewportSize({ width, height: 900 });
     if (width < 1280) {
@@ -94,12 +67,16 @@ test("responsive workspace stays in bounds and accessible across themes and mode
       ).toBeVisible();
       await page.keyboard.press("Escape");
     } else {
+      const openComponents = page.getByRole("button", {
+        name: "Open components",
+        exact: true,
+      });
+      if (await openComponents.isVisible()) await openComponents.click();
       await expect(
         page.getByRole("complementary", { name: "Component navigator" }),
       ).toBeVisible();
     }
-    for (const [combinationIndex, { theme, mode }] of combinations.entries()) {
-      await setMode(page, mode);
+    for (const [themeIndex, theme] of (["Light", "Dark"] as const).entries()) {
       await setTheme(page, theme);
       await expect(
         page.getByRole("link", { name: "Overview", exact: true }),
@@ -114,19 +91,11 @@ test("responsive workspace stays in bounds and accessible across themes and mode
         page.getByRole("link", { name: "Report", exact: true }),
       ).toBeVisible();
       await expect
-        .poll(() =>
-          page.evaluate(
-            () =>
-              Math.max(
-                document.documentElement.scrollWidth,
-                document.body.scrollWidth,
-              ) <= window.innerWidth,
-          ),
-        )
+        .poll(() => page.evaluate(hasNoHorizontalOverflow))
         .toBe(true);
-      if (combinationIndex === widthIndex % combinations.length) {
+      if (themeIndex === widthIndex % 2) {
         const results = await new AxeBuilder({ page }).analyze();
-        expect(results.violations, `${width}px ${theme} ${mode}`).toEqual([]);
+        expect(results.violations, `${width}px ${theme}`).toEqual([]);
       }
     }
   }
@@ -163,6 +132,35 @@ test("copy failure gives a manual fallback", async ({ page }) => {
   );
 });
 
+test("copy feedback resets and keyboard navigation remains usable with reduced motion", async ({
+  page,
+}) => {
+  await mockService(page);
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText: () => Promise.resolve() },
+    });
+  });
+  await openAnalysis(page, "job-test", "overview");
+  await page.getByRole("button", { name: "Copy revision" }).focus();
+  await page.getByRole("button", { name: "Copy revision" }).press("Enter");
+  await expect(page.locator(".copy-control [role='status']")).toHaveText(
+    "Copied",
+  );
+  await expect(
+    page.getByRole("button", { name: "Copy revision" }),
+  ).toBeEnabled();
+  const architecture = page
+    .getByRole("navigation", { name: "Workspace views" })
+    .getByRole("link", { name: "Architecture", exact: true });
+  await architecture.focus();
+  await architecture.press("Enter");
+  await expect(page).toHaveURL(/view=architecture/);
+  await expect(page.getByTestId("graph-canvas")).toBeVisible();
+});
+
 test("failed report export leaves an actionable error", async ({ page }) => {
   await mockService(page);
   await page.route("**/api/v1/analyses/job-test/exports/json", (route) =>
@@ -186,13 +184,16 @@ test("failed report export leaves an actionable error", async ({ page }) => {
   );
 });
 
-test("mode, view changes and keyboard panel resizing preserve inspection context", async ({
+test("view changes and keyboard panel resizing preserve inspection context", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1440, height: 960 });
   await page.emulateMedia({ reducedMotion: "reduce" });
   await mockService(page);
   await openAnalysis(page);
+  await page
+    .getByRole("button", { name: "Open components", exact: true })
+    .click();
   await graphNode(page, embedding.label);
   const inspector = page.getByTestId("inspector");
   await inspector.getByRole("tab", { name: /^Tensors/ }).click();
@@ -201,19 +202,16 @@ test("mode, view changes and keyboard panel resizing preserve inspection context
     .click();
   const viewport = page.locator(".react-flow__viewport");
   // Search focuses at up to 1.2x. Readable view settles at 1x in this desktop
-  // canvas; capture that result before asserting mode changes preserve it.
+  // canvas; capture that result before asserting workspace navigation preserves it.
   await expect(viewport).toHaveAttribute("style", /scale\(1\)/);
-  const beforeMode = await viewport.getAttribute("style");
-  for (const mode of ["Learn", "Research"] as const) {
-    await setMode(page, mode);
-    await expect(viewport).toHaveAttribute("style", beforeMode!);
-    await expect(
-      inspector.getByRole("tab", { name: /^Tensors/ }),
-    ).toHaveAttribute("aria-selected", "true");
-    await expect(
-      page.locator(`[data-component-id="${embedding.id}"]`),
-    ).toHaveAttribute("aria-pressed", "true");
-  }
+  const beforeNavigation = await viewport.getAttribute("style");
+  await expect(
+    inspector.getByRole("tab", { name: /^Tensors/ }),
+  ).toHaveAttribute("aria-selected", "true");
+  await expect(
+    page.locator(`[data-component-id="${embedding.id}"]`),
+  ).toHaveAttribute("aria-pressed", "true");
+  await expect(viewport).toHaveAttribute("style", beforeNavigation!);
   const panel = page.getByRole("complementary", {
     name: "Inspector",
     exact: true,
@@ -309,14 +307,7 @@ test("entry pages and long report identifiers fit every target width in both the
         await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
         await expect
           .poll(
-            () =>
-              page.evaluate(
-                () =>
-                  Math.max(
-                    document.body.scrollWidth,
-                    document.documentElement.scrollWidth,
-                  ) <= innerWidth,
-              ),
+            () => page.evaluate(hasNoHorizontalOverflow),
             `${width}px ${theme} ${path}`,
           )
           .toBe(true);

@@ -9,6 +9,7 @@ import type {
   CreateAnalysisRequest,
   QuestionRequest,
   QuestionAnswer,
+  CatalogResponse,
 } from "./contract";
 
 const prefix = "/api/v1";
@@ -24,6 +25,150 @@ export class ApiError extends Error {
     this.name = "ApiError";
   }
 }
+
+export type BenchmarkCatalogResult = {
+  model_id: string;
+  category: string;
+  revision: string;
+  status: string;
+  architecture: string | null;
+  reference: string | null;
+  declared_task: string | null;
+  started_at: string;
+  finished_at: string;
+  engine_version: string;
+  stored_report_id: string | null;
+  [key: string]: unknown;
+};
+
+export type BenchmarkCatalogResponse = {
+  schema_version: 1;
+  generated_at: string;
+  engine_version: string;
+  manifest_sha256: string;
+  results: BenchmarkCatalogResult[];
+  baseline_cases?: number;
+  recheck_attempts?: number;
+};
+
+export type DiscoveryObservation = {
+  status?: string;
+  engine_version?: string | null;
+  finished_at?: string | null;
+  case_identity?: string;
+  revision?: string | null;
+  reference?: string | null;
+  artifact?: string | null;
+  stored_report_id?: string | null;
+};
+
+export type ExternalValidationObservation = {
+  source_status?: "complete" | "partial" | "fail" | string;
+  status?:
+    | "reported_complete"
+    | "reported_partial"
+    | "out_of_scope"
+    | "reported_failure"
+    | string;
+  scope_reason?:
+    | "no_safetensors"
+    | "safetensors_unavailable"
+    | "access_restricted"
+    | string
+    | null;
+  source_reason_code?: string | null;
+  artifact?: string | null;
+  explicit_artifact?: boolean;
+  source_started_at?: string | null;
+  report_mode?: string | null;
+  graph_count?: number | null;
+  node_count?: number | null;
+  evidence_basis?: "reported" | string;
+  source_repository?: string | null;
+  source_commit?: string | null;
+  source_path?: string | null;
+  source_rows?: number[];
+  csv_sha256?: string | null;
+};
+
+export type ExternalValidationPublication = {
+  source_repository?: string;
+  source_commit?: string;
+  source_path?: string;
+  csv_sha256?: string;
+  created_at?: string;
+  source_counts?: {
+    input_rows?: number;
+    unique_repository_ids?: number;
+    unique_observations?: number;
+    duplicate_input_rows?: number;
+    raw_statuses?: Record<string, number>;
+    observation_statuses?: Record<string, number>;
+    raw_reason_codes?: Record<string, number>;
+    observation_reason_codes?: Record<string, number>;
+  };
+};
+
+export type DiscoveryCatalogResult = {
+  model_id: string;
+  category: string;
+  revision: string | null;
+  reference: string | null;
+  stored_report_id: string | null;
+  status: string;
+  architecture: string | null;
+  declared_task: string | null;
+  started_at: string | null;
+  finished_at: string | null;
+  engine_version: string | null;
+  warning_count: number | null;
+  graph_count: number | null;
+  tensor_count: number | null;
+  parameter_counts?: { unique?: number | null } | null;
+  coverage?: Record<string, number | null> | null;
+  dimensions?: Record<string, number | number[] | null> | null;
+  artifact?: string | null;
+  explicit_artifact?: boolean | null;
+  artifact_verified?: boolean | null;
+  selection_id?: string | null;
+  category_source?: string | null;
+  declared_task_source?: string | null;
+  revision_source?: string | null;
+  source: "inspection" | "benchmark" | "external_validation";
+  run_kind?: "baseline" | "recheck";
+  previous_observations?: DiscoveryObservation[];
+  benchmark_observations?: DiscoveryObservation[];
+  warnings?: string[];
+  diagnostic_notes?: string[];
+  reason_codes?: string[];
+  error?: { message?: string } | null;
+  source_status?: "complete" | "partial" | "fail" | string;
+  report_mode?: string | null;
+  scope_status?: "in_scope" | "out_of_scope" | string;
+  scope_reason?:
+    | "no_safetensors"
+    | "safetensors_unavailable"
+    | "access_restricted"
+    | string
+    | null;
+  evidence_basis?: "reported" | string;
+  source_repository?: string | null;
+  source_commit?: string | null;
+  source_path?: string | null;
+  source_rows?: number[];
+  csv_sha256?: string | null;
+  node_count?: number | null;
+  external_observations?: ExternalValidationObservation[];
+};
+
+export type DiscoveryCatalogResponse = {
+  results: DiscoveryCatalogResult[];
+  total: number;
+  status_counts: Record<string, number>;
+  generated_at: string;
+  benchmark_publication_id: string | null;
+  external_publications?: ExternalValidationPublication[];
+};
 
 async function errorFrom(response: Response): Promise<ApiError> {
   const payload = await response.json().catch(() => null);
@@ -107,10 +252,50 @@ export const api = {
   },
   analyses: (signal?: AbortSignal) =>
     request<AnalysesResponse>("/analyses", { signal }),
+  catalog: (q: string, offset = 0, limit = 24, signal?: AbortSignal) => {
+    const params = new URLSearchParams({
+      q,
+      offset: String(offset),
+      limit: String(limit),
+    });
+    return request<CatalogResponse>(`/catalog?${params}`, { signal });
+  },
+  benchmarkCatalog: (signal?: AbortSignal) =>
+    request<BenchmarkCatalogResponse>("/benchmarks/catalog", { signal }),
+  discoveryCatalog: async (signal?: AbortSignal) => {
+    const payload = await request<DiscoveryCatalogResponse>(
+      "/catalog/discovery",
+      { signal },
+    );
+    if (
+      !payload ||
+      !Array.isArray(payload.results) ||
+      typeof payload.total !== "number" ||
+      !payload.status_counts ||
+      typeof payload.status_counts !== "object" ||
+      typeof payload.generated_at !== "string" ||
+      !(
+        payload.benchmark_publication_id === null ||
+        typeof payload.benchmark_publication_id === "string"
+      )
+    )
+      throw new ApiError(
+        0,
+        "invalid_response",
+        "The model catalog returned an invalid response.",
+      );
+    return payload;
+  },
+  inspectCatalog: (id: string) =>
+    request<AnalysisDetail>(`/catalog/${segment(id)}/inspect`, {
+      method: "POST",
+    }),
   analyze: (model: string) =>
     request<AnalysisDetail>("/analyses", {
       method: "POST",
-      body: JSON.stringify({ model } satisfies CreateAnalysisRequest),
+      body: JSON.stringify({
+        model,
+      } satisfies CreateAnalysisRequest),
     }),
   analysis: (id: string, signal?: AbortSignal) =>
     request<AnalysisDetail>(`/analyses/${segment(id)}`, { signal }),
@@ -180,6 +365,13 @@ export const pending = (status?: string) =>
   status === "queued" || status === "running";
 export const graphReady = (status?: string) =>
   status === "completed" || status === "partial";
+
+/** Workspace URL for a job. Pending jobs carry `awaiting` so the progress screen can hand off. */
+export function analysisHref(job: { id: string; status: string }) {
+  const view = job.status === "inspected" ? "artifacts" : "architecture";
+  const awaiting = pending(job.status) ? "&awaiting=1" : "";
+  return `/app/analyses/${encodeURIComponent(job.id)}?view=${view}${awaiting}`;
+}
 export const retryQuery = (count: number, error: Error) =>
   count < 1 &&
   (!(error instanceof ApiError) || error.status === 0 || error.status >= 500);

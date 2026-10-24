@@ -15,7 +15,13 @@ import {
   mockService,
   rootGraph,
 } from "./service";
-import { expectGraphFramed, graphNode, openAnalysis } from "./helpers";
+import {
+  expectGraphFramed,
+  graphNode,
+  hasNoHorizontalOverflow,
+  openAnalysis,
+  UI_SCALE,
+} from "./helpers";
 
 const drawing = (page: import("@playwright/test").Page) =>
   page.getByTestId("anatomy-drawing");
@@ -288,10 +294,10 @@ test("anatomy controls, facets, keyboard inspection, and reduced motion work", a
   const drawingElement = drawing(page);
   const originalStyle = await drawingElement.getAttribute("style");
   await page.getByRole("button", { name: "Separate parts" }).click();
-  await drawingElement.evaluate((element) => {
+  await drawingElement.evaluate((element, scale) => {
     (element as HTMLElement).style.position = "fixed";
-    (element as HTMLElement).style.top = "120vh";
-  });
+    (element as HTMLElement).style.top = `calc(120vh / ${scale})`;
+  }, UI_SCALE);
   await expect(drawing(page)).toHaveAttribute("data-motion", "paused");
   const offscreenPose = await drawing(page).getAttribute("data-pose");
   await page.waitForTimeout(200);
@@ -367,6 +373,34 @@ test("nested anatomy loads reported components lazily and restores the parent po
     "viewBox",
     parentViewBox!,
   );
+});
+
+test("narrow anatomy keeps a long parent breadcrumb clickable", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  const job = {
+    ...analysisFor("job-test"),
+    model_id: "HuggingFaceTB/SmolLM2-135M",
+  };
+  await mockService(page, { job });
+  await openAnalysis(page);
+  await openAnatomy(page);
+  await page
+    .getByRole("button", { name: "Explore inside", exact: true })
+    .click();
+  const path = page.getByRole("navigation", { name: "Graph path" });
+  await expect(
+    path.getByRole("button", { name: block.label, exact: true }),
+  ).toBeVisible();
+  await path.getByRole("button", { name: "SmolLM2-135M", exact: true }).click();
+  await expect(path.getByRole("button")).toHaveCount(1);
+  await expect(
+    drawing(page)
+      .locator(`.assembly-face[data-part-id="${embedding.id}"]`)
+      .first(),
+  ).toBeVisible();
 });
 
 test("partial shape facts stay unknown and reported repeats have bounded geometry", async ({
@@ -492,14 +526,7 @@ test("anatomy stays usable across viewport widths and themes", async ({
       await setTheme(page, theme);
       await expect
         .poll(
-          () =>
-            page.evaluate(
-              () =>
-                Math.max(
-                  document.body.scrollWidth,
-                  document.documentElement.scrollWidth,
-                ) <= innerWidth,
-            ),
+          () => page.evaluate(hasNoHorizontalOverflow),
           `${width}px ${theme} anatomy width`,
         )
         .toBe(true);

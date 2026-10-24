@@ -11,33 +11,36 @@ import {
   Download,
   Plus,
   Network,
+  ChevronRight,
   LayoutDashboard,
   Files,
-  FileCheck2,
-  ChevronRight,
+  ShieldCheck,
+  ExternalLink,
+  Compass,
+  Cpu,
+  Check,
+  Copy,
 } from "lucide-react";
-import { api, graphReady, pending } from "../api/client";
+import { analysisHref, api, graphReady, pending } from "../api/client";
 import type { Citation, ExportFormat } from "../api/contract";
 import { ErrorNotice, Loading, Status } from "../components/Common";
-import { Menu, MenuItem, ModeControl, ThemeControl } from "../components/ui";
+import { ModelAnatomyMark } from "../components/Logo";
+import { Menu, MenuItem, ThemeControl } from "../components/ui";
 import { Overview, Report } from "../components/AnalysisSummary";
 import { ArtifactInspection } from "../components/ArtifactInspection";
 import { ArchitectureWorkspace } from "../components/ArchitectureWorkspace";
 import { Progress, Recovery } from "../components/Progress";
-import { LearnGuide } from "../components/LearnGuide";
 import { matchesCitation } from "../components/Inspector";
 import { useRecent, useService } from "../state/queries";
-import { usePreferences } from "../state/preferences";
 import { useWorkspaceSession, type Crumb } from "../state/workspace";
 import { count, dimensionCount } from "../format";
+import { DotPattern } from "../components/vendor/dot-pattern";
+import {
+  FluidHoverHighlight,
+  type HighlightRect,
+} from "../components/vendor/fluid-hover-highlight";
 import "./workspace.css";
 const views = ["architecture", "overview", "artifacts", "report"] as const;
-const viewIcons = {
-  architecture: Network,
-  overview: LayoutDashboard,
-  artifacts: Files,
-  report: FileCheck2,
-};
 const formats: { format: ExportFormat; label: string }[] = [
   { format: "json", label: "Report JSON" },
   { format: "zip", label: "Complete ZIP" },
@@ -54,13 +57,28 @@ function Workspace({ id }: { id: string }) {
   const [search, setSearch] = useSearchParams();
   const navigate = useNavigate();
   const client = useQueryClient();
-  const { mode } = usePreferences();
   const { service, available } = useService();
   const recent = useRecent();
   const [state, setState] = useWorkspaceSession(id);
   const [citation, setCitation] = useState<Citation | null>(null);
+  const [copiedModelId, setCopiedModelId] = useState(false);
   const [exporting, setExporting] = useState<ExportFormat | null>(null);
   const [exportError, setExportError] = useState<Error | null>(null);
+  const viewNav = useRef<HTMLElement>(null);
+  const [highlight, setHighlight] = useState<HighlightRect | null>(null);
+  function highlightView(target: HTMLElement) {
+    const item = target.getBoundingClientRect();
+    const nav = viewNav.current!.getBoundingClientRect();
+    const scale =
+      Number.parseFloat(getComputedStyle(document.documentElement).zoom) || 1;
+    const left = Math.max(0, (item.left - nav.left) / scale);
+    setHighlight({
+      left,
+      top: 4,
+      width: Math.min(item.width / scale, viewNav.current!.clientWidth - left),
+      height: viewNav.current!.clientHeight - 8,
+    });
+  }
   const active = useRef(true);
   const submissionPath = useRef(window.location.pathname);
   useEffect(() => {
@@ -76,19 +94,48 @@ function Workspace({ id }: { id: string }) {
   });
   const detail = analysis.data;
   const artifact = detail?.status === "inspected";
+  const sourceTopology =
+    detail?.quality?.mode === "publisher_reference_topology";
   const previousStatus = useRef(detail?.status);
   const ready = graphReady(detail?.status) && !analysis.error;
   const viewParam = search.get("view");
+  const awaiting = search.get("awaiting") === "1";
+  const handoff =
+    awaiting && detail && !pending(detail.status)
+      ? detail.status === "inspected"
+        ? "artifacts"
+        : graphReady(detail.status)
+          ? "architecture"
+          : null
+      : null;
   const view =
+    handoff ??
     views.find((v) => v === viewParam) ??
     (artifact ? "artifacts" : "architecture");
   useEffect(() => {
-    if (artifact && pending(previousStatus.current))
-      setSearch({ view: "artifacts" }, { replace: true });
-    else if (detail && !views.some((v) => v === viewParam))
+    if (!detail) return;
+    const wasPending = pending(previousStatus.current);
+    previousStatus.current = detail.status;
+    if (wasPending && !pending(detail.status))
+      void client.invalidateQueries({ queryKey: ["catalog"] });
+    if (pending(detail.status)) return;
+    if (awaiting || wasPending) {
+      const next =
+        detail.status === "inspected"
+          ? "artifacts"
+          : graphReady(detail.status)
+            ? "architecture"
+            : (views.find((item) => item === viewParam) ?? "architecture");
+      const params = new URLSearchParams(search);
+      params.delete("awaiting");
+      params.set("view", next);
+      if (params.toString() !== search.toString())
+        setSearch(params, { replace: true });
+      return;
+    }
+    if (!views.some((v) => v === viewParam))
       setSearch({ view }, { replace: true });
-    previousStatus.current = detail?.status;
-  }, [detail, artifact, viewParam, view, setSearch]);
+  }, [detail, awaiting, viewParam, view, search, setSearch, client]);
   const graphId = state.path.at(-1)?.id ?? detail?.root_graph_id;
   const graph = useQuery({
     queryKey: ["graph", id, graphId],
@@ -112,9 +159,7 @@ function Workspace({ id }: { id: string }) {
         window.location.pathname !== submissionPath.current
       )
         return;
-      void navigate(
-        `/app/analyses/${encodeURIComponent(job.id)}?view=${job.status === "inspected" ? "artifacts" : "architecture"}`,
-      );
+      void navigate(analysisHref(job));
     },
   });
   async function download(format: ExportFormat) {
@@ -211,17 +256,17 @@ function Workspace({ id }: { id: string }) {
           aria-label="Back to start"
           title="Model Anatomy · All analyses"
         >
-          <Network size={23} />
+          <span className="brand-gem workspace-brand-gem" aria-hidden="true">
+            <ModelAnatomyMark size={18} />
+          </span>
+          <span className="entry-brand-name">Model Anatomy</span>
         </Link>
         <div className="model-switcher">
-          <span className="workspace-product">
-            Model Anatomy <ChevronRight size={12} /> <span>Inspection</span>
-          </span>
           <Menu
             label="Switch model"
             trigger={
               <>
-                <span className="model-name">
+                <span className="model-name" title={detail?.model_id}>
                   {detail?.model_id ?? "Loading analysis"}
                 </span>
                 <ChevronDown size={14} />
@@ -233,9 +278,7 @@ function Workspace({ id }: { id: string }) {
               .map((job) => (
                 <MenuItem
                   key={job.id}
-                  onSelect={() =>
-                    void navigate(`/app/analyses/${encodeURIComponent(job.id)}`)
-                  }
+                  onSelect={() => void navigate(analysisHref(job))}
                 >
                   {job.model_id}
                   <Status status={job.status} />
@@ -246,9 +289,59 @@ function Workspace({ id }: { id: string }) {
             </MenuItem>
           </Menu>
         </div>
+        {detail?.model_id && (
+          <div className="workspace-model-tools" aria-label="Model quick tools">
+            <button
+              type="button"
+              className="button button-ghost button-icon-only workspace-copy-btn"
+              onClick={() => {
+                void navigator.clipboard.writeText(detail.model_id);
+                setCopiedModelId(true);
+                setTimeout(() => setCopiedModelId(false), 2000);
+              }}
+              title={copiedModelId ? "Copied model ID" : "Copy model ID"}
+              aria-label="Copy model ID"
+            >
+              {copiedModelId ? (
+                <Check size={13} aria-hidden="true" />
+              ) : (
+                <Copy size={13} aria-hidden="true" />
+              )}
+            </button>
+            {detail.model_id.includes("/") && (
+              <a
+                href={`https://huggingface.co/${detail.model_id}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="button button-ghost button-icon-only workspace-hf-link"
+                title="Open repository on Hugging Face"
+                aria-label="Open repository on Hugging Face"
+              >
+                <ExternalLink size={13} aria-hidden="true" />
+              </a>
+            )}
+            {detail.architecture && (
+              <span
+                className="workspace-arch-pill"
+                title={`Detected architecture: ${detail.architecture}`}
+              >
+                <Cpu size={12} aria-hidden="true" />
+                <span>{detail.architecture}</span>
+              </span>
+            )}
+          </div>
+        )}
         {detail && <Status status={detail.status} />}
         <div className="workspace-header-actions">
-          <ModeControl />
+          <Link
+            className="button button-ghost workspace-catalog-btn"
+            to="/catalog"
+            aria-label="Browse catalog"
+            title="Browse Model Catalog"
+          >
+            <Compass size={15} aria-hidden="true" />
+            <span className="wide-label">Catalog</span>
+          </Link>
           <ThemeControl />
           <Link
             className="button button-secondary"
@@ -283,13 +376,34 @@ function Workspace({ id }: { id: string }) {
           </Menu>
         </div>
       </header>
-      <div className="workbench-body">
-        <nav className="primary-views" aria-label="Workspace views">
+      <div className="workspace-viewbar">
+        <nav
+          className="primary-views"
+          aria-label="Workspace views"
+          ref={viewNav}
+          onPointerLeave={() => setHighlight(null)}
+          onBlur={(event) => {
+            if (!event.currentTarget.contains(event.relatedTarget))
+              setHighlight(null);
+          }}
+        >
+          <span className="workspace-nav-highlight-clip" aria-hidden="true">
+            <FluidHoverHighlight rect={highlight} />
+          </span>
           {views.map((item) => {
-            const Icon = viewIcons[item];
+            const Icon =
+              item === "architecture"
+                ? Network
+                : item === "overview"
+                  ? LayoutDashboard
+                  : item === "artifacts"
+                    ? Files
+                    : ShieldCheck;
             return (
               <Link
                 key={item}
+                onPointerEnter={(event) => highlightView(event.currentTarget)}
+                onFocus={(event) => highlightView(event.currentTarget)}
                 to={`?view=${item}`}
                 aria-current={view === item ? "page" : undefined}
                 aria-disabled={!ready && !artifact ? true : undefined}
@@ -303,12 +417,120 @@ function Workspace({ id }: { id: string }) {
                     : undefined
                 }
               >
-                <Icon size={20} strokeWidth={1.7} />
+                <Icon size={14} className="view-tab-icon" aria-hidden="true" />
                 <span>{item[0].toUpperCase() + item.slice(1)}</span>
               </Link>
             );
           })}
         </nav>
+        <div className="workspace-view-options">
+          {detail && ready && !artifact && (
+            <>
+              {detail.status === "partial" && (
+                <Link to="?view=report" className="viewbar-findings">
+                  View findings
+                  <ChevronRight size={13} aria-hidden="true" />
+                </Link>
+              )}
+              <div
+                className="workspace-telemetry-ribbon"
+                aria-label="Model telemetry summary"
+              >
+                <div className="telemetry-chip" title="Total Parameters">
+                  <span className="telemetry-label">Params</span>
+                  <span className="telemetry-val">
+                    {count(detail.parameter_count, true)}
+                  </span>
+                </div>
+                {detail.dimensions.layers != null && (
+                  <div className="telemetry-chip" title="Layer count">
+                    <span className="telemetry-label">Layers</span>
+                    <span className="telemetry-val">
+                      {dimensionCount(detail.dimensions.layers)}
+                    </span>
+                  </div>
+                )}
+                {detail.dimensions.hidden != null && (
+                  <div className="telemetry-chip" title="Hidden dimension">
+                    <span className="telemetry-label">Hidden</span>
+                    <span className="telemetry-val">
+                      {dimensionCount(detail.dimensions.hidden)}
+                    </span>
+                  </div>
+                )}
+                {detail.dimensions.heads != null && (
+                  <div className="telemetry-chip" title="Attention heads">
+                    <span className="telemetry-label">Heads</span>
+                    <span className="telemetry-val">
+                      {dimensionCount(detail.dimensions.heads)}
+                    </span>
+                  </div>
+                )}
+                {detail.revision && (
+                  <div
+                    className="telemetry-chip telemetry-revision"
+                    title={`Verified revision: ${detail.revision}`}
+                  >
+                    <span className="telemetry-label">Rev</span>
+                    <span className="telemetry-val font-mono">
+                      {detail.revision.slice(0, 7)}
+                    </span>
+                  </div>
+                )}
+              </div>
+              <details
+                key={view}
+                className="model-facts"
+                onKeyDown={(event) => {
+                  if (event.key === "Escape") {
+                    event.currentTarget.open = false;
+                    event.currentTarget.querySelector("summary")?.focus();
+                  }
+                }}
+              >
+                <summary>
+                  Model details <ChevronDown size={13} aria-hidden="true" />
+                </summary>
+                <div
+                  className="model-context"
+                  role="region"
+                  aria-label="Model context"
+                >
+                  <strong className="context-architecture">
+                    {detail.architecture ?? "Architecture unknown"}
+                  </strong>
+                  <dl>
+                    <div>
+                      <dt>Parameters</dt>
+                      <dd>{count(detail.parameter_count, true)}</dd>
+                    </div>
+                    {detail.dimensions.layers != null && (
+                      <div>
+                        <dt>Layers</dt>
+                        <dd>{dimensionCount(detail.dimensions.layers)}</dd>
+                      </div>
+                    )}
+                    {detail.dimensions.hidden != null && (
+                      <div>
+                        <dt>Hidden size</dt>
+                        <dd>{dimensionCount(detail.dimensions.hidden)}</dd>
+                      </div>
+                    )}
+                  </dl>
+                  <Link to="?view=report" className="context-report">
+                    Inspection findings
+                    <ChevronRight size={13} aria-hidden="true" />
+                  </Link>
+                </div>
+              </details>
+            </>
+          )}
+        </div>
+      </div>
+      <div className="workbench-body">
+        <div className="workbench-pattern" aria-hidden="true">
+          <DotPattern width={22} height={22} cr={0.8} />
+        </div>
         <div className="workbench-main">
           {exportError && <ErrorNotice error={exportError} />}{" "}
           {cancel.error && <ErrorNotice error={cancel.error} />}{" "}
@@ -337,45 +559,6 @@ function Workspace({ id }: { id: string }) {
             <Recovery detail={detail} />
           ) : (
             <div className={`workspace-content view-${view}`}>
-              {view === "architecture" && !artifact && (
-                <div
-                  className="model-context"
-                  role="region"
-                  aria-label="Model context"
-                  tabIndex={0}
-                >
-                  <span className="context-architecture">
-                    <Network size={14} />{" "}
-                    {detail.architecture ?? "Architecture"}
-                  </span>
-                  <span>
-                    <strong>{count(detail.parameter_count, true)}</strong>{" "}
-                    parameters
-                  </span>
-                  {detail.dimensions.layers != null && (
-                    <span>
-                      <strong>
-                        {dimensionCount(detail.dimensions.layers)}
-                      </strong>{" "}
-                      layers
-                    </span>
-                  )}
-                  {detail.dimensions.hidden != null && (
-                    <span>
-                      <strong>
-                        {dimensionCount(detail.dimensions.hidden)}
-                      </strong>{" "}
-                      hidden size
-                    </span>
-                  )}
-                  <Link to="?view=report" className="context-report">
-                    {detail.status === "partial"
-                      ? "Partial reconstruction · view findings"
-                      : "Inspection findings"}
-                    <ChevronRight size={13} />
-                  </Link>
-                </div>
-              )}
               {view === "architecture" && (
                 <h1 className="sr-only">{detail.model_id} architecture</h1>
               )}
@@ -393,19 +576,24 @@ function Workspace({ id }: { id: string }) {
                     onInspectFile={(url) => create.mutate(url)}
                     inspectionDisabled={!available || create.isPending}
                   />
-                  {mode === "learn" && (
-                    <LearnGuide analysis={detail} node={null} />
-                  )}
                 </div>
               )}
               {view === "architecture" &&
                 (artifact ? (
                   <div className="page-state">
-                    <h1>Architecture unavailable</h1>
+                    <h1>No architecture graph</h1>
                     <p>
-                      This result contains verified repository artifacts and
-                      metadata. No architecture graph was reconstructed.
+                      {detail.inspection?.message ??
+                        "This result verified the repository artifacts at the pinned revision. No architecture graph was reconstructed."}
                     </p>
+                    <p>
+                      {detail.inspection
+                        ? `Verified ${count(detail.inspection.file_count)} repository files and ${count(detail.inspection.tensor_count)} tensor headers${detail.revision ? ` at revision ${detail.revision.slice(0, 12)}` : ""}.`
+                        : "Open the artifact inventory for the files and tensor headers that were verified."}
+                    </p>
+                    {detail.inspection?.reason_code && (
+                      <code>{detail.inspection.reason_code}</code>
+                    )}
                     <Link
                       className="button button-primary"
                       to="?view=artifacts"
@@ -422,6 +610,17 @@ function Workspace({ id }: { id: string }) {
                   </div>
                 ) : graph.data ? (
                   <>
+                    {sourceTopology && (
+                      <div className="source-topology-notice" role="note">
+                        <strong>Publisher reference topology · partial</strong>
+                        <span>
+                          Components come from reviewed source at this revision.
+                          Tensor-to-component ownership, parameter totals, and
+                          runtime dataflow are not verified. Dashed links show
+                          reference order only.
+                        </span>
+                      </div>
+                    )}
                     <ArchitectureWorkspace
                       analysis={detail}
                       graph={graph.data}
@@ -436,42 +635,6 @@ function Workspace({ id }: { id: string }) {
                       onCitation={jump}
                       ai={service?.ai_available === true}
                     />
-                    {mode === "learn" && (
-                      <LearnGuide
-                        analysis={detail}
-                        node={
-                          graph.data.nodes.find(
-                            (n) => n.id === state.selected[graph.data.id],
-                          ) ?? null
-                        }
-                        onStep={(step) => {
-                          if (step !== "orient")
-                            setState((s) => ({
-                              ...s,
-                              selected: {
-                                ...s.selected,
-                                [graph.data.id]:
-                                  s.selected[graph.data.id] ??
-                                  graph.data.nodes.find(
-                                    (node) =>
-                                      node.kind !== "input" &&
-                                      node.kind !== "output",
-                                  )?.id ??
-                                  graph.data.nodes[0]?.id ??
-                                  null,
-                              },
-                              inspectorOpen: true,
-                              questions: false,
-                              inspectorTab:
-                                step === "tensors"
-                                  ? "tensors"
-                                  : step === "evidence"
-                                    ? "evidence"
-                                    : "module",
-                            }));
-                        }}
-                      />
-                    )}
                   </>
                 ) : graphId ? (
                   <div className="page-state">

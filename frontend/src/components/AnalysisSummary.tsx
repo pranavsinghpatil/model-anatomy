@@ -2,20 +2,24 @@ import { Link } from "react-router-dom";
 import {
   ArrowRight,
   BookOpen,
+  CheckCircle2,
+  Cpu,
   FileCheck2,
   FileSearch,
   Network,
+  ShieldCheck,
+  Zap,
 } from "lucide-react";
 import type { AnalysisDetail } from "../api/contract";
 import { count, dimensionCount, reportDimensionKeys } from "../format";
 import { CopyButton } from "./ui";
 import { Status } from "./Common";
-import { usePreferences } from "../state/preferences";
 import "./analysis-summary.css";
 
 export function Overview({ detail }: { detail: AnalysisDetail }) {
-  const { mode } = usePreferences();
   const artifact = detail.status === "inspected";
+  const sourceTopology =
+    detail.quality?.mode === "publisher_reference_topology";
   const inspection = detail.inspection;
   const modelName = detail.model_id.split("/").at(-1) ?? detail.model_id;
 
@@ -122,20 +126,53 @@ export function Overview({ detail }: { detail: AnalysisDetail }) {
         </dl>
       )}
 
+      {!artifact && (
+        <div className="summary-specs-banner" aria-label="Model specifications">
+          <div className="spec-cell">
+            <span className="spec-label">Architecture Class</span>
+            <span className="spec-val font-mono">
+              {detail.architecture ?? "Decoder-only Transformer"}
+            </span>
+          </div>
+          <div className="spec-cell">
+            <span className="spec-label">Extraction Pipeline</span>
+            <span className="spec-val">
+              {sourceTopology
+                ? "Reviewed publisher source · partial"
+                : "Deterministic PyTorch IR"}
+            </span>
+          </div>
+          <div className="spec-cell">
+            <span className="spec-label">Input Tensors</span>
+            <span className="spec-val font-mono">
+              {detail.input_names?.length
+                ? detail.input_names.join(", ")
+                : sourceTopology
+                  ? "Not verified"
+                  : "token_ids"}
+            </span>
+          </div>
+          <div className="spec-cell">
+            <span className="spec-label">Evidence Provenance</span>
+            <span className="spec-val">
+              {sourceTopology
+                ? "Pinned config and publisher source"
+                : "Safetensors Range-Stream"}
+            </span>
+          </div>
+        </div>
+      )}
+
       <section className="explore-next summary-next">
         <div className="section-title">
           <div>
             <BookOpen size={18} aria-hidden="true" />
-            <h2>
-              {mode === "learn"
-                ? "Where to go next"
-                : "Continue this inspection"}
-            </h2>
+            <h2>Continue this inspection</h2>
           </div>
           <p>
             {artifact
               ? "Start with the verified files, then inspect available tensor headers."
-              : "Move from the model summary to its structure or recorded report."}
+              : "Move from the model summary to its structure, artifacts, or audit report."}
           </p>
         </div>
         <div className="next-actions">
@@ -162,6 +199,19 @@ export function Overview({ detail }: { detail: AnalysisDetail }) {
             </div>
             <ArrowRight size={18} aria-hidden="true" />
           </Link>
+          {!artifact && (
+            <Link to="?view=artifacts">
+              <FileSearch size={21} aria-hidden="true" />
+              <div>
+                <h3>Inspect Safetensors & files</h3>
+                <p>
+                  Zero-download tensor headers, shapes, and sharded weight
+                  offsets.
+                </p>
+              </div>
+              <ArrowRight size={18} aria-hidden="true" />
+            </Link>
+          )}
           <Link to="?view=report">
             <FileCheck2 size={21} aria-hidden="true" />
             <div>
@@ -196,6 +246,9 @@ const bool = (value: boolean | null | undefined) =>
 export function Report({ detail }: { detail: AnalysisDetail }) {
   const q = detail.quality;
   const artifact = detail.status === "inspected";
+  const sourceTopology = q?.mode === "publisher_reference_topology";
+  const headerAudit = detail.verified_checkpoint_headers;
+  const nameAudit = detail.verified_checkpoint_names;
   const inspection = detail.inspection;
   const checks: [string, string | number][] = [
     ["Semantic coverage", coverage(q?.semantic_coverage)],
@@ -230,6 +283,102 @@ export function Report({ detail }: { detail: AnalysisDetail }) {
         <Status status={detail.status} />
       </header>
 
+      <div
+        className="report-audit-banner"
+        aria-label="Inspection audit highlights"
+      >
+        <div className="audit-score-card">
+          <div className="audit-icon-wrapper" aria-hidden="true">
+            <ShieldCheck size={24} />
+          </div>
+          <div>
+            <span className="eyebrow">AUDIT STATUS</span>
+            <h3>
+              {detail.status === "completed"
+                ? "Verified Reconstruction"
+                : detail.status === "partial"
+                  ? "Partial Reconstruction"
+                  : "Artifact Inspection"}
+            </h3>
+            <p>
+              {artifact
+                ? "Pinned repository artifacts were inspected. No native architecture graph was reconstructed."
+                : sourceTopology
+                  ? headerAudit
+                    ? nameAudit
+                      ? "This partial graph comes from reviewed publisher source. Separate pinned audits verified shard headers and checkpoint-name correspondence; shapes, parameter totals, and runtime flow remain unverified."
+                      : "This partial graph comes from reviewed publisher source. A separate pinned audit verified shard headers; tensor ownership and runtime flow remain unverified."
+                    : "This partial graph comes from reviewed publisher source. Checkpoint shard headers and tensor ownership are unverified."
+                  : "Architecture facts come from inspected checkpoint metadata and native PyTorch module definitions."}
+            </p>
+          </div>
+        </div>
+        <div className="audit-stats-grid">
+          <div className="audit-mini-stat">
+            <span className="stat-label">Coverage Quality</span>
+            <strong className="stat-value">
+              {q?.semantic_coverage != null
+                ? `${(q.semantic_coverage * 100).toFixed(0)}%`
+                : "Not measured"}
+            </strong>
+          </div>
+          <div className="audit-mini-stat">
+            <span className="stat-label">Engine Version</span>
+            <strong className="stat-value font-mono">
+              {detail.engine_version ?? "Current"}
+            </strong>
+          </div>
+          <div className="audit-mini-stat">
+            <span className="stat-label">Execution Mode</span>
+            <strong className="stat-value font-mono">
+              {q?.mode ?? "Static IR"}
+            </strong>
+          </div>
+        </div>
+      </div>
+
+      {headerAudit && (
+        <section
+          className="report-section"
+          aria-label="Separate checkpoint header audit"
+        >
+          <h2>Verified checkpoint headers</h2>
+          <p>
+            A separate audit of this exact revision matched{" "}
+            {count(headerAudit.tensor_count)} tensor names across{" "}
+            {count(headerAudit.shard_count)} shard headers to the pinned index.
+            It read {count(headerAudit.header_bytes_read_by_audit)} header bytes
+            and zero weight payload bytes. The{" "}
+            {count(headerAudit.tensor_element_count_including_scales)} tensor
+            elements include scales; they are not a model parameter count.
+          </p>
+          <p>
+            Index SHA-256: <code>{headerAudit.index_sha256}</code>
+          </p>
+        </section>
+      )}
+
+      {nameAudit && (
+        <section
+          className="report-section"
+          aria-label="Publisher checkpoint-name audit"
+        >
+          <h2>Checkpoint names matched to reference components</h2>
+          <p>
+            A separate source-reviewed audit matched all{" "}
+            {count(nameAudit.state_key_count)} checkpoint state-key names to{" "}
+            {count(nameAudit.component_count)} closest reference components at
+            this exact index. There were zero unmatched, renamed, skipped, or
+            colliding names. Individual tensor shapes, parameter totals, and
+            converter output values remain unverified.
+          </p>
+          <p>
+            Name audit SHA-256:{" "}
+            <code>{nameAudit.name_audit_document_sha256}</code>
+          </p>
+        </section>
+      )}
+
       {artifact ? (
         <section
           className="report-section report-outcome"
@@ -261,10 +410,46 @@ export function Report({ detail }: { detail: AnalysisDetail }) {
               <dd>{count(inspection?.tensor_count)}</dd>
             </div>
             <div>
-              <dt>Checkpoint selected</dt>
+              <dt>Checkpoint artifacts present</dt>
               <dd>{inspection?.checkpoint_available ? "Yes" : "No"}</dd>
             </div>
+            {inspection?.declared_checkpoint_index && (
+              <>
+                <div>
+                  <dt>Index-declared tensor names</dt>
+                  <dd>
+                    {count(
+                      inspection.declared_checkpoint_index
+                        .declared_tensor_names,
+                    )}
+                  </dd>
+                </div>
+                <div>
+                  <dt>Index-declared shard files</dt>
+                  <dd>
+                    {count(
+                      inspection.declared_checkpoint_index.declared_shards,
+                    )}
+                  </dd>
+                </div>
+                <div>
+                  <dt>Tensor inspection limit</dt>
+                  <dd>
+                    {count(
+                      inspection.declared_checkpoint_index.tensor_record_limit,
+                    )}
+                  </dd>
+                </div>
+              </>
+            )}
           </dl>
+          {inspection?.declared_checkpoint_index && (
+            <p className="report-boundary">
+              Index declarations come from the pinned index JSON. Shard headers
+              were not verified for this result, so these are not inspected
+              tensor or parameter counts.
+            </p>
+          )}
           <p className="report-boundary">
             No architecture graph or semantic coverage is available for this
             result. Tensor element totals do not establish unique model
@@ -292,7 +477,9 @@ export function Report({ detail }: { detail: AnalysisDetail }) {
           <p>
             {artifact
               ? "The result records a pinned repository inventory and any bounded checkpoint headers that were safe to inspect. It does not reconstruct an architecture."
-              : "Static inspection describes artifact-backed structure. Coverage does not establish runtime correctness or every possible execution path."}
+              : sourceTopology
+                ? "The pinned configuration and reviewed publisher source describe reference modules and their order. This result does not verify runtime flow or checkpoint ownership."
+                : "Static inspection describes artifact-backed structure. Coverage does not establish runtime correctness or every possible execution path."}
           </p>
           {detail.limitations?.length ? (
             <ul>
@@ -313,8 +500,29 @@ export function Report({ detail }: { detail: AnalysisDetail }) {
                 <li key={i}>{warning}</li>
               ))}
             </ul>
+          ) : artifact ? (
+            <>
+              <p>
+                No extraction warnings were recorded because architecture
+                extraction did not run.
+              </p>
+              <ul>
+                {(inspection?.architecture_blockers ?? []).map((blocker, i) => (
+                  <li key={`blocker-${i}`}>{blocker}</li>
+                ))}
+                {!inspection?.architecture_blockers?.length && (
+                  <li>
+                    {inspection?.message ??
+                      "Architecture reconstruction unavailable."}
+                  </li>
+                )}
+              </ul>
+            </>
           ) : (
-            <p>No warnings returned.</p>
+            <p className="clean-status-notice">
+              <CheckCircle2 size={15} aria-hidden="true" />
+              <span>No warnings returned.</span>
+            </p>
           )}
           {detail.partial_reasons?.length ? (
             <ul>
@@ -327,8 +535,11 @@ export function Report({ detail }: { detail: AnalysisDetail }) {
               This report is partial; no specific incomplete-check details were
               returned.
             </p>
-          ) : (
-            <p>No incomplete-check details returned.</p>
+          ) : artifact ? null : (
+            <p className="clean-status-notice">
+              <CheckCircle2 size={15} aria-hidden="true" />
+              <span>No incomplete-check details returned.</span>
+            </p>
           )}
         </section>
       </div>

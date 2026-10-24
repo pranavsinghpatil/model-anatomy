@@ -1,0 +1,336 @@
+.benchmark-view-tabs {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding-bottom: 12px;
+}
+
+.benchmark-view-tabs button {
+  padding: 9px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  color: #94a3b8;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.benchmark-view-tabs button.is-active {
+  color: #e0f2fe;
+  border-color: rgba(56, 189, 248, 0.45);
+  background: rgba(56, 189, 248, 0.14);
+}
+
+.benchmark-content {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.benchmark-report-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  gap: 16px;
+}
+.benchmark-report-meta h2 {
+  color: #f8fafc;
+  font-size: 19px;
+  margin: 0 0 5px;
+}
+.benchmark-report-meta p,
+.benchmark-disclaimer,
+.benchmark-result-count {
+  color: #94a3b8;
+  font-size: 12.5px;
+  margin: 0;
+}
+.benchmark-report-meta code {
+  color: #94a3b8;
+  font:
+    10px ui-monospace,
+    monospace;
+  overflow-wrap: anywhere;
+  max-width: 45%;
+  text-align: right;
+}
+.benchmark-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.benchmark-summary div {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 9px 13px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  background: rgba(8, 12, 30, 0.58);
+}
+.benchmark-summary strong {
+  color: #7dd3fc;
+  font-size: 17px;
+}
+.benchmark-summary span {
+  color: #cbd5e1;
+  font-size: 11px;
+}
+.benchmark-filters {
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) minmax(170px, 230px) minmax(
+      170px,
+      230px
+    );
+  align-items: end;
+  gap: 12px;
+}
+.benchmark-filters > label:not(.catalog-search-box) {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: #94a3b8;
+  font-size: 11px;
+}
+.benchmark-filters select {
+  height: 44px;
+  padding: 0 12px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 10px;
+  background: #0b1025;
+  color: #e2e8f0;
+  font: inherit;
+  font-size: 12px;
+}
+.benchmark-grid {
+  align-items: start;
+}
+.benchmark-card {
+  min-width: 0;
+}
+.benchmark-card .card-model-title {
+  overflow-wrap: anywhere;
+}
+.benchmark-status {
+  border: 1px solid rgba(56, 189, 248, 0.28);
+  border-radius: 6px;
+  padding: 3px 8px;
+  background: rgba(56, 189, 248, 0.1);
+  color: #bae6fd;
+  font-size: 10.5px;
+  font-weight: 650;
+}
+.benchmark-status.status-partial {
+  color: #fde68a;
+  background: rgba(245, 158, 11, 0.1);
+  border-color: rgba(245, 158, 11, 0.25);
+}
+.benchmark-status.status-inspected {
+  color: #c4b5fd;
+  background: rgba(139, 92, 246, 0.1);
+  border-color: rgba(139, 92, 246, 0.25);
+}
+.benchmark-task {
+  margin: -6px 0 0;
+  color: #94a3b8;
+  font-size: 12px;
+}
+.benchmark-facts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 9px;
+  padding: 11px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.24);
+}
+.benchmark-facts div {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.benchmark-facts span,
+.benchmark-revision > span {
+  color: #64748b;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.benchmark-facts strong {
+  color: #e2e8f0;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.benchmark-revision {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.benchmark-revision code {
+  color: #93c5fd;
+  font:
+    11px ui-monospace,
+    monospace;
+  overflow-wrap: anywhere;
+}
+.benchmark-card-actions {
+  display: flex;
+  align-items: stretch;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.card-retry-btn {
+  padding: 8px 10px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  color: #cbd5e1;
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+.benchmark-details {
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  padding-top: 10px;
+  color: #cbd5e1;
+  font-size: 11px;
+}
+.benchmark-details summary {
+  cursor: pointer;
+  color: #93c5fd;
+  font-weight: 600;
+}
+.benchmark-details dl {
+  display: grid;
+  grid-template-columns: 94px minmax(0, 1fr);
+  gap: 6px 10px;
+  margin: 12px 0;
+}
+.benchmark-details dt {
+  color: #64748b;
+}
+.benchmark-details dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.benchmark-details dd a {
+  color: #93c5fd;
+}
+.history-open-btn {
+  display: block;
+  margin-top: 6px;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: #93c5fd;
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.benchmark-details h4 {
+  margin: 12px 0 6px;
+  font-size: 11px;
+}
+.benchmark-details ul {
+  margin: 0;
+  padding-left: 18px;
+  color: #fcd34d;
+}
+.benchmark-details li {
+  overflow-wrap: anywhere;
+}
+.benchmark-coverage {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+.benchmark-coverage h4 {
+  grid-column: 1 / -1;
+}
+.benchmark-coverage div {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 5px;
+  text-transform: capitalize;
+}
+.benchmark-coverage strong {
+  color: #7dd3fc;
+}
+.benchmark-state {
+  max-width: 600px;
+  margin: 20px auto;
+  padding: 36px 24px;
+  border: 1px dashed rgba(255, 255, 255, 0.15);
+  border-radius: 16px;
+  background: rgba(8, 12, 30, 0.5);
+  color: #cbd5e1;
+  text-align: center;
+}
+.benchmark-state h2,
+.benchmark-state h3 {
+  color: #f8fafc;
+  margin: 0 0 8px;
+}
+.benchmark-state p {
+  color: #94a3b8;
+  font-size: 13px;
+}
+.benchmark-disclaimer {
+  text-align: center;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.catalog-refresh-error {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin: 0;
+  color: #fcd34d;
+  font-size: 12px;
+  text-align: center;
+}
+.catalog-refresh-error button {
+  border: 0;
+  padding: 2px 4px;
+  background: transparent;
+  color: #93c5fd;
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+@media (max-width: 760px) {
+  .benchmark-report-meta {
+    align-items: start;
+    flex-direction: column;
+  }
+  .benchmark-report-meta code {
+    max-width: none;
+    text-align: left;
+  }
+  .benchmark-filters {
+    grid-template-columns: 1fr;
+  }
+  .catalog-refresh-error {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+.benchmark-scope {
+  color: #94a3b8;
+  font-size: 12px;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.benchmark-card .card-top-row {
+  flex-wrap: wrap;
+}

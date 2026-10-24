@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   Background,
   BackgroundVariant,
@@ -21,6 +21,7 @@ import {
   ZoomIn,
   ZoomOut,
   Tags,
+  ChevronDown,
 } from "lucide-react";
 import type { ArchitectureGraph, GraphEdge, GraphNode } from "../api/contract";
 import { count, scopedNodeId } from "../format";
@@ -56,6 +57,8 @@ function Canvas({
   layoutPreference,
   onLayoutPreferenceChange,
   selectEdge,
+  header,
+  legend,
 }: {
   graph: ArchitectureGraph;
   selectedNode: string | null;
@@ -67,6 +70,8 @@ function Canvas({
   layoutPreference: GraphLayoutPreference;
   onLayoutPreferenceChange: (preference: GraphLayoutPreference) => void;
   selectEdge?: (edge: GraphEdge | null) => void;
+  header?: (search: ReactNode) => ReactNode;
+  legend?: ReactNode;
 }) {
   const [layout, setLayout] = useState<{
     nodes: AnatomyNode[];
@@ -82,6 +87,7 @@ function Canvas({
     layoutPreference.connectionLabels ?? false,
   );
   const [neighborhood, setNeighborhood] = useState(false);
+  const [optionsOpen, setOptionsOpen] = useState(false);
   const [zoom, setZoom] = useState(viewport?.zoom ?? 1);
   const [reduceMotion, setReduceMotion] = useState(
     () =>
@@ -163,22 +169,45 @@ function Canvas({
   useEffect(() => {
     if (
       !layout ||
+      !canvasWidth ||
+      !canvasHeight ||
       layoutSignature !== `${direction}:${density}` ||
       (viewport && !fitAfterLayout.current)
     )
       return;
+    const preferReadableInitialView =
+      !viewport && !fitAfterLayout.current && canvasHeight < 500;
     fitAfterLayout.current = false;
     const frame = requestAnimationFrame(() => {
       if (!layout.nodes.length) return;
-      void flow.fitView({
-        padding: 0.12,
-        minZoom: 0.08,
-        maxZoom: 1,
-        duration: 0,
-      });
+      if (preferReadableInitialView) {
+        void flow.fitView({
+          nodes: [readableAnchor(layout.nodes, selectedNode)],
+          padding: 0.18,
+          minZoom: 0.75,
+          maxZoom: 0.85,
+          duration: 0,
+        });
+      } else {
+        void flow.fitView({
+          padding: 0.12,
+          minZoom: 0.08,
+          maxZoom: 1,
+          duration: 0,
+        });
+      }
     });
     return () => cancelAnimationFrame(frame);
-  }, [layout, layoutSignature, direction, density, flow, viewport]);
+  }, [
+    layout,
+    layoutSignature,
+    direction,
+    density,
+    flow,
+    viewport,
+    canvasHeight,
+    selectedNode,
+  ]);
   const connected = useMemo(() => {
     if (!selectedNode) return new Set<string>();
     const ids = new Set([selectedNode]);
@@ -257,6 +286,45 @@ function Canvas({
       className={`graph-canvas ${connectionLabels ? "show-edge-labels" : ""} ${zoom < 0.6 ? "is-distant" : ""} ${zoom < 0.85 ? "is-overview" : ""} ${zoom >= 0.85 ? "is-detailed" : ""}`}
       data-testid="graph-canvas"
     >
+      {header?.(
+        <div className="graph-search">
+          <Search size={14} aria-hidden="true" />
+          <input
+            aria-label="Find component"
+            placeholder="Find in current graph"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+          />
+          {search && (
+            <div className="search-results">
+              {matches.length ? (
+                matches.map((node) => (
+                  <button
+                    key={node.id}
+                    onClick={() => {
+                      select(node);
+                      setSearch("");
+                      const found = flow.getNode(
+                        scopedNodeId(graph.id, node.id),
+                      );
+                      if (found)
+                        void flow.fitView({
+                          nodes: [found],
+                          maxZoom: 1.2,
+                          duration: reduceMotion ? 0 : 250,
+                        });
+                    }}
+                  >
+                    {nodeTitle(node)}
+                  </button>
+                ))
+              ) : (
+                <span>No matching components</span>
+              )}
+            </div>
+          )}
+        </div>,
+      )}
       <ReactFlow<AnatomyNode, AnatomyEdge>
         nodes={nodes}
         edges={edges}
@@ -313,9 +381,17 @@ function Canvas({
         }}
       >
         <Background
+          id="graph-grid-lines"
+          variant={BackgroundVariant.Lines}
+          gap={88}
+          color="var(--graph-grid-major)"
+          lineWidth={0.75}
+        />
+        <Background
+          id="graph-grid-dots"
           variant={BackgroundVariant.Dots}
           gap={22}
-          size={1}
+          size={1.5}
           color="var(--graph-grid)"
         />
         {nodes.some((node) => node.data.isolated) && (
@@ -347,189 +423,180 @@ function Canvas({
         {canvasWidth >= 700 && canvasHeight >= 360 && (
           <MiniMap
             className="graph-minimap"
+            style={{ width: 144, height: 96 }}
             position="bottom-right"
             nodeColor={(node) =>
-              (node as AnatomyNode).data.original.child_graph_id
-                ? "var(--graph-child)"
-                : "var(--graph-node)"
+              node.selected ? "var(--accent)" : "var(--border)"
             }
+            nodeStrokeColor="var(--muted)"
+            nodeStrokeWidth={1}
             maskColor="var(--graph-mask)"
             pannable
             zoomable
           />
         )}
       </ReactFlow>
-      <div className="graph-zoom">
-        <IconButton
-          label="Zoom in"
-          onClick={() => void flow.zoomIn({ duration: reduceMotion ? 0 : 150 })}
+      <div className="graph-dock">
+        <div
+          className="graph-dock-main"
+          role="group"
+          aria-label="Graph view controls"
         >
-          <ZoomIn size={16} />
-        </IconButton>
-        <IconButton
-          label="Zoom out"
-          onClick={() =>
-            void flow.zoomOut({ duration: reduceMotion ? 0 : 150 })
-          }
-        >
-          <ZoomOut size={16} />
-        </IconButton>
-      </div>
-      <div className="canvas-tools">
-        <div className="graph-search">
-          <Search size={14} />
-          <input
-            aria-label="Find component"
-            placeholder="Find in current graph"
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-          />
-          {search && (
-            <div className="search-results">
-              {matches.length ? (
-                matches.map((node) => (
-                  <button
-                    key={node.id}
-                    onClick={() => {
-                      select(node);
-                      setSearch("");
-                      const found = flow.getNode(
-                        scopedNodeId(graph.id, node.id),
-                      );
-                      if (found)
-                        void flow.fitView({
-                          nodes: [found],
-                          maxZoom: 1.2,
-                          duration: reduceMotion ? 0 : 250,
-                        });
-                    }}
-                  >
-                    {nodeTitle(node)}
-                  </button>
-                ))
-              ) : (
-                <span>No matching components</span>
-              )}
+          <button
+            className="layout-direction"
+            type="button"
+            aria-label="Fit graph"
+            title="Fit the entire current graph"
+            onClick={() =>
+              void flow.fitView({
+                padding: 0.12,
+                maxZoom: 1,
+                duration: reduceMotion ? 0 : 200,
+              })
+            }
+          >
+            <Maximize size={16} />
+            <span>Fit</span>
+          </button>
+          <button
+            className="layout-direction"
+            type="button"
+            aria-label="Readable view"
+            title="Focus the selected component at a readable scale"
+            onClick={() =>
+              void flow.fitView({
+                nodes: [readableAnchor(layout.nodes, selectedNode)],
+                padding: 0.2,
+                minZoom: 0.85,
+                maxZoom: 1,
+                duration: reduceMotion ? 0 : 200,
+              })
+            }
+          >
+            <ScanEye size={16} />
+            <span>Readable</span>
+          </button>
+          <span
+            className="zoom-readout"
+            aria-label={`Zoom level ${Math.round(zoom * 100)} percent`}
+          >
+            {Math.round(zoom * 100)}%
+          </span>
+          <div className="graph-zoom" role="group" aria-label="Zoom controls">
+            <IconButton
+              label="Zoom out"
+              onClick={() =>
+                void flow.zoomOut({ duration: reduceMotion ? 0 : 150 })
+              }
+            >
+              <ZoomOut size={15} />
+            </IconButton>
+            <IconButton
+              label="Zoom in"
+              onClick={() =>
+                void flow.zoomIn({ duration: reduceMotion ? 0 : 150 })
+              }
+            >
+              <ZoomIn size={15} />
+            </IconButton>
+          </div>
+          <details
+            className="graph-options"
+            open={optionsOpen}
+            onToggle={(event) => setOptionsOpen(event.currentTarget.open)}
+          >
+            <summary aria-label="Options">
+              <span>Options</span>
+              <ChevronDown size={14} aria-hidden="true" />
+            </summary>
+            <div
+              className="graph-options-panel"
+              role="group"
+              aria-label="Graph options"
+            >
+              <button
+                className="layout-direction"
+                type="button"
+                aria-label={`Switch to ${direction === "DOWN" ? "horizontal" : "vertical"} layout`}
+                title={`Current layout: ${direction === "DOWN" ? "vertical" : "horizontal"}`}
+                onClick={() => {
+                  fitAfterLayout.current = true;
+                  const next = direction === "DOWN" ? "RIGHT" : "DOWN";
+                  setDirection(next);
+                  onLayoutPreferenceChange({
+                    direction: next,
+                    density,
+                    connectionLabels,
+                  });
+                }}
+              >
+                <ArrowLeftRight size={15} />
+                <span>{direction === "DOWN" ? "Vertical" : "Horizontal"}</span>
+              </button>
+              <button
+                className={`layout-direction density-toggle ${density === "detailed" ? "active" : ""}`}
+                type="button"
+                aria-label={
+                  density === "compact"
+                    ? "Show detailed node cards"
+                    : "Show compact node cards"
+                }
+                aria-pressed={density === "detailed"}
+                onClick={() => {
+                  fitAfterLayout.current = true;
+                  const next = density === "compact" ? "detailed" : "compact";
+                  setDensity(next);
+                  onLayoutPreferenceChange({
+                    direction,
+                    density: next,
+                    connectionLabels,
+                  });
+                }}
+              >
+                <Layers size={15} />
+                <span>{density === "compact" ? "Details" : "Compact"}</span>
+              </button>
+              <button
+                className={`layout-direction neighborhood-toggle ${neighborhood ? "active" : ""}`}
+                type="button"
+                aria-pressed={neighborhood}
+                aria-label="Focus selected component and connected neighbors"
+                disabled={!selectedNode}
+                onClick={() => setNeighborhood((value) => !value)}
+              >
+                <Focus size={15} />
+                <span>Neighbors</span>
+              </button>
+              <IconButton
+                label={
+                  connectionLabels
+                    ? "Hide connection labels"
+                    : "Show connection labels"
+                }
+                aria-pressed={connectionLabels}
+                onClick={() => {
+                  setConnectionLabels(!connectionLabels);
+                  onLayoutPreferenceChange({
+                    direction,
+                    density,
+                    connectionLabels: !connectionLabels,
+                  });
+                }}
+              >
+                <Tags size={16} />
+              </IconButton>
             </div>
-          )}
+          </details>
         </div>
-        <button
-          className="layout-direction"
-          type="button"
-          aria-label="Fit graph"
-          title="Fit the entire current graph"
-          onClick={() =>
-            void flow.fitView({
-              padding: 0.12,
-              maxZoom: 1,
-              duration: reduceMotion ? 0 : 200,
-            })
-          }
-        >
-          <Maximize size={16} />
-          <span>Fit</span>
-        </button>
-        <button
-          className="layout-direction"
-          type="button"
-          aria-label="Readable view"
-          title="Focus the selected component at a readable scale"
-          onClick={() =>
-            void flow.fitView({
-              nodes: [readableAnchor(layout.nodes, selectedNode)],
-              padding: 0.2,
-              minZoom: 0.85,
-              maxZoom: 1,
-              duration: reduceMotion ? 0 : 200,
-            })
-          }
-        >
-          <ScanEye size={16} />
-          <span>Readable</span>
-        </button>
-        <button
-          className="layout-direction"
-          type="button"
-          aria-label={`Switch to ${direction === "DOWN" ? "horizontal" : "vertical"} layout`}
-          title={`Current layout: ${direction === "DOWN" ? "vertical" : "horizontal"}`}
-          onClick={() => {
-            fitAfterLayout.current = true;
-            const next = direction === "DOWN" ? "RIGHT" : "DOWN";
-            setDirection(next);
-            onLayoutPreferenceChange({
-              direction: next,
-              density,
-              connectionLabels,
-            });
-          }}
-        >
-          <ArrowLeftRight size={15} />
-          <span>{direction === "DOWN" ? "Vertical" : "Horizontal"}</span>
-        </button>
-        <button
-          className={`layout-direction density-toggle ${density === "detailed" ? "active" : ""}`}
-          type="button"
-          aria-label={
-            density === "compact"
-              ? "Show detailed node cards"
-              : "Show compact node cards"
-          }
-          aria-pressed={density === "detailed"}
-          onClick={() => {
-            fitAfterLayout.current = true;
-            const next = density === "compact" ? "detailed" : "compact";
-            setDensity(next);
-            onLayoutPreferenceChange({
-              direction,
-              density: next,
-              connectionLabels,
-            });
-          }}
-        >
-          <Layers size={15} />
-          <span>{density === "compact" ? "Details" : "Compact"}</span>
-        </button>
-        <button
-          className={`layout-direction neighborhood-toggle ${neighborhood ? "active" : ""}`}
-          type="button"
-          aria-pressed={neighborhood}
-          aria-label="Focus selected component and connected neighbors"
-          disabled={!selectedNode}
-          onClick={() => setNeighborhood((value) => !value)}
-        >
-          <Focus size={15} />
-          <span>Neighbors</span>
-        </button>
-        <span
-          className="zoom-readout"
-          aria-label={`Zoom level ${Math.round(zoom * 100)} percent`}
-        >
-          {Math.round(zoom * 100)}%
-        </span>
-        <IconButton
-          label={
-            connectionLabels
-              ? "Hide connection labels"
-              : "Show connection labels"
-          }
-          aria-pressed={connectionLabels}
-          onClick={() => {
-            setConnectionLabels(!connectionLabels);
-            onLayoutPreferenceChange({
-              direction,
-              density,
-              connectionLabels: !connectionLabels,
-            });
-          }}
-        >
-          <Tags size={16} />
-        </IconButton>
-      </div>
-      <div className="canvas-caption">
-        <ArrowDownToLine size={12} />
-        <span>{count(graph.nodes.length)} components</span>
-        <span className="caption-divider" />
-        <span>{count(graph.edges.length)} relationships</span>
+        <div className="graph-dock-meta">
+          <div className="graph-legend">{legend}</div>
+          <div className="canvas-caption">
+            <ArrowDownToLine size={12} aria-hidden="true" />
+            <span>{count(graph.nodes.length)} components</span>
+            <span className="caption-divider" />
+            <span>{count(graph.edges.length)} relationships</span>
+          </div>
+        </div>
       </div>
     </div>
   );

@@ -135,6 +135,11 @@ class ExplanationService:
                 raise ValueError("Unknown citation")
             cited = [by_id[item] for item in dict.fromkeys(parsed.citations)]
             supported = numeric_values(cited)
+            # Scientific notation is a scaling operation even when its expanded value
+            # happens to equal a cited integer. The provider is instructed to quote
+            # exact values, so reject this compact form deterministically.
+            if re.search(r"(?<![\w.])[+-]?(?:\d+(?:\.\d*)?|\.\d+)[eE][+-]?\d+(?!\w)", parsed.answer):
+                raise ValueError("Scientific notation is not allowed")
             # Numbers embedded in identifiers are not quantitative claims (e.g. GPT2, e1).
             for number in re.findall(r"(?<![\w.])[-+]?\d[\d,]*(?:\.\d+)?(?![\w.])", parsed.answer):
                 if Decimal(number.replace(",", "")) not in supported:

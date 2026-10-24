@@ -17,17 +17,17 @@ build/
 *.pth
 .DS_Store
 .local/
-
+.tmp/
 playwright-report/
 test-results/
 test-results-live/
 frontend/test-results-*/
 frontend/dist/
+.taste-skill/
 *.sqlite3
 *.sqlite3-*
+.vercel/
 
-# local
 .tmp
 .playground
 notebook
-

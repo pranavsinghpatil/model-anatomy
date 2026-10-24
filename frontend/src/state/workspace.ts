@@ -22,8 +22,11 @@ export type WorkspaceSession = {
 };
 const sessions = new Map<string, WorkspaceSession>();
 export function useWorkspaceSession(id: string) {
-  const [state, setState] = useState<WorkspaceSession>(
-    () =>
+  const [state, setState] = useState<WorkspaceSession>(() => {
+    const isDesktop =
+      typeof window !== "undefined" &&
+      window.matchMedia("(min-width: 1024px)").matches;
+    return (
       sessions.get(id) ?? {
         path: [],
         selected: {},
@@ -34,10 +37,11 @@ export function useWorkspaceSession(id: string) {
         inspectorTab: "module",
         inspectorOpen: false,
         questions: false,
-        navigationOpen: true,
+        navigationOpen: false,
         layout: undefined,
-      },
-  );
+      }
+    );
+  });
   useEffect(() => {
     sessions.set(id, state);
   }, [id, state]);

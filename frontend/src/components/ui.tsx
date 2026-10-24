@@ -4,8 +4,9 @@ import * as Dialog from "@radix-ui/react-dialog";
 import { cva, type VariantProps } from "class-variance-authority";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
-import { Check, Copy, Monitor, Moon, Sun, X } from "lucide-react";
-import { useState, type ButtonHTMLAttributes, type ReactNode } from "react";
+import { Check, Monitor, Moon, Sun, X } from "lucide-react";
+import { type ButtonHTMLAttributes, type ReactNode } from "react";
+import { ButtonCopy } from "./vendor/button-copy";
 import { usePreferences } from "../state/preferences";
 export const cn = (...inputs: ClassValue[]) => twMerge(clsx(inputs));
 const variants = cva("button", {
@@ -82,7 +83,11 @@ export function ThemeControl() {
       label="Theme"
       trigger={
         <>
-          <Sun size={16} />
+          <span className="theme-glyph" aria-hidden="true" data-theme={theme}>
+            <Sun size={15} className="theme-light" />
+            <Moon size={15} className="theme-dark" />
+            <Monitor size={15} className="theme-system" />
+          </span>
           <span className="wide-label">Theme</span>
         </>
       }
@@ -108,23 +113,6 @@ export function ThemeControl() {
         ))}
       </Dropdown.RadioGroup>
     </Menu>
-  );
-}
-export function ModeControl() {
-  const { mode, setMode } = usePreferences();
-  return (
-    <div className="mode-control" role="group" aria-label="Experience mode">
-      {(["learn", "research"] as const).map((value) => (
-        <button
-          key={value}
-          type="button"
-          aria-pressed={mode === value}
-          onClick={() => setMode(value)}
-        >
-          {value === "learn" ? "Learn" : "Research"}
-        </button>
-      ))}
-    </div>
   );
 }
 export function Drawer({
@@ -174,28 +162,5 @@ export function CopyButton({
   value: string;
   label?: string;
 }) {
-  const [state, setState] = useState<"idle" | "copied" | "failed">("idle");
-  return (
-    <span className="copy-control">
-      <Button
-        variant="ghost"
-        aria-label={label}
-        onClick={() => {
-          Promise.resolve()
-            .then(() => navigator.clipboard.writeText(value))
-            .then(() => setState("copied"))
-            .catch(() => setState("failed"));
-        }}
-      >
-        {state === "copied" ? <Check size={14} /> : <Copy size={14} />}
-      </Button>
-      <span role="status">
-        {state === "copied"
-          ? "Copied"
-          : state === "failed"
-            ? "Copy failed. Select and copy the text."
-            : ""}
-      </span>
-    </span>
-  );
+  return <ButtonCopy key={value} value={value} label={label} />;
 }

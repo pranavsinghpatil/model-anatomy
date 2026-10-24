@@ -23,11 +23,17 @@ reports use `/app/analyses/:id?view=overview|architecture|artifacts|report`.
 Legacy `/?analysis=:id` links redirect to the report. Recent analyses require an
 explicit Continue action; a new visitor sees an empty history.
 
-Research and Learn both open Architecture; Learn offers a contextual authored
-guide beside the same report data. Theme (System by default) and mode (Research
-by default) are remembered locally. Graph selection, breadcrumbs, viewports,
-inspector tab and panel sizes are retained per analysis during the browser session.
-Switching mode keeps this context. No model report is stored in localStorage.
+There is one inspection flow; Learn/Research modes and their saved preference
+have been removed. General component definitions remain available in the inspector's
+About this component type disclosure. Theme (Light by default) is remembered
+locally. Graph selection, breadcrumbs, viewports, inspector tab and panel sizes
+are retained per analysis during the browser session. No model report is stored
+in localStorage.
+
+The interface uses a 75% page scale at the browser's normal zoom. The workspace
+height compensates for that scale to fill the visible viewport. Graph zoom remains
+an independent control for the inspected diagram. Earlier validation records below
+describe the interface at the time of those runs, including the former modes.
 
 The canvas starts with the complete graph framed using compact components.
 Readable view focuses the selected component at an inspection scale. Direction,
@@ -102,6 +108,39 @@ generated-contract checks, **92 deterministic desktop/mobile tests**, and all
 from 320 to 1920px, long identifiers and a 200% CSS zoom regression. Twelve axe
 scans reported no violations. See the [verification record](../docs/UI_REDESIGN.md#verification-record)
 for model evidence and the limits of local Chromium validation.
+
+The October 16 [art-direction revision](../docs/FRONTEND_ART_DIRECTION.md)
+strengthens the direct-entry composition, moves named workspace views into the
+header, reserves graph-control space, and increases technical typography. It
+introduces no component dependencies or API changes. New visual regression checks
+cover header collisions, graph framing and inspector/artifact/report layouts.
+Verification covers 134 distinct deterministic cases: 132 passes in the broad
+run, followed by both long-identifier matrix cases passing after their overflow
+fix. Formatting, typecheck, and the production build also pass.
+After explicit user approval resumed the existing services, eight distinct live
+desktop/mobile cases were verified across an initial run (6 passes, 2 failures)
+and a targeted rerun (2 passes). The initial 360M metadata timeout remains a
+backend reliability limitation; the rerun used completed real cached reports.
+See the art-direction record for pinned model evidence and these limits.
+
+The subsequent [white workspace revision](../docs/WHITE_WORKSPACE.md) makes the
+canvas primary: two compact global rows, one local graph header, a reserved
+control dock, and opt-in model facts/component navigation. Entry uses one model
+input/action group and concise example choices. Shared controls use consistent
+focus, press and hover feedback; the existing Radix primitives provide menus,
+tabs and dialogs. Light is the default; explicit Dark/System preferences persist.
+No decorative animation or new component dependency is required.
+Verification covers 142 distinct deterministic cases across a broad run and
+targeted reruns, plus all eight selected real desktop/mobile journeys. See the
+white-workspace record for the initial failures, their resolution, pinned reports
+and remaining cold-analysis limitation.
+
+The compact-scale follow-up reduces desktop controls to 32px, the entry heading
+to 36px maximum, and the workspace header/views to 48/40px. Touch controls retain
+44px targets. Mode selection, copy/theme icons, menus and drawers have purposeful
+motion with reduced-motion support. Graph controls respond to the actual canvas
+width, and inspector ports align name, shape and dtype on one row. See the same
+record for the production-build verification and local development-server limits.
 
 ## Contract Integration
 

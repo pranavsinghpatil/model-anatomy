@@ -295,6 +295,9 @@
   background: var(--soft);
   color: var(--text);
 }
+:root[data-theme="light"] .scene-switcher button:not([aria-pressed="true"]) {
+  color: #334155;
+}
 @media (max-width: 767px) {
   .assembly-drawing {
     min-height: 140px;

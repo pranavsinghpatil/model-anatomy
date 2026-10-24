@@ -1,4 +1,6 @@
-import { defineConfig, loadEnv } from "vite";
+import { realpathSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { defineConfig, loadEnv, searchForWorkspaceRoot } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import { fileURLToPath } from "node:url";
@@ -19,9 +21,21 @@ export default defineConfig(({ mode }) => {
     root: frontendRoot,
     envDir: frontendRoot,
     plugins: [react(), tailwindcss()],
+    cacheDir: ".local/vite-cache",
     server: {
-      port,
-      strictPort: true,
+      fs: {
+        allow: [
+          searchForWorkspaceRoot(fileURLToPath(new URL(".", import.meta.url))),
+          ...["inter", "jetbrains-mono"].map((font) =>
+            realpathSync(
+              new URL(
+                `./node_modules/@fontsource-variable/${font}`,
+                import.meta.url,
+              ),
+            ),
+          ),
+        ],
+      },
       watch: {
         ignored: [
           "**/test-results*/**",
@@ -33,11 +47,11 @@ export default defineConfig(({ mode }) => {
       },
       proxy: {
         "/health": {
-          target: env.API_PROXY_TARGET || "http://127.0.0.1:8001",
+          target: env.API_PROXY_TARGET || "http://127.0.0.1:8000",
           changeOrigin: true,
         },
         "/api": {
-          target: env.API_PROXY_TARGET || "http://127.0.0.1:8001",
+          target: env.API_PROXY_TARGET || "http://127.0.0.1:8000",
           changeOrigin: true,
         },
       },

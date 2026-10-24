@@ -69,7 +69,10 @@ class FixtureClient(MetadataClient):
         self.config = config
 
     def resolve(self, reference):
-        self.repository_files[(reference.model_id, SHA)] = {"config.json", "model.safetensors"}
+        self.repository_files[(reference.model_id, SHA)] = {
+            "config.json",
+            "model.safetensors",
+        }
         return SHA
 
     def json(self, url, max_bytes=1024 * 1024):
@@ -84,7 +87,9 @@ class FixtureClient(MetadataClient):
 def test_pipeline_emits_valid_inspectable_report_without_weights(tiny_model):
     stages = []
     ir = reconstruct(
-        "example/model", client=FixtureClient(checkpoint_for(tiny_model)), on_progress=stages.append
+        "example/model",
+        client=FixtureClient(checkpoint_for(tiny_model)),
+        on_progress=stages.append,
     )
     assert ir.metadata["revision"] == SHA
     assert ir.metadata["artifacts"]["weight_payload_bytes_read"] == 0
@@ -117,7 +122,9 @@ def test_native_vision_metadata_and_component_views_keep_ownership():
         "num_labels": 10,
     }
     model, _ = instantiate_native(load_native_config(config))
-    ir = reconstruct("example/vision", client=FixtureClient(checkpoint_for(model), config))
+    ir = reconstruct(
+        "example/vision", client=FixtureClient(checkpoint_for(model), config)
+    )
     assert ir.architecture == "ViTForImageClassification"
     assert ir.metadata["inputs"]["input_specs"]["pixel_values"]["shape"] is None
     assert ir.metadata["dimensions"]["vocabulary"] is None
@@ -189,7 +196,12 @@ def test_excessive_layer_count_is_rejected_before_construction():
 
 @pytest.mark.parametrize(
     "reference",
-    ["http://huggingface.co/a/b", "https://localhost/a/b", "https://huggingface.co/a/b?token=x", "../b"],
+    [
+        "http://huggingface.co/a/b",
+        "https://localhost/a/b",
+        "https://huggingface.co/a/b?token=x",
+        "../b",
+    ],
 )
 def test_non_model_urls_are_rejected(reference):
     with pytest.raises(ArtifactError):
@@ -197,7 +209,9 @@ def test_non_model_urls_are_rejected(reference):
 
 
 def test_file_reference_preserves_exact_revision():
-    ref = parse_reference(f"https://huggingface.co/example/model/blob/{SHA}/model.safetensors")
+    ref = parse_reference(
+        f"https://huggingface.co/example/model/blob/{SHA}/model.safetensors"
+    )
     assert ref.model_id == "example/model"
     assert ref.revision == SHA
     assert ref.explicit_filename
@@ -206,7 +220,9 @@ def test_file_reference_preserves_exact_revision():
 def test_duplicate_tensor_json_and_invalid_offsets_are_rejected():
     with pytest.raises(ArtifactError, match="Duplicate"):
         parse_safetensors_header(b'{"x":{},"x":{}}', 25)
-    header = json.dumps({"x": {"dtype": "F32", "shape": [2], "data_offsets": [0, 4]}}).encode()
+    header = json.dumps(
+        {"x": {"dtype": "F32", "shape": [2], "data_offsets": [0, 4]}}
+    ).encode()
     with pytest.raises(ArtifactError, match="offsets"):
         parse_safetensors_header(header, 8 + len(header) + 4)
 
@@ -240,15 +256,23 @@ def test_range_not_honored_never_reads_weight_body():
     response = Response(b"weight payload must remain unread", 200, {})
     client = MetadataClient(Session(response))
     with pytest.raises(ArtifactError, match="body was not read"):
-        client.range("https://huggingface.co/example/model/resolve/main/model.safetensors", 0, 7)
+        client.range(
+            "https://huggingface.co/example/model/resolve/main/model.safetensors", 0, 7
+        )
     assert response.raw.tell() == 0
 
 
 def test_excessive_header_is_rejected_after_prefix_only():
-    response = Response(struct.pack("<Q", 100 * 1024 * 1024), 206, {"Content-Range": "bytes 0-7/200000000"})
+    response = Response(
+        struct.pack("<Q", 100 * 1024 * 1024),
+        206,
+        {"Content-Range": "bytes 0-7/200000000"},
+    )
     client = MetadataClient(Session(response))
     with pytest.raises(ArtifactError, match="excessive"):
-        client.safetensors("https://huggingface.co/example/model/resolve/main/model.safetensors")
+        client.safetensors(
+            "https://huggingface.co/example/model/resolve/main/model.safetensors"
+        )
     assert response.raw.tell() == 8
 
 
@@ -262,7 +286,11 @@ def test_existing_gpt2_report_roundtrip_and_unknown_shapes_are_preserved(tiny_mo
     ir = reconstruct("example/model", client=FixtureClient(checkpoint_for(tiny_model)))
     restored = ModelIR.from_json(ir.to_json())
     assert restored.to_dict() == ir.to_dict()
-    assert all(edge.tensor is None for graph in restored.root_graph.walk() for edge in graph.edges)
+    assert all(
+        edge.tensor is None
+        for graph in restored.root_graph.walk()
+        for edge in graph.edges
+    )
     assert "dependency" in mermaid(restored.root_graph)
 
 

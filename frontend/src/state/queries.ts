@@ -11,11 +11,7 @@ export function useService() {
     health,
     service,
     available:
-      service?.status === "ok" &&
-      service.checks.database &&
-      service.checks.storage &&
-      service.checks.worker &&
-      service.analysis_available,
+      service?.checks.database === true && service.checks.storage === true,
   };
 }
 export function useRecent() {

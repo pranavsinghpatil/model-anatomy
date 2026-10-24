@@ -28,11 +28,14 @@ the repository root. The script starts hidden local processes, preserves the
 existing `.local/app-v1` database and reports, and applies bounded local limits:
 100 jobs per visitor/hour, 500 jobs globally/day, 100 AI questions per
 visitor/hour, and 500 AI questions globally/day. Parameters may set each limit
-from 1 to 1,000. It refuses to attach to listeners already using ports 8001/5173 or a
+from 1 to 1,000. It refuses to attach to listeners already using ports 8000/5173 or a
 running worker lease, because those processes cannot receive new settings. Existing
 quota records are preserved and continue to count until their normal windows
 expire. The regular settings defaults remain 2/20 jobs and 10/100 AI questions.
 Launcher logs are written to `.local/app-v1/local-testing/`.
+The API defaults to port 8000; `-ApiPort` overrides it and the frontend proxy
+target together. When starting Vite separately, set
+`API_PROXY_TARGET=http://127.0.0.1:8000` in that frontend process's environment.
 
 ## Expected Facts
 
@@ -61,8 +64,8 @@ Other models can correctly return Partial or Unsupported with an explanation.
 
 ## Service and Remaining Work
 
-[API docs](http://127.0.0.1:8001/docs) expose real job, graph, component, export and
-question operations. [Health](http://127.0.0.1:8001/health) checks database, storage
+[API docs](http://127.0.0.1:8000/docs) expose real job, graph, component, export and
+question operations. [Health](http://127.0.0.1:8000/health) checks database, storage
 and worker; all three must be true to accept inspections. `ai_available: false`
 is expected without Nebius credentials. It must not disable graph inspection.
 
@@ -70,6 +73,13 @@ Start commands are in the [README](../README.md). API and worker must use the
 same data directory. The currently launched local workspace uses `.local/app-v1`;
 the documented default for a fresh checkout is `.local/model-anatomy`.
 Neither directory or its visitor data belongs in Git.
+
+If a dependency is unavailable during API startup, requests and health probes
+retry initialization at most once every five seconds. Once the dependencies and
+worker recover, inspection becomes available without restarting the API. The
+worker also defers transient retention-storage failures with bounded retry
+backoff, while continuing to process jobs; unavailable report storage can still
+prevent an individual job from finishing. Configuration errors remain explicit.
 
 Hosted release still requires cloud account/credit setup, Supabase PostgreSQL
 and private storage, real Nebius Nemotron inference, Linux container checks,

@@ -10,7 +10,7 @@
   max-width: min(100%, 680px);
   color: var(--muted);
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: 14px;
 }
 .progress-model span {
   overflow-wrap: anywhere;
@@ -34,7 +34,7 @@
   gap: 8px;
   min-width: 0;
   padding: 20px 12px;
-  font-size: 11px;
+  font-size: 13px;
   color: var(--muted);
   border-right: 1px solid var(--border);
 }
@@ -46,26 +46,11 @@
   background: color-mix(in srgb, var(--accent) 7%, var(--surface));
 }
 .inspection-steps small {
-  font-size: 9px;
+  font-size: 12px;
 }
 .workspace-shell .primary-views a[aria-disabled="true"] {
   opacity: 0.5;
   cursor: default;
-}
-.inspector-definition {
-  border-left: 2px solid var(--border);
-  margin: 12px 0;
-  padding-left: 12px;
-}
-.definition-label {
-  color: var(--muted);
-  font-size: 10px;
-  font-weight: 550;
-}
-.inspector-definition .inspector-purpose {
-  font-size: 12px;
-  line-height: 1.65;
-  margin-top: 4px;
 }
 @media (max-width: 767px) {
   .inspection-steps {

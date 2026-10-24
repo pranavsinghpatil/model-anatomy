@@ -15,7 +15,9 @@ from model_anatomy.service.storage import LocalStorage
 @pytest.fixture
 def service(tmp_path):
     now = [10000.0]
-    service = JobService(Settings(data_dir=tmp_path, guest_jobs_per_hour=20), clock=lambda: now[0])
+    service = JobService(
+        Settings(data_dir=tmp_path, guest_jobs_per_hour=20), clock=lambda: now[0]
+    )
     service.initialize()
     service.acquire_worker("worker-a")
     service.test_now = now
@@ -28,13 +30,43 @@ def visitor(service):
 
 
 def document():
-    return json.loads((Path(__file__).resolve().parents[2] / "output/gpt2/model.json").read_text())
+    return json.loads(
+        (Path(__file__).resolve().parents[2] / "output/gpt2/model.json").read_text()
+    )
+
+
+class MemoryStorage:
+    def __init__(self):
+        self.objects = {}
+        self.get_count = 0
+
+    def put(self, data):
+        import hashlib
+
+        digest = hashlib.sha256(data).hexdigest()
+        self.objects[digest] = data
+        return digest
+
+    def get(self, digest):
+        self.get_count += 1
+        return self.objects[digest]
+
+    def delete(self, digest):
+        self.objects.pop(digest, None)
+
+    def check(self):
+        pass
 
 
 def finish(service, job_id):
     data = document()
     service.resolved(job_id, "worker-a", data["model_id"], data["metadata"]["revision"])
-    key = cache_key(data["model_id"], data["metadata"]["revision"], service.settings.engine_version, "1.1")
+    key = cache_key(
+        data["model_id"],
+        data["metadata"]["revision"],
+        service.settings.engine_version,
+        "1.1",
+    )
     service.finish(job_id, "worker-a", json.dumps(data).encode(), key, cached=False)
     return key
 
@@ -57,12 +89,6 @@ def test_guests_are_persistent_unforgeable_and_isolated(service):
     reopened.db.engine.dispose()
 
 
-
-
-
-
-
-
 def test_global_worker_lease_and_claim_serialize_independent_connections(service):
     owner = visitor(service)
     jobs = [service.create(owner, "gpt2")["id"] for _ in range(2)]
@@ -73,7 +99,9 @@ def test_global_worker_lease_and_claim_serialize_independent_connections(service
         claimed = list(pool.map(lambda s: s.claim("worker-a"), [service, other]))
     assert sorted(x for x in claimed if x) == jobs[:1]
     assert service.claim("worker-a") is None
-    service.fail(jobs[0], "worker-a", "unsupported", "unsupported", status="unsupported")
+    service.fail(
+        jobs[0], "worker-a", "unsupported", "unsupported", status="unsupported"
+    )
     assert other.claim("worker-a") == jobs[1]
     other.db.engine.dispose()
 
@@ -161,6 +189,10 @@ def test_cancel_queued_running_and_completed(service):
 
 
 def test_expiry_is_410_for_owner_404_for_other_and_retention_is_seven_days(service):
+    from model_anatomy.service.database import ModelReport
+
+    memory = MemoryStorage()
+    service.storage = memory
     guest = visitor(service)
     job_id = service.create(guest, "gpt2")["id"]
     service.claim("worker-a")
@@ -176,14 +208,14 @@ def test_expiry_is_410_for_owner_404_for_other_and_retention_is_seven_days(servi
     assert service.recent(guest) == []
     service.cleanup()
     assert service.cached_result(key) is not None
-    assert service.storage.path(digest).is_file()
+    assert digest in memory.objects
     service.test_now[0] += 604800
     service.cleanup()
     assert service.cached_result(key) is None
     assert not service.storage.path(digest).exists()
     with service.db.read() as session:
         assert list(session.scalars(select(Blob))) == []
-        assert list(session.scalars(select(CacheEntry))) == []
+        assert list(session.scalars(select(ModelReport))) == []
 
 
 def test_revision_and_artifact_and_engine_and_schema_are_cache_identity():
@@ -247,7 +279,8 @@ def test_waiting_capacity_excludes_running_job(service):
 def test_global_daily_quota_does_not_reset_with_guest_hour(tmp_path):
     now = [10 * 86400 + 100]
     service = JobService(
-        Settings(data_dir=tmp_path, global_jobs_per_day=2, guest_jobs_per_hour=1), clock=lambda: now[0]
+        Settings(data_dir=tmp_path, global_jobs_per_day=2, guest_jobs_per_hour=1),
+        clock=lambda: now[0],
     )
     service.initialize()
     service.acquire_worker("w")
@@ -291,7 +324,9 @@ def test_retention_deletes_jobs_and_guests_and_bounded_tombstones(service):
         assert session.get(Guest, guest) is None
 
 
-def test_storage_io_does_not_hold_database_mutex_and_cancellation_fences_result(service):
+def test_storage_io_does_not_hold_database_mutex_and_cancellation_fences_result(
+    service,
+):
     guest = visitor(service)
     job_id = service.create(guest, "gpt2")["id"]
     service.claim("worker-a")
@@ -299,13 +334,18 @@ def test_storage_io_does_not_hold_database_mutex_and_cancellation_fences_result(
 
     def cancel_during_upload(data):
         with ThreadPoolExecutor(max_workers=1) as pool:
-            assert pool.submit(service.cancel, job_id, guest).result(timeout=2)["stage"] == "cancelling"
+            assert (
+                pool.submit(service.cancel, job_id, guest).result(timeout=2)["stage"]
+                == "cancelling"
+            )
         return original_put(data)
 
     service.storage.put = cancel_during_upload
     finish(service, job_id)
     assert service.get(job_id, guest).status == "cancelled"
-    service.test_now[0] += service.settings.job_timeout_seconds + service.settings.lease_seconds + 1
+    service.test_now[0] += (
+        service.settings.job_timeout_seconds + service.settings.lease_seconds + 1
+    )
     original_delete = service.storage.delete
 
     def heartbeat_during_delete(digest):

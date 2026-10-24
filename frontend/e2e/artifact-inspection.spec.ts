@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import type { ArtifactInspectionResponse } from "../src/api/contract";
 import { analysisFor, mockService } from "./service";
-import { openAnalysis } from "./helpers";
+import { hasNoHorizontalOverflow, openAnalysis } from "./helpers";
 
 const revision = "0123456789abcdef0123456789abcdef01234567";
 const longTensorName =
@@ -94,6 +94,72 @@ test("GGUF selection submits the exact pinned file rather than guessing a varian
   expect(requests.some((request) => request.path.includes("/graphs/"))).toBe(
     false,
   );
+});
+
+test("metadata budget result offers pinned shard inspection with explicit scope", async ({
+  page: browser,
+}) => {
+  const shard = "model-00001-of-00048.safetensors";
+  const job = {
+    ...analysisFor(),
+    model_id: "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+    revision,
+    status: "inspected" as const,
+    stage: "inspected",
+    root_graph_id: null,
+    architecture: null,
+    parameter_count: null,
+  };
+  const requests = await mockService(browser, {
+    job,
+    artifactPages: [
+      {
+        ...page(0, ["model.safetensors.index.json", shard], []),
+        tensor_count: 0,
+        reason_code: "metadata_budget_exceeded",
+        declared_checkpoint_index: {
+          url: `https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash-1017/resolve/${revision}/model.safetensors.index.json`,
+          canonical_sha256: "a".repeat(64),
+          declared_tensor_names: 96085,
+          declared_shards: 48,
+          tensor_record_limit: 20000,
+        },
+      },
+    ],
+  });
+  await openAnalysis(browser, job.id, "artifacts");
+  const inspection = browser.getByTestId("artifact-inspection");
+  await expect(
+    inspection.getByLabel("Checkpoint index declaration"),
+  ).toContainText("96,085 tensor names across 48 shard files");
+  await expect(inspection.getByTestId("artifact-tensor-count")).toHaveAttribute(
+    "title",
+    "0",
+  );
+  await expect(
+    inspection.getByTestId("checkpoint-selection-callout"),
+  ).toContainText("its tensors are not a whole-model result");
+  await expect(
+    inspection.getByRole("button", {
+      name: "Inspect model.safetensors.index.json (Safetensors index)",
+      exact: true,
+    }),
+  ).toHaveCount(0);
+  await inspection
+    .getByRole("button", {
+      name: `Inspect ${shard} (Safetensors checkpoint)`,
+      exact: true,
+    })
+    .click();
+  await expect
+    .poll(() =>
+      requests
+        .filter((request) => request.method === "POST")
+        .map((request) => request.body),
+    )
+    .toContainEqual({
+      model: `https://huggingface.co/${job.model_id}/blob/${revision}/${shard}`,
+    });
 });
 
 test("declared repository profile and nested Safetensors index remain selectable", async ({
@@ -357,14 +423,7 @@ test("inspected artifacts stay graph-free and paginate verified metadata", async
       await expect(tensorLink).toHaveAttribute("href", longArtifactUrl);
       await expect
         .poll(
-          () =>
-            browser.evaluate(
-              () =>
-                Math.max(
-                  document.body.scrollWidth,
-                  document.documentElement.scrollWidth,
-                ) <= innerWidth,
-            ),
+          () => browser.evaluate(hasNoHorizontalOverflow),
           `${width}px ${theme} long tensor`,
         )
         .toBe(true);

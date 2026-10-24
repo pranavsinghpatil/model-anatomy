@@ -1,0 +1,4818 @@
+{
+  "schema_version": 1,
+  "method": "Integrity-verified saved report diagnostics; no reconstruction, inference, or new support claim.",
+  "source_order": [
+    {
+      "records_sha256": "896d36cafc4a3a862d595d370022f332c2f4d06b80445595b6da00211340281a",
+      "record_count": 500,
+      "unique_model_count": 250
+    },
+    {
+      "records_sha256": "ad723b47af512a8bf25f029fe9cbe190dff8a0537f0f9bdfa2a20deb199273f0",
+      "record_count": 22,
+      "unique_model_count": 22
+    },
+    {
+      "records_sha256": "36e55c6dad39260449a5b8f2878112a15c5c3b6a93c2ddc25b2aa26ddf487024",
+      "record_count": 111,
+      "unique_model_count": 111
+    }
+  ],
+  "case_count": 250,
+  "verified_report_count": 245,
+  "status_counts": {
+    "completed": 7,
+    "partial": 96,
+    "http_access": 4,
+    "inspected": 142,
+    "artifact_error": 1
+  },
+  "report_engine_counts": {
+    "2026.10.21.1": 106,
+    "2026.10.20.2": 138,
+    "2026.10.20.3": 1
+  },
+  "partial_basis_counts": {
+    "coverage_or_ownership_gap": 96
+  },
+  "overlapping_partial_warning_model_counts": {
+    "unresolved_branch": 67,
+    "opaque_call": 62,
+    "unresolved_loop": 10,
+    "unmodeled_exception_path": 0,
+    "unowned_checkpoint_tensor": 11,
+    "unproven_tensor_transform": 80,
+    "other": 8
+  },
+  "overlapping_partial_operation_warning_model_counts": {
+    "numerical_stability": 7,
+    "attention_or_mask_dispatch": 9,
+    "tuple_split_or_chunk": 10,
+    "padding_windows_or_resampling": 7,
+    "reduction_or_normalization": 15,
+    "position_ids": 15
+  },
+  "cases": [
+    {
+      "model_id": "HuggingFaceTB/SmolLM2-135M",
+      "revision": "93efa2f097d58c2a74874c7e644dbc9b0cee75a2",
+      "status": "completed",
+      "engine_version": "2026.10.21.1",
+      "report_digest": "f9121b5b1c4cf88c13bea117c3c4922a92b7c0d8a21952dedf46378355d1c61a",
+      "warning_count": 0,
+      "completion_basis": "recorded_static_gates_passed",
+      "coverage": {
+        "semantic_coverage": 1.0,
+        "module_semantic_coverage": 1.0,
+        "checkpoint_parameter_coverage": 1.0,
+        "tensor_shape_coverage": 1.0
+      },
+      "coverage_gaps": [],
+      "unknown_nodes": 0,
+      "unmapped_checkpoint_tensor_count": 0,
+      "warning_counts": {
+        "unresolved_branch": 0,
+        "opaque_call": 0,
+        "unresolved_loop": 0,
+        "unmodeled_exception_path": 0,
+        "unowned_checkpoint_tensor": 0,
+        "unproven_tensor_transform": 0,
+        "other": 0
+      },
+      "operation_warning_cohorts": []
+    },
+    {
+      "model_id": "HuggingFaceTB/SmolLM2-360M-Instruct",
+      "revision": "a10cc1512eabd3dde888204e902eca88bddb4951",
+      "status": "completed",
+      "engine_version": "2026.10.21.1",
+      "report_digest": "45f1cffae52e0fb7a6d8afb129a71b26fbab7148f8753539925a15fc6d14d2d6",
+      "warning_count": 0,
+      "completion_basis": "recorded_static_gates_passed",
+      "coverage": {
+        "semantic_coverage": 1.0,
+        "module_semantic_coverage": 1.0,
+        "checkpoint_parameter_coverage": 1.0,
+        "tensor_shape_coverage": 1.0
+      },
+      "coverage_gaps": [],
+      "unknown_nodes": 0,
+      "unmapped_checkpoint_tensor_count": 0,
+      "warning_counts": {
+        "unresolved_branch": 0,
+        "opaque_call": 0,
+        "unresolved_loop": 0,
+        "unmodeled_exception_path": 0,
+        "unowned_checkpoint_tensor": 0,
+        "unproven_tensor_transform": 0,
+        "other": 0
+      },
+      "operation_warning_cohorts": []
+    },
+    {
+      "model_id": "Qwen/Qwen3-0.6B",
+      "revision": "c1899de289a04d12100db370d81485cdf75e47ca",
+      "status": "partial",
+      "engine_version": "2026.10.21.1",
+      "report_digest": "cbf657a8968ee2e0981306a3e77cc67e99cb5d78e106103581d193a8541e5f69",
+      "warning_count": 1,
+      "completion_basis": "coverage_or_ownership_gap",
+      "coverage": {
+        "semantic_coverage": 1.0,
+        "module_semantic_coverage": 1.0,
+        "checkpoint_parameter_coverage": 1.0,
+        "tensor_shape_coverage": 0.864406779661017
+      },
+      "coverage_gaps": [
+        "tensor_shape_coverage"
+      ],
+      "unknown_nodes": 0,
+      "unmapped_checkpoint_tensor_count": 0,
+      "warning_counts": {
+        "unresolved_branch": 0,
+        "opaque_call": 0,
+        "unresolved_loop": 0,
+        "unmodeled_exception_path": 0,
+        "unowned_checkpoint_tensor": 0,
+        "unproven_tensor_transform": 0,
+        "other": 1
+      },
+      "operation_warning_cohorts": []
+    },
+    {
+      "model_id": "Qwen/Qwen2.5-0.5B-Instruct",
+      "revision": "7ae557604adf67be50417f59c2c2f167def9a775",
+      "status": "partial",
+      "engine_version": "2026.10.21.1",
+      "report_digest": "a6f82e106520843f21246266d974947116a107478755e85864b4bfbbe0577b41",
+      "warning_count": 0,
+      "completion_basis": "coverage_or_ownership_gap",
+      "coverage": {
+        "semantic_coverage": 1.0,
+        "module_semantic_coverage": 1.0,
+        "checkpoint_parameter_coverage": 1.0,
+        "tensor_shape_coverage": 0.864406779661017
+      },
+      "coverage_gaps": [
+        "tensor_shape_coverage"
+      ],
+      "unknown_nodes": 0,
+      "unmapped_checkpoint_tensor_count": 0,
+      "warning_counts": {
+        "unresolved_branch": 0,
+        "opaque_call": 0,
+        "unresolved_loop": 0,
+        "unmodeled_exception_path": 0,
+        "unowned_checkpoint_tensor": 0,
+        "unproven_tensor_transform": 0,
+        "other": 0
+      },
+      "operation_warning_cohorts": []
+    },
+    {
+      "model_id": "openai-community/gpt2",
+      "revision": "607a30d783dfa663caf39e06633721c8d4cfcd7e",
+      "status": "partial",
+      "engine_version": "2026.10.21.1",
+      "report_digest": "9a52c9ea3383b08998b2831d992fe22b631b73190cad99a1b6539929a09f35d4",
+      "warning_count": 1,
+      "completion_basis": "coverage_or_ownership_gap",
+      "coverage": {
+        "semantic_coverage": 1.0,
+        "module_semantic_coverage": 1.0,
+        "checkpoint_parameter_coverage": 1.0,
+        "tensor_shape_coverage": 0.8125
+      },
+      "coverage_gaps": [
+        "tensor_shape_coverage"
+      ],
+      "unknown_nodes": 0,
+      "unmapped_checkpoint_tensor_count": 0,
+      "warning_counts": {
+        "unresolved_branch": 0,
+        "opaque_call": 0,
+        "unresolved_loop": 0,
+        "unmodeled_exception_path": 0,
+        "unowned_checkpoint_tensor": 0,
+        "unproven_tensor_transform": 1,
+        "other": 0
+      },
+      "operation_warning_cohorts": []
+    },
+    {
+      "model_id": "EleutherAI/pythia-70m",
+      "revision": "a39f36b100fe8a5377810d56c3f4789b9c53ac42",
+      "status": "partial",
+      "engine_version": "2026.10.21.1",
+      "report_digest": "2a7a354407bef8c49d7898dde20a463d0fdf790d69877716d378284ef388a15a",
+      "warning_count": 8,
+      "completion_basis": "coverage_or_ownership_gap",
+      "coverage": {
+        "semantic_coverage": 0.88,
+        "module_semantic_coverage": 0.775,
+        "checkpoint_parameter_coverage": 1.0,
+        "tensor_shape_coverage": 0.6052631578947368
+      },
+      "coverage_gaps": [
+        "semantic_coverage",
+        "module_semantic_coverage",
+        "tensor_shape_coverage"
+      ],
+      "unknown_nodes": 3,
+      "unmapped_checkpoint_tensor_count": 6,
+      "warning_counts": {
+        "unresolved_branch": 1,
+        "opaque_call": 3,
+        "unresolved_loop": 0,
+        "unmodeled_exception_path": 0,
+        "unowned_checkpoint_tensor": 1,
+        "unproven_tensor_transform": 3,
+        "other": 0
+      },
+      "operation_warning_cohorts": [
+        "attention_or_mask_dispatch",
+        "tuple_split_or_chunk"
+      ]
+    },
+    {
+      "model_id": "EleutherAI/pythia-160m",
+      "revision": "50f5173d932e8e61f858120bcb800b97af589f46",
+      "status": "partial",
+      "engine_version": "2026.10.21.1",
+      "report_digest": "92b537332c44dcbf0fce9a7ac7551da833be1fc0b46c2ce75211814c6fc495ab",
+      "warning_count": 8,
+      "completion_basis": "coverage_or_ownership_gap",
+      "coverage": {
+        "semantic_coverage": 0.88,
+        "module_semantic_coverage": 0.7631578947368421,
+        "checkpoint_parameter_coverage": 1.0,
+        "tensor_shape_coverage": 0.6052631578947368
+      },
+      "coverage_gaps": [
+        "semantic_coverage",
+        "module_semantic_coverage",
+        "tensor_shape_coverage"
+      ],
+      "unknown_nodes": 3,
+      "unmapped_checkpoint_tensor_count": 12,
+      "warning_counts": {
+        "unresolved_branch": 1,
+        "opaque_call": 3,
+        "unresolved_loop": 0,
+        "unmodeled_exception_path": 0,
+        "unowned_checkpoint_tensor": 1,
+        "unproven_tensor_transform": 3,
+        "other": 0
+      },
+      "operation_warning_cohorts": [
+        "attention_or_mask_dispatch",
+        "tuple_split_or_chunk"
+      ]
+    },
+    {
+      "model_id": "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
+      "revision": "fe8a4ea1ffedaf415f4da2f062534de366a451e6",
+      "status": "completed",
+      "engine_version": "2026.10.21.1",
+      "report_digest": "b47b8e9a2ce9e7fbd839981c15b9efabc090b0e2c521dd6f8b2b4bc3480e83c3",
+      "warning_count": 0,
+      "completion_basis": "recorded_static_gates_passed",
+      "coverage": {
+        "semantic_coverage": 1.0,
+        "module_semantic_coverage": 1.0,
+        "checkpoint_parameter_coverage": 1.0,
+        "tensor_shape_coverage": 1.0
+      },
+      "coverage_gaps": [],
+      "unknown_nodes": 0,
+      "unmapped_checkpoint_tensor_count": 0,
+      "warning_counts": {
+        "unresolved_branch": 0,
+        "opaque_call": 0,
+        "unresolved_loop": 0,
+        "unmodeled_exception_path": 0,
+        "unowned_checkpoint_tensor": 0,
+        "unproven_tensor_transform": 0,
+        "other": 0
+      },
+      "operation_warning_cohorts": []
+    },
+    {
+      "model_id": "microsoft/phi-2",
+      "revision": "810d367871c1d460086d9f82db8696f2e0a0fcd0",
+      "status": "partial",
+      "engine_version": "2026.10.21.1",
+      "report_digest": "f7d422f0135d3971a278b65197d6e162682cdbf1581abb3a0244e42287e07044",
+      "warning_count": 0,
+      "completion_basis": "coverage_or_ownership_gap",
+      "coverage": {
+        "semantic_coverage": 1.0,
+        "module_semantic_coverage": 1.0,
+        "checkpoint_parameter_coverage": 1.0,
+        "tensor_shape_coverage": 0.875
+      },
+      "coverage_gaps": [
+        "tensor_shape_coverage"
+      ],
+      "unknown_nodes": 0,
+      "unmapped_checkpoint_tensor_count": 0,
+      "warning_counts": {
+        "unresolved_branch": 0,
+        "opaque_call": 0,
+        "unresolved_loop": 0,
+        "unmodeled_exception_path": 0,
+        "unowned_checkpoint_tensor": 0,
+        "unproven_tensor_transform": 0,
+        "other": 0
+      },
+      "operation_warning_cohorts": []
+    },
+    {
+      "model_id": "microsoft/Phi-3-mini-4k-instruct",
+      "revision": "f39ac1d28e925b323eae81227eaba4464caced4e",
+      "status": "partial",
+      "engine_version": "2026.10.21.1",
+      "report_digest": "7ef0fd29d9baaf304fb23319b7b51c374d29e780a038a5fe7edcaebdddac6e5c",
+      "warning_count": 8,
+      "completion_basis": "coverage_or_ownership_gap",
+      "coverage": {
+        "semantic_coverage": 0.9,
+        "module_semantic_coverage": 0.7544757033248082,
+        "checkpoint_parameter_coverage": 1.0,
+        "tensor_shape_coverage": 0.5490196078431373
+      },
+      "coverage_gaps": [
+        "semantic_coverage",
+        "module_semantic_coverage",
+        "tensor_shape_coverage"
+      ],
+      "unknown_nodes": 3,
+      "unmapped_checkpoint_tensor_count": 0,
+      "warning_counts": {
+        "unresolved_branch": 1,
+        "opaque_call": 3,
+        "unresolved_loop": 0,
+        "unmodeled_exception_path": 0,
+        "unowned_checkpoint_tensor": 0,
+        "unproven_tensor_transform": 3,
+        "other": 1
+      },
+      "operation_warning_cohorts": [
+        "attention_or_mask_dispatch"
+      ]
+    },
+    {
+      "model_id": "Qwen/Qwen2.5-Coder-0.5B-Instruct",
+      "revision": "ea3f2471cf1b1f0db85067f1ef93848e38e88c25",
+      "status": "partial",
+      "engine_version": "2026.10.21.1",
+      "report_digest": "39de10598848ebc9dda0dd8763dc09a7ed60c83f6b916828e53662074efa86e8",
+      "warning_count": 0,
+      "completion_basis": "coverage_or_ownership_gap",
+      "coverage": {
+        "semantic_coverage": 1.0,
+        "module_semantic_coverage": 1.0,
+        "checkpoint_parameter_coverage": 1.0,
+        "tensor_shape_coverage": 0.864406779661017
+      },
+      "coverage_gaps": [
+        "tensor_shape_coverage"
+      ],
+      "unknown_nodes": 0,
+      "unmapped_checkpoint_tensor_count": 0,
+      "warning_counts": {
+        "unresolved_branch": 0,
+        "opaque_call": 0,
+        "unresolved_loop": 0,
+        "unmodeled_exception_path": 0,
+        "unowned_checkpoint_tensor": 0,
+        "unproven_tensor_transform": 0,
+        "other": 0
+      },
+      "operation_warning_cohorts": []
+    },
+    {
+      "model_id": "bigcode/starcoder2-3b",
+      "revision": "733247c55e3f73af49ce8e9c7949bf14af205928",
+      "status": "partial",
+      "engine_version": "2026.10.21.1",
+      "report_digest": "b986d8504b7b08f5ac69b7213b9c5e55c4386115792ffc71cd8d7c829268481d",
+      "warning_count": 1,
+      "completion_basis": "coverage_or_ownership_gap",
+      "coverage": {
+        "semantic_coverage": 1.0,
+        "module_semantic_coverage": 1.0,
+        "checkpoint_parameter_coverage": 1.0,
+        "tensor_shape_coverage": 0.8688524590163934
+      },
+      "coverage_gaps": [
+        "tensor_shape_coverage"
+      ],
+      "unknown_nodes": 0,
+      "unmapped_checkpoint_tensor_count": 0,
+      "warning_counts": {
+        "unresolved_branch": 0,
+        "opaque_call": 1,
+        "unresolved_loop": 0,
+        "unmodeled_exception_path": 0,
+        "unowned_checkpoint_tensor": 0,
+        "unproven_tensor_transform": 0,
+        "other": 0
+      },
+      "operation_warning_cohorts": [
+        "attention_or_mask_dispatch"
+      ]
+    },
+    {
+      "model_id": "deepseek-ai/deepseek-coder-1.3b-instruct",
+      "revision": "e063262dac8366fc1f28a4da0ff3c50ea66259ca",
+      "status": "completed",
+      "engine_version": "2026.10.21.1",
+      "report_digest": "42d336430438cb921c5d74f43c736829dbcea054716254aac994084f87bb6fc2",
+      "warning_count": 0,
+      "completion_basis": "recorded_static_gates_passed",
+      "coverage": {
+        "semantic_coverage": 1.0,
+        "module_semantic_coverage": 1.0,
+        "checkpoint_parameter_coverage": 1.0,
+        "tensor_shape_coverage": 1.0
+      },
+      "coverage_gaps": [],
+      "unknown_nodes": 0,
+      "unmapped_checkpoint_tensor_count": 0,
+      "warning_counts": {
+        "unresolved_branch": 0,
+        "opaque_call": 0,
+        "unresolved_loop": 0,
+        "unmodeled_exception_path": 0,
+        "unowned_checkpoint_tensor": 0,
+        "unproven_tensor_transform": 0,
+        "other": 0
+      },
+      "operation_warning_cohorts": []
+    },
+    {
+      "model_id": "HuggingFaceTB/SmolLM2-1.7B-Instruct",
+      "revision": "31b70e2e869a7173562077fd711b654946d38674",
+      "status": "completed",
+      "engine_version": "2026.10.21.1",
+      "report_digest": "ab36bacc12dbb1214de8a13a9d546b7212b0e580bf44054ae1b993b6b9a0ce09",
+      "warning_count": 0,
+      "completion_basis": "recorded_static_gates_passed",
+      "coverage": {
+        "semantic_coverage": 1.0,
+        "module_semantic_coverage": 1.0,
+        "checkpoint_parameter_coverage": 1.0,
+        "tensor_shape_coverage": 1.0
+      },
+      "coverage_gaps": [],
+      "unknown_nodes": 0,
+      "unmapped_checkpoint_tensor_count": 0,
+      "warning_counts": {
+        "unresolved_branch": 0,
+        "opaque_call": 0,
+        "unresolved_loop": 0,
+        "unmodeled_exception_path": 0,
+        "unowned_checkpoint_tensor": 0,
+        "unproven_tensor_transform": 0,
+        "other": 0
+      },
+      "operation_warning_cohorts": []
+    },
+    {
+      "model_id": "mistralai/Mistral-7B-Instruct-v0.3",
+      "revision": "c170c708c41dac9275d15a8fff4eca08d52bab71",
+      "status": "partial",
+      "engine_version": "2026.10.21.1",
+      "report_digest": "4d0db99683dcf98b5c137af35ccaa9028fd38a39298f3048725033fb228c4415",
+      "warning_count": 1,
+      "completion_basis": "coverage_or_ownership_gap",
+      "coverage": {
+        "semantic_coverage": 1.0,
+        "module_semantic_coverage": 1.0,
+        "checkpoint_parameter_coverage": 1.0,
+        "tensor_shape_coverage": 0.8709677419354839
+      },
+      "coverage_gaps": [
+        "tensor_shape_coverage"
+      ],
+      "unknown_nodes": 0,
+      "unmapped_checkpoint_tensor_count": 0,
+      "warning_counts": {
+        "unresolved_branch": 0,
+        "opaque_call": 1,
+        "unresolved_loop": 0,
+        "unmodeled_exception_path": 0,
+        "unowned_checkpoint_tensor": 0,
+        "unproven_tensor_transform": 0,
+        "other": 0
+      },
+      "operation_warning_cohorts": [
+        "attention_or_mask_dispatch"
+      ]
+    },
+    {
+      "model_id": "meta-llama/Llama-3.2-1B-Instruct",
+      "revision": "9213176726f574b556790deb65791e0c5aa438b6",
+      "status": "http_access",
+      "completion_basis": "no_validated_report",
+      "stage": "reconstruction",
+      "cause_type": "HTTPError"
+    },
+    {
+      "model_id": "HuggingFaceH4/zephyr-7b-beta",
+      "revision": "892b3d7a7b1cf10c7a701c60881cd93df615734c",
+      "status": "partial",
+      "engine_version": "2026.10.21.1",
+      "report_digest": "aef95bb44106931126feb0bdd9dc665bc305461edf73d524f0d2711db11a7f90",
+      "warning_count": 1,
+      "completion_basis": "coverage_or_ownership_gap",
+      "coverage": {
+        "semantic_coverage": 1.0,
+        "module_semantic_coverage": 1.0,
+        "checkpoint_parameter_coverage": 1.0,
+        "tensor_shape_coverage": 0.8709677419354839
+      },
+      "coverage_gaps": [
+        "tensor_shape_coverage"
+      ],
+      "unknown_nodes": 0,
+      "unmapped_checkpoint_tensor_count": 0,
+      "warning_counts": {
+        "unresolved_branch": 0,
+        "opaque_call": 1,
+        "unresolved_loop": 0,
+        "unmodeled_exception_path": 0,
+        "unowned_checkpoint_tensor": 0,
+        "unproven_tensor_transform": 0,
+        "other": 0
+      },
+      "operation_warning_cohorts": [
+        "attention_or_mask_dispatch"
+      ]
+    },
+    {
+      "model_id": "OpenAssistant/reward-model-deberta-v3-large",
+      "revision": "1f543c01a36316f080ebda150210b64ec14c38f4",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "c3867d993f703d1a3f4e4c1a5172367bd5a4fc10612a9e7bd41019eae816f745",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "safetensors_unavailable"
+    },
+    {
+      "model_id": "RLHFlow/ArmoRM-Llama3-8B-v0.1",
+      "revision": "eb2676d20da2f2d41082289d23c59b9f7427f955",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "c63689e5d95003a765a6c462fe6934a9a64e70bbf47f536680f1e8d36d58ed90",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "native_architecture_unavailable"
+    },
+    {
+      "model_id": "OpenAssistant/oasst-sft-1-pythia-12b",
+      "revision": "293df535fe7711a5726987fc2f17dfc87de452a1",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "a79931f168a5cfa43fbbb3bb8cbde7219c897e7ef85b19f270f8be397920d486",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "safetensors_unavailable"
+    },
+    {
+      "model_id": "sentence-transformers/all-MiniLM-L6-v2",
+      "revision": "1110a243fdf4706b3f48f1d95db1a4f5529b4d41",
+      "status": "partial",
+      "engine_version": "2026.10.21.1",
+      "report_digest": "392be79e6a21f16086769af6b20ae4a5c8200316bf3eb7eb41d3eb66a1d5fc4e",
+      "warning_count": 4,
+      "completion_basis": "coverage_or_ownership_gap",
+      "coverage": {
+        "semantic_coverage": 0.9803921568627451,
+        "module_semantic_coverage": 0.9916666666666667,
+        "checkpoint_parameter_coverage": 1.0,
+        "tensor_shape_coverage": 0.717948717948718
+      },
+      "coverage_gaps": [
+        "semantic_coverage",
+        "module_semantic_coverage",
+        "tensor_shape_coverage"
+      ],
+      "unknown_nodes": 1,
+      "unmapped_checkpoint_tensor_count": 0,
+      "warning_counts": {
+        "unresolved_branch": 1,
+        "opaque_call": 0,
+        "unresolved_loop": 0,
+        "unmodeled_exception_path": 0,
+        "unowned_checkpoint_tensor": 0,
+        "unproven_tensor_transform": 3,
+        "other": 0
+      },
+      "operation_warning_cohorts": []
+    },
+    {
+      "model_id": "BAAI/bge-small-en-v1.5",
+      "revision": "5c38ec7c405ec4b44b94cc5a9bb96e735b38267a",
+      "status": "partial",
+      "engine_version": "2026.10.21.1",
+      "report_digest": "05ca5c18f13361d62222e2376563b14f48b804aeffa97f6e814668395c89abf0",
+      "warning_count": 4,
+      "completion_basis": "coverage_or_ownership_gap",
+      "coverage": {
+        "semantic_coverage": 0.9803921568627451,
+        "module_semantic_coverage": 0.9956140350877193,
+        "checkpoint_parameter_coverage": 1.0,
+        "tensor_shape_coverage": 0.717948717948718
+      },
+      "coverage_gaps": [
+        "semantic_coverage",
+        "module_semantic_coverage",
+        "tensor_shape_coverage"
+      ],
+      "unknown_nodes": 1,
+      "unmapped_checkpoint_tensor_count": 0,
+      "warning_counts": {
+        "unresolved_branch": 1,
+        "opaque_call": 0,
+        "unresolved_loop": 0,
+        "unmodeled_exception_path": 0,
+        "unowned_checkpoint_tensor": 0,
+        "unproven_tensor_transform": 3,
+        "other": 0
+      },
+      "operation_warning_cohorts": []
+    },
+    {
+      "model_id": "intfloat/e5-small-v2",
+      "revision": "ffb93f3bd4047442299a41ebb6fa998a38507c52",
+      "status": "partial",
+      "engine_version": "2026.10.21.1",
+      "report_digest": "6b82f82cec1dd3c9a7758f262d7f03e3a499ba6e39db9f224b0610d374f1d6ce",
+      "warning_count": 4,
+      "completion_basis": "coverage_or_ownership_gap",
+      "coverage": {
+        "semantic_coverage": 0.9803921568627451,
+        "module_semantic_coverage": 0.9956140350877193,
+        "checkpoint_parameter_coverage": 1.0,
+        "tensor_shape_coverage": 0.717948717948718
+      },
+      "coverage_gaps": [
+        "semantic_coverage",
+        "module_semantic_coverage",
+        "tensor_shape_coverage"
+      ],
+      "unknown_nodes": 1,
+      "unmapped_checkpoint_tensor_count": 0,
+      "warning_counts": {
+        "unresolved_branch": 1,
+        "opaque_call": 0,
+        "unresolved_loop": 0,
+        "unmodeled_exception_path": 0,
+        "unowned_checkpoint_tensor": 0,
+        "unproven_tensor_transform": 3,
+        "other": 0
+      },
+      "operation_warning_cohorts": []
+    },
+    {
+      "model_id": "thenlper/gte-small",
+      "revision": "17e1f347d17fe144873b1201da91788898c639cd",
+      "status": "partial",
+      "engine_version": "2026.10.21.1",
+      "report_digest": "c7423442e1d24d5bc5285d91c41a02a301413dad154e2b64173058bdb621d0ad",
+      "warning_count": 4,
+      "completion_basis": "coverage_or_ownership_gap",
+      "coverage": {
+        "semantic_coverage": 0.9803921568627451,
+        "module_semantic_coverage": 0.9956140350877193,
+        "checkpoint_parameter_coverage": 1.0,
+        "tensor_shape_coverage": 0.717948717948718
+      },
+      "coverage_gaps": [
+        "semantic_coverage",
+        "module_semantic_coverage",
+        "tensor_shape_coverage"
+      ],
+      "unknown_nodes": 1,
+      "unmapped_checkpoint_tensor_count": 0,
+      "warning_counts": {
+        "unresolved_branch": 1,
+        "opaque_call": 0,
+        "unresolved_loop": 0,
+        "unmodeled_exception_path": 0,
+        "unowned_checkpoint_tensor": 0,
+        "unproven_tensor_transform": 3,
+        "other": 0
+      },
+      "operation_warning_cohorts": []
+    },
+    {
+      "model_id": "mixedbread-ai/mxbai-embed-xsmall-v1",
+      "revision": "e6ac24e5d6efb8782b59de1647b3ececb4ece94e",
+      "status": "partial",
+      "engine_version": "2026.10.21.1",
+      "report_digest": "14aeb9ade12d1c9a03775be312ae846e7cb88de97b7b5f5452d046416e615be7",
+      "warning_count": 4,
+      "completion_basis": "coverage_or_ownership_gap",
+      "coverage": {
+        "semantic_coverage": 0.9803921568627451,
+        "module_semantic_coverage": 0.9916666666666667,
+        "checkpoint_parameter_coverage": 1.0,
+        "tensor_shape_coverage": 0.717948717948718
+      },
+      "coverage_gaps": [
+        "semantic_coverage",
+        "module_semantic_coverage",
+        "tensor_shape_coverage"
+      ],
+      "unknown_nodes": 1,
+      "unmapped_checkpoint_tensor_count": 0,
+      "warning_counts": {
+        "unresolved_branch": 1,
+        "opaque_call": 0,
+        "unresolved_loop": 0,
+        "unmodeled_exception_path": 0,
+        "unowned_checkpoint_tensor": 0,
+        "unproven_tensor_transform": 3,
+        "other": 0
+      },
+      "operation_warning_cohorts": []
+    },
+    {
+      "model_id": "BAAI/bge-base-en-v1.5",
+      "revision": "a5beb1e3e68b9ab74eb54cfd186867f64f240e1a",
+      "status": "partial",
+      "engine_version": "2026.10.21.1",
+      "report_digest": "e7352520428a519eb9f086d516bb7d5caa4ee5178d1f3fb766f1b8befaa267c5",
+      "warning_count": 4,
+      "completion_basis": "coverage_or_ownership_gap",
+      "coverage": {
+        "semantic_coverage": 0.9803921568627451,
+        "module_semantic_coverage": 0.9956140350877193,
+        "checkpoint_parameter_coverage": 1.0,
+        "tensor_shape_coverage": 0.717948717948718
+      },
+      "coverage_gaps": [
+        "semantic_coverage",
+        "module_semantic_coverage",
+        "tensor_shape_coverage"
+      ],
+      "unknown_nodes": 1,
+      "unmapped_checkpoint_tensor_count": 0,
+      "warning_counts": {
+        "unresolved_branch": 1,
+        "opaque_call": 0,
+        "unresolved_loop": 0,
+        "unmodeled_exception_path": 0,
+        "unowned_checkpoint_tensor": 0,
+        "unproven_tensor_transform": 3,
+        "other": 0
+      },
+      "operation_warning_cohorts": []
+    },
+    {
+      "model_id": "intfloat/e5-base-v2",
+      "revision": "f52bf8ec8c7124536f0efb74aca902b2995e5bcd",
+      "status": "partial",
+      "engine_version": "2026.10.21.1",
+      "report_digest": "a65b3ab32654745185a61478e43fe778e5932a5cf089763aa42283ac06c8ec55",
+      "warning_count": 4,
+      "completion_basis": "coverage_or_ownership_gap",
+      "coverage": {
+        "semantic_coverage": 0.9803921568627451,
+        "module_semantic_coverage": 0.9956140350877193,
+        "checkpoint_parameter_coverage": 1.0,
+        "tensor_shape_coverage": 0.717948717948718
+      },
+      "coverage_gaps": [
+        "semantic_coverage",
+        "module_semantic_coverage",
+        "tensor_shape_coverage"
+      ],
+      "unknown_nodes": 1,
+      "unmapped_checkpoint_tensor_count": 0,
+      "warning_counts": {
+        "unresolved_branch": 1,
+        "opaque_call": 0,
+        "unresolved_loop": 0,
+        "unmodeled_exception_path": 0,
+        "unowned_checkpoint_tensor": 0,
+        "unproven_tensor_transform": 3,
+        "other": 0
+      },
+      "operation_warning_cohorts": []
+    },
+    {
+      "model_id": "sentence-transformers/paraphrase-MiniLM-L3-v2",
+      "revision": "4ca70771034acceecb2e72475f72050fcdde4ddc",
+      "status": "partial",
+      "engine_version": "2026.10.21.1",
+      "report_digest": "3beef67ca8083d4d2c4c820f61737b4ab51b12e112948872abb884390746d632",
+      "warning_count": 4,
+      "completion_basis": "coverage_or_ownership_gap",
+      "coverage": {
+        "semantic_coverage": 0.9803921568627451,
+        "module_semantic_coverage": 0.9848484848484849,
+        "checkpoint_parameter_coverage": 1.0,
+        "tensor_shape_coverage": 0.717948717948718
+      },
+      "coverage_gaps": [
+        "semantic_coverage",
+        "module_semantic_coverage",
+        "tensor_shape_coverage"
+      ],
+      "unknown_nodes": 1,
+      "unmapped_checkpoint_tensor_count": 0,
+      "warning_counts": {
+        "unresolved_branch": 1,
+        "opaque_call": 0,
+        "unresolved_loop": 0,
+        "unmodeled_exception_path": 0,
+        "unowned_checkpoint_tensor": 0,
+        "unproven_tensor_transform": 3,
+        "other": 0
+      },
+      "operation_warning_cohorts": []
+    },
+    {
+      "model_id": "jinaai/jina-embeddings-v2-small-en",
+      "revision": "44e7d1d6caec8c883c2d4b207588504d519788d0",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "f1a4996508662a031a50f5836207bd7d0a317bf05ef96e49bea7b1e3cc1b2d36",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "native_architecture_unavailable"
+    },
+    {
+      "model_id": "cross-encoder/ms-marco-MiniLM-L-6-v2",
+      "revision": "233902d25c440f23af6f7d6e94d2946bac0bee0a",
+      "status": "partial",
+      "engine_version": "2026.10.21.1",
+      "report_digest": "521d54cc295e59ebf3a96683a09d20906e7b4474abf527dc5503ea0fa4be4a61",
+      "warning_count": 4,
+      "completion_basis": "coverage_or_ownership_gap",
+      "coverage": {
+        "semantic_coverage": 0.9814814814814815,
+        "module_semantic_coverage": 0.991869918699187,
+        "checkpoint_parameter_coverage": 1.0,
+        "tensor_shape_coverage": 0.6951219512195121
+      },
+      "coverage_gaps": [
+        "semantic_coverage",
+        "module_semantic_coverage",
+        "tensor_shape_coverage"
+      ],
+      "unknown_nodes": 1,
+      "unmapped_checkpoint_tensor_count": 0,
+      "warning_counts": {
+        "unresolved_branch": 1,
+        "opaque_call": 0,
+        "unresolved_loop": 0,
+        "unmodeled_exception_path": 0,
+        "unowned_checkpoint_tensor": 0,
+        "unproven_tensor_transform": 3,
+        "other": 0
+      },
+      "operation_warning_cohorts": []
+    },
+    {
+      "model_id": "BAAI/bge-reranker-base",
+      "revision": "2cfc18c9415c912f9d8155881c133215df768a70",
+      "status": "partial",
+      "engine_version": "2026.10.21.1",
+      "report_digest": "867ca0320a38df1e6f1a278eb5c75e11fbd97567e1bf093a809a76e719b7bd02",
+      "warning_count": 5,
+      "completion_basis": "coverage_or_ownership_gap",
+      "coverage": {
+        "semantic_coverage": 1.0,
+        "module_semantic_coverage": 1.0,
+        "checkpoint_parameter_coverage": 1.0,
+        "tensor_shape_coverage": 0.6829268292682927
+      },
+      "coverage_gaps": [
+        "tensor_shape_coverage"
+      ],
+      "unknown_nodes": 0,
+      "unmapped_checkpoint_tensor_count": 0,
+      "warning_counts": {
+        "unresolved_branch": 1,
+        "opaque_call": 1,
+        "unresolved_loop": 0,
+        "unmodeled_exception_path": 0,
+        "unowned_checkpoint_tensor": 0,
+        "unproven_tensor_transform": 3,
+        "other": 0
+      },
+      "operation_warning_cohorts": [
+        "position_ids"
+      ]
+    },
+    {
+      "model_id": "deepset/roberta-base-squad2",
+      "revision": "adc3b06f79f797d1c575d5479d6f5efe54a9e3b4",
+      "status": "partial",
+      "engine_version": "2026.10.21.1",
+      "report_digest": "595ddc5fdc24afa16e5f4dc46e09ba49a3b49a9d7e48278c7bdb33fc141ad9d7",
+      "warning_count": 8,
+      "completion_basis": "coverage_or_ownership_gap",
+      "coverage": {
+        "semantic_coverage": 1.0,
+        "module_semantic_coverage": 1.0,
+        "checkpoint_parameter_coverage": 1.0,
+        "tensor_shape_coverage": 0.6707317073170732
+      },
+      "coverage_gaps": [
+        "tensor_shape_coverage"
+      ],
+      "unknown_nodes": 0,
+      "unmapped_checkpoint_tensor_count": 0,
+      "warning_counts": {
+        "unresolved_branch": 1,
+        "opaque_call": 3,
+        "unresolved_loop": 0,
+        "unmodeled_exception_path": 0,
+        "unowned_checkpoint_tensor": 0,
+        "unproven_tensor_transform": 4,
+        "other": 0
+      },
+      "operation_warning_cohorts": [
+        "tuple_split_or_chunk",
+        "position_ids"
+      ]
+    },
+    {
+      "model_id": "distilbert/distilbert-base-uncased-distilled-squad",
+      "revision": "dfb8fa0e03905f0b6ea92133e56b6fef138015f2",
+      "status": "partial",
+      "engine_version": "2026.10.21.1",
+      "report_digest": "3bb4dc21bc7e4fccfd3a3b231328a56ce13ad482c82016e3da0b23b2c723ef28",
+      "warning_count": 15,
+      "completion_basis": "coverage_or_ownership_gap",
+      "coverage": {
+        "semantic_coverage": 0.8823529411764706,
+        "module_semantic_coverage": 0.8,
+        "checkpoint_parameter_coverage": 1.0,
+        "tensor_shape_coverage": 0.3404255319148936
+      },
+      "coverage_gaps": [
+        "semantic_coverage",
+        "module_semantic_coverage",
+        "tensor_shape_coverage"
+      ],
+      "unknown_nodes": 4,
+      "unmapped_checkpoint_tensor_count": 0,
+      "warning_counts": {
+        "unresolved_branch": 3,
+        "opaque_call": 9,
+        "unresolved_loop": 0,
+        "unmodeled_exception_path": 0,
+        "unowned_checkpoint_tensor": 0,
+        "unproven_tensor_transform": 3,
+        "other": 0
+      },
+      "operation_warning_cohorts": [
+        "tuple_split_or_chunk",
+        "reduction_or_normalization"
+      ]
+    },
+    {
+      "model_id": "google-bert/bert-base-uncased",
+      "revision": "86b5e0934494bd15c9632b12f734a8a67f723594",
+      "status": "partial",
+      "engine_version": "2026.10.21.1",
+      "report_digest": "6c7e693e47f20d801cb9c788d711665b7a854c3620825fe1aa88a5ab200143c5",
+      "warning_count": 5,
+      "completion_basis": "coverage_or_ownership_gap",
+      "coverage": {
+        "semantic_coverage": 1.0,
+        "module_semantic_coverage": 1.0,
+        "checkpoint_parameter_coverage": 1.0,
+        "tensor_shape_coverage": 0.7380952380952381
+      },
+      "coverage_gaps": [
+        "tensor_shape_coverage"
+      ],
+      "unknown_nodes": 0,
+      "unmapped_checkpoint_tensor_count": 4,
+      "warning_counts": {
+        "unresolved_branch": 1,
+        "opaque_call": 0,
+        "unresolved_loop": 0,
+        "unmodeled_exception_path": 0,
+        "unowned_checkpoint_tensor": 1,
+        "unproven_tensor_transform": 3,
+        "other": 0
+      },
+      "operation_warning_cohorts": []
+    },
+    {
+      "model_id": "distilbert/distilbert-base-uncased-finetuned-sst-2-english",
+      "revision": "714eb0fa89d2f80546fda750413ed43d93601a13",
+      "status": "partial",
+      "engine_version": "2026.10.21.1",
+      "report_digest": "8e64da2a4c62a199e1b0288bc46ebe89e022550c341ef695729742f0a9d9f032",
+      "warning_count": 13,
+      "completion_basis": "coverage_or_ownership_gap",
+      "coverage": {
+        "semantic_coverage": 0.8787878787878788,
+        "module_semantic_coverage": 0.8020833333333334,
+        "checkpoint_parameter_coverage": 1.0,
+        "tensor_shape_coverage": 0.37209302325581395
+      },
+      "coverage_gaps": [
+        "semantic_coverage",
+        "module_semantic_coverage",
+        "tensor_shape_coverage"
+      ],
+      "unknown_nodes": 4,
+      "unmapped_checkpoint_tensor_count": 0,
+      "warning_counts": {
+        "unresolved_branch": 3,
+        "opaque_call": 8,
+        "unresolved_loop": 0,
+        "unmodeled_exception_path": 0,
+        "unowned_checkpoint_tensor": 0,
+        "unproven_tensor_transform": 2,
+        "other": 0
+      },
+      "operation_warning_cohorts": [
+        "reduction_or_normalization"
+      ]
+    },
+    {
+      "model_id": "SamLowe/roberta-base-go_emotions",
+      "revision": "d75048347613a25d77de8cf6412eaae9fa7b26be",
+      "status": "partial",
+      "engine_version": "2026.10.21.1",
+      "report_digest": "eebd955a938c62195f92456899da78dd8d8d361f61e05ad13416a7f671e7e408",
+      "warning_count": 5,
+      "completion_basis": "coverage_or_ownership_gap",
+      "coverage": {
+        "semantic_coverage": 1.0,
+        "module_semantic_coverage": 1.0,
+        "checkpoint_parameter_coverage": 1.0,
+        "tensor_shape_coverage": 0.6829268292682927
+      },
+      "coverage_gaps": [
+        "tensor_shape_coverage"
+      ],
+      "unknown_nodes": 0,
+      "unmapped_checkpoint_tensor_count": 0,
+      "warning_counts": {
+        "unresolved_branch": 1,
+        "opaque_call": 1,
+        "unresolved_loop": 0,
+        "unmodeled_exception_path": 0,
+        "unowned_checkpoint_tensor": 0,
+        "unproven_tensor_transform": 3,
+        "other": 0
+      },
+      "operation_warning_cohorts": [
+        "position_ids"
+      ]
+    },
+    {
+      "model_id": "unitary/toxic-bert",
+      "revision": "4d6c22e74ba2fdd26bc4f7238f50766b045a0d94",
+      "status": "partial",
+      "engine_version": "2026.10.21.1",
+      "report_digest": "a701ed5739deb618cda00fcd594c40e58da7539b2be52a95116ef4658598c3fa",
+      "warning_count": 4,
+      "completion_basis": "coverage_or_ownership_gap",
+      "coverage": {
+        "semantic_coverage": 0.9814814814814815,
+        "module_semantic_coverage": 0.9956709956709957,
+        "checkpoint_parameter_coverage": 1.0,
+        "tensor_shape_coverage": 0.6951219512195121
+      },
+      "coverage_gaps": [
+        "semantic_coverage",
+        "module_semantic_coverage",
+        "tensor_shape_coverage"
+      ],
+      "unknown_nodes": 1,
+      "unmapped_checkpoint_tensor_count": 0,
+      "warning_counts": {
+        "unresolved_branch": 1,
+        "opaque_call": 0,
+        "unresolved_loop": 0,
+        "unmodeled_exception_path": 0,
+        "unowned_checkpoint_tensor": 0,
+        "unproven_tensor_transform": 3,
+        "other": 0
+      },
+      "operation_warning_cohorts": []
+    },
+    {
+      "model_id": "cardiffnlp/twitter-roberta-base-sentiment-latest",
+      "revision": "3216a57f2a0d9c45a2e6c20157c20c49fb4bf9c7",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "aae2dbc9e89407ae8afe09720fc956bbc31809953cf1215e4fe2fc831390f0dd",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "safetensors_unavailable"
+    },
+    {
+      "model_id": "FacebookAI/roberta-base",
+      "revision": "e2da8e2f811d1448a5b465c236feacd80ffbac7b",
+      "status": "partial",
+      "engine_version": "2026.10.21.1",
+      "report_digest": "81e6afe07b5abf3b1f3f94d6e39a22f5cbab9147db89001ad63cb6a7cfff0062",
+      "warning_count": 6,
+      "completion_basis": "coverage_or_ownership_gap",
+      "coverage": {
+        "semantic_coverage": 1.0,
+        "module_semantic_coverage": 1.0,
+        "checkpoint_parameter_coverage": 1.0,
+        "tensor_shape_coverage": 0.6875
+      },
+      "coverage_gaps": [
+        "tensor_shape_coverage"
+      ],
+      "unknown_nodes": 0,
+      "unmapped_checkpoint_tensor_count": 0,
+      "warning_counts": {
+        "unresolved_branch": 1,
+        "opaque_call": 2,
+        "unresolved_loop": 0,
+        "unmodeled_exception_path": 0,
+        "unowned_checkpoint_tensor": 0,
+        "unproven_tensor_transform": 3,
+        "other": 0
+      },
+      "operation_warning_cohorts": [
+        "position_ids"
+      ]
+    },
+    {
+      "model_id": "google-t5/t5-small",
+      "revision": "df1b051c49625cf57a3d0d8d3863ed4d13564fe4",
+      "status": "partial",
+      "engine_version": "2026.10.21.1",
+      "report_digest": "c0d87da4b1cc996f5a1356ef68dc38ca283f1b2b4d445de1a707f96715e37070",
+      "warning_count": 13,
+      "completion_basis": "coverage_or_ownership_gap",
+      "coverage": {
+        "semantic_coverage": 1.0,
+        "module_semantic_coverage": 1.0,
+        "checkpoint_parameter_coverage": 1.0,
+        "tensor_shape_coverage": 0.8862973760932945
+      },
+      "coverage_gaps": [
+        "tensor_shape_coverage"
+      ],
+      "unknown_nodes": 0,
+      "unmapped_checkpoint_tensor_count": 0,
+      "warning_counts": {
+        "unresolved_branch": 5,
+        "opaque_call": 5,
+        "unresolved_loop": 0,
+        "unmodeled_exception_path": 0,
+        "unowned_checkpoint_tensor": 0,
+        "unproven_tensor_transform": 3,
+        "other": 0
+      },
+      "operation_warning_cohorts": []
+    },
+    {
+      "model_id": "google/flan-t5-small",
+      "revision": "0fc9ddf78a1e988dac52e2dac162b0ede4fd74ab",
+      "status": "partial",
+      "engine_version": "2026.10.21.1",
+      "report_digest": "79781e681fd50a46b6127e94844abaf9b04f69312d0fdd30467ac26141bc58ac",
+      "warning_count": 21,
+      "completion_basis": "coverage_or_ownership_gap",
+      "coverage": {
+        "semantic_coverage": 1.0,
+        "module_semantic_coverage": 1.0,
+        "checkpoint_parameter_coverage": 1.0,
+        "tensor_shape_coverage": 0.8370165745856354
+      },
+      "coverage_gaps": [
+        "tensor_shape_coverage"
+      ],
+      "unknown_nodes": 0,
+      "unmapped_checkpoint_tensor_count": 0,
+      "warning_counts": {
+        "unresolved_branch": 9,
+        "opaque_call": 5,
+        "unresolved_loop": 0,
+        "unmodeled_exception_path": 0,
+        "unowned_checkpoint_tensor": 0,
+        "unproven_tensor_transform": 7,
+        "other": 0
+      },
+      "operation_warning_cohorts": []
+    },
+    {
+      "model_id": "google/flan-t5-base",
+      "revision": "7bcac572ce56db69c1ea7c8af255c5d7c9672fc2",
+      "status": "partial",
+      "engine_version": "2026.10.21.1",
+      "report_digest": "1a61911cc5c661416878b686da6cab93809efac4a18ef48ef7286fb9b1cd04c3",
+      "warning_count": 21,
+      "completion_basis": "coverage_or_ownership_gap",
+      "coverage": {
+        "semantic_coverage": 1.0,
+        "module_semantic_coverage": 1.0,
+        "checkpoint_parameter_coverage": 1.0,
+        "tensor_shape_coverage": 0.8370165745856354
+      },
+      "coverage_gaps": [
+        "tensor_shape_coverage"
+      ],
+      "unknown_nodes": 0,
+      "unmapped_checkpoint_tensor_count": 0,
+      "warning_counts": {
+        "unresolved_branch": 9,
+        "opaque_call": 5,
+        "unresolved_loop": 0,
+        "unmodeled_exception_path": 0,
+        "unowned_checkpoint_tensor": 0,
+        "unproven_tensor_transform": 7,
+        "other": 0
+      },
+      "operation_warning_cohorts": []
+    },
+    {
+      "model_id": "sshleifer/distilbart-cnn-12-6",
+      "revision": "a4f8f3ea906ed274767e9906dbaede7531d660ff",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "6a50a4085f419f6ba57a33c45ccaa825c1e7f328970f9bdec804c8ab9c2b0501",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "safetensors_unavailable"
+    },
+    {
+      "model_id": "facebook/bart-base",
+      "revision": "aadd2ab0ae0c8268c7c9693540e9904811f36177",
+      "status": "partial",
+      "engine_version": "2026.10.21.1",
+      "report_digest": "3c611f99f8e0655bdcbff2ea4e675298aa1a18197989c8081a305f61f9853907",
+      "warning_count": 16,
+      "completion_basis": "coverage_or_ownership_gap",
+      "coverage": {
+        "semantic_coverage": 1.0,
+        "module_semantic_coverage": 1.0,
+        "checkpoint_parameter_coverage": 1.0,
+        "tensor_shape_coverage": 0.6697247706422018
+      },
+      "coverage_gaps": [
+        "tensor_shape_coverage"
+      ],
+      "unknown_nodes": 0,
+      "unmapped_checkpoint_tensor_count": 0,
+      "warning_counts": {
+        "unresolved_branch": 8,
+        "opaque_call": 6,
+        "unresolved_loop": 0,
+        "unmodeled_exception_path": 0,
+        "unowned_checkpoint_tensor": 0,
+        "unproven_tensor_transform": 2,
+        "other": 0
+      },
+      "operation_warning_cohorts": [
+        "numerical_stability"
+      ]
+    },
+    {
+      "model_id": "Helsinki-NLP/opus-mt-en-fr",
+      "revision": "dd7f6540a7a48a7f4db59e5c0b9c42c8eea67f18",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "f27f26826a9be6a5060ddb4ca3f74ada849fecedbfd5fd3509c25410defc4a59",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "safetensors_unavailable"
+    },
+    {
+      "model_id": "Helsinki-NLP/opus-mt-fr-en",
+      "revision": "c4aed37b318c763fd177aa449b44e3b783cc6c02",
+      "status": "partial",
+      "engine_version": "2026.10.21.1",
+      "report_digest": "71815cf9d98e6e997958d7caca41a7fab88b5197cc767562f36e4dbdc08135df",
+      "warning_count": 15,
+      "completion_basis": "coverage_or_ownership_gap",
+      "coverage": {
+        "semantic_coverage": 1.0,
+        "module_semantic_coverage": 1.0,
+        "checkpoint_parameter_coverage": 1.0,
+        "tensor_shape_coverage": 0.7181818181818181
+      },
+      "coverage_gaps": [
+        "tensor_shape_coverage"
+      ],
+      "unknown_nodes": 0,
+      "unmapped_checkpoint_tensor_count": 0,
+      "warning_counts": {
+        "unresolved_branch": 9,
+        "opaque_call": 6,
+        "unresolved_loop": 0,
+        "unmodeled_exception_path": 0,
+        "unowned_checkpoint_tensor": 0,
+        "unproven_tensor_transform": 0,
+        "other": 0
+      },
+      "operation_warning_cohorts": [
+        "numerical_stability"
+      ]
+    },
+    {
+      "model_id": "Helsinki-NLP/opus-mt-en-de",
+      "revision": "6183067f769a302e3861815543b9f312c71b0ca4",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "851d5806be71108ba8213c732f8f743d57ad41042891585c78dcce6314183414",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "safetensors_unavailable"
+    },
+    {
+      "model_id": "facebook/nllb-200-distilled-600M",
+      "revision": "f8d333a098d19b4fd9a8b18f94170487ad3f821d",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "1752bcf0493ce0239b1b8d73b2cff59afc2d95125f8f4b5dcc7abafbc5730a6f",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "safetensors_unavailable"
+    },
+    {
+      "model_id": "google/pegasus-xsum",
+      "revision": "8d8ffc158a3bee9fbb03afacdfc347c823c5ec8b",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "0e5195ecc19aa5dab3f1ff74b1d5f200f3a72ec8d4a1be5f33e1c6d82f608dc0",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "safetensors_unavailable"
+    },
+    {
+      "model_id": "google/vit-base-patch16-224",
+      "revision": "3f49326eb077187dfe1c2a2bb15fbd74e6ab91e3",
+      "status": "completed",
+      "engine_version": "2026.10.21.1",
+      "report_digest": "c14a153494bcda836757d3ddbde5349c8e646126e1f3a4d90cd7235ff2c62dea",
+      "warning_count": 0,
+      "completion_basis": "recorded_static_gates_passed",
+      "coverage": {
+        "semantic_coverage": 1.0,
+        "module_semantic_coverage": 1.0,
+        "checkpoint_parameter_coverage": 1.0,
+        "tensor_shape_coverage": 1.0
+      },
+      "coverage_gaps": [],
+      "unknown_nodes": 0,
+      "unmapped_checkpoint_tensor_count": 0,
+      "warning_counts": {
+        "unresolved_branch": 0,
+        "opaque_call": 0,
+        "unresolved_loop": 0,
+        "unmodeled_exception_path": 0,
+        "unowned_checkpoint_tensor": 0,
+        "unproven_tensor_transform": 0,
+        "other": 0
+      },
+      "operation_warning_cohorts": []
+    },
+    {
+      "model_id": "timm/mobilenetv3_small_100.lamb_in1k",
+      "revision": "1824797e7887cbec1990e4adbd6675960a36c589",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "e36853172da1c8fbf95915f89564cf5b0017d5de07e64eb0903bda14b50f7edb",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "native_architecture_unavailable"
+    },
+    {
+      "model_id": "microsoft/resnet-50",
+      "revision": "34c2154c194f829b11125337b98c8f5f9965ff19",
+      "status": "partial",
+      "engine_version": "2026.10.21.1",
+      "report_digest": "e4199930fb75e08d8a225109cea12a8d8d9b4a998e703c1a2d9665f553168a9e",
+      "warning_count": 0,
+      "completion_basis": "coverage_or_ownership_gap",
+      "coverage": {
+        "semantic_coverage": 1.0,
+        "module_semantic_coverage": 1.0,
+        "checkpoint_parameter_coverage": 1.0,
+        "tensor_shape_coverage": 0.017167381974248927
+      },
+      "coverage_gaps": [
+        "tensor_shape_coverage"
+      ],
+      "unknown_nodes": 0,
+      "unmapped_checkpoint_tensor_count": 0,
+      "warning_counts": {
+        "unresolved_branch": 0,
+        "opaque_call": 0,
+        "unresolved_loop": 0,
+        "unmodeled_exception_path": 0,
+        "unowned_checkpoint_tensor": 0,
+        "unproven_tensor_transform": 0,
+        "other": 0
+      },
+      "operation_warning_cohorts": []
+    },
+    {
+      "model_id": "facebook/convnext-tiny-224",
+      "revision": "6166b7613034066690a621d8bf25ffdf181a34f0",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "fc3a15646111b6d53e1c6fca829e6630a683b7219dd330d673de8862da50b007",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "safetensors_unavailable"
+    },
+    {
+      "model_id": "google/vit-base-patch16-224-in21k",
+      "revision": "b4569560a39a0f1af58e3ddaf17facf20ab919b0",
+      "status": "partial",
+      "engine_version": "2026.10.21.1",
+      "report_digest": "07379366a90c1e191a9219640db7bf50ebb0e9f33b1a410fffb167e7518e5c0e",
+      "warning_count": 0,
+      "completion_basis": "coverage_or_ownership_gap",
+      "coverage": {
+        "semantic_coverage": 0.9791666666666666,
+        "module_semantic_coverage": 0.9953488372093023,
+        "checkpoint_parameter_coverage": 1.0,
+        "tensor_shape_coverage": 0.9466666666666667
+      },
+      "coverage_gaps": [
+        "semantic_coverage",
+        "module_semantic_coverage",
+        "tensor_shape_coverage"
+      ],
+      "unknown_nodes": 1,
+      "unmapped_checkpoint_tensor_count": 0,
+      "warning_counts": {
+        "unresolved_branch": 0,
+        "opaque_call": 0,
+        "unresolved_loop": 0,
+        "unmodeled_exception_path": 0,
+        "unowned_checkpoint_tensor": 0,
+        "unproven_tensor_transform": 0,
+        "other": 0
+      },
+      "operation_warning_cohorts": []
+    },
+    {
+      "model_id": "microsoft/swin-tiny-patch4-window7-224",
+      "revision": "d00d478bfaf1f417d34a1186673ad4b4be264c51",
+      "status": "partial",
+      "engine_version": "2026.10.21.1",
+      "report_digest": "990e04c9478fc4493261591115d3d6d39a1d6fb64314ce6deec7ba80334757b7",
+      "warning_count": 50,
+      "completion_basis": "coverage_or_ownership_gap",
+      "coverage": {
+        "semantic_coverage": 0.9253112033195021,
+        "module_semantic_coverage": 0.8482490272373541,
+        "checkpoint_parameter_coverage": 1.0,
+        "tensor_shape_coverage": 0.554945054945055
+      },
+      "coverage_gaps": [
+        "semantic_coverage",
+        "module_semantic_coverage",
+        "tensor_shape_coverage"
+      ],
+      "unknown_nodes": 18,
+      "unmapped_checkpoint_tensor_count": 0,
+      "warning_counts": {
+        "unresolved_branch": 10,
+        "opaque_call": 23,
+        "unresolved_loop": 0,
+        "unmodeled_exception_path": 0,
+        "unowned_checkpoint_tensor": 0,
+        "unproven_tensor_transform": 17,
+        "other": 0
+      },
+      "operation_warning_cohorts": [
+        "padding_windows_or_resampling"
+      ]
+    },
+    {
+      "model_id": "nvidia/mit-b0",
+      "revision": "80983a413c30d36a39c20203974ae7807835e2b4",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "8faeb4c01433de6120e942feeb0adac57e40e0df1307daa80fdd1461e79a0802",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "safetensors_unavailable"
+    },
+    {
+      "model_id": "facebook/detr-resnet-50",
+      "revision": "1d5f47bd3bdd2c4bbfa585418ffe6da5028b4c0b",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "ae9da05519ed4170fd50140a291e85fbc1d06ba7e36e9c9b4d3fce8bde46b653",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "native_architecture_unavailable"
+    },
+    {
+      "model_id": "hustvl/yolos-tiny",
+      "revision": "95a90f3c189fbfca3bcfc6d7315b9e84d95dc2de",
+      "status": "partial",
+      "engine_version": "2026.10.21.1",
+      "report_digest": "eb9e6f65a6a87a6d191c4f2f8dea7527ca093feacb03fe5ec8d7aa2d5479b51d",
+      "warning_count": 6,
+      "completion_basis": "coverage_or_ownership_gap",
+      "coverage": {
+        "semantic_coverage": 0.9365079365079365,
+        "module_semantic_coverage": 0.8839285714285714,
+        "checkpoint_parameter_coverage": 1.0,
+        "tensor_shape_coverage": 0.6363636363636364
+      },
+      "coverage_gaps": [
+        "semantic_coverage",
+        "module_semantic_coverage",
+        "tensor_shape_coverage"
+      ],
+      "unknown_nodes": 4,
+      "unmapped_checkpoint_tensor_count": 0,
+      "warning_counts": {
+        "unresolved_branch": 2,
+        "opaque_call": 1,
+        "unresolved_loop": 0,
+        "unmodeled_exception_path": 0,
+        "unowned_checkpoint_tensor": 0,
+        "unproven_tensor_transform": 3,
+        "other": 0
+      },
+      "operation_warning_cohorts": []
+    },
+    {
+      "model_id": "microsoft/table-transformer-detection",
+      "revision": "2357cbe2b5a5d1c03e54f32764f06058933b65ab",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "8734a1f21f3302ca2c83d544e86fad29ec2b5477a2efa6cf5acce31701549fba",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "native_architecture_unavailable"
+    },
+    {
+      "model_id": "microsoft/table-transformer-structure-recognition",
+      "revision": "f4d4bdc85c3fe4b1fa49658882a5d38bbdd0f343",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "f8482c0f149a22363da60457c2fabce0e2e172e34b42ca926402eb3c4a9609da",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "native_architecture_unavailable"
+    },
+    {
+      "model_id": "nvidia/segformer-b0-finetuned-ade-512-512",
+      "revision": "489d5cd81a0b59fab9b7ea758d3548ebe99677da",
+      "status": "partial",
+      "engine_version": "2026.10.21.1",
+      "report_digest": "a750f1383653456c8e925654fd853e2ba4fcdc3767776aff037fb1daf6e0854c",
+      "warning_count": 26,
+      "completion_basis": "coverage_or_ownership_gap",
+      "coverage": {
+        "semantic_coverage": 0.8871595330739299,
+        "module_semantic_coverage": 0.7934272300469484,
+        "checkpoint_parameter_coverage": 1.0,
+        "tensor_shape_coverage": 0.4021164021164021
+      },
+      "coverage_gaps": [
+        "semantic_coverage",
+        "module_semantic_coverage",
+        "tensor_shape_coverage"
+      ],
+      "unknown_nodes": 29,
+      "unmapped_checkpoint_tensor_count": 0,
+      "warning_counts": {
+        "unresolved_branch": 0,
+        "opaque_call": 0,
+        "unresolved_loop": 1,
+        "unmodeled_exception_path": 0,
+        "unowned_checkpoint_tensor": 0,
+        "unproven_tensor_transform": 25,
+        "other": 0
+      },
+      "operation_warning_cohorts": []
+    },
+    {
+      "model_id": "nvidia/segformer-b1-finetuned-ade-512-512",
+      "revision": "a775b4f5dcb2179e57006dca0e268281306412ef",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "55597fc0b08ca1b3a4677efd7321bf57e380c44f6650da04ede00991f0e36675",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "safetensors_unavailable"
+    },
+    {
+      "model_id": "facebook/mask2former-swin-tiny-coco-instance",
+      "revision": "22c4a2f15dc88149b8b8d9f4d42c54431fbd66f6",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "0b14df3b8af96e995e98859f782528401aae3838cfd45b3cfaa4c7c4331e0221",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "native_architecture_unavailable"
+    },
+    {
+      "model_id": "CIDAS/clipseg-rd64-refined",
+      "revision": "999e0328d9e10b484360c477313983f9afdd7050",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "33524f5b5891c2fd762be0ef712b15e16a4f32ff23bc26e1bdaa58c23f4a085e",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "native_architecture_unavailable"
+    },
+    {
+      "model_id": "depth-anything/Depth-Anything-V2-Small-hf",
+      "revision": "5426e4f0f36572d16453bbda7a8389317b1bef99",
+      "status": "partial",
+      "engine_version": "2026.10.21.1",
+      "report_digest": "5516d0897923ca225b02ab0b6bb85461aeb470c6617f6114993e1c66ea57a9bf",
+      "warning_count": 22,
+      "completion_basis": "coverage_or_ownership_gap",
+      "coverage": {
+        "semantic_coverage": 0.8602150537634409,
+        "module_semantic_coverage": 0.8172757475083057,
+        "checkpoint_parameter_coverage": 1.0,
+        "tensor_shape_coverage": 0.2975206611570248
+      },
+      "coverage_gaps": [
+        "semantic_coverage",
+        "module_semantic_coverage",
+        "tensor_shape_coverage"
+      ],
+      "unknown_nodes": 13,
+      "unmapped_checkpoint_tensor_count": 0,
+      "warning_counts": {
+        "unresolved_branch": 2,
+        "opaque_call": 9,
+        "unresolved_loop": 3,
+        "unmodeled_exception_path": 0,
+        "unowned_checkpoint_tensor": 0,
+        "unproven_tensor_transform": 8,
+        "other": 0
+      },
+      "operation_warning_cohorts": [
+        "padding_windows_or_resampling"
+      ]
+    },
+    {
+      "model_id": "Intel/dpt-hybrid-midas",
+      "revision": "11eaf7a1cf4bd70740697dbc216f98980c0aeb03",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "f9d8dc23dd6d52c95ca4d9155d718d4a6c9a03b29ef8fdbec62df5dd7ef981fb",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "safetensors_unavailable"
+    },
+    {
+      "model_id": "facebook/sam-vit-base",
+      "revision": "70c1a07f894ebb5b307fd9eaaee97b9dfc16068f",
+      "status": "partial",
+      "engine_version": "2026.10.21.1",
+      "report_digest": "9c93817c762973a621a5b2f00d0b71d927ed867f6a19fff31c15d6839f3684c7",
+      "warning_count": 95,
+      "completion_basis": "coverage_or_ownership_gap",
+      "coverage": {
+        "semantic_coverage": 0.9295774647887324,
+        "module_semantic_coverage": 0.8008298755186722,
+        "checkpoint_parameter_coverage": 1.0,
+        "tensor_shape_coverage": 0.22962962962962963
+      },
+      "coverage_gaps": [
+        "semantic_coverage",
+        "module_semantic_coverage",
+        "tensor_shape_coverage"
+      ],
+      "unknown_nodes": 35,
+      "unmapped_checkpoint_tensor_count": 0,
+      "warning_counts": {
+        "unresolved_branch": 0,
+        "opaque_call": 40,
+        "unresolved_loop": 0,
+        "unmodeled_exception_path": 0,
+        "unowned_checkpoint_tensor": 0,
+        "unproven_tensor_transform": 55,
+        "other": 0
+      },
+      "operation_warning_cohorts": [
+        "tuple_split_or_chunk",
+        "padding_windows_or_resampling"
+      ]
+    },
+    {
+      "model_id": "openai/clip-vit-base-patch32",
+      "revision": "3d74acf9a28c67741b2f4f2ea7635f0aaf6f0268",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "43b4ed4d9f6c093ae98c1e2309d3002f0028c8fd2a426bd402d70a37659f474f",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "safetensors_unavailable"
+    },
+    {
+      "model_id": "google/siglip-base-patch16-224",
+      "revision": "7fd15f0689c79d79e38b1c2e2e2370a7bf2761ed",
+      "status": "partial",
+      "engine_version": "2026.10.21.1",
+      "report_digest": "b60114ee9d48d577a3d9c08d75a61bdf000d2c7f07f3bcf01b020333670ced4e",
+      "warning_count": 31,
+      "completion_basis": "coverage_or_ownership_gap",
+      "coverage": {
+        "semantic_coverage": 0.9587628865979382,
+        "module_semantic_coverage": 0.9871794871794872,
+        "checkpoint_parameter_coverage": 1.0,
+        "tensor_shape_coverage": 0.4397590361445783
+      },
+      "coverage_gaps": [
+        "semantic_coverage",
+        "module_semantic_coverage",
+        "tensor_shape_coverage"
+      ],
+      "unknown_nodes": 4,
+      "unmapped_checkpoint_tensor_count": 0,
+      "warning_counts": {
+        "unresolved_branch": 16,
+        "opaque_call": 9,
+        "unresolved_loop": 0,
+        "unmodeled_exception_path": 0,
+        "unowned_checkpoint_tensor": 0,
+        "unproven_tensor_transform": 6,
+        "other": 0
+      },
+      "operation_warning_cohorts": [
+        "reduction_or_normalization"
+      ]
+    },
+    {
+      "model_id": "Salesforce/blip-image-captioning-base",
+      "revision": "82a37760796d32b1411fe092ab5d4e227313294b",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "4ac5e11b3af4782423345b1a187994de9a8fd30edfe637216fa380da278a9943",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "safetensors_unavailable"
+    },
+    {
+      "model_id": "Salesforce/blip-vqa-base",
+      "revision": "787b3d35d57e49572baabd22884b3d5a05acf072",
+      "status": "partial",
+      "engine_version": "2026.10.21.1",
+      "report_digest": "eb80cf7fd700566981c7140e881666639c23f38cedb0a17229a2b665622548fb",
+      "warning_count": 108,
+      "completion_basis": "coverage_or_ownership_gap",
+      "coverage": {
+        "semantic_coverage": 0.9965156794425087,
+        "module_semantic_coverage": 0.9832335329341317,
+        "checkpoint_parameter_coverage": 1.0,
+        "tensor_shape_coverage": 0.012048192771084338
+      },
+      "coverage_gaps": [
+        "semantic_coverage",
+        "module_semantic_coverage",
+        "tensor_shape_coverage"
+      ],
+      "unknown_nodes": 3,
+      "unmapped_checkpoint_tensor_count": 0,
+      "warning_counts": {
+        "unresolved_branch": 2,
+        "opaque_call": 24,
+        "unresolved_loop": 0,
+        "unmodeled_exception_path": 0,
+        "unowned_checkpoint_tensor": 0,
+        "unproven_tensor_transform": 81,
+        "other": 1
+      },
+      "operation_warning_cohorts": []
+    },
+    {
+      "model_id": "dandelin/vilt-b32-finetuned-vqa",
+      "revision": "d0a1f6ab88522427a7ae76ceb6e1e1e7b68a1d08",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "2c48e1ae8eb0878f37bba5ad953ddcfcbb78a220ceb19d10cc86494b92974549",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "safetensors_unavailable"
+    },
+    {
+      "model_id": "HuggingFaceTB/SmolVLM-256M-Instruct",
+      "revision": "7e3e67edbbed1bf9888184d9df282b700a323964",
+      "status": "partial",
+      "engine_version": "2026.10.21.1",
+      "report_digest": "3a3d4700f9cd88732ee85018f915b0a3bb021b29b86938dd1b618f968e27777f",
+      "warning_count": 20,
+      "completion_basis": "coverage_or_ownership_gap",
+      "coverage": {
+        "semantic_coverage": 0.9574468085106383,
+        "module_semantic_coverage": 0.9927536231884058,
+        "checkpoint_parameter_coverage": 1.0,
+        "tensor_shape_coverage": 0.5073529411764706
+      },
+      "coverage_gaps": [
+        "semantic_coverage",
+        "module_semantic_coverage",
+        "tensor_shape_coverage"
+      ],
+      "unknown_nodes": 4,
+      "unmapped_checkpoint_tensor_count": 0,
+      "warning_counts": {
+        "unresolved_branch": 4,
+        "opaque_call": 4,
+        "unresolved_loop": 1,
+        "unmodeled_exception_path": 0,
+        "unowned_checkpoint_tensor": 0,
+        "unproven_tensor_transform": 11,
+        "other": 0
+      },
+      "operation_warning_cohorts": [
+        "reduction_or_normalization"
+      ]
+    },
+    {
+      "model_id": "Qwen/Qwen2-VL-2B-Instruct",
+      "revision": "895c3a49bc3fa70a340399125c650a463535e71c",
+      "status": "partial",
+      "engine_version": "2026.10.21.1",
+      "report_digest": "345380d2c84ff1b69f16c928467ecc3ea95f0cce28ca023e5f1574a9916de1bb",
+      "warning_count": 366,
+      "completion_basis": "coverage_or_ownership_gap",
+      "coverage": {
+        "semantic_coverage": 0.9545454545454546,
+        "module_semantic_coverage": 0.9097127222982216,
+        "checkpoint_parameter_coverage": 0.3011659722906297,
+        "tensor_shape_coverage": 0.5081967213114754
+      },
+      "coverage_gaps": [
+        "semantic_coverage",
+        "module_semantic_coverage",
+        "checkpoint_parameter_coverage",
+        "tensor_shape_coverage"
+      ],
+      "unknown_nodes": 4,
+      "unmapped_checkpoint_tensor_count": 338,
+      "warning_counts": {
+        "unresolved_branch": 4,
+        "opaque_call": 11,
+        "unresolved_loop": 1,
+        "unmodeled_exception_path": 0,
+        "unowned_checkpoint_tensor": 1,
+        "unproven_tensor_transform": 11,
+        "other": 338
+      },
+      "operation_warning_cohorts": [
+        "attention_or_mask_dispatch",
+        "tuple_split_or_chunk",
+        "reduction_or_normalization"
+      ]
+    },
+    {
+      "model_id": "llava-hf/llava-1.5-7b-hf",
+      "revision": "b234b804b114d9e37bb655e11cbbb5f5e971b7a9",
+      "status": "partial",
+      "engine_version": "2026.10.21.1",
+      "report_digest": "ebeca8fd3a55ce5f363c21271ec19366991e8ee2dd4fad11e7f53921c0486bc5",
+      "warning_count": 700,
+      "completion_basis": "coverage_or_ownership_gap",
+      "coverage": {
+        "semantic_coverage": 0.9550561797752809,
+        "module_semantic_coverage": 0.9944827586206897,
+        "checkpoint_parameter_coverage": 0.0,
+        "tensor_shape_coverage": 0.5259259259259259
+      },
+      "coverage_gaps": [
+        "semantic_coverage",
+        "module_semantic_coverage",
+        "checkpoint_parameter_coverage",
+        "tensor_shape_coverage"
+      ],
+      "unknown_nodes": 4,
+      "unmapped_checkpoint_tensor_count": 686,
+      "warning_counts": {
+        "unresolved_branch": 2,
+        "opaque_call": 5,
+        "unresolved_loop": 0,
+        "unmodeled_exception_path": 0,
+        "unowned_checkpoint_tensor": 1,
+        "unproven_tensor_transform": 6,
+        "other": 686
+      },
+      "operation_warning_cohorts": [
+        "tuple_split_or_chunk",
+        "reduction_or_normalization"
+      ]
+    },
+    {
+      "model_id": "naver-clova-ix/donut-base-finetuned-cord-v2",
+      "revision": "8003d433113256b4ce3a0f5bf604b29ff78a7451",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "5c19d0b4f18a884e0e0ec9ed8288a61f7623f0fc429c51bf35bc2e04957c2155",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "safetensors_unavailable"
+    },
+    {
+      "model_id": "google/pix2struct-base",
+      "revision": "4605659ec5d82c985955ebdea8210f32fe54a682",
+      "status": "partial",
+      "engine_version": "2026.10.21.1",
+      "report_digest": "b106ffc05898bef4f52f8675d3a03a8326de93638c18c05ab966bd08a3f70fe5",
+      "warning_count": 31,
+      "completion_basis": "coverage_or_ownership_gap",
+      "coverage": {
+        "semantic_coverage": 1.0,
+        "module_semantic_coverage": 1.0,
+        "checkpoint_parameter_coverage": 1.0,
+        "tensor_shape_coverage": 0.5244755244755245
+      },
+      "coverage_gaps": [
+        "tensor_shape_coverage"
+      ],
+      "unknown_nodes": 0,
+      "unmapped_checkpoint_tensor_count": 0,
+      "warning_counts": {
+        "unresolved_branch": 14,
+        "opaque_call": 11,
+        "unresolved_loop": 0,
+        "unmodeled_exception_path": 0,
+        "unowned_checkpoint_tensor": 0,
+        "unproven_tensor_transform": 6,
+        "other": 0
+      },
+      "operation_warning_cohorts": [
+        "numerical_stability"
+      ]
+    },
+    {
+      "model_id": "MCG-NJU/videomae-base",
+      "revision": "dc740ceda42fce44faed2ea03c6d447db72f6af9",
+      "status": "partial",
+      "engine_version": "2026.10.21.1",
+      "report_digest": "11ef7e6ca9df8d9bac822e4060b0fa46dcbf2b469095516e6124d8ed63a6a478",
+      "warning_count": 14,
+      "completion_basis": "coverage_or_ownership_gap",
+      "coverage": {
+        "semantic_coverage": 0.9595959595959596,
+        "module_semantic_coverage": 0.887719298245614,
+        "checkpoint_parameter_coverage": 1.0,
+        "tensor_shape_coverage": 0.5973154362416108
+      },
+      "coverage_gaps": [
+        "semantic_coverage",
+        "module_semantic_coverage",
+        "tensor_shape_coverage"
+      ],
+      "unknown_nodes": 4,
+      "unmapped_checkpoint_tensor_count": 0,
+      "warning_counts": {
+        "unresolved_branch": 0,
+        "opaque_call": 4,
+        "unresolved_loop": 0,
+        "unmodeled_exception_path": 0,
+        "unowned_checkpoint_tensor": 0,
+        "unproven_tensor_transform": 10,
+        "other": 0
+      },
+      "operation_warning_cohorts": [
+        "reduction_or_normalization"
+      ]
+    },
+    {
+      "model_id": "facebook/timesformer-base-finetuned-k400",
+      "revision": "8aaf40ea7d3d282dcb0a5dea01a198320d15d6c0",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "590b912e2a2c8b1b7b91b50a30a675cd453a5c2862fa833a418b85d440b356e1",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "safetensors_unavailable"
+    },
+    {
+      "model_id": "microsoft/xclip-base-patch32",
+      "revision": "a2e27a78a2b5d802e894b8a1ef14f3a8ce490963",
+      "status": "inspected",
+      "engine_version": "2026.10.20.3",
+      "report_digest": "0c4ad2b7aa03827985c55b64c40c23ab4fdc5d1c66805bc8ad55a0d8c1c2b886",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "native_architecture_unavailable"
+    },
+    {
+      "model_id": "openai/whisper-tiny",
+      "revision": "169d4a4341b33bc18d8881c4b69c2e104e1cc0af",
+      "status": "partial",
+      "engine_version": "2026.10.21.1",
+      "report_digest": "f1c818262c91d5ababdfe6ca2037fe2d8f4c5f6a626f85a12c82f5f24a66d1f7",
+      "warning_count": 2,
+      "completion_basis": "coverage_or_ownership_gap",
+      "coverage": {
+        "semantic_coverage": 1.0,
+        "module_semantic_coverage": 1.0,
+        "checkpoint_parameter_coverage": 1.0,
+        "tensor_shape_coverage": 0.8389830508474576
+      },
+      "coverage_gaps": [
+        "tensor_shape_coverage"
+      ],
+      "unknown_nodes": 0,
+      "unmapped_checkpoint_tensor_count": 0,
+      "warning_counts": {
+        "unresolved_branch": 0,
+        "opaque_call": 0,
+        "unresolved_loop": 0,
+        "unmodeled_exception_path": 0,
+        "unowned_checkpoint_tensor": 0,
+        "unproven_tensor_transform": 2,
+        "other": 0
+      },
+      "operation_warning_cohorts": []
+    },
+    {
+      "model_id": "openai/whisper-base",
+      "revision": "e37978b90ca9030d5170a5c07aadb050351a65bb",
+      "status": "partial",
+      "engine_version": "2026.10.21.1",
+      "report_digest": "064acee66ef0403199528a30bee3b93a152fb053b99e38906640d0669c54613f",
+      "warning_count": 2,
+      "completion_basis": "coverage_or_ownership_gap",
+      "coverage": {
+        "semantic_coverage": 1.0,
+        "module_semantic_coverage": 1.0,
+        "checkpoint_parameter_coverage": 1.0,
+        "tensor_shape_coverage": 0.8389830508474576
+      },
+      "coverage_gaps": [
+        "tensor_shape_coverage"
+      ],
+      "unknown_nodes": 0,
+      "unmapped_checkpoint_tensor_count": 0,
+      "warning_counts": {
+        "unresolved_branch": 0,
+        "opaque_call": 0,
+        "unresolved_loop": 0,
+        "unmodeled_exception_path": 0,
+        "unowned_checkpoint_tensor": 0,
+        "unproven_tensor_transform": 2,
+        "other": 0
+      },
+      "operation_warning_cohorts": []
+    },
+    {
+      "model_id": "facebook/wav2vec2-base-960h",
+      "revision": "22aad52d435eb6dbaf354bdad9b0da84ce7d6156",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "334964a08f0956f836b9016b8f8d4129bdfc35222bf0372c78c5ec2f3825d1a3",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "native_architecture_unavailable"
+    },
+    {
+      "model_id": "facebook/hubert-base-ls960",
+      "revision": "dba3bb02fda4248b6e082697eee756de8fe8aa8a",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "eba285c8c46ebd04b07fd266a7cd4207e8b1b9d7e1032fb3abdf215bba0aba67",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "safetensors_unavailable"
+    },
+    {
+      "model_id": "jonatasgrosman/wav2vec2-large-xlsr-53-english",
+      "revision": "569a6236e92bd5f7652a0420bfe9bb94c5664080",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "c3a139fafa91dee796f93893725b995b317409868b2a8806a0e1bed30d2297f4",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "native_architecture_unavailable"
+    },
+    {
+      "model_id": "facebook/mms-1b-all",
+      "revision": "3d33597edbdaaba14a8e858e2c8caa76e3cec0cd",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "c4d756ed5a562bd8bae569a18310e55b339a0b63485dcfc3bceb35cfb74ec929",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "native_architecture_unavailable"
+    },
+    {
+      "model_id": "microsoft/speecht5_tts",
+      "revision": "30fcde30f19b87502b8435427b5f5068e401d5f6",
+      "status": "inspected",
+      "engine_version": "2026.10.21.1",
+      "report_digest": "02eb3c3163cc9f2c351ace70d6d99a22a3a5b59368ba8274b9c867e5a152eaa2",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "safetensors_unavailable"
+    },
+    {
+      "model_id": "microsoft/speecht5_vc",
+      "revision": "c418ba2144598f973d0fddc9fd5909a3af83de3d",
+      "status": "inspected",
+      "engine_version": "2026.10.21.1",
+      "report_digest": "d08b6b7cbec19de584ac14a38b16e5d074dd7e844fa4115b484fed3f205edecd",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "safetensors_unavailable"
+    },
+    {
+      "model_id": "myshell-ai/OpenVoice",
+      "revision": "c70fc8b939bd1d8213994ff7c88e32be39708271",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "d6bcb4c56450b4c111145f03bca81ec957f9d57324f7bde6c7d9abe2aa0e5ec2",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "architecture_config_unavailable"
+    },
+    {
+      "model_id": "coqui/XTTS-v2",
+      "revision": "6c2b0d75eae4b7047358e3b6bd9325f857d43f77",
+      "status": "artifact_error",
+      "completion_basis": "no_validated_report",
+      "stage": "reconstruction",
+      "cause_type": "ArtifactError"
+    },
+    {
+      "model_id": "facebook/encodec_24khz",
+      "revision": "c1dbe2ae3f1de713481a3b3e7c47f357092ee040",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "b39a0bc1f5762584853d28edda832977454e4b152682c4ed01b8909c7130668a",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "native_architecture_unavailable"
+    },
+    {
+      "model_id": "facebook/mms-tts-eng",
+      "revision": "c71de0fe7204c83f1c10820a7d696d0b450048ba",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "9fab9d0e23af4643e034efa908c1b48276c65a71e8b3b6a1076a03cf255fe9c9",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "native_architecture_unavailable"
+    },
+    {
+      "model_id": "suno/bark-small",
+      "revision": "1dbd7a128513b8ae4a4e2130fed57b7ac9da5bcd",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "37ff7945339c83fdff7a72c266ea25f87a991b8480a77a190c699fecfa1a48c8",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "safetensors_unavailable"
+    },
+    {
+      "model_id": "parler-tts/parler-tts-mini-v1",
+      "revision": "0392b9451a601e528fd863bbb0598431fee810d9",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "c6b0b7f9a67e291f26f779c869bc98d86fa9117f64d0ae6d53884430ee5a51b2",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "native_architecture_unavailable"
+    },
+    {
+      "model_id": "hexgrad/Kokoro-82M",
+      "revision": "f3ff3571791e39611d31c381e3a41a3af07b4987",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "439dce8298407845c88e485b46789fe6e46435c2d3cd9bf00fb14953bf727ad7",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "safetensors_unavailable"
+    },
+    {
+      "model_id": "kyutai/hibiki-2b-pytorch-bf16",
+      "revision": "bd71144c96f26040612f6414716f5f48ee4fce69",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "488ef88aa2f2aa1f7092d23a99aa70ce5bbdc69fb97510df434667cd0b8c2eb5",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "checkpoint_selection_required"
+    },
+    {
+      "model_id": "kyutai/tts-1.6b-en_fr",
+      "revision": "f65439609986c392cb12df63938abcc550c3fb15",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "ab2a3e91c7704da9665615f3e91fbd51df9f12f60283c238fbd1bb35b6eb83bf",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "checkpoint_selection_required"
+    },
+    {
+      "model_id": "hf-internal-testing/tiny-stable-diffusion-pipe",
+      "revision": "3ee6c9f225f088ad5d35b624b6514b091e6a4849",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "4db65eb8d110dbe68f8adbaa2e97fa6aaae9e337721d72e49b524de83b728ba3",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "pipeline_components_require_selection"
+    },
+    {
+      "model_id": "segmind/tiny-sd",
+      "revision": "cad0bd7495fa6c4bcca01b19a723dc91627fe84f",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "51433d4e25be6e8dcd4150ae390dc02640c357e9cf40af85b5617598408fdacf",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "pipeline_components_require_selection"
+    },
+    {
+      "model_id": "stabilityai/sd-turbo",
+      "revision": "b261bac6fd2cf515557d5d0707481eafa0485ec2",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "65466b653be8cec3ba7e8c04936cc11c7f7b552360f2a170818348c1147ef14f",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "native_architecture_unavailable"
+    },
+    {
+      "model_id": "stabilityai/sdxl-turbo",
+      "revision": "71153311d3dbb46851df1931d3ca6e939de83304",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "ce40809725a94bb87cc91c4db08565744552a9a73738b136ca87fcd505200929",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "native_architecture_unavailable"
+    },
+    {
+      "model_id": "stabilityai/stable-diffusion-xl-base-1.0",
+      "revision": "462165984030d82259a11f4367a4eed129e94a7b",
+      "status": "inspected",
+      "engine_version": "2026.10.21.1",
+      "report_digest": "7d3b14b4aa3d69be24152c8fa9ade26af55243037e47ec927de7b6e9d8dccc14",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "native_architecture_unavailable"
+    },
+    {
+      "model_id": "black-forest-labs/FLUX.1-schnell",
+      "revision": "741f7c3ce8b383c54771c7003378a50191e9efe9",
+      "status": "http_access",
+      "completion_basis": "no_validated_report",
+      "stage": "reconstruction",
+      "cause_type": "HTTPError"
+    },
+    {
+      "model_id": "PixArt-alpha/PixArt-Sigma-XL-2-1024-MS",
+      "revision": "e102b3591cc82e97071b8b4cb90d834d0c487207",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "3151bea6061dcfa65405530012959877ecfbcdcfbbf7d73f9947fffa23d21876",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "native_architecture_unavailable"
+    },
+    {
+      "model_id": "DeepFloyd/IF-I-XL-v1.0",
+      "revision": "c03d510e9b75bce9f9db5bb85148c1402ad7e694",
+      "status": "http_access",
+      "completion_basis": "no_validated_report",
+      "stage": "reconstruction",
+      "cause_type": "HTTPError"
+    },
+    {
+      "model_id": "THUDM/CogVideoX-2b",
+      "revision": "1137dacfc2c9c012bed6a0793f4ecf2ca8e7ba01",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "366390163943d772c351993efe8783bc71f8fb1b9da8ea9c32ba1f7d8f399f98",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "native_architecture_unavailable"
+    },
+    {
+      "model_id": "Lightricks/LTX-Video",
+      "revision": "8984fa25007f376c1a299016d0957a37a2f797bb",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "b61217b9feb23a789aaa9499b18695e6a29f4f20faf6afd8f3890cd258ba61cf",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "native_architecture_unavailable"
+    },
+    {
+      "model_id": "Wan-AI/Wan2.1-T2V-1.3B",
+      "revision": "37ec512624d61f7aa208f7ea8140a131f93afc9a",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "61a628c61c29aa500986a7b4ef0a34da3e362e1675b010eacc3ab515f5c9a5d6",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "native_architecture_unavailable"
+    },
+    {
+      "model_id": "cerspense/zeroscope_v2_576w",
+      "revision": "6963642a64dbefa93663d1ecebb4ceda2d9ecb28",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "8ddf58e9c7109fe463202a1e957cf441637fcb2f2719043c80806e93f2e3d44f",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "pipeline_components_require_selection"
+    },
+    {
+      "model_id": "ali-vilab/i2vgen-xl",
+      "revision": "39e1979ea27be737b0278c06755e321f2b4360d5",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "bec7dbb8e7e4f7d9e4677a9cd9a81cae69feeabfe36a52925375f6d4f08696bc",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "native_architecture_unavailable"
+    },
+    {
+      "model_id": "araffin/ppo-CartPole-v1",
+      "revision": "48dd7c8aab44c2f84fedb167a8d64aefddbc93cf",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "61c463e597e18c029d184e33b501721fc06607ba30158be65de2ee97ba719f20",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "architecture_config_unavailable"
+    },
+    {
+      "model_id": "sb3/ddpg-LunarLanderContinuous-v2",
+      "revision": "b56a46599e75ba67a34f79b83d3a8c921134dedd",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "dfe7dcbd799d4f7086f5e8dc6828c7c97b785193fca9a34ecbe573e47e3d8daa",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "architecture_config_unavailable"
+    },
+    {
+      "model_id": "edbeeching/decision-transformer-gym-hopper-medium",
+      "revision": "8224ec324200b150f10287b8c8c525224e62f319",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "1bfaf4a22514fc1945a91f5933f7150a0de42da0d8c350c81b396affe42da026",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "safetensors_unavailable"
+    },
+    {
+      "model_id": "edbeeching/decision-transformer-gym-walker2d-medium",
+      "revision": "da2238c5041fd7fb197d6305f668880454b2f3d4",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "182cfc2109afcc92ca1f0418d656c44a7b2b25e510f0e50686cb1ad6fb4a5397",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "safetensors_unavailable"
+    },
+    {
+      "model_id": "edbeeching/decision-transformer-gym-halfcheetah-medium",
+      "revision": "bb89518aa176be7e778249a64e0b565a0e488bf5",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "3ae2814a82162824306aaae8adbf2e2b2ee8a4a4e80fb6e2e58483d12ced2d56",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "safetensors_unavailable"
+    },
+    {
+      "model_id": "TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF",
+      "revision": "52e7645ba7c309695bec7ac98f4f005b139cf465",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "2a369c54c643b6dba67a34da823bfecfc479d7aa38a91a2485b418da9abe6728",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "gguf_header_only"
+    },
+    {
+      "model_id": "TheBloke/phi-2-GGUF",
+      "revision": "5a454d977c6438bb9fb2df233c8ca70f21c87420",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "4aec3e3727237ce57a9eb33b1f47df7576e1c6605dabadd5e38ffd7450aad4d7",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "gguf_header_only"
+    },
+    {
+      "model_id": "bartowski/Qwen2.5-Coder-0.5B-Instruct-GGUF",
+      "revision": "69a2c192eed24297fb09a34d8ba948b8624cc3e2",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "73dc637960ed9a1e2a34ec10c626b85d67f38359a27e760bdc99a93274ec7f3e",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "gguf_header_only"
+    },
+    {
+      "model_id": "microsoft/Phi-3-mini-4k-instruct-gguf",
+      "revision": "a64113399c2f6b8ad3e11c394733a2ddadaa7f33",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "e9a1deb934fe5a7a0d23b02b23b984955101dbbb56f3d4516b183bf0663e1d39",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "gguf_header_only"
+    },
+    {
+      "model_id": "tloen/alpaca-lora-7b",
+      "revision": "12103d6baae1b320aa60631b38acb6ea094a0539",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "864180ebb0d791472f7ad57691b0901432be600eb75a7aa151d4291f1f6725cd",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "adapter_requires_base_model"
+    },
+    {
+      "model_id": "Qwen/Qwen3-4B",
+      "revision": "1cfa9a7208912126459214e8b04321603b3df60c",
+      "status": "partial",
+      "engine_version": "2026.10.21.1",
+      "report_digest": "250540ca10836c566dbdbf1274fb0347bb6b1baa9e54ae5b3a86629b97dbe233",
+      "warning_count": 0,
+      "completion_basis": "coverage_or_ownership_gap",
+      "coverage": {
+        "semantic_coverage": 1.0,
+        "module_semantic_coverage": 1.0,
+        "checkpoint_parameter_coverage": 1.0,
+        "tensor_shape_coverage": 0.864406779661017
+      },
+      "coverage_gaps": [
+        "tensor_shape_coverage"
+      ],
+      "unknown_nodes": 0,
+      "unmapped_checkpoint_tensor_count": 0,
+      "warning_counts": {
+        "unresolved_branch": 0,
+        "opaque_call": 0,
+        "unresolved_loop": 0,
+        "unmodeled_exception_path": 0,
+        "unowned_checkpoint_tensor": 0,
+        "unproven_tensor_transform": 0,
+        "other": 0
+      },
+      "operation_warning_cohorts": []
+    },
+    {
+      "model_id": "FacebookAI/xlm-roberta-base",
+      "revision": "e73636d4f797dec63c3081bb6ed5c7b0bb3f2089",
+      "status": "partial",
+      "engine_version": "2026.10.21.1",
+      "report_digest": "5ce374582b759a436e1518b5faae7de84eaac17d86ff7bc037d3fa8fb5fb7154",
+      "warning_count": 7,
+      "completion_basis": "coverage_or_ownership_gap",
+      "coverage": {
+        "semantic_coverage": 1.0,
+        "module_semantic_coverage": 1.0,
+        "checkpoint_parameter_coverage": 1.0,
+        "tensor_shape_coverage": 0.6875
+      },
+      "coverage_gaps": [
+        "tensor_shape_coverage"
+      ],
+      "unknown_nodes": 0,
+      "unmapped_checkpoint_tensor_count": 2,
+      "warning_counts": {
+        "unresolved_branch": 1,
+        "opaque_call": 2,
+        "unresolved_loop": 0,
+        "unmodeled_exception_path": 0,
+        "unowned_checkpoint_tensor": 1,
+        "unproven_tensor_transform": 3,
+        "other": 0
+      },
+      "operation_warning_cohorts": [
+        "position_ids"
+      ]
+    },
+    {
+      "model_id": "BAAI/bge-reranker-v2-m3",
+      "revision": "953dc6f6f85a1b2dbfca4c34a2796e7dde08d41e",
+      "status": "partial",
+      "engine_version": "2026.10.21.1",
+      "report_digest": "2c2d4a73268ca6e65810ebcacd6366d3e51e64f7efeb2362158a2c3beec5fc4b",
+      "warning_count": 5,
+      "completion_basis": "coverage_or_ownership_gap",
+      "coverage": {
+        "semantic_coverage": 1.0,
+        "module_semantic_coverage": 1.0,
+        "checkpoint_parameter_coverage": 1.0,
+        "tensor_shape_coverage": 0.6829268292682927
+      },
+      "coverage_gaps": [
+        "tensor_shape_coverage"
+      ],
+      "unknown_nodes": 0,
+      "unmapped_checkpoint_tensor_count": 0,
+      "warning_counts": {
+        "unresolved_branch": 1,
+        "opaque_call": 1,
+        "unresolved_loop": 0,
+        "unmodeled_exception_path": 0,
+        "unowned_checkpoint_tensor": 0,
+        "unproven_tensor_transform": 3,
+        "other": 0
+      },
+      "operation_warning_cohorts": [
+        "position_ids"
+      ]
+    },
+    {
+      "model_id": "w11wo/indonesian-roberta-base-posp-tagger",
+      "revision": "5067796360930a7b9c5e1d76e1ab2b8c6b4cd103",
+      "status": "partial",
+      "engine_version": "2026.10.21.1",
+      "report_digest": "4913f392f2cb0dafbd5e8eacbadfe94817a49ba8414fdd5c080aa6931975cf20",
+      "warning_count": 5,
+      "completion_basis": "coverage_or_ownership_gap",
+      "coverage": {
+        "semantic_coverage": 1.0,
+        "module_semantic_coverage": 1.0,
+        "checkpoint_parameter_coverage": 1.0,
+        "tensor_shape_coverage": 0.7051282051282052
+      },
+      "coverage_gaps": [
+        "tensor_shape_coverage"
+      ],
+      "unknown_nodes": 0,
+      "unmapped_checkpoint_tensor_count": 0,
+      "warning_counts": {
+        "unresolved_branch": 1,
+        "opaque_call": 1,
+        "unresolved_loop": 0,
+        "unmodeled_exception_path": 0,
+        "unowned_checkpoint_tensor": 0,
+        "unproven_tensor_transform": 3,
+        "other": 0
+      },
+      "operation_warning_cohorts": [
+        "position_ids"
+      ]
+    },
+    {
+      "model_id": "deepset/bert-large-uncased-whole-word-masking-squad2",
+      "revision": "0a489d6caaf651c1983e8ecd8a418c7f65993d72",
+      "status": "partial",
+      "engine_version": "2026.10.21.1",
+      "report_digest": "f91e67a0526cae27817a644a7778f94a0e3bb1494a2355cb0ec466a1abc32a6b",
+      "warning_count": 8,
+      "completion_basis": "coverage_or_ownership_gap",
+      "coverage": {
+        "semantic_coverage": 1.0,
+        "module_semantic_coverage": 1.0,
+        "checkpoint_parameter_coverage": 1.0,
+        "tensor_shape_coverage": 0.654320987654321
+      },
+      "coverage_gaps": [
+        "tensor_shape_coverage"
+      ],
+      "unknown_nodes": 0,
+      "unmapped_checkpoint_tensor_count": 2,
+      "warning_counts": {
+        "unresolved_branch": 1,
+        "opaque_call": 2,
+        "unresolved_loop": 0,
+        "unmodeled_exception_path": 0,
+        "unowned_checkpoint_tensor": 1,
+        "unproven_tensor_transform": 4,
+        "other": 0
+      },
+      "operation_warning_cohorts": [
+        "tuple_split_or_chunk"
+      ]
+    },
+    {
+      "model_id": "facebook/bart-large-cnn",
+      "revision": "37f520fa929c961707657b28798b30c003dd100b",
+      "status": "partial",
+      "engine_version": "2026.10.21.1",
+      "report_digest": "b770475531ee78916f62650576fbe26c1e898f9e16ee73102f90f114bb9b2612",
+      "warning_count": 17,
+      "completion_basis": "coverage_or_ownership_gap",
+      "coverage": {
+        "semantic_coverage": 1.0,
+        "module_semantic_coverage": 1.0,
+        "checkpoint_parameter_coverage": 1.0,
+        "tensor_shape_coverage": 0.6521739130434783
+      },
+      "coverage_gaps": [
+        "tensor_shape_coverage"
+      ],
+      "unknown_nodes": 0,
+      "unmapped_checkpoint_tensor_count": 0,
+      "warning_counts": {
+        "unresolved_branch": 8,
+        "opaque_call": 6,
+        "unresolved_loop": 0,
+        "unmodeled_exception_path": 0,
+        "unowned_checkpoint_tensor": 0,
+        "unproven_tensor_transform": 3,
+        "other": 0
+      },
+      "operation_warning_cohorts": [
+        "numerical_stability"
+      ]
+    },
+    {
+      "model_id": "google-t5/t5-base",
+      "revision": "a9723ea7f1b39c1eae772870f3b547bf6ef7e6c1",
+      "status": "partial",
+      "engine_version": "2026.10.21.1",
+      "report_digest": "0d2b1bdfef4d3aff7ad47b77005e21924a134fc82cd64122985f7ddc0ab15233",
+      "warning_count": 13,
+      "completion_basis": "coverage_or_ownership_gap",
+      "coverage": {
+        "semantic_coverage": 1.0,
+        "module_semantic_coverage": 1.0,
+        "checkpoint_parameter_coverage": 1.0,
+        "tensor_shape_coverage": 0.8862973760932945
+      },
+      "coverage_gaps": [
+        "tensor_shape_coverage"
+      ],
+      "unknown_nodes": 0,
+      "unmapped_checkpoint_tensor_count": 0,
+      "warning_counts": {
+        "unresolved_branch": 5,
+        "opaque_call": 5,
+        "unresolved_loop": 0,
+        "unmodeled_exception_path": 0,
+        "unowned_checkpoint_tensor": 0,
+        "unproven_tensor_transform": 3,
+        "other": 0
+      },
+      "operation_warning_cohorts": []
+    },
+    {
+      "model_id": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+      "revision": "e8f8c211226b894fcb81acc59f3b34ba3efd5f42",
+      "status": "partial",
+      "engine_version": "2026.10.21.1",
+      "report_digest": "24b36aa85668a173b151b5523ff4483df34b9e60b7332389ae17eeaeb77eedfa",
+      "warning_count": 4,
+      "completion_basis": "coverage_or_ownership_gap",
+      "coverage": {
+        "semantic_coverage": 0.9803921568627451,
+        "module_semantic_coverage": 0.9956140350877193,
+        "checkpoint_parameter_coverage": 1.0,
+        "tensor_shape_coverage": 0.717948717948718
+      },
+      "coverage_gaps": [
+        "semantic_coverage",
+        "module_semantic_coverage",
+        "tensor_shape_coverage"
+      ],
+      "unknown_nodes": 1,
+      "unmapped_checkpoint_tensor_count": 0,
+      "warning_counts": {
+        "unresolved_branch": 1,
+        "opaque_call": 0,
+        "unresolved_loop": 0,
+        "unmodeled_exception_path": 0,
+        "unowned_checkpoint_tensor": 0,
+        "unproven_tensor_transform": 3,
+        "other": 0
+      },
+      "operation_warning_cohorts": []
+    },
+    {
+      "model_id": "BAAI/bge-large-en-v1.5",
+      "revision": "d4aa6901d3a41ba39fb536a557fa166f842b0e09",
+      "status": "partial",
+      "engine_version": "2026.10.21.1",
+      "report_digest": "32c2b42c215f0f8ac49364f924a3a65452201707f6cacd8561ee04afd2d738b8",
+      "warning_count": 4,
+      "completion_basis": "coverage_or_ownership_gap",
+      "coverage": {
+        "semantic_coverage": 0.9803921568627451,
+        "module_semantic_coverage": 0.9977477477477478,
+        "checkpoint_parameter_coverage": 1.0,
+        "tensor_shape_coverage": 0.717948717948718
+      },
+      "coverage_gaps": [
+        "semantic_coverage",
+        "module_semantic_coverage",
+        "tensor_shape_coverage"
+      ],
+      "unknown_nodes": 1,
+      "unmapped_checkpoint_tensor_count": 0,
+      "warning_counts": {
+        "unresolved_branch": 1,
+        "opaque_call": 0,
+        "unresolved_loop": 0,
+        "unmodeled_exception_path": 0,
+        "unowned_checkpoint_tensor": 0,
+        "unproven_tensor_transform": 3,
+        "other": 0
+      },
+      "operation_warning_cohorts": []
+    },
+    {
+      "model_id": "prithivMLmods/Gender-Classifier-Mini",
+      "revision": "4855356b698e88ba57996836bb35091f81932667",
+      "status": "partial",
+      "engine_version": "2026.10.21.1",
+      "report_digest": "74aea27305238c9fb3f064e8631f95b2678e9ca742750cd6d54a599193bc63a0",
+      "warning_count": 26,
+      "completion_basis": "coverage_or_ownership_gap",
+      "coverage": {
+        "semantic_coverage": 0.9444444444444444,
+        "module_semantic_coverage": 0.9813664596273292,
+        "checkpoint_parameter_coverage": 1.0,
+        "tensor_shape_coverage": 0.3877551020408163
+      },
+      "coverage_gaps": [
+        "semantic_coverage",
+        "module_semantic_coverage",
+        "tensor_shape_coverage"
+      ],
+      "unknown_nodes": 3,
+      "unmapped_checkpoint_tensor_count": 0,
+      "warning_counts": {
+        "unresolved_branch": 16,
+        "opaque_call": 5,
+        "unresolved_loop": 0,
+        "unmodeled_exception_path": 0,
+        "unowned_checkpoint_tensor": 0,
+        "unproven_tensor_transform": 5,
+        "other": 0
+      },
+      "operation_warning_cohorts": [
+        "reduction_or_normalization"
+      ]
+    },
+    {
+      "model_id": "mudler/locate-anything.cpp-gguf",
+      "revision": "4e50db5b836dd876f5e464734ef5484cae754a52",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "7a568616a916c33275be72bf1eae04ed39a3de669b2bc86319172d3e6c7407f9",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "checkpoint_selection_required"
+    },
+    {
+      "model_id": "ZhengPeng7/BiRefNet",
+      "revision": "e2bf8e4460fc8fa32bba5ea4d94b3233d367b0e4",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "f6ce9e7626acecedf36f4fca216d2d27752269281839d98398cebafc85a2bafa",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "native_architecture_unavailable"
+    },
+    {
+      "model_id": "depth-anything/DA3METRIC-LARGE",
+      "revision": "4010e39f3634a45bc60553321fb49fb760bd594e",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "85f90675858b7c32ebb18d79fdfe7f77e117dcd4fa7c675adc6096bfd5c4ad11",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "native_architecture_unavailable"
+    },
+    {
+      "model_id": "zai-org/GLM-OCR",
+      "revision": "2e85a62840ccac27daa451df36c736c4636b8628",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "5879e5b84d00ea7a2638084052845c3e979f3d0d5bbfd11b490be55626912230",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "native_architecture_unavailable"
+    },
+    {
+      "model_id": "OpenMed/Qwen3.5-2B-MedVL",
+      "revision": "9bfe30c4a41211d382b37249d283972547283ea2",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "3098b73cd17192391cc6e6524a21fde2af19036f74e0e4a76857815cdf3faf97",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "native_architecture_unavailable"
+    },
+    {
+      "model_id": "google/gemma-4-26B-A4B-it",
+      "revision": "4d7ae4984b7db7de8f8457170b3f1a419ee76d52",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "e548049ac38f1dd2ca261eb489bcd579599e44f28a332deb046ea11025e939c9",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "native_architecture_unavailable"
+    },
+    {
+      "model_id": "facebook/vjepa2-vitl-fpc64-256",
+      "revision": "b3c1679b7c34d3255ef3547f27c7b226aefab26f",
+      "status": "partial",
+      "engine_version": "2026.10.21.1",
+      "report_digest": "2f20788e21744a92cbaf1b0d54da117bd4392bfe85a7835e64a8407a6d13d410",
+      "warning_count": 17,
+      "completion_basis": "coverage_or_ownership_gap",
+      "coverage": {
+        "semantic_coverage": 0.978021978021978,
+        "module_semantic_coverage": 0.9961315280464217,
+        "checkpoint_parameter_coverage": 1.0,
+        "tensor_shape_coverage": 0.5968992248062015
+      },
+      "coverage_gaps": [
+        "semantic_coverage",
+        "module_semantic_coverage",
+        "tensor_shape_coverage"
+      ],
+      "unknown_nodes": 2,
+      "unmapped_checkpoint_tensor_count": 0,
+      "warning_counts": {
+        "unresolved_branch": 1,
+        "opaque_call": 8,
+        "unresolved_loop": 0,
+        "unmodeled_exception_path": 0,
+        "unowned_checkpoint_tensor": 0,
+        "unproven_tensor_transform": 8,
+        "other": 0
+      },
+      "operation_warning_cohorts": []
+    },
+    {
+      "model_id": "jonatasgrosman/wav2vec2-large-xlsr-53-japanese",
+      "revision": "cf031e020336460d15a417eba710bbc5bb43be9a",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "7fdaf4545912d14cd5749efd78c6955381f2e675e364e5c46e8fb584f26c027d",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "safetensors_unavailable"
+    },
+    {
+      "model_id": "audio-cpp/audio.cpp-gguf",
+      "revision": "02f5de92a82339ebb722ea6fdadc14b7bec43a7f",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "c53d0b41a9f1418581de9b3cdeac4300445a0fca3f19f15000ce1f06fdcd42f0",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "checkpoint_selection_required"
+    },
+    {
+      "model_id": "laion/clap-htsat-fused",
+      "revision": "365dea6ef167def6676140ed93bbc43f84dabb28",
+      "status": "partial",
+      "engine_version": "2026.10.21.1",
+      "report_digest": "da3c62c34a55313eca65fa6db2786793051b6b2091eed46bd4bacce7620ec5ff",
+      "warning_count": 58,
+      "completion_basis": "coverage_or_ownership_gap",
+      "coverage": {
+        "semantic_coverage": 0.9387755102040817,
+        "module_semantic_coverage": 0.9329388560157791,
+        "checkpoint_parameter_coverage": 1.0,
+        "tensor_shape_coverage": 0.5599078341013825
+      },
+      "coverage_gaps": [
+        "semantic_coverage",
+        "module_semantic_coverage",
+        "tensor_shape_coverage"
+      ],
+      "unknown_nodes": 18,
+      "unmapped_checkpoint_tensor_count": 0,
+      "warning_counts": {
+        "unresolved_branch": 10,
+        "opaque_call": 25,
+        "unresolved_loop": 0,
+        "unmodeled_exception_path": 0,
+        "unowned_checkpoint_tensor": 0,
+        "unproven_tensor_transform": 23,
+        "other": 0
+      },
+      "operation_warning_cohorts": [
+        "padding_windows_or_resampling",
+        "reduction_or_normalization",
+        "position_ids"
+      ]
+    },
+    {
+      "model_id": "nvidia/bigvgan_v2_22khz_80band_256x",
+      "revision": "633ff708ed5b74903e86ff1298cf4a98e921c513",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "f39f13ba6ff29848d94cf5c309bd06b566458600a2a78818d3ffc52cc0b93cea",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "safetensors_unavailable"
+    },
+    {
+      "model_id": "facebook/musicgen-medium",
+      "revision": "d3bd7b00761b78ad7a8a05145ee31e7832e9916c",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "8199639a04a9f592900d737455974c24e0face043475b80b502d1b4e942af3b4",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "safetensors_unavailable"
+    },
+    {
+      "model_id": "abenzerps/Qwen-Image-2.1-Uncensored-Quantized",
+      "revision": "7959e658915f52274897fb573ffeda49de8dc16b",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "f057eefb59d3aafa29693e3d3d477fb42ca49277a48d0ae370a404fa25d17b6d",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "checkpoint_selection_required"
+    },
+    {
+      "model_id": "unsloth/Qwen-Image-Edit-2511-GGUF",
+      "revision": "0d33d9692b4b26212297240d87b0d4719aa4fd06",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "a3430d485be3e4c1887a6c21014069f70839cd074557a6ed24556da49f490bcd",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "checkpoint_selection_required"
+    },
+    {
+      "model_id": "Comfy-Org/Wan_2.2_ComfyUI_Repackaged",
+      "revision": "ee6f4a40737a995bf5818954cfce6d59443b0f04",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "c37ed6056b561bc31f3d5d7aa7a089503638a8714c2d1d70f30e3d75863ae17b",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "checkpoint_selection_required"
+    },
+    {
+      "model_id": "FastVideo/FastVideo-FastH3-4-step-Preview-v1-VSA-DataFree",
+      "revision": "5ea076f35b84da4c3c82217112fa733d8eea2ae1",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "4fad9ced93838dd8d529e206d119c7e1151bf8bc461211dc355e254a052318df",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "checkpoint_selection_required"
+    },
+    {
+      "model_id": "google/ddpm-cifar10-32",
+      "revision": "267b167dc01f0e4e61923ea244e8b988f84deb80",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "0c06a9691b516a11c0806962e718bfec5c4d75bb16cc900778a0f07d3227a395",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "pipeline_components_require_selection"
+    },
+    {
+      "model_id": "openai/clip-vit-large-patch14",
+      "revision": "32bd64288804d66eefd0ccbe215aa642df71cc41",
+      "status": "partial",
+      "engine_version": "2026.10.21.1",
+      "report_digest": "56a41ccd004fb6cc07065e2cca52c69189f16764fb2b9a7826b0e560d5e6e0a5",
+      "warning_count": 9,
+      "completion_basis": "coverage_or_ownership_gap",
+      "coverage": {
+        "semantic_coverage": 0.9642857142857143,
+        "module_semantic_coverage": 0.9933333333333333,
+        "checkpoint_parameter_coverage": 1.0,
+        "tensor_shape_coverage": 0.5433070866141733
+      },
+      "coverage_gaps": [
+        "semantic_coverage",
+        "module_semantic_coverage",
+        "tensor_shape_coverage"
+      ],
+      "unknown_nodes": 3,
+      "unmapped_checkpoint_tensor_count": 0,
+      "warning_counts": {
+        "unresolved_branch": 0,
+        "opaque_call": 4,
+        "unresolved_loop": 0,
+        "unmodeled_exception_path": 0,
+        "unowned_checkpoint_tensor": 0,
+        "unproven_tensor_transform": 5,
+        "other": 0
+      },
+      "operation_warning_cohorts": [
+        "reduction_or_normalization"
+      ]
+    },
+    {
+      "model_id": "amazon/chronos-t5-small",
+      "revision": "a971ba21945c4f1796b17a91fe69214b5f4ad472",
+      "status": "partial",
+      "engine_version": "2026.10.21.1",
+      "report_digest": "7e08a298b831dc0dcc4fb5818513b80b7df6d09b46f541196033a2e8c09608a7",
+      "warning_count": 13,
+      "completion_basis": "coverage_or_ownership_gap",
+      "coverage": {
+        "semantic_coverage": 1.0,
+        "module_semantic_coverage": 1.0,
+        "checkpoint_parameter_coverage": 1.0,
+        "tensor_shape_coverage": 0.8862973760932945
+      },
+      "coverage_gaps": [
+        "tensor_shape_coverage"
+      ],
+      "unknown_nodes": 0,
+      "unmapped_checkpoint_tensor_count": 0,
+      "warning_counts": {
+        "unresolved_branch": 5,
+        "opaque_call": 5,
+        "unresolved_loop": 0,
+        "unmodeled_exception_path": 0,
+        "unowned_checkpoint_tensor": 0,
+        "unproven_tensor_transform": 3,
+        "other": 0
+      },
+      "operation_warning_cohorts": []
+    },
+    {
+      "model_id": "facebook/esm2_t6_8M_UR50D",
+      "revision": "c731040fcd8d73dceaa04b0a8e6329b345b0f5df",
+      "status": "partial",
+      "engine_version": "2026.10.21.1",
+      "report_digest": "114a92bf751501a0f882a7d32dff5d7d695db64c73ba0524a98edebc6f3d3770",
+      "warning_count": 19,
+      "completion_basis": "coverage_or_ownership_gap",
+      "coverage": {
+        "semantic_coverage": 0.9137931034482758,
+        "module_semantic_coverage": 0.7863247863247863,
+        "checkpoint_parameter_coverage": 1.0,
+        "tensor_shape_coverage": 0.6309523809523809
+      },
+      "coverage_gaps": [
+        "semantic_coverage",
+        "module_semantic_coverage",
+        "tensor_shape_coverage"
+      ],
+      "unknown_nodes": 5,
+      "unmapped_checkpoint_tensor_count": 0,
+      "warning_counts": {
+        "unresolved_branch": 4,
+        "opaque_call": 6,
+        "unresolved_loop": 0,
+        "unmodeled_exception_path": 0,
+        "unowned_checkpoint_tensor": 0,
+        "unproven_tensor_transform": 9,
+        "other": 0
+      },
+      "operation_warning_cohorts": [
+        "position_ids"
+      ]
+    },
+    {
+      "model_id": "Prior-Labs/TabPFN-v2-clf",
+      "revision": "f851f2a3c941544733b712d8c0f96dfae9b28862",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "85c4fa0f70ce8199fe1927e26b53d4100cd1e31650e15e164f2a78feacea1941",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "safetensors_unavailable"
+    },
+    {
+      "model_id": "lerobot/pi05_libero_finetuned_v044",
+      "revision": "7152f13e34c6c115d808aea0e5d08aca74eac14b",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "b87a401f4f9d648c9e7e4a8aaf01cd507798457753b27b964b9addbb13fa112f",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "native_architecture_unavailable"
+    },
+    {
+      "model_id": "Qwen/Qwen3-8B",
+      "revision": "b968826d9c46dd6066d109eabc6255188de91218",
+      "status": "partial",
+      "engine_version": "2026.10.21.1",
+      "report_digest": "f49ddd881f452989af34b921ed913745666f677c340b909ced6bbaa830412cf5",
+      "warning_count": 0,
+      "completion_basis": "coverage_or_ownership_gap",
+      "coverage": {
+        "semantic_coverage": 1.0,
+        "module_semantic_coverage": 1.0,
+        "checkpoint_parameter_coverage": 1.0,
+        "tensor_shape_coverage": 0.864406779661017
+      },
+      "coverage_gaps": [
+        "tensor_shape_coverage"
+      ],
+      "unknown_nodes": 0,
+      "unmapped_checkpoint_tensor_count": 0,
+      "warning_counts": {
+        "unresolved_branch": 0,
+        "opaque_call": 0,
+        "unresolved_loop": 0,
+        "unmodeled_exception_path": 0,
+        "unowned_checkpoint_tensor": 0,
+        "unproven_tensor_transform": 0,
+        "other": 0
+      },
+      "operation_warning_cohorts": []
+    },
+    {
+      "model_id": "distilbert/distilbert-base-uncased",
+      "revision": "12040accade4e8a0f71eabdb258fecc2e7e948be",
+      "status": "partial",
+      "engine_version": "2026.10.21.1",
+      "report_digest": "3db73b063ee4c5f893015214ae948299b517b43651f0d0dd40c7c457ddc9a2db",
+      "warning_count": 12,
+      "completion_basis": "coverage_or_ownership_gap",
+      "coverage": {
+        "semantic_coverage": 0.8571428571428572,
+        "module_semantic_coverage": 0.7959183673469388,
+        "checkpoint_parameter_coverage": 1.0,
+        "tensor_shape_coverage": 0.36363636363636365
+      },
+      "coverage_gaps": [
+        "semantic_coverage",
+        "module_semantic_coverage",
+        "tensor_shape_coverage"
+      ],
+      "unknown_nodes": 5,
+      "unmapped_checkpoint_tensor_count": 0,
+      "warning_counts": {
+        "unresolved_branch": 3,
+        "opaque_call": 7,
+        "unresolved_loop": 0,
+        "unmodeled_exception_path": 0,
+        "unowned_checkpoint_tensor": 0,
+        "unproven_tensor_transform": 2,
+        "other": 0
+      },
+      "operation_warning_cohorts": [
+        "reduction_or_normalization"
+      ]
+    },
+    {
+      "model_id": "ProsusAI/finbert",
+      "revision": "0bc2ac10dda6929bcb1f77ccc43c7ec5c424f031",
+      "status": "partial",
+      "engine_version": "2026.10.21.1",
+      "report_digest": "20b3c38defb93aeb08c3d5c6e3cc387b8a770818f6b1e90ed58ef0366775c787",
+      "warning_count": 4,
+      "completion_basis": "coverage_or_ownership_gap",
+      "coverage": {
+        "semantic_coverage": 0.9814814814814815,
+        "module_semantic_coverage": 0.9956709956709957,
+        "checkpoint_parameter_coverage": 1.0,
+        "tensor_shape_coverage": 0.6951219512195121
+      },
+      "coverage_gaps": [
+        "semantic_coverage",
+        "module_semantic_coverage",
+        "tensor_shape_coverage"
+      ],
+      "unknown_nodes": 1,
+      "unmapped_checkpoint_tensor_count": 0,
+      "warning_counts": {
+        "unresolved_branch": 1,
+        "opaque_call": 0,
+        "unresolved_loop": 0,
+        "unmodeled_exception_path": 0,
+        "unowned_checkpoint_tensor": 0,
+        "unproven_tensor_transform": 3,
+        "other": 0
+      },
+      "operation_warning_cohorts": []
+    },
+    {
+      "model_id": "StanfordAIMI/stanford-deidentifier-base",
+      "revision": "661b9c1c717d3165512d440abc3700c386aefab6",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "987a64684f6f0e10b7bdc6ed3f0ed179c4e17bd0bbf9a68dd2a1e5e9c10e4e43",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "safetensors_unavailable"
+    },
+    {
+      "model_id": "deepset/tinyroberta-squad2",
+      "revision": "12b287c9df677e28b07f0a023850dba68c997dbf",
+      "status": "partial",
+      "engine_version": "2026.10.21.1",
+      "report_digest": "4ecf1d5367b610d49e664eb0d9190f3115d90d445b553192462ee39d5fda5027",
+      "warning_count": 8,
+      "completion_basis": "coverage_or_ownership_gap",
+      "coverage": {
+        "semantic_coverage": 1.0,
+        "module_semantic_coverage": 1.0,
+        "checkpoint_parameter_coverage": 1.0,
+        "tensor_shape_coverage": 0.6707317073170732
+      },
+      "coverage_gaps": [
+        "tensor_shape_coverage"
+      ],
+      "unknown_nodes": 0,
+      "unmapped_checkpoint_tensor_count": 0,
+      "warning_counts": {
+        "unresolved_branch": 1,
+        "opaque_call": 3,
+        "unresolved_loop": 0,
+        "unmodeled_exception_path": 0,
+        "unowned_checkpoint_tensor": 0,
+        "unproven_tensor_transform": 4,
+        "other": 0
+      },
+      "operation_warning_cohorts": [
+        "tuple_split_or_chunk",
+        "position_ids"
+      ]
+    },
+    {
+      "model_id": "pszemraj/long-t5-tglobal-base-sci-simplify",
+      "revision": "bf86a88089c7199d6dad4dc815ee4821e362070d",
+      "status": "partial",
+      "engine_version": "2026.10.21.1",
+      "report_digest": "04aec3e32f3feeb5e2dba2595d075633662b57d4cd86445415feed51f3f0c0cd",
+      "warning_count": 28,
+      "completion_basis": "coverage_or_ownership_gap",
+      "coverage": {
+        "semantic_coverage": 1.0,
+        "module_semantic_coverage": 1.0,
+        "checkpoint_parameter_coverage": 1.0,
+        "tensor_shape_coverage": 0.8328611898016998
+      },
+      "coverage_gaps": [
+        "tensor_shape_coverage"
+      ],
+      "unknown_nodes": 0,
+      "unmapped_checkpoint_tensor_count": 0,
+      "warning_counts": {
+        "unresolved_branch": 9,
+        "opaque_call": 17,
+        "unresolved_loop": 0,
+        "unmodeled_exception_path": 0,
+        "unowned_checkpoint_tensor": 0,
+        "unproven_tensor_transform": 2,
+        "other": 0
+      },
+      "operation_warning_cohorts": [
+        "numerical_stability"
+      ]
+    },
+    {
+      "model_id": "Helsinki-NLP/opus-mt-nl-en",
+      "revision": "48af999f2c59b10c05ca6e008dcedc07677a9b15",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "346353197fd1140de63af36bf4bc81d98b4d268022645b92009e60f81be68f12",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "safetensors_unavailable"
+    },
+    {
+      "model_id": "BAAI/bge-m3",
+      "revision": "5617a9f61b028005a4858fdac845db406aefb181",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "4612620e49eed82bd380902be201fae9f0c24399b8b2e0d7d252c606ca26cc3a",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "safetensors_unavailable"
+    },
+    {
+      "model_id": "Qwen/Qwen3-Embedding-0.6B",
+      "revision": "97b0c614be4d77ee51c0cef4e5f07c00f9eb65b3",
+      "status": "partial",
+      "engine_version": "2026.10.21.1",
+      "report_digest": "b7961a45d381515b37acf4bcd2e8c169e11d395d662ed2f145cceeb0c0ad967d",
+      "warning_count": 0,
+      "completion_basis": "coverage_or_ownership_gap",
+      "coverage": {
+        "semantic_coverage": 1.0,
+        "module_semantic_coverage": 1.0,
+        "checkpoint_parameter_coverage": 1.0,
+        "tensor_shape_coverage": 0.864406779661017
+      },
+      "coverage_gaps": [
+        "tensor_shape_coverage"
+      ],
+      "unknown_nodes": 0,
+      "unmapped_checkpoint_tensor_count": 0,
+      "warning_counts": {
+        "unresolved_branch": 0,
+        "opaque_call": 0,
+        "unresolved_loop": 0,
+        "unmodeled_exception_path": 0,
+        "unowned_checkpoint_tensor": 0,
+        "unproven_tensor_transform": 0,
+        "other": 0
+      },
+      "operation_warning_cohorts": []
+    },
+    {
+      "model_id": "timm/resnet18.a1_in1k",
+      "revision": "491b427b45c94c7fb0e78b5474cc919aff584bbf",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "2469f8b23953b346d8d33e865734fbcae5d4bb6fc67ef4c0eff078afa1b45e1d",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "native_architecture_unavailable"
+    },
+    {
+      "model_id": "PekingU/rtdetr_r101vd_coco_o365",
+      "revision": "ff44b69152a72cc752677665fb4539507d56a99d",
+      "status": "partial",
+      "engine_version": "2026.10.21.1",
+      "report_digest": "8b6e22beb1cb420473e7a37eefedcabe4b8118c46191921e66450139a48102f9",
+      "warning_count": 41,
+      "completion_basis": "coverage_or_ownership_gap",
+      "coverage": {
+        "semantic_coverage": 0.8032786885245902,
+        "module_semantic_coverage": 0.7141414141414142,
+        "checkpoint_parameter_coverage": 1.0,
+        "tensor_shape_coverage": 0.32666666666666666
+      },
+      "coverage_gaps": [
+        "semantic_coverage",
+        "module_semantic_coverage",
+        "tensor_shape_coverage"
+      ],
+      "unknown_nodes": 84,
+      "unmapped_checkpoint_tensor_count": 0,
+      "warning_counts": {
+        "unresolved_branch": 6,
+        "opaque_call": 24,
+        "unresolved_loop": 3,
+        "unmodeled_exception_path": 0,
+        "unowned_checkpoint_tensor": 0,
+        "unproven_tensor_transform": 8,
+        "other": 0
+      },
+      "operation_warning_cohorts": [
+        "padding_windows_or_resampling"
+      ]
+    },
+    {
+      "model_id": "facebook/mask2former-swin-large-ade-semantic",
+      "revision": "aa25c92404a40599614215e76514c79b427c7527",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "83901abcc9bd23edc6ced100984eda742e8f2d1d62df597c2fc19003f003b556",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "native_architecture_unavailable"
+    },
+    {
+      "model_id": "depth-anything/DA3MONO-LARGE",
+      "revision": "f465978e618db8cc79c83b8bbf24964857db1875",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "9e28898823b3d6412925851232fb6f732fdb4a2a7f36023d78cf332679b84393",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "native_architecture_unavailable"
+    },
+    {
+      "model_id": "kha-white/manga-ocr-base",
+      "revision": "aa6573bd10b0d446cbf622e29c3e084914df9741",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "c5a07ce98ac92b8314c8ca695fdc6b4ec380f3ce881037b2ffaf926c03854f20",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "safetensors_unavailable"
+    },
+    {
+      "model_id": "internlm/internlm-xcomposer2-vl-7b",
+      "revision": "c67bd06390dbe068a582c6561570725b1289a7c5",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "690d13d77450d047b17c526e112e002a64239cdbf03583357b91fcf070d6365b",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "safetensors_unavailable"
+    },
+    {
+      "model_id": "google/gemma-4-31B-it",
+      "revision": "842da3794eaa0b77d5f08bae87a17459d91ff475",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "f505d84a12fe55528ad8ced0ea76e45f9aa399c6941484cd0e604edc6251d0b8",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "native_architecture_unavailable"
+    },
+    {
+      "model_id": "microsoft/xclip-base-patch16-zero-shot",
+      "revision": "6746d6a5202bf24300cd9bf36f457f174483d41b",
+      "status": "partial",
+      "engine_version": "2026.10.21.1",
+      "report_digest": "51b89a49bd2834beb6daf5fb2890e7dca401816a0cc9aca501a22ac15bbafab0",
+      "warning_count": 15,
+      "completion_basis": "coverage_or_ownership_gap",
+      "coverage": {
+        "semantic_coverage": 0.9661016949152542,
+        "module_semantic_coverage": 0.9844789356984479,
+        "checkpoint_parameter_coverage": 1.0,
+        "tensor_shape_coverage": 0.5671641791044776
+      },
+      "coverage_gaps": [
+        "semantic_coverage",
+        "module_semantic_coverage",
+        "tensor_shape_coverage"
+      ],
+      "unknown_nodes": 6,
+      "unmapped_checkpoint_tensor_count": 0,
+      "warning_counts": {
+        "unresolved_branch": 0,
+        "opaque_call": 7,
+        "unresolved_loop": 0,
+        "unmodeled_exception_path": 0,
+        "unowned_checkpoint_tensor": 0,
+        "unproven_tensor_transform": 8,
+        "other": 0
+      },
+      "operation_warning_cohorts": [
+        "reduction_or_normalization"
+      ]
+    },
+    {
+      "model_id": "argmaxinc/whisperkit-coreml",
+      "revision": "0f63a7800b00dd0226abd051b906c246e1907482",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "dd6ca3cf6e5261af7a3d9ec8f8f67560b3c3eb0df4d3bb728d99b848c4542d74",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "safetensors_unavailable"
+    },
+    {
+      "model_id": "Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice",
+      "revision": "0c0e3051f131929182e2c023b9537f8b1c68adfe",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "3e9eff94f0ff72920979582f2b25d7c59930ff87deb72fe6dc7fc960bc834444",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "native_architecture_unavailable"
+    },
+    {
+      "model_id": "audeering/wav2vec2-large-robust-24-ft-age-gender",
+      "revision": "bad2737f529168bc3d3fcd97edfaba9583c7d36d",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "5d802451a9fe4f6b8237d85fa838b43610c4d4108ec2b8f54bae577965b21125",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "native_architecture_unavailable"
+    },
+    {
+      "model_id": "nvidia/bigvgan_v2_44khz_128band_512x",
+      "revision": "95a9d1dcb12906c03edd938d77b9333d6ded7dfb",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "378401e0c1aad822066b536404de25acd599204310a88e48269212b932274a94",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "safetensors_unavailable"
+    },
+    {
+      "model_id": "audio-cpp/MiniMax-Music3-GGUF",
+      "revision": "46fe77f8bb395ccdbe797d784225f7b84866e7ce",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "f4c5a52a4bc22c1a2cac11859eb0245f98657bfc3f96ae1a3b6df02ada865a1e",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "checkpoint_selection_required"
+    },
+    {
+      "model_id": "unsloth/Qwen-Image-2.1-GGUF",
+      "revision": "2c31ccd392b367a6637841a143813320a02dff55",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "6a3e17780f915ae7a6f579d1c7d1142f7bf7082c3008754a45f27623568ab9b6",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "checkpoint_selection_required"
+    },
+    {
+      "model_id": "black-forest-labs/FLUX.2-klein-base-4B",
+      "revision": "a3b4f4849157f664bdbc776fd7453c2783562f4d",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "7124799e1ddc675d345704b9f5db783f616475f029642b00d4bcad1fd298e41e",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "pipeline_components_require_selection"
+    },
+    {
+      "model_id": "Lightricks/LTX-2.5",
+      "revision": "49b093a39c19169a8a81721dcc541e07e945232f",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "6a6f000eed31607d295c8a9c9c9929d35126f1f827e229fac2125b10fb49cba7",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "checkpoint_selection_required"
+    },
+    {
+      "model_id": "QuantStack/Wan2.2-TI2V-5B-GGUF",
+      "revision": "57437632ddd08bdcbd1508c866aa22e126ed51d2",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "546adad40afe0406ff35571bd9b233055b4455583ed4c97d4c6835f5db7651c7",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "checkpoint_selection_required"
+    },
+    {
+      "model_id": "akasharidas/ddpm-cifar10-32-dot.in.name",
+      "revision": "39fee3d79d5c44c21ca5b58a6363d5bc78bbd8cf",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "4d700d357c78219e4e755d344a2f3360f6bbee04ef15b2adc764f925a6502d30",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "pipeline_components_require_selection"
+    },
+    {
+      "model_id": "laion/CLIP-ViT-B-32-laion2B-s34B-b79K",
+      "revision": "1a25a446712ba5ee05982a381eed697ef9b435cf",
+      "status": "partial",
+      "engine_version": "2026.10.21.1",
+      "report_digest": "661b1138c5a4af4aff19b386f1d89c5c25c128e1af07757afbcb0093312c257d",
+      "warning_count": 9,
+      "completion_basis": "coverage_or_ownership_gap",
+      "coverage": {
+        "semantic_coverage": 0.9642857142857143,
+        "module_semantic_coverage": 0.9901960784313726,
+        "checkpoint_parameter_coverage": 1.0,
+        "tensor_shape_coverage": 0.5433070866141733
+      },
+      "coverage_gaps": [
+        "semantic_coverage",
+        "module_semantic_coverage",
+        "tensor_shape_coverage"
+      ],
+      "unknown_nodes": 3,
+      "unmapped_checkpoint_tensor_count": 0,
+      "warning_counts": {
+        "unresolved_branch": 0,
+        "opaque_call": 4,
+        "unresolved_loop": 0,
+        "unmodeled_exception_path": 0,
+        "unowned_checkpoint_tensor": 0,
+        "unproven_tensor_transform": 5,
+        "other": 0
+      },
+      "operation_warning_cohorts": [
+        "reduction_or_normalization"
+      ]
+    },
+    {
+      "model_id": "ibm-granite/granite-timeseries-ttm-r3",
+      "revision": "ea17cfd2e3edcaea21eb8dcecd18bf88971482fa",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "a2677487aa75983b4cda6ba30d9c63cb1d26fe584872634d997155c8075468f8",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "native_architecture_unavailable"
+    },
+    {
+      "model_id": "facebook/esm2_t12_35M_UR50D",
+      "revision": "6fbf070e65b0b7291e7bbcd451118c216cff79d8",
+      "status": "partial",
+      "engine_version": "2026.10.21.1",
+      "report_digest": "4ab46a1308f3f4cf30fdfedbe1c467b7f512c2da2124589fc1f5a4e61c4f330d",
+      "warning_count": 19,
+      "completion_basis": "coverage_or_ownership_gap",
+      "coverage": {
+        "semantic_coverage": 0.9137931034482758,
+        "module_semantic_coverage": 0.7762557077625571,
+        "checkpoint_parameter_coverage": 1.0,
+        "tensor_shape_coverage": 0.6309523809523809
+      },
+      "coverage_gaps": [
+        "semantic_coverage",
+        "module_semantic_coverage",
+        "tensor_shape_coverage"
+      ],
+      "unknown_nodes": 5,
+      "unmapped_checkpoint_tensor_count": 0,
+      "warning_counts": {
+        "unresolved_branch": 4,
+        "opaque_call": 6,
+        "unresolved_loop": 0,
+        "unmodeled_exception_path": 0,
+        "unowned_checkpoint_tensor": 0,
+        "unproven_tensor_transform": 9,
+        "other": 0
+      },
+      "operation_warning_cohorts": [
+        "position_ids"
+      ]
+    },
+    {
+      "model_id": "LG-AI-Research/EXAONE-Tabular",
+      "revision": "093ad1c2613e1e95d26df8610451d2e02ed53cbe",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "2b790b046819cc8e6230d89558b3fb8f4c2f3ec0dee75190b1469a2df4a6b267",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "checkpoint_selection_required"
+    },
+    {
+      "model_id": "lerobot/pi05_base",
+      "revision": "22c30e5b34f9e7ab738b1b34fc2fc5ecfe2d28f0",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "cf95746b329fa9d52bee48e16dc691ca2c9c0fe8d49cc6cfc1c21c0df215d458",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "native_architecture_unavailable"
+    },
+    {
+      "model_id": "Qwen/Qwen3-14B",
+      "revision": "40c069824f4251a91eefaf281ebe4c544efd3e18",
+      "status": "partial",
+      "engine_version": "2026.10.21.1",
+      "report_digest": "e73f15b9c60ea49e667fba1e6c9aa8f5d43b2d7f73c3cc09e56147cc8c551271",
+      "warning_count": 0,
+      "completion_basis": "coverage_or_ownership_gap",
+      "coverage": {
+        "semantic_coverage": 1.0,
+        "module_semantic_coverage": 1.0,
+        "checkpoint_parameter_coverage": 1.0,
+        "tensor_shape_coverage": 0.864406779661017
+      },
+      "coverage_gaps": [
+        "tensor_shape_coverage"
+      ],
+      "unknown_nodes": 0,
+      "unmapped_checkpoint_tensor_count": 0,
+      "warning_counts": {
+        "unresolved_branch": 0,
+        "opaque_call": 0,
+        "unresolved_loop": 0,
+        "unmodeled_exception_path": 0,
+        "unowned_checkpoint_tensor": 0,
+        "unproven_tensor_transform": 0,
+        "other": 0
+      },
+      "operation_warning_cohorts": []
+    },
+    {
+      "model_id": "FacebookAI/roberta-large",
+      "revision": "722cf37b1afa9454edce342e7895e588b6ff1d59",
+      "status": "partial",
+      "engine_version": "2026.10.21.1",
+      "report_digest": "aaa0626199df6dcee2f45486c64d99cd44732b1c0a7c8f065384c45a1337a776",
+      "warning_count": 6,
+      "completion_basis": "coverage_or_ownership_gap",
+      "coverage": {
+        "semantic_coverage": 1.0,
+        "module_semantic_coverage": 1.0,
+        "checkpoint_parameter_coverage": 1.0,
+        "tensor_shape_coverage": 0.6875
+      },
+      "coverage_gaps": [
+        "tensor_shape_coverage"
+      ],
+      "unknown_nodes": 0,
+      "unmapped_checkpoint_tensor_count": 0,
+      "warning_counts": {
+        "unresolved_branch": 1,
+        "opaque_call": 2,
+        "unresolved_loop": 0,
+        "unmodeled_exception_path": 0,
+        "unowned_checkpoint_tensor": 0,
+        "unproven_tensor_transform": 3,
+        "other": 0
+      },
+      "operation_warning_cohorts": [
+        "position_ids"
+      ]
+    },
+    {
+      "model_id": "meta-llama/Prompt-Guard-86M",
+      "revision": "1209add6ca7d9c1d815171b8e5571587fe3e7b03",
+      "status": "http_access",
+      "completion_basis": "no_validated_report",
+      "stage": "reconstruction",
+      "cause_type": "HTTPError"
+    },
+    {
+      "model_id": "dslim/bert-base-NER",
+      "revision": "d1a3e8f13f8c3566299d95fcfc9a8d2382a9affc",
+      "status": "partial",
+      "engine_version": "2026.10.21.1",
+      "report_digest": "0a0ccbb2f0956276567c742a214ecf135d07e0df39c0f318492a638c2f6a57e6",
+      "warning_count": 5,
+      "completion_basis": "coverage_or_ownership_gap",
+      "coverage": {
+        "semantic_coverage": 1.0,
+        "module_semantic_coverage": 1.0,
+        "checkpoint_parameter_coverage": 1.0,
+        "tensor_shape_coverage": 0.6883116883116883
+      },
+      "coverage_gaps": [
+        "tensor_shape_coverage"
+      ],
+      "unknown_nodes": 0,
+      "unmapped_checkpoint_tensor_count": 2,
+      "warning_counts": {
+        "unresolved_branch": 1,
+        "opaque_call": 0,
+        "unresolved_loop": 0,
+        "unmodeled_exception_path": 0,
+        "unowned_checkpoint_tensor": 1,
+        "unproven_tensor_transform": 3,
+        "other": 0
+      },
+      "operation_warning_cohorts": []
+    },
+    {
+      "model_id": "ahotrod/electra_large_discriminator_squad2_512",
+      "revision": "fe230d41e74248eceb366a91e4f8572f358f201c",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "823cd84bf8f9bce0f958bbb9f973dc52f965ba4252e4d2c38bfe6afc59473108",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "safetensors_unavailable"
+    },
+    {
+      "model_id": "philschmid/bart-large-cnn-samsum",
+      "revision": "e49b3d60d923f12db22bdd363356f1a4c68532ad",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "eedfed57e92584d2a84db1829e3926936289a00f9c49e9f6d86a97fa02c9a6aa",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "safetensors_unavailable"
+    },
+    {
+      "model_id": "facebook/nllb-200-distilled-1.3B",
+      "revision": "7be3e24664b38ce1cac29b8aeed6911aa0cf0576",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "19c5a4c442c36ec490788def75c5fc1fef3c00f98eb0c512d6cdde70fe88a263",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "safetensors_unavailable"
+    },
+    {
+      "model_id": "sentence-transformers/all-mpnet-base-v2",
+      "revision": "e8c3b32edf5434bc2275fc9bab85f82640a19130",
+      "status": "partial",
+      "engine_version": "2026.10.21.1",
+      "report_digest": "c055c414528318ec352526a80e12f3c5ed986d2c15f8072b5495cca5bb687eb4",
+      "warning_count": 20,
+      "completion_basis": "coverage_or_ownership_gap",
+      "coverage": {
+        "semantic_coverage": 1.0,
+        "module_semantic_coverage": 1.0,
+        "checkpoint_parameter_coverage": 0.9943146149144245,
+        "tensor_shape_coverage": 0.5813953488372093
+      },
+      "coverage_gaps": [
+        "checkpoint_parameter_coverage",
+        "tensor_shape_coverage"
+      ],
+      "unknown_nodes": 0,
+      "unmapped_checkpoint_tensor_count": 2,
+      "warning_counts": {
+        "unresolved_branch": 2,
+        "opaque_call": 6,
+        "unresolved_loop": 0,
+        "unmodeled_exception_path": 0,
+        "unowned_checkpoint_tensor": 1,
+        "unproven_tensor_transform": 6,
+        "other": 5
+      },
+      "operation_warning_cohorts": [
+        "numerical_stability",
+        "position_ids"
+      ]
+    },
+    {
+      "model_id": "intfloat/multilingual-e5-large",
+      "revision": "3d7cfbdacd47fdda877c5cd8a79fbcc4f2a574f3",
+      "status": "partial",
+      "engine_version": "2026.10.21.1",
+      "report_digest": "79dd350afd2098cce3a9441ad1546e603079e8874ed7798998fc73544f9ee802",
+      "warning_count": 5,
+      "completion_basis": "coverage_or_ownership_gap",
+      "coverage": {
+        "semantic_coverage": 0.9803921568627451,
+        "module_semantic_coverage": 0.9977477477477478,
+        "checkpoint_parameter_coverage": 1.0,
+        "tensor_shape_coverage": 0.7341772151898734
+      },
+      "coverage_gaps": [
+        "semantic_coverage",
+        "module_semantic_coverage",
+        "tensor_shape_coverage"
+      ],
+      "unknown_nodes": 1,
+      "unmapped_checkpoint_tensor_count": 0,
+      "warning_counts": {
+        "unresolved_branch": 1,
+        "opaque_call": 1,
+        "unresolved_loop": 0,
+        "unmodeled_exception_path": 0,
+        "unowned_checkpoint_tensor": 0,
+        "unproven_tensor_transform": 3,
+        "other": 0
+      },
+      "operation_warning_cohorts": [
+        "position_ids"
+      ]
+    },
+    {
+      "model_id": "timm/tf_efficientnetv2_s.in21k_ft_in1k",
+      "revision": "ea9abc143ea2b9d8e1ec1de277bce02149b9cf0e",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "3b701c2d1c5bd210cbe0b5570c4fb50b71d0aa21e95fb09cd45ccd3ec9c71889",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "native_architecture_unavailable"
+    },
+    {
+      "model_id": "PaddlePaddle/PP-DocLayoutV3_safetensors",
+      "revision": "e4f489dc536556fc1be02b973ba06756e0d4a2ac",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "81afd1c7e3fda5ef13d5458f5021b6f7b179b5df301353e30ed63a1933c2d77a",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "native_architecture_unavailable"
+    },
+    {
+      "model_id": "facebook/mask2former-swin-large-cityscapes-semantic",
+      "revision": "062c2c0cf95dd6080a50b56ffc1fe2ad2d63513e",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "a29173ca19d605605e0b8ffd32dce5d2e3a228aaede30a67e78034e2882b1120",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "native_architecture_unavailable"
+    },
+    {
+      "model_id": "LiheYoung/depth-anything-large-hf",
+      "revision": "27ccb0920352c0c37b3a96441873c8d37bd52fb6",
+      "status": "partial",
+      "engine_version": "2026.10.21.1",
+      "report_digest": "17a46c461ed022af53f849c2706b7d7dae213a7b88c988f619705e5e58da7822",
+      "warning_count": 22,
+      "completion_basis": "coverage_or_ownership_gap",
+      "coverage": {
+        "semantic_coverage": 0.8602150537634409,
+        "module_semantic_coverage": 0.8239845261121856,
+        "checkpoint_parameter_coverage": 1.0,
+        "tensor_shape_coverage": 0.2975206611570248
+      },
+      "coverage_gaps": [
+        "semantic_coverage",
+        "module_semantic_coverage",
+        "tensor_shape_coverage"
+      ],
+      "unknown_nodes": 13,
+      "unmapped_checkpoint_tensor_count": 0,
+      "warning_counts": {
+        "unresolved_branch": 2,
+        "opaque_call": 9,
+        "unresolved_loop": 3,
+        "unmodeled_exception_path": 0,
+        "unowned_checkpoint_tensor": 0,
+        "unproven_tensor_transform": 8,
+        "other": 0
+      },
+      "operation_warning_cohorts": [
+        "padding_windows_or_resampling"
+      ]
+    },
+    {
+      "model_id": "Salesforce/blip-image-captioning-large",
+      "revision": "353689b859fcf0523410b1806dace5fb46ecdf41",
+      "status": "partial",
+      "engine_version": "2026.10.21.1",
+      "report_digest": "2ad8787700dc976ed9c05cd53bca4bb8a1bad412215180f2c2feea1e428d8b86",
+      "warning_count": 58,
+      "completion_basis": "coverage_or_ownership_gap",
+      "coverage": {
+        "semantic_coverage": 0.9933774834437086,
+        "module_semantic_coverage": 0.9582664526484751,
+        "checkpoint_parameter_coverage": 1.0,
+        "tensor_shape_coverage": 0.013761467889908258
+      },
+      "coverage_gaps": [
+        "semantic_coverage",
+        "module_semantic_coverage",
+        "tensor_shape_coverage"
+      ],
+      "unknown_nodes": 3,
+      "unmapped_checkpoint_tensor_count": 0,
+      "warning_counts": {
+        "unresolved_branch": 1,
+        "opaque_call": 12,
+        "unresolved_loop": 0,
+        "unmodeled_exception_path": 0,
+        "unowned_checkpoint_tensor": 0,
+        "unproven_tensor_transform": 44,
+        "other": 1
+      },
+      "operation_warning_cohorts": []
+    },
+    {
+      "model_id": "Salesforce/blip-vqa-capfilt-large",
+      "revision": "270352c30d7166e585cd686c3f2250e04bb509da",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "2969d1c4b2357ed983e352c25605f54ebf019a5c7d5ba62fb607d8ec227c8ae4",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "safetensors_unavailable"
+    },
+    {
+      "model_id": "Qwen/Qwen3.5-4B",
+      "revision": "851bf6e806efd8d0a36b00ddf55e13ccb7b8cd0a",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "0c6cf7acf556460c4383d2c603805d6869baf83aba5b530ccb375a7dd7dc2de6",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "native_architecture_unavailable"
+    },
+    {
+      "model_id": "MCG-NJU/videomae-base-finetuned-kinetics",
+      "revision": "488eb9a0565f257b32866000305c8178965eb9f6",
+      "status": "partial",
+      "engine_version": "2026.10.21.1",
+      "report_digest": "fc92d16bd5765ec8995ae211584043d6425438d1da6d9d388b6a060a03149d87",
+      "warning_count": 6,
+      "completion_basis": "coverage_or_ownership_gap",
+      "coverage": {
+        "semantic_coverage": 0.9555555555555556,
+        "module_semantic_coverage": 0.8873239436619719,
+        "checkpoint_parameter_coverage": 1.0,
+        "tensor_shape_coverage": 0.7285714285714285
+      },
+      "coverage_gaps": [
+        "semantic_coverage",
+        "module_semantic_coverage",
+        "tensor_shape_coverage"
+      ],
+      "unknown_nodes": 2,
+      "unmapped_checkpoint_tensor_count": 0,
+      "warning_counts": {
+        "unresolved_branch": 0,
+        "opaque_call": 1,
+        "unresolved_loop": 0,
+        "unmodeled_exception_path": 0,
+        "unowned_checkpoint_tensor": 0,
+        "unproven_tensor_transform": 5,
+        "other": 0
+      },
+      "operation_warning_cohorts": [
+        "reduction_or_normalization"
+      ]
+    },
+    {
+      "model_id": "pyannote/speaker-diarization-3.1",
+      "revision": "84fd25912480287da0247647c3d2b4853cb3ee5d",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "bea89a3e89c568e0ca652e002876f71b5816687119d6cb4d0f023442f18d70ca",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "architecture_config_unavailable"
+    },
+    {
+      "model_id": "k2-fsa/OmniVoice",
+      "revision": "c5fdb5ccb189668d56333f77ba2629f4cd7535f4",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "602464838cf9f4928f851fa35e77eab255d3eaf140acffe36bc0eca80a3df99e",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "native_architecture_unavailable"
+    },
+    {
+      "model_id": "MIT/ast-finetuned-audioset-10-10-0.4593",
+      "revision": "f826b80d28226b62986cc218e5cec390b1096902",
+      "status": "partial",
+      "engine_version": "2026.10.21.1",
+      "report_digest": "004e3fa3768ffa8c5c4bb5b8195c7c246c0f775fd3c9190ef5d63031e60982fa",
+      "warning_count": 3,
+      "completion_basis": "coverage_or_ownership_gap",
+      "coverage": {
+        "semantic_coverage": 0.9622641509433962,
+        "module_semantic_coverage": 0.8888888888888888,
+        "checkpoint_parameter_coverage": 1.0,
+        "tensor_shape_coverage": 0.7108433734939759
+      },
+      "coverage_gaps": [
+        "semantic_coverage",
+        "module_semantic_coverage",
+        "tensor_shape_coverage"
+      ],
+      "unknown_nodes": 2,
+      "unmapped_checkpoint_tensor_count": 0,
+      "warning_counts": {
+        "unresolved_branch": 0,
+        "opaque_call": 0,
+        "unresolved_loop": 0,
+        "unmodeled_exception_path": 0,
+        "unowned_checkpoint_tensor": 0,
+        "unproven_tensor_transform": 3,
+        "other": 0
+      },
+      "operation_warning_cohorts": []
+    },
+    {
+      "model_id": "Aratako/MioCodec-25Hz-44.1kHz-v2",
+      "revision": "67faba34153fe74e6665991c432a7327e23c5c1c",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "c8ea3a361a85ebc8fbe437ae79645c1a6ab87e816c0df5e13b70e71f93ba34a6",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "architecture_config_unavailable"
+    },
+    {
+      "model_id": "audio-cpp/Yue2-3B-GGUF",
+      "revision": "cca74d8980c00f30ab8d52248a367c01ad633ec2",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "50efbe60463f3a8b3b2d5bff4c6a5302436e1fe4973ebbf4f5939f9122e9910d",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "checkpoint_selection_required"
+    },
+    {
+      "model_id": "stable-diffusion-v1-5/stable-diffusion-v1-5",
+      "revision": "451f4fe16113bff5a5d2269ed5ad43b0592e9a14",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "e9699a643d99c1a1bd0b9568abe91740901694a1bdfe8459f8e92a86bef852f1",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "pipeline_components_require_selection"
+    },
+    {
+      "model_id": "Qwen/Qwen-Image-Edit-2509",
+      "revision": "d3968ef930e841f4c73640fb8afa3b306a78167e",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "4f6cfdeae2d155a9767e06ef61277ab947fba29f7baff832677b566e7181d875",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "pipeline_components_require_selection"
+    },
+    {
+      "model_id": "comfyicu/LTX-2.5",
+      "revision": "1026e00f808dbd9601911479b22d65b760737dc8",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "d2d762b8dd2e3a6c1d5d78a6a686ce83d33bbb2a09ae62a8c67abe49d04af296",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "checkpoint_selection_required"
+    },
+    {
+      "model_id": "unsloth/Wan2.2-TI2V-5B-GGUF",
+      "revision": "b5c2a3816e7056e57e200f6be726fb36ce523b49",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "85e8ef32906f8996d940bbf8a2aed54b1059cbf10910b1c7da40aba01a1f0e0f",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "checkpoint_selection_required"
+    },
+    {
+      "model_id": "google/ddpm-celebahq-256",
+      "revision": "cd5c944777ea2668051904ead6cc120739b86c4d",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "aa11a210ca1e25dd9190a8c211dbde2f10e5396bc2ccd7e66e2c166ab0f64a50",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "pipeline_components_require_selection"
+    },
+    {
+      "model_id": "openai/clip-vit-large-patch14-336",
+      "revision": "ce19dc912ca5cd21c8a653c79e251e808ccabcd1",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "346585207abb5ad2c14c74646390dd92b71057f89c971c14a52d4d4337b7f750",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "safetensors_unavailable"
+    },
+    {
+      "model_id": "google/timesfm-2.0-500m-pytorch",
+      "revision": "dc2443792ce5516872b89b37cf1bc058c3bf0c10",
+      "status": "partial",
+      "engine_version": "2026.10.21.1",
+      "report_digest": "e235d282a28aa921dfc614f935ff85965b29d0f5ac082e8e9c60821a44c24737",
+      "warning_count": 5,
+      "completion_basis": "coverage_or_ownership_gap",
+      "coverage": {
+        "semantic_coverage": 0.9230769230769231,
+        "module_semantic_coverage": 0.9078014184397163,
+        "checkpoint_parameter_coverage": 1.0,
+        "tensor_shape_coverage": 0.7
+      },
+      "coverage_gaps": [
+        "semantic_coverage",
+        "module_semantic_coverage",
+        "tensor_shape_coverage"
+      ],
+      "unknown_nodes": 1,
+      "unmapped_checkpoint_tensor_count": 0,
+      "warning_counts": {
+        "unresolved_branch": 0,
+        "opaque_call": 1,
+        "unresolved_loop": 2,
+        "unmodeled_exception_path": 0,
+        "unowned_checkpoint_tensor": 0,
+        "unproven_tensor_transform": 2,
+        "other": 0
+      },
+      "operation_warning_cohorts": []
+    },
+    {
+      "model_id": "Rostlab/prot_bert",
+      "revision": "7a894481acdc12202f0a415dd567f6cfdb698908",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "d60e8b64ccbfcea311106ff7df90a4b3c78b10dd4e4b20dfd0f77c827ab4b90f",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "safetensors_unavailable"
+    },
+    {
+      "model_id": "nvidia/Kumo-Tabular",
+      "revision": "c5893d418e162b9f841ae179dc767afefff73831",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "d3901da2bed7e3fea7dc3f7ec6cc8e352ae8377370b2842ad87bc7cce1553375",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "safetensors_unavailable"
+    },
+    {
+      "model_id": "lerobot/pi0_base",
+      "revision": "6e245399ad403ccf02b8112b73cfdc2633068f38",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "e48820440ff96c441362dfbc0a7434fc3c655ab26741cc3a37d321e5bd23e5f1",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "native_architecture_unavailable"
+    },
+    {
+      "model_id": "Qwen/Qwen2.5-7B-Instruct",
+      "revision": "a09a35458c702b33eeacc393d103063234e8bc28",
+      "status": "partial",
+      "engine_version": "2026.10.21.1",
+      "report_digest": "3f72e2badef2ec9957a1dd9997d9d0137ac2639fd245dad64cbf7e7be59aaac8",
+      "warning_count": 0,
+      "completion_basis": "coverage_or_ownership_gap",
+      "coverage": {
+        "semantic_coverage": 1.0,
+        "module_semantic_coverage": 1.0,
+        "checkpoint_parameter_coverage": 1.0,
+        "tensor_shape_coverage": 0.864406779661017
+      },
+      "coverage_gaps": [
+        "tensor_shape_coverage"
+      ],
+      "unknown_nodes": 0,
+      "unmapped_checkpoint_tensor_count": 0,
+      "warning_counts": {
+        "unresolved_branch": 0,
+        "opaque_call": 0,
+        "unresolved_loop": 0,
+        "unmodeled_exception_path": 0,
+        "unowned_checkpoint_tensor": 0,
+        "unproven_tensor_transform": 0,
+        "other": 0
+      },
+      "operation_warning_cohorts": []
+    },
+    {
+      "model_id": "microsoft/mdeberta-v3-base",
+      "revision": "a0484667b22365f84929a935b5e50a51f71f159d",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "8b2670f8b708536fce547cd791e0345043d000ea4ffd53a9c6aff3a3c18fc9c6",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "safetensors_unavailable"
+    },
+    {
+      "model_id": "Arunavaonly/Bangla-twoclass-Sentiment-Analyzer",
+      "revision": "b2b3ca5db5eaf56a8542ee9deff888d5fa1b5cad",
+      "status": "partial",
+      "engine_version": "2026.10.21.1",
+      "report_digest": "f9ec18debebc7656d4f771f3832b4b865b762192f6985331f7644021b7a51d6a",
+      "warning_count": 5,
+      "completion_basis": "coverage_or_ownership_gap",
+      "coverage": {
+        "semantic_coverage": 1.0,
+        "module_semantic_coverage": 1.0,
+        "checkpoint_parameter_coverage": 1.0,
+        "tensor_shape_coverage": 0.6829268292682927
+      },
+      "coverage_gaps": [
+        "tensor_shape_coverage"
+      ],
+      "unknown_nodes": 0,
+      "unmapped_checkpoint_tensor_count": 0,
+      "warning_counts": {
+        "unresolved_branch": 1,
+        "opaque_call": 1,
+        "unresolved_loop": 0,
+        "unmodeled_exception_path": 0,
+        "unowned_checkpoint_tensor": 0,
+        "unproven_tensor_transform": 3,
+        "other": 0
+      },
+      "operation_warning_cohorts": [
+        "position_ids"
+      ]
+    },
+    {
+      "model_id": "dbmdz/bert-large-cased-finetuned-conll03-english",
+      "revision": "4c534963167c08d4b8ff1f88733cf2930f86add0",
+      "status": "partial",
+      "engine_version": "2026.10.21.1",
+      "report_digest": "e43c23bc71762a1cd5ba6ca8f9b92c8b2d6477613dd1df3da17a6daad512ff8c",
+      "warning_count": 5,
+      "completion_basis": "coverage_or_ownership_gap",
+      "coverage": {
+        "semantic_coverage": 1.0,
+        "module_semantic_coverage": 1.0,
+        "checkpoint_parameter_coverage": 1.0,
+        "tensor_shape_coverage": 0.6883116883116883
+      },
+      "coverage_gaps": [
+        "tensor_shape_coverage"
+      ],
+      "unknown_nodes": 0,
+      "unmapped_checkpoint_tensor_count": 2,
+      "warning_counts": {
+        "unresolved_branch": 1,
+        "opaque_call": 0,
+        "unresolved_loop": 0,
+        "unmodeled_exception_path": 0,
+        "unowned_checkpoint_tensor": 1,
+        "unproven_tensor_transform": 3,
+        "other": 0
+      },
+      "operation_warning_cohorts": []
+    },
+    {
+      "model_id": "distilbert/distilbert-base-cased-distilled-squad",
+      "revision": "564e9b582944a57a3e586bbb98fd6f0a4118db7f",
+      "status": "partial",
+      "engine_version": "2026.10.21.1",
+      "report_digest": "d1b2ce49ad9166eee5a10416de6e425c50c9304d59a716fd2c991fce1fbe799a",
+      "warning_count": 15,
+      "completion_basis": "coverage_or_ownership_gap",
+      "coverage": {
+        "semantic_coverage": 0.8823529411764706,
+        "module_semantic_coverage": 0.8,
+        "checkpoint_parameter_coverage": 1.0,
+        "tensor_shape_coverage": 0.3404255319148936
+      },
+      "coverage_gaps": [
+        "semantic_coverage",
+        "module_semantic_coverage",
+        "tensor_shape_coverage"
+      ],
+      "unknown_nodes": 4,
+      "unmapped_checkpoint_tensor_count": 0,
+      "warning_counts": {
+        "unresolved_branch": 3,
+        "opaque_call": 9,
+        "unresolved_loop": 0,
+        "unmodeled_exception_path": 0,
+        "unowned_checkpoint_tensor": 0,
+        "unproven_tensor_transform": 3,
+        "other": 0
+      },
+      "operation_warning_cohorts": [
+        "tuple_split_or_chunk",
+        "reduction_or_normalization"
+      ]
+    },
+    {
+      "model_id": "sshleifer/distilbart-xsum-12-6",
+      "revision": "5b2e376c845c201ddc34ec0e55fd1ad9890ba5ee",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "3542c00178d4c3d8fa43a2ec328f24a890fd01b2adc3bbef7a2664978665f4ed",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "safetensors_unavailable"
+    },
+    {
+      "model_id": "Helsinki-NLP/opus-mt-zh-en",
+      "revision": "cf109095479db38d6df799875e34039d4938aaa6",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "585af81da58ee12a9f73e8489036d27c4b241347725f53b56b2f7602014e43a6",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "safetensors_unavailable"
+    },
+    {
+      "model_id": "nomic-ai/nomic-embed-text-v1.5",
+      "revision": "e9b6763023c676ca8431644204f50c2b100d9aab",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "6cf1b0dff1c218c279e1cfb4ec21dfb40e31f32391b65b383137c261f551f55b",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "native_architecture_unavailable"
+    },
+    {
+      "model_id": "ibm-granite/granite-embedding-small-english-r2",
+      "revision": "2ab6fa8ea2d674564defd37171ae19079b864b33",
+      "status": "partial",
+      "engine_version": "2026.10.21.1",
+      "report_digest": "8491f2c6b181b697a66a3595ec8eb6fe68f5d7d14627dc77e91512f17b62f192",
+      "warning_count": 18,
+      "completion_basis": "coverage_or_ownership_gap",
+      "coverage": {
+        "semantic_coverage": 0.9636363636363636,
+        "module_semantic_coverage": 0.9263803680981595,
+        "checkpoint_parameter_coverage": 1.0,
+        "tensor_shape_coverage": 0.48863636363636365
+      },
+      "coverage_gaps": [
+        "semantic_coverage",
+        "module_semantic_coverage",
+        "tensor_shape_coverage"
+      ],
+      "unknown_nodes": 2,
+      "unmapped_checkpoint_tensor_count": 0,
+      "warning_counts": {
+        "unresolved_branch": 6,
+        "opaque_call": 8,
+        "unresolved_loop": 0,
+        "unmodeled_exception_path": 0,
+        "unowned_checkpoint_tensor": 0,
+        "unproven_tensor_transform": 4,
+        "other": 0
+      },
+      "operation_warning_cohorts": [
+        "attention_or_mask_dispatch"
+      ]
+    },
+    {
+      "model_id": "Falconsai/nsfw_image_detection",
+      "revision": "96cb0d0342c7afb80cab76ecc58b265fa44da256",
+      "status": "completed",
+      "engine_version": "2026.10.21.1",
+      "report_digest": "24a20be12cb559e90218952d41c8f62c785d7fc040ec7e70aa46c1b54b0c4cb5",
+      "warning_count": 0,
+      "completion_basis": "recorded_static_gates_passed",
+      "coverage": {
+        "semantic_coverage": 1.0,
+        "module_semantic_coverage": 1.0,
+        "checkpoint_parameter_coverage": 1.0,
+        "tensor_shape_coverage": 1.0
+      },
+      "coverage_gaps": [],
+      "unknown_nodes": 0,
+      "unmapped_checkpoint_tensor_count": 0,
+      "warning_counts": {
+        "unresolved_branch": 0,
+        "opaque_call": 0,
+        "unresolved_loop": 0,
+        "unmodeled_exception_path": 0,
+        "unowned_checkpoint_tensor": 0,
+        "unproven_tensor_transform": 0,
+        "other": 0
+      },
+      "operation_warning_cohorts": []
+    },
+    {
+      "model_id": "hustvl/yolos-small",
+      "revision": "3d8f7130d3ce4907cb206fe1c8485dc8fe8703de",
+      "status": "partial",
+      "engine_version": "2026.10.21.1",
+      "report_digest": "c2611a969b1a704e9e852aaa60003c2904476e80c11b5db1ab1467b2b6610c66",
+      "warning_count": 7,
+      "completion_basis": "coverage_or_ownership_gap",
+      "coverage": {
+        "semantic_coverage": 0.9242424242424242,
+        "module_semantic_coverage": 0.88,
+        "checkpoint_parameter_coverage": 1.0,
+        "tensor_shape_coverage": 0.6213592233009708
+      },
+      "coverage_gaps": [
+        "semantic_coverage",
+        "module_semantic_coverage",
+        "tensor_shape_coverage"
+      ],
+      "unknown_nodes": 5,
+      "unmapped_checkpoint_tensor_count": 0,
+      "warning_counts": {
+        "unresolved_branch": 3,
+        "opaque_call": 1,
+        "unresolved_loop": 0,
+        "unmodeled_exception_path": 0,
+        "unowned_checkpoint_tensor": 0,
+        "unproven_tensor_transform": 3,
+        "other": 0
+      },
+      "operation_warning_cohorts": []
+    },
+    {
+      "model_id": "mattmdjaga/segformer_b2_clothes",
+      "revision": "584abc1e1d260e23c0fc627c5217a09b2b461046",
+      "status": "partial",
+      "engine_version": "2026.10.21.1",
+      "report_digest": "b33eb30b1c4aaf18f6b03ebcb89fdc5b50ff9052b87d5c3090caea5ed5e5268e",
+      "warning_count": 26,
+      "completion_basis": "coverage_or_ownership_gap",
+      "coverage": {
+        "semantic_coverage": 0.8871595330739299,
+        "module_semantic_coverage": 0.7829457364341086,
+        "checkpoint_parameter_coverage": 1.0,
+        "tensor_shape_coverage": 0.4021164021164021
+      },
+      "coverage_gaps": [
+        "semantic_coverage",
+        "module_semantic_coverage",
+        "tensor_shape_coverage"
+      ],
+      "unknown_nodes": 29,
+      "unmapped_checkpoint_tensor_count": 0,
+      "warning_counts": {
+        "unresolved_branch": 0,
+        "opaque_call": 0,
+        "unresolved_loop": 1,
+        "unmodeled_exception_path": 0,
+        "unowned_checkpoint_tensor": 0,
+        "unproven_tensor_transform": 25,
+        "other": 0
+      },
+      "operation_warning_cohorts": []
+    },
+    {
+      "model_id": "depth-anything/Depth-Anything-V2-Large-hf",
+      "revision": "7581137eff8d4e94f6e796d3baea0e9fa79b22d2",
+      "status": "partial",
+      "engine_version": "2026.10.21.1",
+      "report_digest": "cc993a5a7d3e35bddc2b82e791c63af0e0095914c076ac400883546ba17837c3",
+      "warning_count": 22,
+      "completion_basis": "coverage_or_ownership_gap",
+      "coverage": {
+        "semantic_coverage": 0.8602150537634409,
+        "module_semantic_coverage": 0.8239845261121856,
+        "checkpoint_parameter_coverage": 1.0,
+        "tensor_shape_coverage": 0.2975206611570248
+      },
+      "coverage_gaps": [
+        "semantic_coverage",
+        "module_semantic_coverage",
+        "tensor_shape_coverage"
+      ],
+      "unknown_nodes": 13,
+      "unmapped_checkpoint_tensor_count": 0,
+      "warning_counts": {
+        "unresolved_branch": 2,
+        "opaque_call": 9,
+        "unresolved_loop": 3,
+        "unmodeled_exception_path": 0,
+        "unowned_checkpoint_tensor": 0,
+        "unproven_tensor_transform": 8,
+        "other": 0
+      },
+      "operation_warning_cohorts": [
+        "padding_windows_or_resampling"
+      ]
+    },
+    {
+      "model_id": "PaddlePaddle/UVDoc",
+      "revision": "16c3f0ea9c2f0c6a57e24160f7eeaa7574613fa3",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "f4b472abb7267b3ad1602e264646829b77af18f0c95cff6451ffe13b02c24562",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "safetensors_unavailable"
+    },
+    {
+      "model_id": "openbmb/MiniCPM-V-2",
+      "revision": "b9a02dbfcc87e471b13f8d1c6963747db31427db",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "805812c8dbd4f24c7c48bfab4ae0c19d65f0a7a29b8f491a80c55e1d92f4b5db",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "native_architecture_unavailable"
+    },
+    {
+      "model_id": "zai-org/GLM-5.3-Flash",
+      "revision": "46a050bec13002ad29ee795c16e61cf4fa3c4a9c",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "2d31cfa1f5a64f39592a1fefda9ad9b685b8449f3dcf61f11c67ba56e8c02f5a",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "metadata_budget_exceeded"
+    },
+    {
+      "model_id": "facebook/vjepa2-vitg-fpc64-256",
+      "revision": "875c192b7b704b87d1e1d99345769632dd5f739a",
+      "status": "partial",
+      "engine_version": "2026.10.21.1",
+      "report_digest": "26c0278f1c1ec65648a60040171907917a3b1f035bd117eaf3fe786a2825acbb",
+      "warning_count": 17,
+      "completion_basis": "coverage_or_ownership_gap",
+      "coverage": {
+        "semantic_coverage": 0.978021978021978,
+        "module_semantic_coverage": 0.9973009446693657,
+        "checkpoint_parameter_coverage": 1.0,
+        "tensor_shape_coverage": 0.5968992248062015
+      },
+      "coverage_gaps": [
+        "semantic_coverage",
+        "module_semantic_coverage",
+        "tensor_shape_coverage"
+      ],
+      "unknown_nodes": 2,
+      "unmapped_checkpoint_tensor_count": 0,
+      "warning_counts": {
+        "unresolved_branch": 1,
+        "opaque_call": 8,
+        "unresolved_loop": 0,
+        "unmodeled_exception_path": 0,
+        "unowned_checkpoint_tensor": 0,
+        "unproven_tensor_transform": 8,
+        "other": 0
+      },
+      "operation_warning_cohorts": []
+    },
+    {
+      "model_id": "openai/whisper-large-v3-turbo",
+      "revision": "41f01f3fe87f28c78e2fbf8b568835947dd65ed9",
+      "status": "partial",
+      "engine_version": "2026.10.21.1",
+      "report_digest": "b7310e24c2361383b831f98212bccad9f01ee6f910682545117837e23abcf038",
+      "warning_count": 3,
+      "completion_basis": "coverage_or_ownership_gap",
+      "coverage": {
+        "semantic_coverage": 1.0,
+        "module_semantic_coverage": 1.0,
+        "checkpoint_parameter_coverage": 1.0,
+        "tensor_shape_coverage": 0.8389830508474576
+      },
+      "coverage_gaps": [
+        "tensor_shape_coverage"
+      ],
+      "unknown_nodes": 0,
+      "unmapped_checkpoint_tensor_count": 0,
+      "warning_counts": {
+        "unresolved_branch": 0,
+        "opaque_call": 1,
+        "unresolved_loop": 0,
+        "unmodeled_exception_path": 0,
+        "unowned_checkpoint_tensor": 0,
+        "unproven_tensor_transform": 2,
+        "other": 0
+      },
+      "operation_warning_cohorts": [
+        "numerical_stability"
+      ]
+    },
+    {
+      "model_id": "ResembleAI/chatterbox",
+      "revision": "5bb1f6ee58e50c3b8d408bc82a6d3740c2db6e18",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "5ae352c866a3cf81d7d463eff9062f67ec5b3551c1c7cc693ede35a9add54529",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "checkpoint_selection_required"
+    },
+    {
+      "model_id": "onecxi/open-vakgyata",
+      "revision": "f2754058e485dfc65cc62589b8d0e21c1d328399",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "c777b7c5eb877be3b9e3829b6132883acc2e3d388ae04bd1d4b3b30b962c691e",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "native_architecture_unavailable"
+    },
+    {
+      "model_id": "LiquidAI/LFM2.5-Audio-1.5B-JP-GGUF",
+      "revision": "64b96718b341dbd5650f9e85627cecdcbd4ac61b",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "f814e489fbd961101b5bf6fdf41a02f711aac1437cfb80800eae2f1a2752ba72",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "checkpoint_selection_required"
+    },
+    {
+      "model_id": "facebook/musicgen-small",
+      "revision": "4c8334b02c6ec4e8664a91979669a501ec497792",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "2bcbb6a97ea282b9391582daef9e113e3e54cbb9fcdef4d2f172a193f88ae9ac",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "native_architecture_unavailable"
+    },
+    {
+      "model_id": "unsloth/Z-Image-Turbo-GGUF",
+      "revision": "6c80814333b7b6a70a2e5b469a7c6437ce65de0f",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "007f855eebc7a5308702d0587d19f2a072a5f525def0b66b5c6eed47503a5739",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "checkpoint_selection_required"
+    },
+    {
+      "model_id": "black-forest-labs/FLUX.2-klein-4B",
+      "revision": "e7b7dc27f91deacad38e78976d1f2b499d76a294",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "a3eadc3fce50a69fbe6849b5a6c28ac3bd576c520f3ed6e65d74b28964357e78",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "pipeline_components_require_selection"
+    },
+    {
+      "model_id": "Lightricks/LTX-2.3",
+      "revision": "3c6a4e66e5d0a684231950b9c74dd4ded7b6fadc",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "3489b907174e8ac33062afb7d9e64c6dcd5f3c916f00979d5563adaf02ccdaef",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "checkpoint_selection_required"
+    },
+    {
+      "model_id": "Wan-AI/Wan2.1-T2V-1.3B-Diffusers",
+      "revision": "0fad780a534b6463e45facd96134c9f345acfa5b",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "be4a36047219a2c6242f98f758e05d9cb1feaf70f3f039bb423c06010e4dde19",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "pipeline_components_require_selection"
+    },
+    {
+      "model_id": "google/ddpm-ema-celebahq-256",
+      "revision": "4cb6117472e6e4f45c5afe606b101858c27c3802",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "a634d20430912b03ed68618ea583e35f32bd1314acbe0a9833926489bde478ae",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "pipeline_components_require_selection"
+    },
+    {
+      "model_id": "laion/CLIP-convnext_base_w-laion2B-s13B-b82K-augreg",
+      "revision": "f231e88547aac0dd86ad224432612fcf91aa4226",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "88adb12b18be70c95f42e70da22780535c15aff2050268b64de6d7d7bacb8f2a",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "architecture_config_unavailable"
+    },
+    {
+      "model_id": "ibm-granite/granite-timeseries-ttm-r2",
+      "revision": "d6a79570cac0f33d526601cd3a0fc7c80a8f9a2f",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "f80c38e46912931f745cd695045fa7ec58b4bc7a68a52b31de8d651563d284de",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "native_architecture_unavailable"
+    },
+    {
+      "model_id": "ElnaggarLab/ankh-base",
+      "revision": "d99cb6b966530dfc2ae96bc69d9255c2a07308b0",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "2f47ef245757d758130f24d463f2dc2a5c6a73dec0f30d6a6c3ed0a4ab0c8be5",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "safetensors_unavailable"
+    },
+    {
+      "model_id": "Prior-Labs/TabPFN-v2-reg",
+      "revision": "4972a65a1b30806315c6f92499959ffbfc69a673",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "ae5c264dd18ac7eea80840f61525580b1560479ddc3b1cfaeccfe8e119ca17cb",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "safetensors_unavailable"
+    },
+    {
+      "model_id": "lerobot/pi05_libero_base",
+      "revision": "5fcf06fc42b6717e22ab885fd381a096574b12c7",
+      "status": "inspected",
+      "engine_version": "2026.10.20.2",
+      "report_digest": "f0780196448ff4af16306d9bc45556bbfed6951ba0e57a9bdcef0f59e5a214f8",
+      "warning_count": 0,
+      "completion_basis": "artifacts_only",
+      "artifact_reason": "native_architecture_unavailable"
+    },
+    {
+      "model_id": "openai/gpt-oss-20b",
+      "revision": "6cee5e81ee83917806bbde320786a8fb61efebee",
+      "status": "partial",
+      "engine_version": "2026.10.21.1",
+      "report_digest": "08695c1dfe38a8e8bc551284b7b5a2e5671d5c158fa58c2dbbeb31d2af4df554",
+      "warning_count": 49,
+      "completion_basis": "coverage_or_ownership_gap",
+      "coverage": {
+        "semantic_coverage": 0.9189189189189189,
+        "module_semantic_coverage": 0.7343173431734318,
+        "checkpoint_parameter_coverage": 0.08627686031088277,
+        "tensor_shape_coverage": 0.7666666666666667
+      },
+      "coverage_gaps": [
+        "semantic_coverage",
+        "module_semantic_coverage",
+        "checkpoint_parameter_coverage",
+        "tensor_shape_coverage"
+      ],
+      "unknown_nodes": 3,
+      "unmapped_checkpoint_tensor_count": 96,
+      "warning_counts": {
+        "unresolved_branch": 0,
+        "opaque_call": 0,
+        "unresolved_loop": 0,
+        "unmodeled_exception_path": 0,
+        "unowned_checkpoint_tensor": 1,
+        "unproven_tensor_transform": 0,
+        "other": 48
+      },
+      "operation_warning_cohorts": []
+    },
+    {
+      "model_id": "answerdotai/ModernBERT-base",
+      "revision": "8949b909ec900327062f0ebf497f51aef5e6f0c8",
+      "status": "partial",
+      "engine_version": "2026.10.21.1",
+      "report_digest": "fbffc37876028a65ca76a3e65efb6afb08967349d2508dd4af5eb44a089a8f9b",
+      "warning_count": 26,
+      "completion_basis": "coverage_or_ownership_gap",
+      "coverage": {
+        "semantic_coverage": 0.967741935483871,
+        "module_semantic_coverage": 0.9264214046822743,
+        "checkpoint_parameter_coverage": 1.0,
+        "tensor_shape_coverage": 0.46788990825688076
+      },
+      "coverage_gaps": [
+        "semantic_coverage",
+        "module_semantic_coverage",
+        "tensor_shape_coverage"
+      ],
+      "unknown_nodes": 2,
+      "unmapped_checkpoint_tensor_count": 0,
+      "warning_counts": {
+        "unresolved_branch": 9,
+        "opaque_call": 12,
+        "unresolved_loop": 1,
+        "unmodeled_exception_path": 0,
+        "unowned_checkpoint_tensor": 0,
+        "unproven_tensor_transform": 4,
+        "other": 0
+      },
+      "operation_warning_cohorts": [
+        "attention_or_mask_dispatch"
+      ]
+    }
+  ]
+}

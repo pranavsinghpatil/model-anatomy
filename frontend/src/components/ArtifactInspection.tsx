@@ -141,8 +141,11 @@ export function ArtifactInspection({
       false);
   const checkpointSelectionRequired =
     reasonCode === "checkpoint_selection_required";
+  const metadataBudgetExceeded = reasonCode === "metadata_budget_exceeded";
   const selectionRequired =
-    checkpointSelectionRequired || pipelineSelectionRequired;
+    checkpointSelectionRequired ||
+    pipelineSelectionRequired ||
+    metadataBudgetExceeded;
   const inspectionError =
     filesInspection.error ?? tensorsInspection.error ?? undefined;
   const filteredFiles = (filesPage?.files ?? []).filter((file) =>
@@ -214,7 +217,11 @@ export function ArtifactInspection({
           </dd>
         </div>
         <div>
-          <dt>Tensor headers</dt>
+          <dt>
+            {page?.verified_checkpoint_headers
+              ? "Tensor records in this report"
+              : "Tensor headers"}
+          </dt>
           <dd data-testid="artifact-tensor-count" title={count(tensorCount)}>
             {count(tensorCount, true)}
           </dd>
@@ -244,6 +251,76 @@ export function ArtifactInspection({
         </div>
       </dl>
 
+      {page?.verified_checkpoint_headers && (
+        <section
+          className="artifact-reason"
+          aria-label="Verified checkpoint header audit"
+        >
+          <strong>Separate pinned checkpoint audit</strong>
+          <p>
+            All {count(page.verified_checkpoint_headers.shard_count)} shard
+            headers matched the pinned index, covering{" "}
+            {count(page.verified_checkpoint_headers.tensor_count)} tensor names.
+            The headers contain{" "}
+            {count(
+              page.verified_checkpoint_headers
+                .tensor_element_count_including_scales,
+            )}
+            tensor elements, including scales. The prior audit read{" "}
+            {count(page.verified_checkpoint_headers.header_bytes_read_by_audit)}
+            header bytes and zero weight payload bytes. These aggregates do not
+            establish parameter count, tensor ownership, or runtime flow.
+          </p>
+          <p>
+            Index SHA-256:{" "}
+            <code>{page.verified_checkpoint_headers.index_sha256}</code>
+          </p>
+        </section>
+      )}
+
+      {page?.verified_checkpoint_names && (
+        <section
+          className="artifact-reason"
+          aria-label="Publisher checkpoint-name audit"
+        >
+          <strong>Source-reviewed checkpoint-name match</strong>
+          <p>
+            A separate pinned audit matched all{" "}
+            {count(page.verified_checkpoint_names.state_key_count)} checkpoint
+            names to {count(page.verified_checkpoint_names.component_count)}
+            closest reference components. This is name evidence; this report
+            retains no individual tensor records, and parameter totals and
+            converter output values remain unverified.
+          </p>
+          <p>
+            Name audit SHA-256:{" "}
+            <code>
+              {page.verified_checkpoint_names.name_audit_document_sha256}
+            </code>
+          </p>
+        </section>
+      )}
+
+      {page?.declared_checkpoint_index && (
+        <section
+          className="artifact-reason"
+          aria-label="Checkpoint index declaration"
+        >
+          <strong>Checkpoint index declaration</strong>
+          <p>
+            The pinned index lists{" "}
+            {count(page.declared_checkpoint_index.declared_tensor_names)} tensor
+            names across {count(page.declared_checkpoint_index.declared_shards)}{" "}
+            shard files; the inspection limit is{" "}
+            {count(page.declared_checkpoint_index.tensor_record_limit)} tensor
+            records.{" "}
+            {page.verified_checkpoint_headers
+              ? "A separate pinned audit verified the shard headers; the current report does not retain individual tensor records."
+              : "These are index declarations, not verified shard headers or model parameters."}
+          </p>
+        </section>
+      )}
+
       {!architecture && (
         <details className="artifact-scope-disclosure">
           <summary>What this inspection establishes</summary>
@@ -266,12 +343,16 @@ export function ArtifactInspection({
             <h3 id="artifact-selection-title">
               {pipelineSelectionRequired
                 ? "Choose the checkpoint for the component you want to inspect."
-                : "Choose a checkpoint file to read its tensor headers."}
+                : metadataBudgetExceeded
+                  ? "Choose one Safetensors file for a bounded header inspection."
+                  : "Choose a checkpoint file to read its tensor headers."}
             </h3>
             <p>
               {pipelineSelectionRequired
                 ? "This repository declares multiple pipeline components. Nothing was selected automatically."
-                : "Several checkpoint variants are present, so no variant was selected automatically."}
+                : metadataBudgetExceeded
+                  ? "The full checkpoint exceeds the metadata budget. An individual file can be inspected if its header fits; its tensors are not a whole-model result."
+                  : "Several checkpoint variants are present, so no variant was selected automatically."}
             </p>
             {pipelineSelectionRequired && (
               <code>pipeline_components_require_selection</code>
@@ -384,16 +465,19 @@ export function ArtifactInspection({
                             )}
                             {fileKind && <small>{fileKind}</small>}
                           </div>
-                          {href && fileKind && (
-                            <IconButton
-                              label={`Inspect ${file} (${fileKind})`}
-                              disabled={inspectionDisabled}
-                              onClick={() => onInspectFile(href)}
-                            >
-                              <ScanSearch size={16} />
-                              <span>Inspect</span>
-                            </IconButton>
-                          )}
+                          {href &&
+                            fileKind &&
+                            (!metadataBudgetExceeded ||
+                              file.endsWith(".safetensors")) && (
+                              <IconButton
+                                label={`Inspect ${file} (${fileKind})`}
+                                disabled={inspectionDisabled}
+                                onClick={() => onInspectFile(href)}
+                              >
+                                <ScanSearch size={16} />
+                                <span>Inspect</span>
+                              </IconButton>
+                            )}
                         </li>
                       );
                     })}

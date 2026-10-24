@@ -4,12 +4,15 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import re
 import struct
+from collections.abc import Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass, field
-from math import prod
+from math import isfinite, prod
 from typing import Any
-from urllib.parse import quote, unquote, urlsplit
+from urllib.parse import quote, unquote, urljoin, urlsplit
 
 import requests
 
@@ -35,6 +38,7 @@ DTYPE_BYTES = {
     "F64": 8,
     "F8_E4M3": 1,
     "F8_E5M2": 1,
+    "F8_E8M0": 1,
 }
 
 
@@ -62,7 +66,9 @@ def parse_reference(value: str) -> ModelReference:
         if url.scheme != "https" or url.netloc != "huggingface.co" or url.query or url.fragment:
             raise ArtifactError("Expected an HTTPS Hugging Face model URL without query or fragment")
         parts = url.path.strip("/").split("/")
-        if len(parts) >= 5 and parts[2] in {"blob", "resolve"}:
+        if len(parts) == 4 and parts[2] == "tree" and re.fullmatch(r"[0-9a-f]{40}", parts[3]):
+            revision = parts[3]
+        elif len(parts) >= 5 and parts[2] in {"blob", "resolve"}:
             revision = unquote(parts[3])
             filename_parts = [unquote(part) for part in parts[4:]]
             if any(
@@ -114,6 +120,19 @@ class SafetensorsMetadata:
     requests: list[dict[str, Any]] = field(default_factory=list)
 
 
+@dataclass(frozen=True)
+class VerifiedCheckpointHeaders:
+    """Aggregate facts established only after every indexed shard validates."""
+
+    index_sha256: str
+    tensor_count: int
+    tensor_element_count: int
+    shard_count: int
+    shards: dict[str, dict[str, Any]]
+    header_bytes_read: int
+    weight_payload_bytes_read: int = 0
+
+
 @dataclass
 class CheckpointMetadata:
     tensors: dict[str, Any]
@@ -134,6 +153,10 @@ class AmbiguousCheckpointError(ArtifactError):
 class InspectionBudgetError(ArtifactError):
     """Well-formed checkpoint metadata exceeded a configured inspection budget."""
 
+    def __init__(self, message: str, *, index_summary: dict[str, Any] | None = None):
+        super().__init__(message)
+        self.index_summary = index_summary
+
 
 def _unique_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
     result: dict[str, Any] = {}
@@ -142,6 +165,17 @@ def _unique_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
             raise ArtifactError(f"Duplicate JSON key: {key}")
         result[key] = value
     return result
+
+
+def _finite_float(value: str) -> float:
+    result = float(value)
+    if not isfinite(result):
+        raise ValueError("Non-finite JSON number")
+    return result
+
+
+def _reject_json_constant(value: str) -> Any:
+    raise ValueError(f"Invalid JSON constant: {value}")
 
 
 def parse_safetensors_header(header_bytes: bytes, file_size: int) -> SafetensorsMetadata:
@@ -193,28 +227,144 @@ def parse_safetensors_header(header_bytes: bytes, file_size: int) -> Safetensors
     )
 
 
+def summarize_safetensors_header(
+    header_bytes: bytes, file_size: int
+) -> tuple[dict[str, Any], int]:
+    """Validate a bounded header and return its entries and element total.
+
+    The caller consumes and discards the entries for each shard in turn. This
+    path does not impose the full-report tensor-record limit or create tensor IR.
+    """
+    try:
+        header = json.loads(
+            header_bytes,
+            object_pairs_hook=_unique_object,
+            parse_constant=_reject_json_constant,
+            parse_float=_finite_float,
+        )
+    except (ValueError, UnicodeError, RecursionError) as exc:
+        raise ArtifactError(f"Invalid Safetensors JSON header: {exc}") from exc
+    if not isinstance(header, dict) or not header_bytes.startswith(b"{"):
+        raise ArtifactError("Safetensors header must be a JSON object")
+    metadata = header.get("__metadata__", {})
+    if not isinstance(metadata, dict) or not all(isinstance(v, str) for v in metadata.values()):
+        raise ArtifactError("Safetensors file metadata must contain strings")
+    spans: list[tuple[int, int]] = []
+    element_count = 0
+    for name, info in header.items():
+        if name == "__metadata__":
+            continue
+        if not isinstance(info, dict):
+            raise ArtifactError(f"Invalid tensor entry: {name}")
+        dtype, shape, offsets = info.get("dtype"), info.get("shape"), info.get("data_offsets")
+        if not isinstance(dtype, str) or dtype not in DTYPE_BYTES:
+            raise ArtifactError(f"Unsupported Safetensors dtype for {name}: {dtype}")
+        if not isinstance(shape, list) or not all(type(d) is int and d >= 0 for d in shape):
+            raise ArtifactError(f"Invalid tensor shape: {name}")
+        elements = prod(shape)
+        if (
+            not isinstance(offsets, list)
+            or len(offsets) != 2
+            or not all(type(d) is int and d >= 0 for d in offsets)
+            or offsets[1] - offsets[0] != elements * DTYPE_BYTES[dtype]
+        ):
+            raise ArtifactError(f"Invalid tensor byte offsets: {name}")
+        spans.append((offsets[0], offsets[1]))
+        element_count += elements
+    cursor = 0
+    for start, end in sorted(spans):
+        if start != cursor:
+            raise ArtifactError("Safetensors payload contains overlapping tensors or holes")
+        cursor = end
+    if 8 + len(header_bytes) + cursor != file_size:
+        raise ArtifactError("Safetensors header offsets disagree with file size")
+    return header, element_count
+
+
 class MetadataClient:
     """Never consume a weight-file body unless the exact requested range is honored."""
 
-    def __init__(self, session: requests.Session | None = None, timeout: float = 15.0):
+    def __init__(
+        self,
+        session: requests.Session | None = None,
+        timeout: float = 15.0,
+        token: str | None = None,
+    ):
         self.session = session or requests.Session()
         self.timeout = timeout
+        selected_token = token if token is not None else os.environ.get("HF_TOKEN", "")
+        if not isinstance(selected_token, str) or (
+            selected_token.strip() and any(not 33 <= ord(char) <= 126 for char in selected_token)
+        ):
+            raise ArtifactError("Invalid Hugging Face token configuration")
+        self._token = selected_token.strip()
         self.audit: list[dict[str, Any]] = []
         self.repository_files: dict[tuple[str, str], set[str]] = {}
         self.repository_metadata: dict[tuple[str, str], dict[str, str | None]] = {}
         self.header_bytes_read = 0
         self.checkpoint_header_bytes_read = 0
 
+    @staticmethod
+    def _trusted_hf_url(url: str) -> bool:
+        if any(ord(char) < 33 for char in url):
+            return False
+        try:
+            parsed = urlsplit(url)
+            return (
+                parsed.scheme == "https"
+                and parsed.hostname == "huggingface.co"
+                and parsed.port in (None, 443)
+                and parsed.username is None
+                and parsed.password is None
+            )
+        except ValueError:
+            return False
+
+    @contextmanager
+    def _get(self, url: str, headers: dict[str, str]) -> Iterator[requests.Response]:
+        current_url = url
+        request_headers: dict[str, str | None] = dict(headers)
+        if self._token and self._trusted_hf_url(current_url):
+            request_headers["Authorization"] = f"Bearer {self._token}"
+        else:
+            # A caller-owned Session may have default auth headers; suppress them
+            # per request without changing that Session's configuration.
+            request_headers["Authorization"] = None
+        for _ in range(6):
+            with self.session.get(
+                current_url,
+                stream=True,
+                timeout=self.timeout,
+                headers=request_headers,
+                auth=lambda prepared: prepared,
+                allow_redirects=False,
+            ) as response:
+                if response.status_code in {301, 302, 303, 307, 308} and response.headers.get("Location"):
+                    next_url = urljoin(current_url, response.headers["Location"])
+                    if not (
+                        self._trusted_hf_url(current_url)
+                        and self._trusted_hf_url(next_url)
+                    ):
+                        request_headers["Authorization"] = None
+                    current_url = next_url
+                    continue
+                yield response
+                return
+        raise ArtifactError("Artifact request exceeded the redirect limit")
+
     def json(self, url: str, max_bytes: int = 1024 * 1024) -> dict[str, Any]:
-        with self.session.get(
-            url, stream=True, timeout=self.timeout, headers={"Accept-Encoding": "identity"}
-        ) as response:
+        with self._get(url, {"Accept-Encoding": "identity"}) as response:
             response.raise_for_status()
             body = response.raw.read(max_bytes + 1, decode_content=True)
             if len(body) > max_bytes:
                 raise ArtifactError("JSON metadata exceeds the size limit")
             try:
-                result = json.loads(body, object_pairs_hook=_unique_object)
+                result = json.loads(
+                    body,
+                    object_pairs_hook=_unique_object,
+                    parse_constant=_reject_json_constant,
+                    parse_float=_finite_float,
+                )
             except (ValueError, UnicodeError, RecursionError) as exc:
                 raise ArtifactError(f"Invalid JSON metadata: {url}") from exc
             if not isinstance(result, dict):
@@ -226,6 +376,8 @@ class MetadataClient:
         info = self.json(
             f"https://huggingface.co/api/models/{reference.model_id}/revision/{quote(reference.revision, safe='')}"
         )
+        if info.get("private") is True or (self._token and info.get("private") is not False):
+            raise ArtifactError("Private or unverified Hugging Face repository is not supported")
         sha = info.get("sha")
         if not isinstance(sha, str) or not re.fullmatch(r"[0-9a-f]{40}", sha):
             raise ArtifactError("Hugging Face did not return an immutable commit SHA")
@@ -297,7 +449,18 @@ class MetadataClient:
             ):
                 raise ArtifactError("Safetensors index references invalid or missing shard files")
             if len(mapping) > limits.MAX_CHECKPOINT_TENSORS:
-                raise InspectionBudgetError("Checkpoint index exceeds the supported tensor record count")
+                raise InspectionBudgetError(
+                    "Checkpoint index exceeds the supported tensor record count",
+                    index_summary={
+                        "url": reference.url(index_name, revision),
+                        "canonical_sha256": hashlib.sha256(
+                            json.dumps(index, sort_keys=True).encode()
+                        ).hexdigest(),
+                        "declared_tensor_names": len(mapping),
+                        "declared_shards": len(shard_names),
+                        "tensor_record_limit": limits.MAX_CHECKPOINT_TENSORS,
+                    },
+                )
         else:
             index = None
             filename = reference.filename
@@ -326,6 +489,98 @@ class MetadataClient:
             raise ArtifactError("Safetensors shard headers disagree with the index weight_map")
         return CheckpointMetadata(tensors, shards, tensor_files, index)
 
+    def verify_indexed_checkpoint_headers(
+        self, reference: ModelReference, revision: str
+    ) -> VerifiedCheckpointHeaders:
+        """Verify every indexed shard without retaining checkpoint tensor records.
+
+        This is an explicit, potentially long-running audit. It never loads a
+        payload or changes the normal reconstruction tensor-record budget.
+        """
+        if reference.explicit_filename and not reference.filename.endswith(".index.json"):
+            raise ArtifactError("Header verification requires an indexed checkpoint selection")
+        files = self.repository_files[(reference.model_id, revision)]
+        index_name = (
+            reference.filename
+            if reference.explicit_filename and reference.filename.endswith(".index.json")
+            else "model.safetensors.index.json"
+        )
+        if index_name not in files:
+            raise ArtifactError("Repository has no selected Safetensors index")
+        index = self.json(reference.url(index_name, revision), max_bytes=16 * 1024 * 1024)
+        mapping = index.get("weight_map")
+        if not isinstance(mapping, dict) or not mapping or not all(
+            isinstance(name, str) and name and isinstance(filename, str)
+            for name, filename in mapping.items()
+        ):
+            raise ArtifactError("Safetensors index has an invalid weight_map")
+        directory = index_name.rpartition("/")[0]
+        if directory:
+            mapping = {name: f"{directory}/{filename}" for name, filename in mapping.items()}
+        shard_names = sorted(set(mapping.values()))
+        if len(shard_names) > MAX_CHECKPOINT_SHARDS:
+            raise InspectionBudgetError("Checkpoint exceeds the supported shard count")
+        if any(
+            filename not in files
+            or not filename.endswith(".safetensors")
+            or filename.startswith("/")
+            or "\\" in filename
+            or "\x00" in filename
+            or any(part in {"", ".", ".."} for part in filename.split("/"))
+            for filename in shard_names
+        ):
+            raise ArtifactError("Safetensors index references invalid or missing shard files")
+
+        remaining = dict(mapping)
+        shard_summaries: dict[str, dict[str, Any]] = {}
+        total_tensors = total_elements = 0
+        bytes_before = self.checkpoint_header_bytes_read
+        for filename in shard_names:
+            url = reference.url(filename, revision)
+            prefix, file_size = self.range(url, 0, 7)
+            length = struct.unpack("<Q", prefix)[0]
+            if length < 2 or 8 + length > file_size:
+                raise ArtifactError(f"Invalid Safetensors header length: {length}")
+            if length > MAX_HEADER_BYTES:
+                raise InspectionBudgetError("Safetensors header length is excessive for the inspection budget")
+            if self.header_bytes_read + length + 8 > MAX_TOTAL_HEADER_BYTES:
+                raise InspectionBudgetError("Checkpoint metadata exceeds the total inspection budget")
+            body, second_size = self.range(url, 8, 8 + length - 1)
+            self.header_bytes_read += length + 8
+            if second_size != file_size:
+                raise ArtifactError("Safetensors file changed between Range requests")
+            header, element_count = summarize_safetensors_header(body, file_size)
+            shard_tensor_count = 0
+            for name in header:
+                if name == "__metadata__":
+                    continue
+                expected = remaining.pop(name, None)
+                if expected is None:
+                    raise ArtifactError(f"Duplicate or unindexed Safetensors tensor: {name}")
+                if expected != filename:
+                    raise ArtifactError(f"Safetensors shard headers disagree with the index weight_map: {name}")
+                shard_tensor_count += 1
+            shard_summaries[filename] = {
+                "url": url,
+                "header_sha256": hashlib.sha256(body).hexdigest(),
+                "header_length": length,
+                "file_size": file_size,
+                "tensor_count": shard_tensor_count,
+                "tensor_element_count": element_count,
+            }
+            total_tensors += shard_tensor_count
+            total_elements += element_count
+        if remaining:
+            raise ArtifactError("Safetensors shard headers omit indexed tensor names")
+        return VerifiedCheckpointHeaders(
+            index_sha256=hashlib.sha256(json.dumps(index, sort_keys=True).encode()).hexdigest(),
+            tensor_count=total_tensors,
+            tensor_element_count=total_elements,
+            shard_count=len(shard_summaries),
+            shards=shard_summaries,
+            header_bytes_read=self.checkpoint_header_bytes_read - bytes_before,
+        )
+
     def gguf_checkpoint(self, reference: ModelReference, revision: str, filename: str) -> CheckpointMetadata:
         from .gguf import parse_gguf_header
 
@@ -353,12 +608,7 @@ class MetadataClient:
         )
 
     def range(self, url: str, start: int, end: int) -> tuple[bytes, int]:
-        with self.session.get(
-            url,
-            stream=True,
-            timeout=self.timeout,
-            headers={"Range": f"bytes={start}-{end}", "Accept-Encoding": "identity"},
-        ) as response:
+        with self._get(url, {"Range": f"bytes={start}-{end}", "Accept-Encoding": "identity"}) as response:
             response.raise_for_status()
             content_range = response.headers.get("Content-Range", "")
             match = re.fullmatch(r"bytes (\d+)-(\d+)/(\d+)", content_range)

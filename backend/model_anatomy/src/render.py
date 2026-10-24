@@ -33,9 +33,15 @@ def mermaid(graph: Graph) -> str:
             else "unknown shape"
         )
         label = f"{edge.label}: " if edge.label else ""
-        label += f"[{shape}]" if edge.relation == "dataflow" and edge.tensor else edge.relation
+        label += (
+            f"[{shape}]"
+            if edge.relation == "dataflow" and edge.tensor
+            else edge.relation
+        )
         arrow = "-->" if edge.relation == "dataflow" else "-.->"
-        lines.append(f'    {ids[edge.source]} {arrow}|"{_label(label)}"| {ids[edge.target]}')
+        lines.append(
+            f'    {ids[edge.source]} {arrow}|"{_label(label)}"| {ids[edge.target]}'
+        )
     return "\n".join(lines) + "\n"
 
 
@@ -63,19 +69,36 @@ def write_outputs(
     contents = {model_path: serialized}
     config_path = config_directory / "config.json"
     if isinstance(ir.metadata.get("source_config"), dict):
-        contents[config_path] = json.dumps(ir.metadata["source_config"], indent=2, sort_keys=True) + "\n"
+        contents[config_path] = (
+            json.dumps(ir.metadata["source_config"], indent=2, sort_keys=True) + "\n"
+        )
     component_paths = []
     for filename, data in ir.metadata.get("component_configs", {}).items():
-        if (not isinstance(filename, str) or not isinstance(data, dict)
-                or any(not part or part in {".", ".."} or any(char in part for char in "\\:\x00") for part in filename.split("/"))
-                or filename.split("/")[-1] != "config.json"):
+        if (
+            not isinstance(filename, str)
+            or not isinstance(data, dict)
+            or any(
+                not part
+                or part in {".", ".."}
+                or any(char in part for char in "\\:\x00")
+                for part in filename.split("/")
+            )
+            or filename.split("/")[-1] != "config.json"
+        ):
             raise ArtifactError("Invalid component configuration output path")
         component_path = config_directory / filename
         contents[component_path] = json.dumps(data, indent=2, sort_keys=True) + "\n"
         component_paths.append(component_path)
     audit_path = output_directory / "artifact_audit.json"
-    contents[audit_path] = json.dumps(ir.metadata["artifacts"], indent=2, sort_keys=True) + "\n"
-    paths = [model_path, *([config_path] if config_path in contents else []), *component_paths, audit_path]
+    contents[audit_path] = (
+        json.dumps(ir.metadata["artifacts"], indent=2, sort_keys=True) + "\n"
+    )
+    paths = [
+        model_path,
+        *([config_path] if config_path in contents else []),
+        *component_paths,
+        audit_path,
+    ]
     diagnostics_path = output_directory / "diagnostics.json"
     contents[diagnostics_path] = (
         json.dumps(
@@ -106,7 +129,9 @@ def write_outputs(
         path = output_directory / f"{graph.id}.mmd"
         contents[path] = rendered
         paths.append(path)
-        preview.extend([f"## {graph.id}", "", "```mermaid", rendered.rstrip(), "```", ""])
+        preview.extend(
+            [f"## {graph.id}", "", "```mermaid", rendered.rstrip(), "```", ""]
+        )
     obsolete = {
         output_directory / f"{obsolete_id}.mmd"
         for obsolete_id in old_graph_ids - {graph.id for graph in ir.root_graph.walk()}

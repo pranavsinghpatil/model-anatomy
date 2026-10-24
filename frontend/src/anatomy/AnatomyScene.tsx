@@ -19,7 +19,7 @@ import type {
 } from "../api/contract";
 import { count, shape } from "../format";
 import { nodeTitle } from "../graph/presentation";
-import { componentMeaning } from "../components/LearnGuide";
+import { componentMeaning } from "../components/component-purpose";
 import { IconButton } from "../components/Common";
 import { Button } from "../components/ui";
 import { AssemblyDrawing } from "./AssemblyDrawing";
@@ -206,8 +206,16 @@ export function AnatomyScene({
             <dl>
               <div>
                 <dt>Parameters</dt>
-                <dd title={count(current.parameter_count)}>
-                  {count(current.parameter_count, true)}
+                <dd
+                  title={
+                    analysis.quality?.mode === "publisher_reference_topology"
+                      ? "Unverified"
+                      : count(current.parameter_count)
+                  }
+                >
+                  {analysis.quality?.mode === "publisher_reference_topology"
+                    ? "Unknown"
+                    : count(current.parameter_count, true)}
                 </dd>
               </div>
               <div>

@@ -5,8 +5,9 @@ import pytest
 from fastapi.testclient import TestClient
 
 from model_anatomy.api.app import COOKIE, create_app
+from model_anatomy.api.schemas import ArtifactInspectionResponse, InspectionSummary
 from model_anatomy.api.settings import Settings
-from model_anatomy.service.jobs import cache_key
+from model_anatomy.service.jobs import cache_key, ir_summary
 from model_anatomy.service.views import artifact_view
 from model_anatomy.src.ir import Evidence, Graph, ModelIR
 
@@ -105,6 +106,53 @@ def test_gguf_artifact_view_preserves_selected_split_file_scope(inspected):
     assert page["selected_file_split_metadata"]["split.count"] == 2
 
 
+def test_declared_index_counts_remain_distinct_in_public_views():
+    declared = {
+        "url": "https://huggingface.co/publisher/adapter/resolve/" + "a" * 40 + "/model.safetensors.index.json",
+        "canonical_sha256": "b" * 64,
+        "declared_tensor_names": 96_085,
+        "declared_shards": 48,
+        "tensor_record_limit": 20_000,
+    }
+    ir = ModelIR(
+        "publisher/model",
+        "Unavailable",
+        Graph("architecture_unavailable", [], []),
+        metadata={
+            "revision": "a" * 40,
+            "inspection": {
+                "kind": "artifact_inspection",
+                "reason_code": "metadata_budget_exceeded",
+                "message": "Checkpoint index exceeds the tensor budget.",
+                "files": ["model.safetensors.index.json"],
+                "checkpoint_available": True,
+            },
+            "artifacts": {"declared_checkpoint_index": declared},
+            "model_profile": {
+                "repository_kind": "transformers",
+                "declared_task": None,
+                "declared_library": "transformers",
+                "config_model_type": "unknown",
+                "declared_architectures": [],
+                "formats": ["safetensors"],
+                "selected_file": None,
+                "selected_config": "config.json",
+                "components": [],
+                "architecture_blockers": ["No native config"],
+                "metadata_basis": "repository_metadata",
+            },
+            "analysis_report": {"mode": "artifact_inspection", "warnings": []},
+        },
+    )
+    summary = ir_summary(ir.to_dict())["inspection"]
+    artifact = artifact_view(ir)
+    InspectionSummary.model_validate(summary)
+    ArtifactInspectionResponse.model_validate(artifact)
+    assert summary["tensor_count"] == artifact["tensor_count"] == 0
+    assert summary["declared_checkpoint_index"] == artifact["declared_checkpoint_index"] == declared
+    assert summary["architecture_blockers"] == ["No native config"]
+
+
 def test_artifact_results_do_not_expose_fake_graphs_or_spend_ai_quota(inspected):
     client, job_id, _, _ = inspected
     path = f"/api/v1/analyses/{job_id}"
@@ -141,16 +189,22 @@ def test_inspection_access_remains_visitor_owned(inspected):
 
 
 def test_inspected_cache_reuses_real_report_without_changing_outcome(inspected):
-    client, _, ir, key = inspected
+    client, original_id, ir, key = inspected
     service = client.app.state.jobs
-    new_job = client.post("/api/v1/analyses", json={"model": ir.model_id}).json()
-    service.claim("worker")
-    service.resolved(new_job["id"], "worker", ir.model_id, ir.metadata["revision"])
-    data = service.cached_result(key)
-    assert data == ir.to_json().encode()
-    service.finish(new_job["id"], "worker", data, key, cached=True)
+    service.release_worker("worker")
+    response = client.post("/api/v1/analyses", json={"model": ir.model_id})
+    assert response.status_code == 202
+    new_job = response.json()
+    assert new_job["id"] != original_id
+    assert new_job["revision"] == ir.metadata["revision"]
+    guest_id, _ = service.guest(client.cookies.get(COOKIE))
+    job = service.get(new_job["id"], guest_id)
+    assert job.attempts == 0
+    assert service.cached_result(key) == ir.to_json().encode()
     detail = client.get(f"/api/v1/analyses/{new_job['id']}").json()
     assert detail["cached"] is True and detail["status"] == "inspected"
+    artifacts = client.get(f"/api/v1/analyses/{new_job['id']}/artifacts").json()
+    assert artifacts["kind"] == "artifact_inspection"
 
 
 def test_markdown_inventory_does_not_interpret_repository_filenames(inspected):

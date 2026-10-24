@@ -65,9 +65,14 @@ def publish_files(contents: dict[Path, str], obsolete: set[Path]) -> None:
                         retained.add(backup)
                     failures.append(str(path))
             if failures:
-                raise OSError(f"Output rollback failed for {failures}; retained backups: {sorted(map(str, retained))}") from original
+                raise OSError(
+                    f"Output rollback failed for {failures}; retained backups: {sorted(map(str, retained))}"
+                ) from original
             raise
     finally:
-        for temporary in [*staged.values(), *(item for item in backups.values() if item is not None)]:
+        for temporary in [
+            *staged.values(),
+            *(item for item in backups.values() if item is not None),
+        ]:
             if temporary not in retained:
                 temporary.unlink(missing_ok=True)

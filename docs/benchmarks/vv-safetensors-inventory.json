@@ -1,0 +1,654 @@
+{
+  "source_commit": "56ffad8f67afb83076c3067a90d846de1e88d83d",
+  "source_no_safetensors_rows": 81,
+  "unique_models_checked": 80,
+  "metadata_only": true,
+  "counts": {
+    "safetensors_absent": 80
+  },
+  "results": [
+    {
+      "model_id": "BridgeTower/bridgetower-base-itm-mlm",
+      "revision": "6cfb318bb08588808368a9ab1fe26609bc148f1f",
+      "outcome": "safetensors_absent",
+      "safetensors_files": [],
+      "metadata_bytes_read": 1123,
+      "weight_payload_bytes_read": 0
+    },
+    {
+      "model_id": "EleutherAI/gpt-j-6b",
+      "revision": "47e169305d2e8376be1d31e765533382721b2cc1",
+      "outcome": "safetensors_absent",
+      "safetensors_files": [],
+      "metadata_bytes_read": 5042,
+      "weight_payload_bytes_read": 0
+    },
+    {
+      "model_id": "FacebookAI/xlm-mlm-en-2048",
+      "revision": "6eb6401a142611ae90f3d6bc606b97384f1c9961",
+      "outcome": "safetensors_absent",
+      "safetensors_files": [],
+      "metadata_bytes_read": 1449,
+      "weight_payload_bytes_read": 0
+    },
+    {
+      "model_id": "Helsinki-NLP/opus-mt-en-de",
+      "revision": "6183067f769a302e3861815543b9f312c71b0ca4",
+      "outcome": "safetensors_absent",
+      "safetensors_files": [],
+      "metadata_bytes_read": 4255,
+      "weight_payload_bytes_read": 0
+    },
+    {
+      "model_id": "OFA-Sys/chinese-clip-vit-base-patch16",
+      "revision": "36e679e65c2a2fead755ae21162091293ad37834",
+      "outcome": "safetensors_absent",
+      "safetensors_files": [],
+      "metadata_bytes_read": 2735,
+      "weight_payload_bytes_read": 0
+    },
+    {
+      "model_id": "RUCAIBox/mvp",
+      "revision": "c1d9aeb879f3079101f716f1f6e7109fdd18b4e9",
+      "outcome": "safetensors_absent",
+      "safetensors_files": [],
+      "metadata_bytes_read": 2985,
+      "weight_payload_bytes_read": 0
+    },
+    {
+      "model_id": "RWKV/rwkv-4-169m-pile",
+      "revision": "46bdc280eb97b6141d5d51a935e0c4870ecaefcc",
+      "outcome": "safetensors_absent",
+      "safetensors_files": [],
+      "metadata_bytes_read": 1371,
+      "weight_payload_bytes_read": 0
+    },
+    {
+      "model_id": "Salesforce/blip-image-captioning-base",
+      "revision": "82a37760796d32b1411fe092ab5d4e227313294b",
+      "outcome": "safetensors_absent",
+      "safetensors_files": [],
+      "metadata_bytes_read": 4554,
+      "weight_payload_bytes_read": 0
+    },
+    {
+      "model_id": "Salesforce/codegen-350M-mono",
+      "revision": "d9107f71cca463240db1143f4a75a927a27fcb27",
+      "outcome": "safetensors_absent",
+      "safetensors_files": [],
+      "metadata_bytes_read": 4333,
+      "weight_payload_bytes_read": 0
+    },
+    {
+      "model_id": "Salesforce/ctrl",
+      "revision": "3ff4f697e86bb0b95f7a70e39822af96671727d9",
+      "outcome": "safetensors_absent",
+      "safetensors_files": [],
+      "metadata_bytes_read": 4038,
+      "weight_payload_bytes_read": 0
+    },
+    {
+      "model_id": "Visual-Attention-Network/van-base",
+      "revision": "569d1d8e1323ad5baefa8c00b11d82de0e42cfad",
+      "outcome": "safetensors_absent",
+      "safetensors_files": [],
+      "metadata_bytes_read": 1820,
+      "weight_payload_bytes_read": 0
+    },
+    {
+      "model_id": "YituTech/conv-bert-base",
+      "revision": "5cb451936b5c4a96562d8b146de85f64f9cf2c22",
+      "outcome": "safetensors_absent",
+      "safetensors_files": [],
+      "metadata_bytes_read": 944,
+      "weight_payload_bytes_read": 0
+    },
+    {
+      "model_id": "allenai/led-base-16384",
+      "revision": "38335783885b338d93791936c54bb4be46bebed9",
+      "outcome": "safetensors_absent",
+      "safetensors_files": [],
+      "metadata_bytes_read": 2135,
+      "weight_payload_bytes_read": 0
+    },
+    {
+      "model_id": "allenai/longformer-base-4096",
+      "revision": "301e6a42cb0d9976a6d6a26a079fef81c18aa895",
+      "outcome": "safetensors_absent",
+      "safetensors_files": [],
+      "metadata_bytes_read": 2309,
+      "weight_payload_bytes_read": 0
+    },
+    {
+      "model_id": "andreasmadsen/efficient_mlm_m0.40",
+      "revision": "3924d3fe62a60eb393a809cec55355f2837de173",
+      "outcome": "safetensors_absent",
+      "safetensors_files": [],
+      "metadata_bytes_read": 1422,
+      "weight_payload_bytes_read": 0
+    },
+    {
+      "model_id": "apple/mobilevit-small",
+      "revision": "6c8612545dc98676d27bc518fa521d9e9af23e34",
+      "outcome": "safetensors_absent",
+      "safetensors_files": [],
+      "metadata_bytes_read": 2388,
+      "weight_payload_bytes_read": 0
+    },
+    {
+      "model_id": "apple/mobilevitv2-1.0-imagenet1k-256",
+      "revision": "fe97dbe6d3334921e8ca1a8644c27d8ae4e44f76",
+      "outcome": "safetensors_absent",
+      "safetensors_files": [],
+      "metadata_bytes_read": 1178,
+      "weight_payload_bytes_read": 0
+    },
+    {
+      "model_id": "dandelin/vilt-b32-mlm",
+      "revision": "9507e9c3da12076e10f272e942569dc5190edc1c",
+      "outcome": "safetensors_absent",
+      "safetensors_files": [],
+      "metadata_bytes_read": 1397,
+      "weight_payload_bytes_read": 0
+    },
+    {
+      "model_id": "deepmind/vision-perceiver-conv",
+      "revision": "795b5eea5867940bd8fa46105029874afce6f037",
+      "outcome": "safetensors_absent",
+      "safetensors_files": [],
+      "metadata_bytes_read": 1288,
+      "weight_payload_bytes_read": 0
+    },
+    {
+      "model_id": "facebook/blenderbot-400M-distill",
+      "revision": "eaaf64e3be20ad1f1fb0bdf689565ba52c97eafe",
+      "outcome": "safetensors_absent",
+      "safetensors_files": [],
+      "metadata_bytes_read": 5418,
+      "weight_payload_bytes_read": 0
+    },
+    {
+      "model_id": "facebook/blenderbot_small-90M",
+      "revision": "bbf60f5f68fd8789ac04bd1c20712233f3dc899f",
+      "outcome": "safetensors_absent",
+      "safetensors_files": [],
+      "metadata_bytes_read": 2745,
+      "weight_payload_bytes_read": 0
+    },
+    {
+      "model_id": "facebook/convnext-tiny-224",
+      "revision": "6166b7613034066690a621d8bf25ffdf181a34f0",
+      "outcome": "safetensors_absent",
+      "safetensors_files": [],
+      "metadata_bytes_read": 2901,
+      "weight_payload_bytes_read": 0
+    },
+    {
+      "model_id": "facebook/data2vec-audio-base-960h",
+      "revision": "32331f3123e703528918aa688a9a38232d58c872",
+      "outcome": "safetensors_absent",
+      "safetensors_files": [],
+      "metadata_bytes_read": 3549,
+      "weight_payload_bytes_read": 0
+    },
+    {
+      "model_id": "facebook/data2vec-text-base",
+      "revision": "bd0db19c3500ee7a0b626791db67fa6e9fda9a0b",
+      "outcome": "safetensors_absent",
+      "safetensors_files": [],
+      "metadata_bytes_read": 2199,
+      "weight_payload_bytes_read": 0
+    },
+    {
+      "model_id": "facebook/data2vec-vision-base",
+      "revision": "72a7bdadab41d0e9a2c8d6887b9f8a50eebb8e0f",
+      "outcome": "safetensors_absent",
+      "safetensors_files": [],
+      "metadata_bytes_read": 1246,
+      "weight_payload_bytes_read": 0
+    },
+    {
+      "model_id": "facebook/deit-base-patch16-224",
+      "revision": "fb2c78a54a5637dec350432794f7b93e31f910c9",
+      "outcome": "safetensors_absent",
+      "safetensors_files": [],
+      "metadata_bytes_read": 1747,
+      "weight_payload_bytes_read": 0
+    },
+    {
+      "model_id": "facebook/dpr-question_encoder-single-nq-base",
+      "revision": "d04a52f6d2f96c60117a925e8c24c4043a75f265",
+      "outcome": "safetensors_absent",
+      "safetensors_files": [],
+      "metadata_bytes_read": 1893,
+      "weight_payload_bytes_read": 0
+    },
+    {
+      "model_id": "facebook/flava-full",
+      "revision": "51e2b5fac49169959b01da7f3708d8e0d8d7304a",
+      "outcome": "safetensors_absent",
+      "safetensors_files": [],
+      "metadata_bytes_read": 1496,
+      "weight_payload_bytes_read": 0
+    },
+    {
+      "model_id": "facebook/hubert-base-ls960",
+      "revision": "dba3bb02fda4248b6e082697eee756de8fe8aa8a",
+      "outcome": "safetensors_absent",
+      "safetensors_files": [],
+      "metadata_bytes_read": 4099,
+      "weight_payload_bytes_read": 0
+    },
+    {
+      "model_id": "facebook/m2m100_418M",
+      "revision": "55c2e61bbf05dfb8d7abccdc3fae6fc8512fd636",
+      "outcome": "safetensors_absent",
+      "safetensors_files": [],
+      "metadata_bytes_read": 5619,
+      "weight_payload_bytes_read": 0
+    },
+    {
+      "model_id": "facebook/maskformer-swin-base-ade",
+      "revision": "b569351e060953d37fd7dfb8b16ab83c360a13d6",
+      "outcome": "safetensors_absent",
+      "safetensors_files": [],
+      "metadata_bytes_read": 2034,
+      "weight_payload_bytes_read": 0
+    },
+    {
+      "model_id": "facebook/nllb-200-distilled-600M",
+      "revision": "f8d333a098d19b4fd9a8b18f94170487ad3f821d",
+      "outcome": "safetensors_absent",
+      "safetensors_files": [],
+      "metadata_bytes_read": 9091,
+      "weight_payload_bytes_read": 0
+    },
+    {
+      "model_id": "facebook/nllb-moe-54b",
+      "revision": "5a753becf6f2aec7393f2df9defa511d96a4e8ec",
+      "outcome": "safetensors_absent",
+      "safetensors_files": [],
+      "metadata_bytes_read": 7033,
+      "weight_payload_bytes_read": 0
+    },
+    {
+      "model_id": "facebook/opt-125m",
+      "revision": "27dcfa74d334bc871f3234de431e71c6eeba5dd6",
+      "outcome": "safetensors_absent",
+      "safetensors_files": [],
+      "metadata_bytes_read": 4542,
+      "weight_payload_bytes_read": 0
+    },
+    {
+      "model_id": "facebook/regnet-y-040",
+      "revision": "29e70d26bce1b86bc90c32ac5fadedfc1b671285",
+      "outcome": "safetensors_absent",
+      "safetensors_files": [],
+      "metadata_bytes_read": 1961,
+      "weight_payload_bytes_read": 0
+    },
+    {
+      "model_id": "facebook/s2t-wav2vec2-large-en-de",
+      "revision": "bfec7719beddbca4524925286dd956bf11f2a3f9",
+      "outcome": "safetensors_absent",
+      "safetensors_files": [],
+      "metadata_bytes_read": 2500,
+      "weight_payload_bytes_read": 0
+    },
+    {
+      "model_id": "facebook/timesformer-base-finetuned-k400",
+      "revision": "8aaf40ea7d3d282dcb0a5dea01a198320d15d6c0",
+      "outcome": "safetensors_absent",
+      "safetensors_files": [],
+      "metadata_bytes_read": 3756,
+      "weight_payload_bytes_read": 0
+    },
+    {
+      "model_id": "facebook/vit-msn-base",
+      "revision": "8c7214355ddee1c0e55633ceea978e75eb2b8218",
+      "outcome": "safetensors_absent",
+      "safetensors_files": [],
+      "metadata_bytes_read": 1065,
+      "weight_payload_bytes_read": 0
+    },
+    {
+      "model_id": "facebook/wav2vec2-conformer-rel-pos-large-960h-ft",
+      "revision": "ca7f36f527f234b3cd4f05ecee30361f971e8e33",
+      "outcome": "safetensors_absent",
+      "safetensors_files": [],
+      "metadata_bytes_read": 2870,
+      "weight_payload_bytes_read": 0
+    },
+    {
+      "model_id": "facebook/xglm-564M",
+      "revision": "f3059f01b98ccc877c673149e0178c0e957660f9",
+      "outcome": "safetensors_absent",
+      "safetensors_files": [],
+      "metadata_bytes_read": 1934,
+      "weight_payload_bytes_read": 0
+    },
+    {
+      "model_id": "funnel-transformer/small",
+      "revision": "81e9124473a26bd4ff7244e1c1c544ef8e22ed08",
+      "outcome": "safetensors_absent",
+      "safetensors_files": [],
+      "metadata_bytes_read": 1473,
+      "weight_payload_bytes_read": 0
+    },
+    {
+      "model_id": "google/bert_for_seq_generation_L-24_bbc_encoder",
+      "revision": "c817d1fd1be2ffa69431227a1fe320544943d4db",
+      "outcome": "safetensors_absent",
+      "safetensors_files": [],
+      "metadata_bytes_read": 829,
+      "weight_payload_bytes_read": 0
+    },
+    {
+      "model_id": "google/bigbird-pegasus-large-arxiv",
+      "revision": "c5ae494f3d319933617d513f8491c5be87f5d35b",
+      "outcome": "safetensors_absent",
+      "safetensors_files": [],
+      "metadata_bytes_read": 9237,
+      "weight_payload_bytes_read": 0
+    },
+    {
+      "model_id": "google/bigbird-roberta-base",
+      "revision": "5a145f7852cba9bd431386a58137bf8a29903b90",
+      "outcome": "safetensors_absent",
+      "safetensors_files": [],
+      "metadata_bytes_read": 2362,
+      "weight_payload_bytes_read": 0
+    },
+    {
+      "model_id": "google/bit-50",
+      "revision": "60f75d535bfe0a2a9d419f89f96e3c6c78bd0da9",
+      "outcome": "safetensors_absent",
+      "safetensors_files": [],
+      "metadata_bytes_read": 1103,
+      "weight_payload_bytes_read": 0
+    },
+    {
+      "model_id": "google/electra-base-discriminator",
+      "revision": "1ae76a97c7e84a4e640876a07453fccd636f0667",
+      "outcome": "safetensors_absent",
+      "safetensors_files": [],
+      "metadata_bytes_read": 2246,
+      "weight_payload_bytes_read": 0
+    },
+    {
+      "model_id": "google/fnet-base",
+      "revision": "d89b6fad3cf5384848b783dc480f9685f49d008c",
+      "outcome": "safetensors_absent",
+      "safetensors_files": [],
+      "metadata_bytes_read": 1412,
+      "weight_payload_bytes_read": 0
+    },
+    {
+      "model_id": "google/long-t5-tglobal-base",
+      "revision": "aecb1376e5bd78db32ebc5c9deb257449b9e2b21",
+      "outcome": "safetensors_absent",
+      "safetensors_files": [],
+      "metadata_bytes_read": 1527,
+      "weight_payload_bytes_read": 0
+    },
+    {
+      "model_id": "google/mobilebert-uncased",
+      "revision": "1f90a6c24c7879273a291d34a849033eba2dbc0f",
+      "outcome": "safetensors_absent",
+      "safetensors_files": [],
+      "metadata_bytes_read": 1289,
+      "weight_payload_bytes_read": 0
+    },
+    {
+      "model_id": "google/mobilenet_v1_1.0_224",
+      "revision": "82c74e899e053f9ac5820a574f987d14f8230f10",
+      "outcome": "safetensors_absent",
+      "safetensors_files": [],
+      "metadata_bytes_read": 1825,
+      "weight_payload_bytes_read": 0
+    },
+    {
+      "model_id": "google/mt5-small",
+      "revision": "73fb5dbe4756edadc8fbe8c769b0a109493acf7a",
+      "outcome": "safetensors_absent",
+      "safetensors_files": [],
+      "metadata_bytes_read": 5676,
+      "weight_payload_bytes_read": 0
+    },
+    {
+      "model_id": "google/pegasus-xsum",
+      "revision": "8d8ffc158a3bee9fbb03afacdfc347c823c5ec8b",
+      "outcome": "safetensors_absent",
+      "safetensors_files": [],
+      "metadata_bytes_read": 8566,
+      "weight_payload_bytes_read": 0
+    },
+    {
+      "model_id": "google/reformer-crime-and-punishment",
+      "revision": "8fcd50a33ea773f3bacf3fecdf193c9ca2c060ac",
+      "outcome": "safetensors_absent",
+      "safetensors_files": [],
+      "metadata_bytes_read": 1413,
+      "weight_payload_bytes_read": 0
+    },
+    {
+      "model_id": "google/rembert",
+      "revision": "65da5133da36e29dfca67d4f0dd9f7f9db21b563",
+      "outcome": "safetensors_absent",
+      "safetensors_files": [],
+      "metadata_bytes_read": 2280,
+      "weight_payload_bytes_read": 0
+    },
+    {
+      "model_id": "google/switch-base-8",
+      "revision": "92fe2d22b024d9937146fe097ba3d3a7ba146e1b",
+      "outcome": "safetensors_absent",
+      "safetensors_files": [],
+      "metadata_bytes_read": 1574,
+      "weight_payload_bytes_read": 0
+    },
+    {
+      "model_id": "google/tapas-base-finetuned-wtq",
+      "revision": "e3dde1905dea877b0df1a5c057533e48327dee77",
+      "outcome": "safetensors_absent",
+      "safetensors_files": [],
+      "metadata_bytes_read": 4465,
+      "weight_payload_bytes_read": 0
+    },
+    {
+      "model_id": "huggingface/informer-tourism-monthly",
+      "revision": "da30269a25658b3626dda20a94c9bf6b765f1b13",
+      "outcome": "safetensors_absent",
+      "safetensors_files": [],
+      "metadata_bytes_read": 936,
+      "weight_payload_bytes_read": 0
+    },
+    {
+      "model_id": "kssteven/ibert-roberta-base",
+      "revision": "4f98e9110b04a8958444d3af8ed39287834fbb90",
+      "outcome": "safetensors_absent",
+      "safetensors_files": [],
+      "metadata_bytes_read": 2034,
+      "weight_payload_bytes_read": 0
+    },
+    {
+      "model_id": "microsoft/biogpt",
+      "revision": "eb0d815e95434dc9e3b78f464e52b899bee7d923",
+      "outcome": "safetensors_absent",
+      "safetensors_files": [],
+      "metadata_bytes_read": 3849,
+      "weight_payload_bytes_read": 0
+    },
+    {
+      "model_id": "microsoft/deberta-base",
+      "revision": "0d1b43ccf21b5acd9f4e5f7b077fa698f05cf195",
+      "outcome": "safetensors_absent",
+      "safetensors_files": [],
+      "metadata_bytes_read": 2904,
+      "weight_payload_bytes_read": 0
+    },
+    {
+      "model_id": "microsoft/deberta-v3-base",
+      "revision": "8ccc9b6f36199bec6961081d44eb72fb3f7353f3",
+      "outcome": "safetensors_absent",
+      "safetensors_files": [],
+      "metadata_bytes_read": 4500,
+      "weight_payload_bytes_read": 0
+    },
+    {
+      "model_id": "microsoft/focalnet-tiny",
+      "revision": "20d638e48e9b0f915874420a937b55f0a104f85c",
+      "outcome": "safetensors_absent",
+      "safetensors_files": [],
+      "metadata_bytes_read": 1820,
+      "weight_payload_bytes_read": 0
+    },
+    {
+      "model_id": "microsoft/layoutlmv2-base-uncased",
+      "revision": "ae6f4350c668f88ec580046e35c670df6ec616c1",
+      "outcome": "safetensors_absent",
+      "safetensors_files": [],
+      "metadata_bytes_read": 1415,
+      "weight_payload_bytes_read": 0
+    },
+    {
+      "model_id": "microsoft/speecht5_tts",
+      "revision": "30fcde30f19b87502b8435427b5f5068e401d5f6",
+      "outcome": "safetensors_absent",
+      "safetensors_files": [],
+      "metadata_bytes_read": 4510,
+      "weight_payload_bytes_read": 0
+    },
+    {
+      "model_id": "microsoft/swinv2-tiny-patch4-window8-256",
+      "revision": "40213dad8563a5a916d434a1291443c0fa6358f0",
+      "outcome": "safetensors_absent",
+      "safetensors_files": [],
+      "metadata_bytes_read": 1898,
+      "weight_payload_bytes_read": 0
+    },
+    {
+      "model_id": "microsoft/unispeech-sat-base",
+      "revision": "ca010627e5d232d9179ebdcd615eaa02cea382ed",
+      "outcome": "safetensors_absent",
+      "safetensors_files": [],
+      "metadata_bytes_read": 1035,
+      "weight_payload_bytes_read": 0
+    },
+    {
+      "model_id": "microsoft/wavlm-base",
+      "revision": "efa81aae7ff777e464159e0f877d54eac5b84f81",
+      "outcome": "safetensors_absent",
+      "safetensors_files": [],
+      "metadata_bytes_read": 2140,
+      "weight_payload_bytes_read": 0
+    },
+    {
+      "model_id": "naver-clova-ix/donut-base",
+      "revision": "a959cf33c20e09215873e338299c900f57047c61",
+      "outcome": "safetensors_absent",
+      "safetensors_files": [],
+      "metadata_bytes_read": 2793,
+      "weight_payload_bytes_read": 0
+    },
+    {
+      "model_id": "nghuyong/ernie-2.0-base-en",
+      "revision": "2c22755178879588695a30d68a4d9e861237db7b",
+      "outcome": "safetensors_absent",
+      "safetensors_files": [],
+      "metadata_bytes_read": 1068,
+      "weight_payload_bytes_read": 0
+    },
+    {
+      "model_id": "openai/clip-vit-base-patch32",
+      "revision": "3d74acf9a28c67741b2f4f2ea7635f0aaf6f0268",
+      "outcome": "safetensors_absent",
+      "safetensors_files": [],
+      "metadata_bytes_read": 4912,
+      "weight_payload_bytes_read": 0
+    },
+    {
+      "model_id": "openai/jukebox-1b-lyrics",
+      "revision": "73b6a8861016d54edba607ff7c27777c630ddd9c",
+      "outcome": "safetensors_absent",
+      "safetensors_files": [],
+      "metadata_bytes_read": 1547,
+      "weight_payload_bytes_read": 0
+    },
+    {
+      "model_id": "patrickvonplaten/bert2bert_cnn_daily_mail",
+      "revision": "60cef1a6c33d35ea07afb476b561ecc483df1d6f",
+      "outcome": "safetensors_absent",
+      "safetensors_files": [],
+      "metadata_bytes_read": 3521,
+      "weight_payload_bytes_read": 0
+    },
+    {
+      "model_id": "shi-labs/nat-mini-in1k-224",
+      "revision": "b34f038f1ed307d1f0592c6717c4ebbdda28dc9b",
+      "outcome": "safetensors_absent",
+      "safetensors_files": [],
+      "metadata_bytes_read": 1760,
+      "weight_payload_bytes_read": 0
+    },
+    {
+      "model_id": "shi-labs/oneformer_ade20k_swin_tiny",
+      "revision": "05f2812b1eccf9909b3897777450f8d68148cafc",
+      "outcome": "safetensors_absent",
+      "safetensors_files": [],
+      "metadata_bytes_read": 2712,
+      "weight_payload_bytes_read": 0
+    },
+    {
+      "model_id": "squeezebert/squeezebert-uncased",
+      "revision": "7978b0c163f11850ec35d5cd541828159313ac41",
+      "outcome": "safetensors_absent",
+      "safetensors_files": [],
+      "metadata_bytes_read": 804,
+      "weight_payload_bytes_read": 0
+    },
+    {
+      "model_id": "studio-ousia/luke-base",
+      "revision": "7438924defd9f3c2018d63c16073bf4bcb6a70aa",
+      "outcome": "safetensors_absent",
+      "safetensors_files": [],
+      "metadata_bytes_read": 2519,
+      "weight_payload_bytes_read": 0
+    },
+    {
+      "model_id": "uclanlp/plbart-base",
+      "revision": "cf5287241fcff3819f6ade49635dc2d77efee032",
+      "outcome": "safetensors_absent",
+      "safetensors_files": [],
+      "metadata_bytes_read": 853,
+      "weight_payload_bytes_read": 0
+    },
+    {
+      "model_id": "uw-madison/yoso-4096",
+      "revision": "51a64263ef39d9e633f821a13ec9fafe5711061f",
+      "outcome": "safetensors_absent",
+      "safetensors_files": [],
+      "metadata_bytes_read": 1286,
+      "weight_payload_bytes_read": 0
+    },
+    {
+      "model_id": "weiweishi/roc-bert-base-zh",
+      "revision": "0348c672af2fc2aea383cd1275e43398e7a1ebd1",
+      "outcome": "safetensors_absent",
+      "safetensors_files": [],
+      "metadata_bytes_read": 1486,
+      "weight_payload_bytes_read": 0
+    },
+    {
+      "model_id": "xlnet/xlnet-base-cased",
+      "revision": "ceaa69c7bc5e512b5007106a7ccbb7daf24b2c79",
+      "outcome": "safetensors_absent",
+      "safetensors_files": [],
+      "metadata_bytes_read": 2917,
+      "weight_payload_bytes_read": 0
+    }
+  ],
+  "verified_at": "2026-10-21T16:03:52.818492Z",
+  "metadata_bytes_read": 218960,
+  "weight_payload_bytes_read": 0
+}

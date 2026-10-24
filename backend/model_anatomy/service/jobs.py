@@ -53,7 +53,15 @@ def model_reference(value: str) -> tuple[str, str]:
             or url.netloc != "huggingface.co"
             or url.query
             or url.fragment
-            or (len(parts) != 2 and len(parts) < 5)
+            or (
+                len(parts) != 2
+                and len(parts) < 5
+                and not (
+                    len(parts) == 4
+                    and parts[2] == "tree"
+                    and re.fullmatch(r"[0-9a-f]{40}", parts[3])
+                )
+            )
         ):
             raise ServiceError(
                 422,
@@ -90,6 +98,21 @@ def model_reference(value: str) -> tuple[str, str]:
     return value, model_id
 
 
+def request_selector(value: str) -> tuple[str, str, str, bool]:
+    """Return model, requested revision selector, artifact and explicit selection."""
+    value, model_id = model_reference(value)
+    revision, artifact, explicit = "main", "model.safetensors", False
+    if "://" in value:
+        parts = urlsplit(value).path.strip("/").split("/")
+        if len(parts) == 4 and parts[2] == "tree":
+            revision = parts[3]
+        elif len(parts) >= 5:
+            revision = unquote(parts[3])
+            artifact = "/".join(unquote(part) for part in parts[4:])
+            explicit = True
+    return model_id, revision, artifact, explicit
+
+
 def cache_key(
     model_id: str,
     revision: str,
@@ -109,14 +132,22 @@ def cache_key(
 def ir_summary(data: dict) -> dict:
     metadata = data["metadata"]
     inspection = metadata.get("inspection")
+    profile = metadata.get("model_profile")
+    declared_task = profile.get("declared_task") if isinstance(profile, dict) else None
     if inspection and inspection.get("kind") == "artifact_inspection":
+        warnings = metadata.get("analysis_report", {}).get("warnings", [])
         return {
             "architecture": None,
             "root_graph_id": None,
             "parameter_count": None,
             "dimensions": {},
             "input_names": [],
-            "warnings": metadata.get("analysis_report", {}).get("warnings", []),
+            "warnings": warnings,
+            "warning_count": len(warnings),
+            "graph_count": 0,
+            "tensor_count": len(data.get("tensors", {})),
+            "declared_task": declared_task if isinstance(declared_task, str) else None,
+            "category": "unclassified",
             "limitations": metadata.get("limitations", []),
             "quality": {
                 "mode": "artifact_inspection",
@@ -136,13 +167,23 @@ def ir_summary(data: dict) -> dict:
                     "checkpoint_tensor_element_count"
                 ),
                 "checkpoint_available": inspection.get("checkpoint_available", False),
+                "declared_checkpoint_index": metadata.get("artifacts", {}).get(
+                    "declared_checkpoint_index"
+                ),
+                "architecture_blockers": (profile or {}).get(
+                    "architecture_blockers", []
+                ),
             },
         }
     report = metadata.get("analysis_report", {})
     completion = report.get("completion", {})
     warnings = list(dict.fromkeys(report.get("warnings", [])))
     quality, reasons = {}, []
-    for key in ("semantic_coverage", "module_semantic_coverage", "checkpoint_parameter_coverage"):
+    for key in (
+        "semantic_coverage",
+        "module_semantic_coverage",
+        "checkpoint_parameter_coverage",
+    ):
         value = report.get(key)
         valid = type(value) in (int, float) and 0 <= value <= 1 and math.isfinite(value)
         quality[key] = value if valid else None
@@ -153,16 +194,33 @@ def ir_summary(data: dict) -> dict:
         if key == "unmapped_checkpoint_tensors":
             value = len(value) if isinstance(value, list) else None
         quality[key] = value if type(value) is int and value >= 0 else None
-    required = {"module_inventory", "parameter_mapping", "native_architecture", "module_topology"}
+    required = {
+        "module_inventory",
+        "parameter_mapping",
+        "native_architecture",
+        "module_topology",
+    }
     checks = completion.get("checks") if isinstance(completion, dict) else None
-    valid_checks = isinstance(checks, dict) and required <= checks.keys() and all(type(checks[key]) is bool for key in required)
-    if (not isinstance(completion, dict) or type(completion.get("version")) is not int
-            or completion["version"] != 3 or not valid_checks
-            or completion.get("status") not in {"complete", "partial"}
-            or not isinstance(completion.get("scope"), str)):
+    valid_checks = (
+        isinstance(checks, dict)
+        and required <= checks.keys()
+        and all(type(checks[key]) is bool for key in required)
+    )
+    if (
+        not isinstance(completion, dict)
+        or type(completion.get("version")) is not int
+        or completion["version"] != 3
+        or not valid_checks
+        or completion.get("status") not in {"complete", "partial"}
+        or not isinstance(completion.get("scope"), str)
+    ):
         reasons.append("Architecture completeness contract was not established.")
     else:
-        reasons.extend(f"Architecture check incomplete: {key}." for key in sorted(required) if not checks[key])
+        reasons.extend(
+            f"Architecture check incomplete: {key}."
+            for key in sorted(required)
+            if not checks[key]
+        )
         if completion["status"] != "complete" and not reasons:
             reasons.append("Architecture report is partial.")
         quality["architecture_scope"] = completion["scope"]
@@ -194,6 +252,15 @@ def ir_summary(data: dict) -> dict:
         "dimensions": metadata.get("dimensions", {}),
         "input_names": sorted(metadata.get("inputs", {}).get("input_specs", {})),
         "warnings": warnings,
+        "warning_count": len(warnings),
+        "graph_count": (
+            graph_total(data.get("root_graph", {}))
+            if isinstance(data.get("root_graph"), dict)
+            else None
+        ),
+        "tensor_count": len(data.get("tensors", {})),
+        "declared_task": declared_task if isinstance(declared_task, str) else None,
+        "category": "unclassified",
         "limitations": list(dict.fromkeys(metadata.get("limitations", []))),
         "quality": quality,
         "partial_reasons": reasons,
@@ -225,6 +292,8 @@ def job_detail(job: Job) -> dict:
         "input_names": summary.get("input_names", []),
         "cached": job.cached,
         "inspection": summary.get("inspection"),
+        "verified_checkpoint_headers": summary.get("verified_checkpoint_headers"),
+        "verified_checkpoint_names": summary.get("verified_checkpoint_names"),
     }
 
 
@@ -288,6 +357,91 @@ class JobService:
             else:
                 session.add(RateBucket(key=key, window=window, count=1))
 
+    def _record_failure_outcome(
+        self, session, job: Job, code: str, status: str, finished_at: float
+    ) -> None:
+        try:
+            _, requested_revision, artifact, explicit = request_selector(
+                job.model_input
+            )
+        except ServiceError:
+            requested_revision, artifact, explicit = "main", "model.safetensors", False
+        revision = job.revision or (
+            requested_revision if REVISION_RE.fullmatch(requested_revision) else None
+        )
+        revision_source = (
+            "resolved" if job.revision else "requested" if revision else None
+        )
+        outcome = (
+            "unsupported"
+            if status == "unsupported" or code == "unsupported_model"
+            else (
+                "timeout"
+                if status == "timed_out" or code in {"timeout", "worker_crashed"}
+                else (
+                    "network"
+                    if code in {"artifact_network", "artifact_unavailable"}
+                    else (
+                        "memorylimit"
+                        if code == "memory_limit"
+                        else (
+                            "artifact_error"
+                            if code in {"artifact_http", "invalid_artifacts"}
+                            else "failure"
+                        )
+                    )
+                )
+            )
+        )
+        identity = {
+            "model_id": job.model_id,
+            "revision": revision,
+            "revision_source": revision_source,
+            "artifact": artifact,
+            "explicit_artifact": explicit,
+            "status": outcome,
+            "engine_version": job.engine_version,
+            "started_at": job.created_at,
+            "finished_at": finished_at,
+        }
+        failure_id = hashlib.sha256(
+            json.dumps(identity, sort_keys=True).encode()
+        ).hexdigest()
+        if session.get(InspectionFailure, failure_id) is None:
+            session.add(InspectionFailure(id=failure_id, **identity))
+
+    def _quota_available(self, session, guest_id: str, action: str) -> None:
+        """Reject already-exhausted visitors before any report blob is read."""
+        suffix = "jobs" if action == "jobs" else "questions"
+        limits = [
+            (
+                f"global:{action}:day",
+                getattr(self.settings, f"global_{suffix}_per_day"),
+                86400,
+            ),
+            (
+                f"guest:{guest_id}:{action}:hour",
+                getattr(self.settings, f"guest_{suffix}_per_hour"),
+                3600,
+            ),
+        ]
+        for key, limit, seconds in limits:
+            window = int(self.clock() // seconds)
+            bucket = session.get(RateBucket, (key, window))
+            # if bucket and bucket.count >= limit:
+            #     minutes = math.ceil(((window + 1) * seconds - self.clock()) / 60)
+            #     scope = "Daily shared" if key.startswith("global:") else "Hourly visitor"
+            #     action_label = "analysis" if action == "jobs" else "AI question"
+            #     raise ServiceError(
+            #         429,
+            #         "rate_limited",
+            #         f"{scope} {action_label} allowance reached ({limit}). Try again in {max(1, minutes)} minutes.",
+            #     )
+            if bucket:
+                bucket.count += 1
+            else:
+                session.add(RateBucket(key=key, window=window, count=1))
+
     def question_quota(self, guest_id: str) -> None:
         with self.db.write() as session:
             self._quota(session, guest_id, "questions")
@@ -299,10 +453,28 @@ class JobService:
                 mutex and mutex.worker_owner and mutex.worker_until > self.clock()
             )
 
-    def create(self, guest_id: str, value: str) -> dict:
+    def create(self, guest_id: str, value: str, *, refresh: bool = False) -> dict:
         value, model_id = model_reference(value)
         now = self.clock()
+        model_id, selector, artifact, explicit = request_selector(value)
+        with self.db.read() as session:
+            self._quota_available(session, guest_id, "jobs")
+        valid = (
+            None
+            if refresh
+            else self._valid_registry(
+                self._registry_candidates(model_id, selector, artifact, explicit)
+            )
+        )
         with self.db.write() as session:
+            # A saved report is usable without a live worker or queue capacity.
+            if valid:
+                report, summary = valid
+                self._quota(session, guest_id, "jobs")
+                job = self._ready_job(
+                    session, guest_id, value, model_id, report, summary, now
+                )
+                return job_detail(job)
             mutex = session.get(Mutex, 1)
             if not mutex.worker_owner or mutex.worker_until <= now:
                 raise ServiceError(
@@ -331,11 +503,165 @@ class JobService:
                 attempts=0,
                 cancel_requested=False,
                 cached=False,
+                refresh_requested=refresh,
                 summary={},
             )
             session.add(job)
             session.flush()
             return job_detail(job)
+
+    def _registry_candidates(
+        self, model_id: str, selector: str, artifact: str, explicit: bool
+    ):
+        with self.db.read() as session:
+            query = select(ModelReport).where(
+                ModelReport.model_id == model_id,
+                ModelReport.artifact == artifact,
+                ModelReport.explicit_artifact.is_(explicit),
+                ModelReport.engine_version == self.settings.engine_version,
+                ModelReport.schema_version == self.settings.schema_version,
+            )
+            if selector == "main":
+                query = query.where(ModelReport.request_revision == "main").order_by(
+                    ModelReport.inspected_at.desc(), ModelReport.id
+                )
+            else:
+                query = query.where(
+                    (ModelReport.request_revision == selector)
+                    | (ModelReport.revision == selector)
+                ).order_by(ModelReport.inspected_at.desc(), ModelReport.id)
+            return list(session.scalars(query.limit(20)))
+
+    def _valid_registry(self, candidates):
+        for report in candidates:
+            try:
+                raw = self.storage.get(report.blob_digest)
+                document = json.loads(raw)
+                metadata = (
+                    document.get("metadata") if isinstance(document, dict) else None
+                )
+                if (
+                    not isinstance(metadata, dict)
+                    or document.get("schema_version") != self.settings.schema_version
+                    or document.get("model_id") != report.model_id
+                    or metadata.get("revision") != report.revision
+                    or report.cache_identity
+                    != cache_key(
+                        report.model_id,
+                        report.revision,
+                        report.engine_version,
+                        report.schema_version,
+                        report.artifact,
+                        report.explicit_artifact,
+                    )
+                    or metadata.get("engine_version", report.engine_version)
+                    != report.engine_version
+                ):
+                    raise ValueError("registry and report identity disagree")
+                return report, ir_summary(document)
+            except ServiceError as exc:
+                if exc.code not in {"artifact_unavailable", "artifact_corrupt"}:
+                    raise
+                with self.db.write() as session:
+                    stale = session.get(ModelReport, report.id)
+                    if stale:
+                        session.delete(stale)
+            except (ValueError, KeyError, TypeError, AttributeError):
+                # A damaged index row is never served. Remove it and let a live worker
+                # reconstruct the submitted request if one is available.
+                with self.db.write() as session:
+                    stale = session.get(ModelReport, report.id)
+                    if stale:
+                        session.delete(stale)
+        return None
+
+    def _ready_job(self, session, guest_id, value, model_id, report, summary, now):
+        job = Job(
+            id=uuid4().hex,
+            guest_id=guest_id,
+            model_input=value,
+            model_id=model_id,
+            revision=report.revision,
+            engine_version=report.engine_version,
+            schema_version=self.settings.schema_version,
+            status=summary["result_status"],
+            stage=summary["result_status"],
+            created_at=now,
+            expires_at=now + self.settings.job_ttl_seconds,
+            available_at=now,
+            attempts=0,
+            cancel_requested=False,
+            blob_digest=report.blob_digest,
+            cached=True,
+            summary=summary,
+        )
+        session.add(job)
+        session.flush()
+        return job
+
+    def inspect_registry(self, guest_id: str, report_id: str) -> dict:
+        with self.db.read() as session:
+            self._quota_available(session, guest_id, "jobs")
+        candidates = self._registry_candidates_by_id(report_id)
+        valid = self._valid_registry(candidates)
+        if not valid:
+            raise ServiceError(404, "not_found", "Catalog report not found")
+        report, summary = valid
+        now = self.clock()
+        with self.db.write() as session:
+            self._quota(session, guest_id, "jobs")
+            value = f"https://huggingface.co/{report.model_id}/resolve/{report.revision}/{report.artifact}"
+            job = self._ready_job(
+                session, guest_id, value, report.model_id, report, summary, now
+            )
+            return job_detail(job)
+
+    def _registry_candidates_by_id(self, report_id: str):
+        with self.db.read() as session:
+            report = session.get(ModelReport, report_id)
+            if not report or report.schema_version != self.settings.schema_version:
+                return []
+            return [report]
+
+    def catalog(self, query: str = "", offset: int = 0, limit: int = 24) -> dict:
+        with self.db.read() as session:
+            base = select(ModelReport).where(
+                ModelReport.schema_version == self.settings.schema_version,
+            )
+            if query:
+                base = base.where(ModelReport.model_id.ilike(f"%{query}%"))
+            total = (
+                session.scalar(select(func.count()).select_from(base.subquery())) or 0
+            )
+            rows = session.scalars(
+                base.order_by(ModelReport.inspected_at.desc(), ModelReport.id)
+                .offset(offset)
+                .limit(limit)
+            ).all()
+        models = []
+        for row in rows:
+            summary = row.summary
+            dims = summary.get("dimensions", {})
+            models.append(
+                {
+                    "id": row.id,
+                    "model_id": row.model_id,
+                    "revision": row.revision,
+                    "architecture": summary.get("architecture"),
+                    "status": summary.get("result_status"),
+                    "parameter_count": summary.get("parameter_count"),
+                    "dimensions": {
+                        key: dims.get(key)
+                        for key in ("hidden", "heads", "layers", "vocabulary")
+                    },
+                    "engine_version": row.engine_version,
+                    "schema_version": row.schema_version,
+                    "artifact": row.artifact,
+                    "explicit_artifact": row.explicit_artifact,
+                    "inspected_at": timestamp(row.inspected_at),
+                }
+            )
+        return {"models": models, "total": total, "offset": offset, "limit": limit}
 
     def get(self, job_id: str, guest_id: str) -> Job:
         with self.db.read() as session:
@@ -444,6 +770,9 @@ class JobService:
                             "code": "worker_interrupted",
                             "message": "Worker recovery attempts exhausted",
                         }
+                        self._record_failure_outcome(
+                            session, job, "worker_interrupted", "failed", now
+                        )
                     else:
                         job.status = job.stage = "queued"
                         job.available_at = now
@@ -501,7 +830,14 @@ class JobService:
             job.model_id, job.revision, job.stage = model_id, revision, "checking_cache"
             return job
 
-    def cached_result(self, key: str) -> bytes | None:
+    def cached_result(
+        self,
+        key: str,
+        model_id: str | None = None,
+        revision: str | None = None,
+        artifact: str = "model.safetensors",
+        explicit: bool = False,
+    ) -> bytes | None:
         with self.db.read() as session:
             entry = session.get(CacheEntry, key)
             if not entry or entry.expires_at <= self.clock():
@@ -569,6 +905,37 @@ class JobService:
             )
             job.status = job.stage = job.summary["result_status"]
             job.error, job.lease_owner, job.lease_until = None, None, None
+            requested_model, requested_revision, artifact, explicit = request_selector(
+                job.model_input
+            )
+            if requested_model != job.model_id:
+                raise ServiceError(
+                    503,
+                    "identity_mismatch",
+                    "Submitted reference disagrees with inspected model",
+                )
+            registry_id = hashlib.sha256(
+                f"{key}:{requested_revision}".encode()
+            ).hexdigest()
+            existing_report = session.get(ModelReport, registry_id)
+            values = {
+                "cache_identity": key,
+                "model_id": job.model_id,
+                "request_revision": requested_revision,
+                "revision": job.revision,
+                "engine_version": job.engine_version,
+                "schema_version": job.schema_version,
+                "artifact": artifact,
+                "explicit_artifact": explicit,
+                "blob_digest": digest,
+                "summary": job.summary,
+                "inspected_at": self.clock(),
+            }
+            if existing_report is None:
+                session.add(ModelReport(id=registry_id, **values))
+            else:
+                for field, value in values.items():
+                    setattr(existing_report, field, value)
 
     def fail(
         self,
@@ -590,6 +957,10 @@ class JobService:
                 job.available_at = self.clock() + min(30, 2**job.attempts)
             else:
                 job.status = job.stage = status
+                if status in {"failed", "timed_out", "unsupported"}:
+                    self._record_failure_outcome(
+                        session, job, code, status, self.clock()
+                    )
             job.lease_owner, job.lease_until = None, None
 
     def cleanup(self) -> None:
@@ -632,6 +1003,7 @@ class JobService:
                 )
             )
             referenced.update(session.scalars(select(CacheEntry.blob_digest)))
+            referenced.update(session.scalars(select(ModelReport.blob_digest)))
             grace = self.settings.job_timeout_seconds + self.settings.lease_seconds
             for blob in session.scalars(select(Blob)):
                 if blob.digest not in referenced and (
