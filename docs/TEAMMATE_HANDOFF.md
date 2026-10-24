@@ -205,3 +205,21 @@ trees for SmolLM2-360M and ViT, each completed with zero warnings and zero paylo
 reads. Live browser handoff and hosted deployment remain separate gates. Swin,
 Whisper, VideoMAE, SigLIP and the DeepSeek custom-architecture case still need
 their own measured semantic increments.
+
+## DeepSeek exact-name gate — October 24
+
+The `codex/deepseek-name-coverage` branch is stacked on the exact-pin header
+binding branch. Its offline audit checks the 96,085 checkpoint index names
+against a finite publisher-constructor state-key inventory and the pinned
+config, four source hashes and converter hash. All names match; the compact
+[name evidence](evidence/deepseek-v41-name-coverage.json) lists 114 normalized
+patterns and counts for 632 closest reference components. The source graph
+gains the three previously missing root image-marker parameters. The
+converter's name rewrites leave these pinned names unchanged, but its tensor
+value transformations are not verified or executed.
+
+The next gate is an exact-index and audit-digest-bound report field that exposes
+these name counts per graph component. Keep that field distinct from verified
+tensor records, element totals and parameter count. Historical visitor reports
+stay immutable. Follow with per-name header shape/type association only after
+the name field is accepted; do not infer runtime dataflow from source order.

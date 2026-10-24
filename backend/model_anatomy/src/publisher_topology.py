@@ -305,6 +305,17 @@ def build_reviewed_topology(
             ),
         ]
     )
+    for marker in ("image_start", "image_end", "image_newline"):
+        nodes.append(
+            _node(
+                marker,
+                marker.replace("_", " ").title(),
+                "parameter",
+                marker,
+                source,
+                details={"conditional_on_images": True, "root_state_key": marker},
+            )
+        )
     root_edges = _order(nodes[1:2] + layers + nodes[2 + len(layers) : 4 + len(layers)], source)
     mtp_nodes = [node for node in nodes if node.id.startswith("mtp_")]
     root_edges += _order(mtp_nodes, source)

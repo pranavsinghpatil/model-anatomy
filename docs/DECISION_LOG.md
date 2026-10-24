@@ -1250,3 +1250,20 @@ evidence category. Keep report tensor records empty, parameter count and
 ownership unknown, and graph links as source reference order. Engine/cache
 identity advances to `2026.10.24.3`; see
 [publisher topology evidence](PUBLISHER_SOURCE_TOPOLOGY.md).
+
+## D-077 - Audit exact publisher state-key correspondence separately
+
+**2026-10-24 - DeepSeek checkpoint-name increment**
+
+At the exact DeepSeek V4.1 pin, compare the full 96,085-name checkpoint index
+with a finite state-key inventory from the hash-verified publisher constructors.
+Reject missing or unexpected names rather than treating a shared prefix as
+ownership proof. Record counts by closest reference component and normalized
+pattern in a compact, inspectable evidence document. Add graph nodes for the
+three source-declared root image markers omitted from the earlier topology.
+
+The pinned converter's name rewrites leave this index's names unchanged, but
+its value transformations remain unverified. The audit is offline and does not
+upgrade historical reports, parameter count, shapes, dataflow or runtime
+coverage. The three new graph nodes advance engine/cache identity to
+`2026.10.24.4`. See [publisher topology evidence](PUBLISHER_SOURCE_TOPOLOGY.md).

@@ -126,6 +126,38 @@ against this checkpoint's actual naming and native module state keys before
 building an ownership map. The conversion script reads tensor payloads; it is
 not part of the app's metadata-only inspection route.
 
+## Follow-up: exact checkpoint-name correspondence
+
+The separate `codex/deepseek-name-coverage` increment checks the entire pinned
+index name set against a finite inventory derived from the reviewed publisher
+`model.py` and `vision.py` constructors. The audit verifies the canonical index
+and config digests and the exact hashes of all four reviewed source files plus
+`inference/convert.py`. It rejects any missing or additional name, even under a
+known module prefix. The command reads no tensor payloads and does not execute
+publisher code:
+
+```powershell
+python scripts/audit_publisher_checkpoint_names.py --index .local/verification/deepseek-v41-index.json --config backend/tests/fixtures/deepseek_v41_config.json --source-dir .local/verification/publisher-src --converter .local/verification/deepseek-v41-convert.py --output .local/verification/deepseek-v41-name-coverage.json
+```
+
+The resulting [compact evidence](evidence/deepseek-v41-name-coverage.json)
+records all **96,085** matched state keys, **114** normalized name patterns and
+counts for **632** closest reference components. The prior header audit
+independently checked those names against all 48 shard headers at the same index
+digest. The source graph previously omitted three root state keys,
+`image_start`, `image_end` and `image_newline`; this increment adds their
+source-backed graph nodes. No pinned name is skipped, renamed or collided by
+the reviewed converter's *name* rewrites. The converter can still partition,
+pad, dequantize and recast tensor values, and it has not been run here.
+
+The name correspondence is an offline audit. Existing visitor reports remain
+immutable and do not yet show component-level checkpoint counts. This result
+does not establish tensor dimensions, unique parameter count, tensor-value
+equivalence after conversion, or execution dataflow. Its next gate is to bind
+the compact name evidence to a new exact-pin report and expose the per-component
+counts as name evidence, while keeping those stronger claims unknown. The three
+new graph nodes advance engine/cache identity to `2026.10.24.4`.
+
 ## vv branch audit
 
 PR [#48](https://github.com/pranavsinghpatil/model-anatomy/pull/48) merged
