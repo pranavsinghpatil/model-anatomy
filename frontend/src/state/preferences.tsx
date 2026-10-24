@@ -32,15 +32,35 @@ export function Preferences({ children }: { children: ReactNode }) {
       /* Storage may be blocked. */
     }
     const media = matchMedia("(prefers-color-scheme: dark)");
+    let firstFrame = 0;
+    let secondFrame = 0;
     const apply = () => {
       const resolved =
         theme === "system" ? (media.matches ? "dark" : "light") : theme;
-      document.documentElement.dataset.theme = resolved;
-      document.documentElement.style.colorScheme = resolved;
+      const root = document.documentElement;
+      if (root.dataset.theme === resolved) {
+        root.style.colorScheme = resolved;
+        return;
+      }
+      cancelAnimationFrame(firstFrame);
+      cancelAnimationFrame(secondFrame);
+      root.dataset.themeSwitching = "true";
+      root.dataset.theme = resolved;
+      root.style.colorScheme = resolved;
+      firstFrame = requestAnimationFrame(() => {
+        secondFrame = requestAnimationFrame(() => {
+          delete root.dataset.themeSwitching;
+        });
+      });
     };
     apply();
     media.addEventListener("change", apply);
-    return () => media.removeEventListener("change", apply);
+    return () => {
+      media.removeEventListener("change", apply);
+      cancelAnimationFrame(firstFrame);
+      cancelAnimationFrame(secondFrame);
+      delete document.documentElement.dataset.themeSwitching;
+    };
   }, [theme]);
   return (
     <Context.Provider value={{ theme, setTheme }}>{children}</Context.Provider>

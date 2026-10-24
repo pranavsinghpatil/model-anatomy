@@ -605,7 +605,7 @@
   }
   .primary-views {
     justify-content: space-between;
-    gap: 16px;
+    gap: 14px;
   }
   .primary-views a {
     min-height: 44px;
