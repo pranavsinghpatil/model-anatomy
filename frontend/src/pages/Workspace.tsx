@@ -387,7 +387,9 @@ function Workspace({ id }: { id: string }) {
               setHighlight(null);
           }}
         >
-          <FluidHoverHighlight rect={highlight} />
+          <span className="workspace-nav-highlight-clip" aria-hidden="true">
+            <FluidHoverHighlight rect={highlight} />
+          </span>
           {views.map((item) => {
             const Icon =
               item === "architecture"

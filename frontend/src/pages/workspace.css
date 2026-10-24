@@ -312,11 +312,17 @@
   gap: 16px;
   min-width: 0;
 }
+.workspace-nav-highlight-clip {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+}
 .workspace-nav-highlight {
   position: absolute;
   top: 0;
   left: 0;
-  z-index: -1;
   border-radius: 6px;
   background: var(--soft);
   pointer-events: none;
