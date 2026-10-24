@@ -88,8 +88,21 @@ unknown parameter count and ownership, and `reference_order` links. The saved
 `fd318b65ce144aa9a08e5c2a3b5834cd` report remains immutable and unbound.
 Only a fresh inspection at the exact pin can show the bound audit. Changed
 index identity or missing shards leave it unbound; the source graph remains
-partial. The next task is to review `inference/convert.py` against checkpoint
-names before attempting an ownership map.
+partial. The next task is to test the reviewed `inference/convert.py` name
+rules against checkpoint names and publisher module state keys before
+attempting an ownership map.
+
+A live Supabase-backed browser submission after restarting the API and worker
+created visitor report `a1ceb64fb91445d3af65b5d5e222b78f`. The API health
+checks showed database, storage and worker healthy. The Architecture view
+rendered 49 root components and 45 reference-order relationships. The Report
+view showed engine `2026.10.24.3`, the separate 48-header/96,085-name audit,
+unknown coverage and no parameter total. The Artifacts view showed zero tensor
+records in this job alongside the prior audit and the distinct index
+declaration. The saved `fd318b65ce144aa9a08e5c2a3b5834cd` report remained
+unmodified. The preview is on `http://127.0.0.1:5176/`; local API/worker and
+browser logs are retained under `.local/app-v1/supabase/` and the pre-restart
+copy under `.local/verification/preview-before-audit-binding/`.
 
 ## Publisher conversion review for the ownership gate
 

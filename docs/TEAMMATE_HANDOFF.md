@@ -27,16 +27,23 @@ upgrade semantic completeness from header counts alone.
 The independent audit and `F8_E8M0` metadata recognition advance engine
 identity to `2026.10.24.2`; old visitor reports remain immutable.
 
-The next branch `codex/deepseek-report-audit-binding` packages and binds that
+The current branch `codex/deepseek-report-audit-binding` packages and binds that
 audit for **new** exact-pin reports at engine `2026.10.24.3`. The old saved
 report remains unchanged. The UI distinguishes the prior audit's verified
 aggregate from tensor records inspected in this job. The next teammate gate is
-publisher `inference/convert.py` and checkpoint-name mapping, with tests for
-aliases, scales, unmapped names and no ownership claims before verification.
+a deterministic, metadata-only name audit over the pinned index: compare the
+reviewed converter rules with publisher module state keys; count unambiguous,
+aliased, scale and unmapped names; reject collisions and changed revision,
+index digest or converter hash. Do not claim ownership until the name mapping
+and source-defined module state keys are independently checked.
 The pinned converter source hash and current index name cohorts are recorded in
 [publisher topology evidence](PUBLISHER_SOURCE_TOPOLOGY.md). It can split,
 pad, skip or recast tensors, so do not run it in the metadata-only worker or
 equate its output with the raw indexed checkpoint.
+The refreshed local app is open at the new browser report
+`a1ceb64fb91445d3af65b5d5e222b78f`. Its graph remains partial, while
+Report and Artifacts show the separately bound header audit. The old visitor
+report remains unchanged.
 
 Also reconcile vv's merged [PR #48](https://github.com/pranavsinghpatil/model-anatomy/pull/48)
 on `b-mvp` in a separate tested slice. Its parser and Transformers 5.20.2 pin
