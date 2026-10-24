@@ -69,10 +69,49 @@ defines it as 8 bits per element; the
 validator now supports it. The failed attempt is preserved locally at
 `.local/verification/deepseek-v41-headers.failed.json`. The verifier saves a
 failure log, with completed request audit, on any unsuccessful run. Its result
-is a separate audit and has **not** been attached to the immutable visitor
-report or used to upgrade graph completeness. The next increment must bind
-this evidence to a newly generated report, then independently review the
-publisher's checkpoint-name conversion before assigning tensor ownership.
+is a separate audit and was **not** attached to the immutable visitor
+report or used to upgrade graph completeness. The following increment binds
+this evidence to newly generated reports. Publisher checkpoint-name
+conversion still needs independent review before assigning tensor ownership.
+
+## Follow-up: binding the prior audit to a new report
+
+Engine `2026.10.24.3` carries a digest-pinned copy of that completed audit in
+the worker package. A newly generated report binds it only when the exact
+model and revision, canonical index SHA-256, declared tensor/shard counts,
+all 48 shard filenames, header hashes, file sizes and aggregate totals agree.
+The bound evidence explicitly says **previously verified pinned header audit**:
+the worker does not fetch those headers again within its 120-second budget.
+The report exposes verified-header counts, an audit-document digest and the
+per-shard hashes as evidence, while retaining zero individual tensor records,
+unknown parameter count and ownership, and `reference_order` links. The saved
+`fd318b65ce144aa9a08e5c2a3b5834cd` report remains immutable and unbound.
+Only a fresh inspection at the exact pin can show the bound audit. Changed
+index identity or missing shards leave it unbound; the source graph remains
+partial. The next task is to review `inference/convert.py` against checkpoint
+names before attempting an ownership map.
+
+## Publisher conversion review for the ownership gate
+
+The pinned [`inference/convert.py`](https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash-1017/blob/1bae0e1088993b9b82de08f59de5be5a34e42170/inference/convert.py)
+has SHA-256 `035028340479145594a81d6084a8424e57363adf83c0d5983914783d95614d76`.
+It was read as source, not executed. It conditionally strips `model.`, renames
+`self_attn` to `attn`, non-vision `mlp` to `ffn`, and scale/bias suffixes, then
+partitions experts and selected tensor dimensions across model-parallel files.
+It can skip tied MTP embeddings/heads, pad Engram embeddings, dequantize
+`wo_a` weights using scale tensors, and recast expert data. Therefore its
+output names and element totals cannot be assumed to equal raw HF checkpoint
+parameters or ownership.
+
+The pinned index itself contains 96,085 names: 93,415 under `layers`, 2,401
+under `mtp`, 259 under `vision`, and four under `aligner`, plus root tensors.
+47,675 names contain `scale`; 94,464 contain `.experts.`. It has 43
+`wo_a.weight` names. The present index has no `model.`, `self_attn`,
+`weight_scale_inv` or `e_score_correction_bias` spelling, and its `mlp`
+spellings are confined to vision. That means conversion rules must be checked
+against this checkpoint's actual naming and native module state keys before
+building an ownership map. The conversion script reads tensor payloads; it is
+not part of the app's metadata-only inspection route.
 
 ## vv branch audit
 

@@ -6,9 +6,16 @@ from pathlib import Path
 
 import pytest
 
+from model_anatomy.api.schemas import ArtifactInspectionResponse, VerifiedCheckpointHeaders
 from model_anatomy.service.jobs import ir_summary
+from model_anatomy.service.views import artifact_view
 from model_anatomy.src import limits
 from model_anatomy.src.artifacts import MetadataClient
+from model_anatomy.src.checkpoint_audit_binding import (
+    INDEX_SHA256,
+    bind_pinned_header_audit,
+    validate_audit_document,
+)
 from model_anatomy.src.errors import UnsupportedModelError
 from model_anatomy.src.pipeline import reconstruct
 from model_anatomy.src.publisher_topology import MODEL_ID, REQUIRED_FILES, REVISION
@@ -54,6 +61,10 @@ def test_reviewed_deepseek_pin_yields_source_graph_with_honest_partial_status(mo
     assert report["root_graph_id"] == "publisher_reference_topology"
     assert report["parameter_count"] is None
     assert ir.metadata["source_topology"]["checkpoint_headers_verified"] is False
+    assert ir.metadata["artifacts"]["header_audit_binding"] == {
+        "status": "not_bound",
+        "reason_code": "index_or_shard_identity_mismatch",
+    }
     assert ir.metadata["artifacts"]["declared_checkpoint_index"]["declared_tensor_names"] == 3
     assert ir.metadata["artifacts"]["weight_payload_bytes_read"] == 0
     assert ir.tensors == {}
@@ -99,3 +110,76 @@ def test_strict_cli_does_not_use_reviewed_fallback(monkeypatch):
     monkeypatch.setattr(limits, "MAX_CHECKPOINT_TENSORS", 2)
     with pytest.raises(UnsupportedModelError, match="No native Transformers config"):
         inspect(IndexedClient(), allow=False)
+
+
+def test_prior_header_audit_binds_only_to_matching_new_report(monkeypatch):
+    monkeypatch.setattr(limits, "MAX_CHECKPOINT_TENSORS", 2)
+    client = IndexedClient()
+    ir = inspect(client)
+    document = json.loads(
+        (
+            Path(__file__).parents[1] / "model_anatomy" / "src" / "data" / "deepseek-v41-headers.json"
+        ).read_text(encoding="utf-8")
+    )
+    assert (Path(__file__).parents[2] / "docs" / "evidence" / "deepseek-v41-headers.json").read_bytes() == (
+        Path(__file__).parents[1] / "model_anatomy" / "src" / "data" / "deepseek-v41-headers.json"
+    ).read_bytes()
+    verification = document["verification"]
+    declared = ir.metadata["artifacts"]["declared_checkpoint_index"]
+    declared.update(
+        canonical_sha256=INDEX_SHA256,
+        declared_tensor_names=verification["tensor_count"],
+        declared_shards=verification["shard_count"],
+    )
+    files = client.files | set(verification["shards"])
+    assert bind_pinned_header_audit(ir, client_ref(), REVISION, files)
+    summary = ir_summary(ir.to_dict())
+    assert summary["result_status"] == "partial"
+    assert summary["parameter_count"] is None
+    assert summary["verified_checkpoint_headers"]["tensor_count"] == 96085
+    assert summary["verified_checkpoint_headers"]["tensor_element_count_including_scales"] == 508182659298
+    assert artifact_view(ir)["verified_checkpoint_headers"] == summary["verified_checkpoint_headers"]
+    assert VerifiedCheckpointHeaders.model_validate(summary["verified_checkpoint_headers"])
+    assert ArtifactInspectionResponse.model_validate(artifact_view(ir))
+    assert ir.metadata["source_topology"]["checkpoint_headers_verified"] is True
+    assert ir.metadata["artifacts"]["header_audit_binding"] == {"status": "bound"}
+    assert not ir.tensors
+    assert any(item.source == "pinned_checkpoint_header_audit" for item in ir.evidence)
+
+
+def client_ref():
+    from model_anatomy.src.artifacts import ModelReference
+
+    return ModelReference(MODEL_ID, REVISION)
+
+
+@pytest.mark.parametrize("change", ["index", "revision", "missing_shard", "hash", "sum"])
+def test_prior_header_audit_rejects_mismatched_evidence(monkeypatch, change):
+    monkeypatch.setattr(limits, "MAX_CHECKPOINT_TENSORS", 2)
+    client = IndexedClient()
+    ir = inspect(client)
+    document = json.loads(
+        (
+            Path(__file__).parents[1] / "model_anatomy" / "src" / "data" / "deepseek-v41-headers.json"
+        ).read_text(encoding="utf-8")
+    )
+    verification = document["verification"]
+    declared = ir.metadata["artifacts"]["declared_checkpoint_index"]
+    declared.update(
+        canonical_sha256=INDEX_SHA256,
+        declared_tensor_names=verification["tensor_count"],
+        declared_shards=verification["shard_count"],
+    )
+    files = client.files | set(verification["shards"])
+    revision = REVISION
+    if change == "index":
+        declared["canonical_sha256"] = "a" * 64
+    elif change == "revision":
+        revision = "a" * 40
+    elif change == "missing_shard":
+        files.remove(next(iter(verification["shards"])))
+    elif change == "hash":
+        next(iter(verification["shards"].values()))["header_sha256"] = "invalid"
+    else:
+        verification["tensor_element_count"] += 1
+    assert validate_audit_document(document, client_ref(), revision, files, declared) is None

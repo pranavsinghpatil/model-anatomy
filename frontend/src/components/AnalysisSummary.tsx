@@ -247,6 +247,7 @@ export function Report({ detail }: { detail: AnalysisDetail }) {
   const q = detail.quality;
   const artifact = detail.status === "inspected";
   const sourceTopology = q?.mode === "publisher_reference_topology";
+  const headerAudit = detail.verified_checkpoint_headers;
   const inspection = detail.inspection;
   const checks: [string, string | number][] = [
     ["Semantic coverage", coverage(q?.semantic_coverage)],
@@ -302,7 +303,9 @@ export function Report({ detail }: { detail: AnalysisDetail }) {
               {artifact
                 ? "Pinned repository artifacts were inspected. No native architecture graph was reconstructed."
                 : sourceTopology
-                  ? "This partial graph comes from reviewed publisher source. Checkpoint shard headers and tensor ownership are unverified."
+                  ? headerAudit
+                    ? "This partial graph comes from reviewed publisher source. A separate pinned audit verified shard headers; tensor ownership and runtime flow remain unverified."
+                    : "This partial graph comes from reviewed publisher source. Checkpoint shard headers and tensor ownership are unverified."
                   : "Architecture facts come from inspected checkpoint metadata and native PyTorch module definitions."}
             </p>
           </div>
@@ -330,6 +333,27 @@ export function Report({ detail }: { detail: AnalysisDetail }) {
           </div>
         </div>
       </div>
+
+      {headerAudit && (
+        <section
+          className="report-section"
+          aria-label="Separate checkpoint header audit"
+        >
+          <h2>Verified checkpoint headers</h2>
+          <p>
+            A separate audit of this exact revision matched{" "}
+            {count(headerAudit.tensor_count)} tensor names across{" "}
+            {count(headerAudit.shard_count)} shard headers to the pinned index.
+            It read {count(headerAudit.header_bytes_read_by_audit)} header bytes
+            and zero weight payload bytes. The{" "}
+            {count(headerAudit.tensor_element_count_including_scales)} tensor
+            elements include scales; they are not a model parameter count.
+          </p>
+          <p>
+            Index SHA-256: <code>{headerAudit.index_sha256}</code>
+          </p>
+        </section>
+      )}
 
       {artifact ? (
         <section

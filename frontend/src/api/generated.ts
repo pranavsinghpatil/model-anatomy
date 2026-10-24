@@ -272,6 +272,8 @@ export interface components {
       /** Input Names */
       input_names?: string[];
       inspection?: components["schemas"]["InspectionSummary"] | null;
+      verified_checkpoint_headers?:
+        components["schemas"]["VerifiedCheckpointHeaders"] | null;
     };
     /** AnalysisError */
     AnalysisError: {
@@ -351,6 +353,8 @@ export interface components {
       /** Input Names */
       input_names?: string[];
       inspection?: components["schemas"]["InspectionSummary"] | null;
+      verified_checkpoint_headers?:
+        components["schemas"]["VerifiedCheckpointHeaders"] | null;
     };
     /** ArtifactInspectionResponse */
     ArtifactInspectionResponse: {
@@ -379,6 +383,8 @@ export interface components {
       checkpoint_available: boolean;
       declared_checkpoint_index?:
         components["schemas"]["DeclaredCheckpointIndex"] | null;
+      verified_checkpoint_headers?:
+        components["schemas"]["VerifiedCheckpointHeaders"] | null;
       /** Checkpoint Format */
       checkpoint_format?: string | null;
       /** Selected File Tensor Element Count */
@@ -844,6 +850,31 @@ export interface components {
       dtype: string | null;
       /** Semantic Name */
       semantic_name: string;
+    };
+    /** VerifiedCheckpointHeaders */
+    VerifiedCheckpointHeaders: {
+      /**
+       * Basis
+       * @constant
+       */
+      basis: "previously_verified_pinned_header_audit";
+      /** Index Sha256 */
+      index_sha256: string;
+      /** Audit Document Sha256 */
+      audit_document_sha256: string;
+      /** Shard Count */
+      shard_count: number;
+      /** Tensor Count */
+      tensor_count: number;
+      /** Tensor Element Count Including Scales */
+      tensor_element_count_including_scales: number;
+      /** Header Bytes Read By Audit */
+      header_bytes_read_by_audit: number;
+      /**
+       * Weight Payload Bytes Read By Audit
+       * @constant
+       */
+      weight_payload_bytes_read_by_audit: 0;
     };
   };
   responses: never;

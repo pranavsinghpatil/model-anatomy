@@ -203,6 +203,9 @@ def ir_summary(data: dict) -> dict:
         "partial_reasons": reasons,
         "engine_version": metadata.get("engine_version"),
         "result_status": "partial" if reasons or warnings else "completed",
+        "verified_checkpoint_headers": metadata.get("artifacts", {}).get(
+            "verified_checkpoint_headers"
+        ),
     }
 
 
@@ -229,6 +232,7 @@ def job_detail(job: Job, summary: dict | None = None) -> dict:
         "input_names": summary.get("input_names", []),
         "cached": job.cached,
         "inspection": summary.get("inspection"),
+        "verified_checkpoint_headers": summary.get("verified_checkpoint_headers"),
     }
 
 

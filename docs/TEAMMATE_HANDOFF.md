@@ -19,13 +19,24 @@ against the pinned index, reading 10,685,312 header bytes and zero weight
 payload bytes. The 508,182,659,298 tensor elements include scales and are not
 model parameter count. It is stored at
 [`evidence/deepseek-v41-headers.json`](evidence/deepseek-v41-headers.json);
-the first failed dtype attempt remains in the local failure log. The visitor
-report still has no attached verified-header evidence. Next: bind this audit
-to a **new** report with source/index/hash identity checks, then review
+the first failed dtype attempt remains in the local failure log. The saved
+visitor report still has no attached verified-header evidence. The next branch
+binds it to **new** reports with source/index/hash identity checks. Review
 `inference/convert.py` before mapping names to reference modules. Do not
 upgrade semantic completeness from header counts alone.
 The independent audit and `F8_E8M0` metadata recognition advance engine
 identity to `2026.10.24.2`; old visitor reports remain immutable.
+
+The next branch `codex/deepseek-report-audit-binding` packages and binds that
+audit for **new** exact-pin reports at engine `2026.10.24.3`. The old saved
+report remains unchanged. The UI distinguishes the prior audit's verified
+aggregate from tensor records inspected in this job. The next teammate gate is
+publisher `inference/convert.py` and checkpoint-name mapping, with tests for
+aliases, scales, unmapped names and no ownership claims before verification.
+The pinned converter source hash and current index name cohorts are recorded in
+[publisher topology evidence](PUBLISHER_SOURCE_TOPOLOGY.md). It can split,
+pad, skip or recast tensors, so do not run it in the metadata-only worker or
+equate its output with the raw indexed checkpoint.
 
 Also reconcile vv's merged [PR #48](https://github.com/pranavsinghpatil/model-anatomy/pull/48)
 on `b-mvp` in a separate tested slice. Its parser and Transformers 5.20.2 pin

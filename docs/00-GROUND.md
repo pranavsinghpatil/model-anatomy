@@ -70,10 +70,12 @@ configuration hash as its gate. It is not a verified checkpoint graph: shard
 headers, tensor ownership, parameter totals, shapes and runtime dataflow stay
 unknown. See `PUBLISHER_SOURCE_TOPOLOGY.md`.
 An explicit, pinned Safetensors-header audit may verify oversized checkpoint
-index mappings and aggregate tensor elements without weight reads. Its result
-remains separate from the immutable visitor report until the app binds and
-validates that evidence; aggregate elements do not establish parameter
-ownership or runtime dataflow.
+index mappings and aggregate tensor elements without weight reads. A new report
+may bind that prior audit only when its exact revision, canonical index digest,
+declared counts, shard inventory and bundled audit digest agree. The report
+labels prior verification separately from reads in its own job. Earlier reports
+remain immutable; aggregate elements do not establish parameter ownership or
+runtime dataflow.
 
 ## Product sequence
 

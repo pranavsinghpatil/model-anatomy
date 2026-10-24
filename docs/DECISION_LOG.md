@@ -1231,3 +1231,22 @@ reference topology. See [publisher topology evidence](PUBLISHER_SOURCE_TOPOLOGY.
 and [the per-shard aggregate](evidence/deepseek-v41-headers.json).
 Recognizing `F8_E8M0` in normal metadata parsing advances engine/cache identity
 to `2026.10.24.2`; existing visitor reports remain immutable.
+
+## D-076 - Bind a prior exact-pin header audit to new partial reports
+
+**2026-10-24 - DeepSeek report-evidence increment**
+
+Package the completed 48-shard audit as a digest-pinned resource. A new
+publisher-reference report may cite it only if its model/revision, validated
+index digest and declared counts match, every audited shard is in the pinned
+repository inventory, the bundled digest pins all recorded header hashes and
+sizes, and the per-shard aggregates agree. The worker does not repeat the
+roughly two-minute audit inside its 120-second deadline. Existing reports are
+immutable.
+
+Expose the prior audit's 96,085 tensor names, 48 headers, 10,685,312 header
+bytes and 508,182,659,298 tensor elements (including scales) as a separate
+evidence category. Keep report tensor records empty, parameter count and
+ownership unknown, and graph links as source reference order. Engine/cache
+identity advances to `2026.10.24.3`; see
+[publisher topology evidence](PUBLISHER_SOURCE_TOPOLOGY.md).

@@ -615,9 +615,9 @@ function Workspace({ id }: { id: string }) {
                         <strong>Publisher reference topology · partial</strong>
                         <span>
                           Components come from reviewed source at this revision.
-                          Checkpoint tensors, parameter totals, and runtime
-                          dataflow are not verified. Dashed links show reference
-                          order only.
+                          Tensor-to-component ownership, parameter totals, and
+                          runtime dataflow are not verified. Dashed links show
+                          reference order only.
                         </span>
                       </div>
                     )}

@@ -217,7 +217,11 @@ export function ArtifactInspection({
           </dd>
         </div>
         <div>
-          <dt>Tensor headers</dt>
+          <dt>
+            {page?.verified_checkpoint_headers
+              ? "Tensor records in this report"
+              : "Tensor headers"}
+          </dt>
           <dd data-testid="artifact-tensor-count" title={count(tensorCount)}>
             {count(tensorCount, true)}
           </dd>
@@ -247,6 +251,33 @@ export function ArtifactInspection({
         </div>
       </dl>
 
+      {page?.verified_checkpoint_headers && (
+        <section
+          className="artifact-reason"
+          aria-label="Verified checkpoint header audit"
+        >
+          <strong>Separate pinned checkpoint audit</strong>
+          <p>
+            All {count(page.verified_checkpoint_headers.shard_count)} shard
+            headers matched the pinned index, covering{" "}
+            {count(page.verified_checkpoint_headers.tensor_count)} tensor names.
+            The headers contain{" "}
+            {count(
+              page.verified_checkpoint_headers
+                .tensor_element_count_including_scales,
+            )}
+            tensor elements, including scales. The prior audit read{" "}
+            {count(page.verified_checkpoint_headers.header_bytes_read_by_audit)}
+            header bytes and zero weight payload bytes. These aggregates do not
+            establish parameter count, tensor ownership, or runtime flow.
+          </p>
+          <p>
+            Index SHA-256:{" "}
+            <code>{page.verified_checkpoint_headers.index_sha256}</code>
+          </p>
+        </section>
+      )}
+
       {page?.declared_checkpoint_index && (
         <section
           className="artifact-reason"
@@ -259,8 +290,10 @@ export function ArtifactInspection({
             names across {count(page.declared_checkpoint_index.declared_shards)}{" "}
             shard files; the inspection limit is{" "}
             {count(page.declared_checkpoint_index.tensor_record_limit)} tensor
-            records. These are index declarations, not verified shard headers or
-            model parameters.
+            records.{" "}
+            {page.verified_checkpoint_headers
+              ? "A separate pinned audit verified the shard headers; the current report does not retain individual tensor records."
+              : "These are index declarations, not verified shard headers or model parameters."}
           </p>
         </section>
       )}

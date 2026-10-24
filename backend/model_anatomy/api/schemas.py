@@ -144,6 +144,17 @@ class DeclaredCheckpointIndex(BaseModel):
     tensor_record_limit: int = Field(ge=0)
 
 
+class VerifiedCheckpointHeaders(BaseModel):
+    basis: Literal["previously_verified_pinned_header_audit"]
+    index_sha256: str
+    audit_document_sha256: str
+    shard_count: int = Field(gt=0)
+    tensor_count: int = Field(gt=0)
+    tensor_element_count_including_scales: int = Field(gt=0)
+    header_bytes_read_by_audit: int = Field(gt=0)
+    weight_payload_bytes_read_by_audit: Literal[0]
+
+
 class InspectionSummary(BaseModel):
     kind: Literal["artifact_inspection"]
     reason_code: str
@@ -177,6 +188,7 @@ class AnalysisDetail(BaseModel):
     dimensions: Dimensions
     input_names: list[str] = Field(default_factory=list)
     inspection: InspectionSummary | None = None
+    verified_checkpoint_headers: VerifiedCheckpointHeaders | None = None
 
 
 class AnalysisSummary(AnalysisDetail):
@@ -289,6 +301,7 @@ class ArtifactInspectionResponse(BaseModel):
     checkpoint_tensor_element_count: int | None
     checkpoint_available: bool
     declared_checkpoint_index: DeclaredCheckpointIndex | None = None
+    verified_checkpoint_headers: VerifiedCheckpointHeaders | None = None
     checkpoint_format: str | None = None
     selected_file_tensor_element_count: int | None = None
     selected_file_split_metadata: dict[str, int] | None = None

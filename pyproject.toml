@@ -51,3 +51,6 @@ torch = [{ index = "pytorch-cpu", marker = "sys_platform != 'darwin'" }]
 
 [tool.setuptools.packages.find]
 where = ["backend"]
+
+[tool.setuptools.package-data]
+"model_anatomy.src" = ["data/*.json"]
