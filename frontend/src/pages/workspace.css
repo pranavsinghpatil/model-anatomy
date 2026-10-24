@@ -309,7 +309,7 @@
   display: flex;
   align-items: stretch;
   align-self: stretch;
-  gap: 20px;
+  gap: 16px;
   min-width: 0;
 }
 .workspace-nav-highlight {
