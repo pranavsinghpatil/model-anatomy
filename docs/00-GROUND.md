@@ -69,6 +69,11 @@ and reference order from pinned, source-reviewed publisher code, with the exact
 configuration hash as its gate. It is not a verified checkpoint graph: shard
 headers, tensor ownership, parameter totals, shapes and runtime dataflow stay
 unknown. See `PUBLISHER_SOURCE_TOPOLOGY.md`.
+An explicit, pinned Safetensors-header audit may verify oversized checkpoint
+index mappings and aggregate tensor elements without weight reads. Its result
+remains separate from the immutable visitor report until the app binds and
+validates that evidence; aggregate elements do not establish parameter
+ownership or runtime dataflow.
 
 ## Product sequence
 

@@ -1210,3 +1210,24 @@ shard-header verification, parameter count, tensor ownership and graph shapes
 unknown. Other revisions and altered configs remain artifact-only. Advance
 engine/cache identity to `2026.10.24.1`; existing saved reports remain immutable.
 See [publisher topology evidence](PUBLISHER_SOURCE_TOPOLOGY.md).
+
+## D-075 - Verify oversized indexed checkpoint headers as a separate audit
+
+**2026-10-24 - DeepSeek checkpoint-evidence increment**
+
+The normal reconstruction path retains its 20,000 tensor-record limit. An
+explicit pinned-index audit may validate each Safetensors shard header and
+compare every tensor name with the index without loading weight payloads or
+retaining checkpoint-wide tensor records. A result is emitted only after every
+shard passes descriptor, file-size, non-overlap, index-location and aggregate
+byte-budget checks. Failed runs preserve a local error/request log and cannot
+publish partial counts.
+
+The exact DeepSeek V4.1 pin verified 48 headers and 96,085 indexed tensor names
+with zero weight payload bytes read. Its 508,182,659,298 tensor elements include
+scale tensors and do not establish model parameter count, ownership or runtime
+dataflow. The audit is separate from the immutable visitor report and publisher
+reference topology. See [publisher topology evidence](PUBLISHER_SOURCE_TOPOLOGY.md)
+and [the per-shard aggregate](evidence/deepseek-v41-headers.json).
+Recognizing `F8_E8M0` in normal metadata parsing advances engine/cache identity
+to `2026.10.24.2`; existing visitor reports remain immutable.

@@ -2,9 +2,10 @@
 
 ## Current handoff — October 24, 2026
 
-Work from `codex/top-all-preserved` at `9559278`, in draft
-[PR #51](https://github.com/pranavsinghpatil/model-anatomy/pull/51).
-Engine `2026.10.24.1` gives the exact pinned DeepSeek V4.1 revision a
+The current stacked header-verification work is on
+`codex/deepseek-shard-header-evidence`, based on `codex/top-all-preserved` at
+`e17f3b7` in draft [PR #51](https://github.com/pranavsinghpatil/model-anatomy/pull/51).
+Engine `2026.10.24.1` gave the exact pinned DeepSeek V4.1 revision a
 **partial publisher-reference topology**. The live visitor report is
 `fd318b65ce144aa9a08e5c2a3b5834cd`: it displays 49 root components and
 45 reference-order links, with nested blocks. It does not verify Safetensors
@@ -13,22 +14,28 @@ Read [the evidence and vv audit](PUBLISHER_SOURCE_TOPOLOGY.md) before changing
 that boundary. The sections below are historical handoffs, not the current
 branch or task instructions.
 
-Next backend increment: verify all 48 shard headers against the pinned index
-using bounded aggregate processing. Validate every tensor descriptor, shard
-identity and index-to-header name mapping while discarding individual records
-after each shard. Enforce header and total-byte budgets and read zero weight
-payload bytes. Report aggregate counts only if **all** shards validate; add
-malformed, missing, duplicate, mismatch and budget tests. Keep this separate
-from source topology and do not claim tensor ownership yet. The subsequent
-increment can review `inference/convert.py` mapping and connect verified
-checkpoint names to the reference modules.
+The separate header audit now verifies all 48 shard headers and 96,085 names
+against the pinned index, reading 10,685,312 header bytes and zero weight
+payload bytes. The 508,182,659,298 tensor elements include scales and are not
+model parameter count. It is stored at
+[`evidence/deepseek-v41-headers.json`](evidence/deepseek-v41-headers.json);
+the first failed dtype attempt remains in the local failure log. The visitor
+report still has no attached verified-header evidence. Next: bind this audit
+to a **new** report with source/index/hash identity checks, then review
+`inference/convert.py` before mapping names to reference modules. Do not
+upgrade semantic completeness from header counts alone.
+The independent audit and `F8_E8M0` metadata recognition advance engine
+identity to `2026.10.24.2`; old visitor reports remain immutable.
 
 Also reconcile vv's merged [PR #48](https://github.com/pranavsinghpatil/model-anatomy/pull/48)
 on `b-mvp` in a separate tested slice. Its parser and Transformers 5.20.2 pin
 are not in PR #51; a merge simulation found 15 conflicts. Preserve the catalog,
 the current static-flow tests and the source/topology evidence rules while
 measuring the new parser on pinned controls. Do not treat the 48-model claim or
-the version pin as native DeepSeek support without a verified replay.
+the version pin as native DeepSeek support without a verified replay. Its
+quality, browser and container checks failed; the quality log includes missing
+deleted GPT-2 fixtures and service behavior failures. Repair and rerun those
+checks before considering integration.
 
 ## Review and integration
 

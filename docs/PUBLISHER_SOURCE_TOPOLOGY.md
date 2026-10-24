@@ -44,6 +44,36 @@ then needs separate source-backed conversion and ownership checks. A generic
 custom-model route would need a reviewed, deterministic source extractor rather
 than copying this model's module names.
 
+## Follow-up: verified checkpoint headers
+
+The separate `codex/deepseek-shard-header-evidence` increment adds an explicit
+header-only audit. Run it with:
+
+```text
+python scripts/verify_checkpoint_headers.py deepseek-ai/DeepSeek-V4.1-Flash-1017 1bae0e1088993b9b82de08f59de5be5a34e42170 --output .local/verification/deepseek-v41-headers.json
+```
+
+The live run verified all **48** indexed shard headers and exactly **96,085**
+tensor names against the pinned index. Its index digest is
+`abc09b0491e66b9f1c3d9dd635896523f2eaef3ca3904a91cfaa216390de7ba4`.
+It read **10,685,312 header bytes** and **zero weight payload bytes**. The
+validated descriptors sum to **508,182,659,298 tensor elements**, including
+scales. This is not a parameter count or module ownership claim. Individual
+records were discarded after each shard; the committed
+[`evidence/deepseek-v41-headers.json`](evidence/deepseek-v41-headers.json)
+contains only per-shard counts, sizes and header hashes.
+
+The first attempt stopped honestly at `F8_E8M0`, which the existing dtype table
+did not recognize. [Upstream Safetensors](https://github.com/safetensors/safetensors/blob/main/safetensors/src/tensor.rs)
+defines it as 8 bits per element; the
+validator now supports it. The failed attempt is preserved locally at
+`.local/verification/deepseek-v41-headers.failed.json`. The verifier saves a
+failure log, with completed request audit, on any unsuccessful run. Its result
+is a separate audit and has **not** been attached to the immutable visitor
+report or used to upgrade graph completeness. The next increment must bind
+this evidence to a newly generated report, then independently review the
+publisher's checkpoint-name conversion before assigning tensor ownership.
+
 ## vv branch audit
 
 PR [#48](https://github.com/pranavsinghpatil/model-anatomy/pull/48) merged
@@ -56,6 +86,10 @@ jobs, worker and frontend proxy. The 5.20.2 mapping and the reported 48-model
 outcomes have not yet passed this branch's pinned acceptance suite. The merged
 work is retained on `b-mvp`; it should be reconciled by behavior and tests in
 small increments so the current catalog and evidence rules are preserved.
+The PR's final quality, browser and container checks were failed when merged.
+The quality log includes missing deleted `output/gpt2/model.json` fixtures,
+quota behavior failures and a worker status mismatch. Its 48-model results do
+not establish successful CI or compatibility with the current catalog branch.
 
 ## Validation
 

@@ -38,6 +38,7 @@ DTYPE_BYTES = {
     "F64": 8,
     "F8_E4M3": 1,
     "F8_E5M2": 1,
+    "F8_E8M0": 1,
 }
 
 
@@ -117,6 +118,19 @@ class SafetensorsMetadata:
     file_size: int
     header: dict[str, Any]
     requests: list[dict[str, Any]] = field(default_factory=list)
+
+
+@dataclass(frozen=True)
+class VerifiedCheckpointHeaders:
+    """Aggregate facts established only after every indexed shard validates."""
+
+    index_sha256: str
+    tensor_count: int
+    tensor_element_count: int
+    shard_count: int
+    shards: dict[str, dict[str, Any]]
+    header_bytes_read: int
+    weight_payload_bytes_read: int = 0
 
 
 @dataclass
@@ -211,6 +225,60 @@ def parse_safetensors_header(header_bytes: bytes, file_size: int) -> Safetensors
     return SafetensorsMetadata(
         tensors, metadata, hashlib.sha256(header_bytes).hexdigest(), len(header_bytes), file_size, header
     )
+
+
+def summarize_safetensors_header(
+    header_bytes: bytes, file_size: int
+) -> tuple[dict[str, Any], int]:
+    """Validate a bounded header and return its entries and element total.
+
+    The caller consumes and discards the entries for each shard in turn. This
+    path does not impose the full-report tensor-record limit or create tensor IR.
+    """
+    try:
+        header = json.loads(
+            header_bytes,
+            object_pairs_hook=_unique_object,
+            parse_constant=_reject_json_constant,
+            parse_float=_finite_float,
+        )
+    except (ValueError, UnicodeError, RecursionError) as exc:
+        raise ArtifactError(f"Invalid Safetensors JSON header: {exc}") from exc
+    if not isinstance(header, dict) or not header_bytes.startswith(b"{"):
+        raise ArtifactError("Safetensors header must be a JSON object")
+    metadata = header.get("__metadata__", {})
+    if not isinstance(metadata, dict) or not all(isinstance(v, str) for v in metadata.values()):
+        raise ArtifactError("Safetensors file metadata must contain strings")
+    spans: list[tuple[int, int]] = []
+    element_count = 0
+    for name, info in header.items():
+        if name == "__metadata__":
+            continue
+        if not isinstance(info, dict):
+            raise ArtifactError(f"Invalid tensor entry: {name}")
+        dtype, shape, offsets = info.get("dtype"), info.get("shape"), info.get("data_offsets")
+        if not isinstance(dtype, str) or dtype not in DTYPE_BYTES:
+            raise ArtifactError(f"Unsupported Safetensors dtype for {name}: {dtype}")
+        if not isinstance(shape, list) or not all(type(d) is int and d >= 0 for d in shape):
+            raise ArtifactError(f"Invalid tensor shape: {name}")
+        elements = prod(shape)
+        if (
+            not isinstance(offsets, list)
+            or len(offsets) != 2
+            or not all(type(d) is int and d >= 0 for d in offsets)
+            or offsets[1] - offsets[0] != elements * DTYPE_BYTES[dtype]
+        ):
+            raise ArtifactError(f"Invalid tensor byte offsets: {name}")
+        spans.append((offsets[0], offsets[1]))
+        element_count += elements
+    cursor = 0
+    for start, end in sorted(spans):
+        if start != cursor:
+            raise ArtifactError("Safetensors payload contains overlapping tensors or holes")
+        cursor = end
+    if 8 + len(header_bytes) + cursor != file_size:
+        raise ArtifactError("Safetensors header offsets disagree with file size")
+    return header, element_count
 
 
 class MetadataClient:
@@ -420,6 +488,98 @@ class MetadataClient:
         if mapping is not None and mapping != tensor_files:
             raise ArtifactError("Safetensors shard headers disagree with the index weight_map")
         return CheckpointMetadata(tensors, shards, tensor_files, index)
+
+    def verify_indexed_checkpoint_headers(
+        self, reference: ModelReference, revision: str
+    ) -> VerifiedCheckpointHeaders:
+        """Verify every indexed shard without retaining checkpoint tensor records.
+
+        This is an explicit, potentially long-running audit. It never loads a
+        payload or changes the normal reconstruction tensor-record budget.
+        """
+        if reference.explicit_filename and not reference.filename.endswith(".index.json"):
+            raise ArtifactError("Header verification requires an indexed checkpoint selection")
+        files = self.repository_files[(reference.model_id, revision)]
+        index_name = (
+            reference.filename
+            if reference.explicit_filename and reference.filename.endswith(".index.json")
+            else "model.safetensors.index.json"
+        )
+        if index_name not in files:
+            raise ArtifactError("Repository has no selected Safetensors index")
+        index = self.json(reference.url(index_name, revision), max_bytes=16 * 1024 * 1024)
+        mapping = index.get("weight_map")
+        if not isinstance(mapping, dict) or not mapping or not all(
+            isinstance(name, str) and name and isinstance(filename, str)
+            for name, filename in mapping.items()
+        ):
+            raise ArtifactError("Safetensors index has an invalid weight_map")
+        directory = index_name.rpartition("/")[0]
+        if directory:
+            mapping = {name: f"{directory}/{filename}" for name, filename in mapping.items()}
+        shard_names = sorted(set(mapping.values()))
+        if len(shard_names) > MAX_CHECKPOINT_SHARDS:
+            raise InspectionBudgetError("Checkpoint exceeds the supported shard count")
+        if any(
+            filename not in files
+            or not filename.endswith(".safetensors")
+            or filename.startswith("/")
+            or "\\" in filename
+            or "\x00" in filename
+            or any(part in {"", ".", ".."} for part in filename.split("/"))
+            for filename in shard_names
+        ):
+            raise ArtifactError("Safetensors index references invalid or missing shard files")
+
+        remaining = dict(mapping)
+        shard_summaries: dict[str, dict[str, Any]] = {}
+        total_tensors = total_elements = 0
+        bytes_before = self.checkpoint_header_bytes_read
+        for filename in shard_names:
+            url = reference.url(filename, revision)
+            prefix, file_size = self.range(url, 0, 7)
+            length = struct.unpack("<Q", prefix)[0]
+            if length < 2 or 8 + length > file_size:
+                raise ArtifactError(f"Invalid Safetensors header length: {length}")
+            if length > MAX_HEADER_BYTES:
+                raise InspectionBudgetError("Safetensors header length is excessive for the inspection budget")
+            if self.header_bytes_read + length + 8 > MAX_TOTAL_HEADER_BYTES:
+                raise InspectionBudgetError("Checkpoint metadata exceeds the total inspection budget")
+            body, second_size = self.range(url, 8, 8 + length - 1)
+            self.header_bytes_read += length + 8
+            if second_size != file_size:
+                raise ArtifactError("Safetensors file changed between Range requests")
+            header, element_count = summarize_safetensors_header(body, file_size)
+            shard_tensor_count = 0
+            for name in header:
+                if name == "__metadata__":
+                    continue
+                expected = remaining.pop(name, None)
+                if expected is None:
+                    raise ArtifactError(f"Duplicate or unindexed Safetensors tensor: {name}")
+                if expected != filename:
+                    raise ArtifactError(f"Safetensors shard headers disagree with the index weight_map: {name}")
+                shard_tensor_count += 1
+            shard_summaries[filename] = {
+                "url": url,
+                "header_sha256": hashlib.sha256(body).hexdigest(),
+                "header_length": length,
+                "file_size": file_size,
+                "tensor_count": shard_tensor_count,
+                "tensor_element_count": element_count,
+            }
+            total_tensors += shard_tensor_count
+            total_elements += element_count
+        if remaining:
+            raise ArtifactError("Safetensors shard headers omit indexed tensor names")
+        return VerifiedCheckpointHeaders(
+            index_sha256=hashlib.sha256(json.dumps(index, sort_keys=True).encode()).hexdigest(),
+            tensor_count=total_tensors,
+            tensor_element_count=total_elements,
+            shard_count=len(shard_summaries),
+            shards=shard_summaries,
+            header_bytes_read=self.checkpoint_header_bytes_read - bytes_before,
+        )
 
     def gguf_checkpoint(self, reference: ModelReference, revision: str, filename: str) -> CheckpointMetadata:
         from .gguf import parse_gguf_header
