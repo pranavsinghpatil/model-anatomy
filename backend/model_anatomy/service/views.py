@@ -160,7 +160,7 @@ def export_files(ir: ModelIR) -> dict[str, bytes]:
             {
                 "analysis_report": ir.metadata.get("analysis_report"),
                 "semantic": ir.raw_structure.get("semantic_diagnostics"),
-                "static_flow": ir.raw_structure.get("static_flow_reports"),
+                "module_topology": ir.raw_structure.get("module_topology"),
                 "inspection": inspection or None,
             }
         ),

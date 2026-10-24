@@ -15,8 +15,7 @@ import time
 from dataclasses import replace
 from uuid import uuid4
 
-from sqlalchemy.exc import DBAPIError, OperationalError
-
+from model_anatomy.dependencies import require_dependencies
 from model_anatomy.api.settings import Settings
 from model_anatomy.src.errors import AnatomyError, ArtifactError, UnsupportedModelError
 
@@ -34,7 +33,10 @@ def database_connection_lost(exc: BaseException, *, sqlite: bool) -> bool:
         and isinstance(exc, DBAPIError)
         and (
             exc.connection_invalidated
-            or (isinstance(exc, OperationalError) and getattr(exc.orig, "sqlstate", None) is None)
+            or (
+                isinstance(exc, OperationalError)
+                and getattr(exc.orig, "sqlstate", None) is None
+            )
         )
     )
 
@@ -44,7 +46,9 @@ def enforce_limits(settings: Settings) -> None:
         import resource
 
         os.setsid()
-        resource.setrlimit(resource.RLIMIT_AS, (settings.job_memory_bytes, settings.job_memory_bytes))
+        resource.setrlimit(
+            resource.RLIMIT_AS, (settings.job_memory_bytes, settings.job_memory_bytes)
+        )
         cpu = math.ceil(settings.job_timeout_seconds) + 1
         resource.setrlimit(resource.RLIMIT_CPU, (cpu, cpu))
         resource.setrlimit(resource.RLIMIT_CORE, (0, 0))
@@ -67,12 +71,18 @@ def guard_parent() -> None:
         os._exit(1)
 
 
-def execute_job(service: JobService, job_id: str, owner: str, client, reconstruct, parse_reference) -> None:
+def execute_job(
+    service: JobService, job_id: str, owner: str, client, reconstruct, parse_reference
+) -> None:
     """Testable child execution: resolve first; cache hit never enters reconstruction."""
     with service.db.read() as session:
         job = session.get(Job, job_id)
     if job.engine_version != service.settings.engine_version:
-        raise ServiceError(503, "engine_version_mismatch", "Queued job requires a different engine version")
+        raise ServiceError(
+            503,
+            "engine_version_mismatch",
+            "Queued job requires a different engine version",
+        )
     reference = parse_reference(job.model_input)
     if job.revision:
         reference = replace(reference, revision=job.revision)
@@ -86,8 +96,16 @@ def execute_job(service: JobService, job_id: str, owner: str, client, reconstruc
         reference.filename,
         reference.explicit_filename,
     )
-    result = None if job.refresh_requested else service.cached_result(
-        key, reference.model_id, revision, reference.filename, reference.explicit_filename
+    result = (
+        None
+        if job.refresh_requested
+        else service.cached_result(
+            key,
+            reference.model_id,
+            revision,
+            reference.filename,
+            reference.explicit_filename,
+        )
     )
     if result is not None:
         service.finish(job_id, owner, result, key, cached=True)
@@ -113,6 +131,9 @@ def child_main(settings: Settings, job_id: str, owner: str) -> None:
         import requests
 
         from model_anatomy.src.artifacts import MetadataClient, parse_reference
+        from model_anatomy.src.native_provider import require_supported_provider
+
+        require_supported_provider()
 
         def reconstruct(*args, **kwargs):
             from model_anatomy.src.pipeline import reconstruct as engine_reconstruct
@@ -123,11 +144,22 @@ def child_main(settings: Settings, job_id: str, owner: str) -> None:
             # HF metadata requests are public and must never inherit credentials from
             # ~/.netrc, proxy environment variables, or a user's global requests config.
             session.trust_env = False
-            execute_job(service, job_id, owner, MetadataClient(session), reconstruct, parse_reference)
-    except Exception as exc:  # noqa: BLE001 - record unexpected child failures without leaking secrets
+            execute_job(
+                service,
+                job_id,
+                owner,
+                MetadataClient(session),
+                reconstruct,
+                parse_reference,
+            )
+    except (
+        Exception
+    ) as exc:  # noqa: BLE001 - record unexpected child failures without leaking secrets
         code, message, status, transient = classify_failure(exc)
         try:
-            service.fail(job_id, owner, code, message, status=status, transient=transient)
+            service.fail(
+                job_id, owner, code, message, status=status, transient=transient
+            )
         except ServiceError:
             pass  # A cancelled or recovered job cannot be written by its former child.
     finally:
@@ -136,7 +168,12 @@ def child_main(settings: Settings, job_id: str, owner: str) -> None:
 
 def classify_failure(exc: BaseException) -> tuple[str, str, str, bool]:
     if isinstance(exc, MemoryError):
-        return "memory_limit", "Reconstruction exceeded the memory budget", "failed", False
+        return (
+            "memory_limit",
+            "Reconstruction exceeded the memory budget",
+            "failed",
+            False,
+        )
     if isinstance(exc, ServiceError):
         return (
             exc.code,
@@ -148,7 +185,12 @@ def classify_failure(exc: BaseException) -> tuple[str, str, str, bool]:
     import requests
 
     if isinstance(exc, (requests.Timeout, requests.ConnectionError)):
-        return "artifact_network", "Artifact provider temporarily unavailable", "failed", True
+        return (
+            "artifact_network",
+            "Artifact provider temporarily unavailable",
+            "failed",
+            True,
+        )
     if isinstance(exc, requests.HTTPError):
         status = exc.response.status_code if exc.response is not None else 0
         if status in {401, 403}:
@@ -164,6 +206,13 @@ def classify_failure(exc: BaseException) -> tuple[str, str, str, bool]:
             "failed",
             status in {429, 502, 503, 504},
         )
+    from model_anatomy.src.native_provider import NativeResolutionError
+
+    if (
+        isinstance(exc, NativeResolutionError)
+        and exc.diagnostic.get("code") == "provider_version_mismatch"
+    ):
+        return "provider_version_mismatch", str(exc), "failed", False
     if isinstance(exc, UnsupportedModelError):
         return (
             "unsupported_model",
@@ -172,7 +221,12 @@ def classify_failure(exc: BaseException) -> tuple[str, str, str, bool]:
             False,
         )
     if isinstance(exc, (ArtifactError, AnatomyError)):
-        return "invalid_artifacts", "Artifacts are unsupported, malformed, or inconsistent", "failed", False
+        return (
+            "invalid_artifacts",
+            "Artifacts are unsupported, malformed, or inconsistent",
+            "failed",
+            False,
+        )
     return (
         "reconstruction_failed",
         "Reconstruction failed; no architecture facts were fabricated",
@@ -244,13 +298,21 @@ class Worker:
                 if cancelled:
                     stop_process(process)
                     self.service.fail(
-                        job_id, self.owner, "cancelled", "Cancellation requested", status="cancelled"
+                        job_id,
+                        self.owner,
+                        "cancelled",
+                        "Cancellation requested",
+                        status="cancelled",
                     )
                     return
                 if self.stopping:
                     stop_process(process)
                     self.service.fail(
-                        job_id, self.owner, "worker_interrupted", "Worker stopped", transient=True
+                        job_id,
+                        self.owner,
+                        "worker_interrupted",
+                        "Worker stopped",
+                        transient=True,
                     )
                     return
                 if time.monotonic() - started >= self.settings.job_timeout_seconds:
@@ -266,15 +328,19 @@ class Worker:
             process.join()
             with self.service.db.read() as session:
                 job = session.get(Job, job_id)
-                unfinished = bool(job and job.status == "running" and job.lease_owner == self.owner)
+                unfinished = bool(
+                    job and job.status == "running" and job.lease_owner == self.owner
+                )
             if unfinished:
                 self.service.fail(
                     job_id,
                     self.owner,
                     "timeout" if deadline.is_set() else "worker_crashed",
-                    "Reconstruction exceeded wall clock budget"
-                    if deadline.is_set()
-                    else "Worker child exited without a result",
+                    (
+                        "Reconstruction exceeded wall clock budget"
+                        if deadline.is_set()
+                        else "Worker child exited without a result"
+                    ),
                     status="timed_out" if deadline.is_set() else "failed",
                 )
         finally:
@@ -299,7 +365,10 @@ class Worker:
                     if self.process:
                         stop_process(self.process)
                     self.service.db.engine.dispose()
-                    logger.warning("database connection lost; worker reconnecting in %.0f seconds", backoff)
+                    logger.warning(
+                        "database connection lost; worker reconnecting in %.0f seconds",
+                        backoff,
+                    )
                     if once:
                         raise
                     time.sleep(backoff)
@@ -318,9 +387,14 @@ class Worker:
                     try:
                         self.service.cleanup()
                     except (ServiceError, OSError) as exc:
-                        if isinstance(exc, ServiceError) and exc.code != "storage_unavailable":
+                        if (
+                            isinstance(exc, ServiceError)
+                            and exc.code != "storage_unavailable"
+                        ):
                             raise
-                        logger.warning("retention cleanup deferred; storage unavailable")
+                        logger.warning(
+                            "retention cleanup deferred; storage unavailable"
+                        )
                         cleanup_at = time.monotonic() + cleanup_backoff
                         cleanup_backoff = min(30.0, cleanup_backoff * 2)
                     else:
@@ -331,7 +405,9 @@ class Worker:
                 except ServiceError as exc:
                     # Idle cleanup or suspension may outlive the lease; the lifetime lock remains held.
                     # Reclaim its expired lease without ever overlapping a live child.
-                    if exc.code != "lease_lost" or not self.service.acquire_worker(self.owner):
+                    if exc.code != "lease_lost" or not self.service.acquire_worker(
+                        self.owner
+                    ):
                         raise
                     logger.warning("idle worker lease recovered")
                 job_id = self.service.claim(self.owner)
@@ -350,10 +426,7 @@ class Worker:
 
 
 def main() -> None:
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s %(levelname)s %(name)s %(message)s",
-    )
+    require_dependencies("api", "engine", component="Worker")
     worker = Worker(Settings())
     signal.signal(signal.SIGINT, worker.request_stop)
     signal.signal(signal.SIGTERM, worker.request_stop)

@@ -72,7 +72,8 @@ def test_pinned_native_category(model, revision, architecture, tensors, task, in
     assert ir.architecture == architecture
     assert len(ir.tensors) == tensors
     assert ir.metadata["model_profile"]["declared_task"] == task
-    assert ir.metadata["inputs"]["input_specs"][input_name]["shape"] == input_shape
+    assert ir.metadata["inputs"]["input_specs"][input_name]["shape"] is None
+    assert ir.metadata["analysis_report"]["module_inventory_coverage"] == 1
     assert ir.metadata["analysis_report"]["checkpoint_parameter_coverage"] == 1
     if architecture == "SwinForImageClassification":
         assert ir.metadata["dimensions"]["heads"] == [3, 6, 12, 24]

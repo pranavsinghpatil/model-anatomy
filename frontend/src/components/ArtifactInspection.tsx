@@ -762,6 +762,48 @@ export function ArtifactInspection({
                     </ul>
                   </div>
                 )}
+                {profile.native_resolution && (
+                  <div>
+                    <h4>Architecture resolution</h4>
+                    <dl className="artifact-metadata-list">
+                      {["status", "stage", "code", "implementation", "provider_versions"].map((key) =>
+                        profile.native_resolution?.[key] != null ? (
+                          <div key={key}>
+                            <dt>{key.replaceAll("_", " ")}</dt>
+                            <dd>{valueText(profile.native_resolution[key])}</dd>
+                          </div>
+                        ) : null,
+                      )}
+                    </dl>
+                    {profile.native_resolution.publisher_auto_map != null && (
+                      <p>
+                        This report uses the installed native implementation.
+                        Equivalence to the publisher's custom code has not been established.
+                      </p>
+                    )}
+                  </div>
+                )}
+                {(profile.component_discovery?.length ?? 0) > 0 && (
+                  <div>
+                    <h4>Component architecture checks</h4>
+                    <p>
+                      A verified component covers its recorded checkpoint namespace.
+                      It does not establish the outer model's computation or connections.
+                    </p>
+                    <ul>
+                      {profile.component_discovery?.map((component, index) => (
+                        <li key={index}>
+                          <strong>{valueText(component.config_file ?? component.path ?? "Component discovery")}</strong>
+                          <span>{valueText(component.status)}</span>
+                          {component.selected_model_class != null && (
+                            <span>{valueText(component.selected_model_class)}</span>
+                          )}
+                          {component.message != null && <p>{valueText(component.message)}</p>}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
                 {profile.architecture_blockers.length > 0 && (
                   <div>
                     <h4>Architecture blockers</h4>

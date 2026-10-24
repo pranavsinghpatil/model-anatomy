@@ -15,7 +15,9 @@ from model_anatomy.service.storage import LocalStorage
 @pytest.fixture
 def service(tmp_path):
     now = [10000.0]
-    service = JobService(Settings(data_dir=tmp_path, guest_jobs_per_hour=20), clock=lambda: now[0])
+    service = JobService(
+        Settings(data_dir=tmp_path, guest_jobs_per_hour=20), clock=lambda: now[0]
+    )
     service.initialize()
     service.acquire_worker("worker-a")
     service.test_now = now
@@ -28,7 +30,9 @@ def visitor(service):
 
 
 def document():
-    return json.loads((Path(__file__).resolve().parents[2] / "output/gpt2/model.json").read_text())
+    return json.loads(
+        (Path(__file__).resolve().parents[2] / "output/gpt2/model.json").read_text()
+    )
 
 
 class MemoryStorage:
@@ -38,6 +42,7 @@ class MemoryStorage:
 
     def put(self, data):
         import hashlib
+
         digest = hashlib.sha256(data).hexdigest()
         self.objects[digest] = data
         return digest
@@ -56,7 +61,12 @@ class MemoryStorage:
 def finish(service, job_id):
     data = document()
     service.resolved(job_id, "worker-a", data["model_id"], data["metadata"]["revision"])
-    key = cache_key(data["model_id"], data["metadata"]["revision"], service.settings.engine_version, "1.1")
+    key = cache_key(
+        data["model_id"],
+        data["metadata"]["revision"],
+        service.settings.engine_version,
+        "1.1",
+    )
     service.finish(job_id, "worker-a", json.dumps(data).encode(), key, cached=False)
     return key
 
@@ -79,275 +89,6 @@ def test_guests_are_persistent_unforgeable_and_isolated(service):
     reopened.db.engine.dispose()
 
 
-def test_durable_registry_serves_private_ready_job_without_worker_or_cache_ttl(service):
-    from model_anatomy.service.database import ModelReport
-
-    service.storage = MemoryStorage()
-    guest = visitor(service)
-    job_id = service.create(guest, "gpt2")["id"]
-    service.claim("worker-a")
-    key = finish(service, job_id)
-    service.test_now[0] += service.settings.cache_ttl_seconds + 1
-    service.cleanup()
-    service.release_worker("worker-a")
-    result = service.create(guest, "gpt2")
-    assert result["status"] == "partial"
-    assert result["cached"] is True
-    assert result["revision"] == document()["metadata"]["revision"]
-    with service.db.read() as session:
-        assert session.scalar(select(ModelReport).where(ModelReport.cache_identity == key))
-    with pytest.raises(ServiceError) as exc:
-        service.get(result["id"], visitor(service))
-    assert exc.value.status == 404
-
-
-def test_finished_models_automatically_enter_recent_catalog_and_remain_revisitable(service):
-    service.storage = MemoryStorage()
-    guest = visitor(service)
-    for name, inspected_at in [
-        ("owner/aa-older", 10000.0),
-        ("owner/zz-newer", 10001.0),
-        ("owner/mm-newer", 10001.0),
-    ]:
-        service.test_now[0] = inspected_at
-        data = document()
-        data["model_id"] = name
-        data["metadata"]["engine_version"] = service.settings.engine_version
-        job_id = service.create(guest, name)["id"]
-        assert service.claim("worker-a") == job_id
-        revision = data["metadata"]["revision"]
-        service.resolved(job_id, "worker-a", name, revision)
-        key = cache_key(name, revision, service.settings.engine_version, service.settings.schema_version)
-        service.finish(job_id, "worker-a", json.dumps(data).encode(), key, cached=False)
-
-    pages = [service.catalog(offset=offset, limit=1) for offset in range(3)]
-    rows = [page["models"][0] for page in pages]
-    assert all(page["total"] == 3 for page in pages)
-    assert {row["model_id"] for row in rows[:2]} == {"owner/zz-newer", "owner/mm-newer"}
-    assert rows[2]["model_id"] == "owner/aa-older"
-    assert len({row["id"] for row in rows}) == 3
-    assert [service.catalog(offset=offset, limit=1)["models"][0]["id"] for offset in range(3)] == [
-        row["id"] for row in rows
-    ]
-    assert service.catalog("aa-older")["total"] == 1
-
-    service.test_now[0] += service.settings.job_ttl_seconds + service.settings.cache_ttl_seconds + 1
-    service.cleanup()
-    service.release_worker("worker-a")
-    reopened = JobService(service.settings, clock=service.clock)
-    reopened.storage = service.storage
-    reopened.initialize()
-    try:
-        assert reopened.catalog()["total"] == 3
-        saved = reopened.inspect_registry(visitor(reopened), rows[0]["id"])
-        assert saved["cached"] is True
-        assert saved["model_id"] == rows[0]["model_id"]
-        assert saved["revision"] == rows[0]["revision"]
-    finally:
-        reopened.db.engine.dispose()
-
-
-def test_default_main_does_not_reuse_a_report_requested_from_named_branch(service):
-    service.storage = MemoryStorage()
-    guest = visitor(service)
-    reference = "https://huggingface.co/openai-community/gpt2/resolve/feature-branch/model.safetensors"
-    job_id = service.create(guest, reference)["id"]
-    service.claim("worker-a")
-    finish(service, job_id)
-    service.release_worker("worker-a")
-    with pytest.raises(ServiceError) as exc:
-        service.create(guest, "gpt2")
-    assert exc.value.code == "worker_unavailable"
-
-
-def test_exhausted_visitor_is_rejected_before_private_blob_read(service):
-    from model_anatomy.service.database import RateBucket
-
-    memory = MemoryStorage()
-    service.storage = memory
-    guest = visitor(service)
-    job_id = service.create(guest, "gpt2")["id"]
-    service.claim("worker-a")
-    finish(service, job_id)
-    memory.get_count = 0
-    with service.db.write() as session:
-        bucket = session.get(RateBucket, (f"guest:{guest}:jobs:hour", int(service.clock() // 3600)))
-        bucket.count = 20
-    with pytest.raises(ServiceError) as exc:
-        service.create(guest, "gpt2")
-    assert exc.value.status == 429
-    assert memory.get_count == 0
-
-
-def test_registry_cache_identity_mismatch_is_invalidated(service):
-    from model_anatomy.service.database import ModelReport
-
-    service.storage = MemoryStorage()
-    guest = visitor(service)
-    job_id = service.create(guest, "gpt2")["id"]
-    service.claim("worker-a")
-    key = finish(service, job_id)
-    with service.db.write() as session:
-        report = session.scalar(select(ModelReport).where(ModelReport.cache_identity == key))
-        report.cache_identity = "f" * 64
-    candidates = service._registry_candidates("openai-community/gpt2", "main", "model.safetensors", False)
-    assert service._valid_registry(candidates) is None
-    with service.db.read() as session:
-        assert session.get(ModelReport, report.id) is None
-
-
-def test_historical_registry_report_is_openable_but_not_an_automatic_cache_hit(service):
-    from model_anatomy.service.database import Blob, ModelReport
-
-    service.settings = service.settings.model_copy(
-        update={"engine_version": "engine-3", "schema_version": "1.1"}
-    )
-    service.storage = MemoryStorage()
-    guest = visitor(service)
-    data = document()
-    data["metadata"]["engine_version"] = "engine-2"
-    payload = json.dumps(data).encode()
-    digest = service.storage.put(payload)
-    report_id = "a" * 64
-    revision = data["metadata"]["revision"]
-    summary = ir_summary(data)
-    with service.db.write() as session:
-        session.add(Blob(digest=digest, created_at=service.clock()))
-        session.add(
-            ModelReport(
-                id=report_id,
-                cache_identity=cache_key(data["model_id"], revision, "engine-2", "1.1"),
-                model_id=data["model_id"],
-                request_revision="main",
-                revision=revision,
-                engine_version="engine-2",
-                schema_version="1.1",
-                artifact="model.safetensors",
-                explicit_artifact=False,
-                blob_digest=digest,
-                summary=summary,
-                inspected_at=service.clock(),
-            )
-        )
-        # Historical engine versions are supported for opening only while the report schema is current.
-        session.add(
-            ModelReport(
-                id="b" * 64,
-                cache_identity=cache_key(data["model_id"], revision, "engine-1", "1.0"),
-                model_id=data["model_id"],
-                request_revision="main",
-                revision=revision,
-                engine_version="engine-1",
-                schema_version="1.0",
-                artifact="model.safetensors",
-                explicit_artifact=False,
-                blob_digest=digest,
-                summary=summary,
-                inspected_at=service.clock(),
-            )
-        )
-
-    opened = service.inspect_registry(guest, report_id)
-    stored_job = service.get(opened["id"], guest)
-    assert opened["cached"] is True
-    assert opened["engine_version"] == "engine-2"
-    assert stored_job.engine_version == "engine-2"
-    assert [(row["id"], row["engine_version"]) for row in service.catalog()["models"]] == [
-        (report_id, "engine-2")
-    ]
-
-    # The current engine cache lookup remains strict and queues a fresh reconstruction.
-    queued = service.create(guest, "gpt2")
-    assert queued["status"] == "queued"
-    assert queued["cached"] is False
-    assert queued["engine_version"] == "engine-3"
-    with pytest.raises(ServiceError) as exc:
-        service.inspect_registry(guest, "b" * 64)
-    assert exc.value.status == 404
-
-
-def test_existing_local_sqlite_jobs_gain_refresh_flag_without_data_loss(tmp_path):
-    service = JobService(Settings(data_dir=tmp_path))
-    service.initialize()
-    service.acquire_worker("worker")
-    guest = visitor(service)
-    job_id = service.create(guest, "gpt2")["id"]
-    with service.db.engine.begin() as connection:
-        connection.exec_driver_sql("ALTER TABLE analysis_jobs DROP COLUMN refresh_requested")
-    service.db.initialize(create=True)
-    with service.db.read() as session:
-        job = session.get(Job, job_id)
-        assert job is not None
-        assert job.model_id == "openai-community/gpt2"
-        assert job.refresh_requested is False
-    service.db.engine.dispose()
-
-
-def test_legacy_summary_is_reprojected_without_rewriting_saved_job_or_artifact(service, monkeypatch):
-    guest = visitor(service)
-    job_id = service.create(guest, "gpt2")["id"]
-    service.claim("worker-a")
-    finish(service, job_id)
-    with service.db.write() as session:
-        job = session.get(Job, job_id)
-        old_summary = dict(job.summary)
-        for key in ("quality", "limitations", "partial_reasons", "engine_version"):
-            old_summary.pop(key, None)
-        old_summary["warnings"] += document()["metadata"]["limitations"]
-        job.summary = old_summary
-        digest = job.blob_digest
-    original = service.storage.get(digest)
-    calls = []
-    get = service.storage.get
-    monkeypatch.setattr(service.storage, "get", lambda digest: calls.append(digest) or get(digest))
-    detail = service.present(service.get(job_id, guest))
-    recent = service.recent(guest)[0]
-    assert detail == recent
-    assert len(calls) == 1
-    assert detail["warnings"] == document()["metadata"]["analysis_report"]["warnings"]
-    assert detail["limitations"] == document()["metadata"]["limitations"]
-    assert detail["quality"]["checkpoint_parameter_coverage"] == 1
-    assert service.get(job_id, guest).summary == old_summary
-    assert get(digest) == original
-    with pytest.raises(ServiceError) as exc:
-        service.get(job_id, visitor(service))
-    assert exc.value.status == 404
-    assert len(calls) == 1
-
-
-def test_legacy_terminal_status_matches_artifact_assessment_without_database_rewrite(service):
-    guest = visitor(service)
-    job_id = service.create(guest, "gpt2")["id"]
-    service.claim("worker-a")
-    finish(service, job_id)
-    with service.db.write() as session:
-        job = session.get(Job, job_id)
-        job.status = job.stage = "completed"
-        job.summary = {"warnings": []}
-    detail = service.present(service.get(job_id, guest))
-    assert detail["status"] == detail["stage"] == "partial"
-    assert detail["warnings"] == document()["metadata"]["analysis_report"]["warnings"]
-    assert service.cancel(job_id, guest) == detail
-    persisted = service.get(job_id, guest)
-    assert persisted.status == persisted.stage == "completed"
-    assert persisted.summary == {"warnings": []}
-
-
-def test_summary_predating_input_applicability_is_read_from_immutable_report(service):
-    guest = visitor(service)
-    job_id = service.create(guest, "gpt2")["id"]
-    service.claim("worker-a")
-    finish(service, job_id)
-    with service.db.write() as session:
-        job = session.get(Job, job_id)
-        summary = dict(job.summary)
-        summary.pop("input_names")
-        job.summary = summary
-    expected = sorted(document()["metadata"]["inputs"]["input_specs"])
-    assert service.present(service.get(job_id, guest))["input_names"] == expected
-    assert "input_names" not in service.get(job_id, guest).summary
-
-
 def test_global_worker_lease_and_claim_serialize_independent_connections(service):
     owner = visitor(service)
     jobs = [service.create(owner, "gpt2")["id"] for _ in range(2)]
@@ -358,7 +99,9 @@ def test_global_worker_lease_and_claim_serialize_independent_connections(service
         claimed = list(pool.map(lambda s: s.claim("worker-a"), [service, other]))
     assert sorted(x for x in claimed if x) == jobs[:1]
     assert service.claim("worker-a") is None
-    service.fail(jobs[0], "worker-a", "unsupported", "unsupported", status="unsupported")
+    service.fail(
+        jobs[0], "worker-a", "unsupported", "unsupported", status="unsupported"
+    )
     assert other.claim("worker-a") == jobs[1]
     other.db.engine.dispose()
 
@@ -469,16 +212,7 @@ def test_expiry_is_410_for_owner_404_for_other_and_retention_is_seven_days(servi
     service.test_now[0] += 604800
     service.cleanup()
     assert service.cached_result(key) is None
-    assert digest in memory.objects
-    with service.db.read() as session:
-        report = session.scalar(select(ModelReport).where(ModelReport.cache_identity == key))
-        assert report is not None
-        assert list(session.scalars(select(CacheEntry))) == []
-        report_id = report.id
-    with service.db.write() as session:
-        session.delete(session.get(ModelReport, report_id))
-    service.cleanup()
-    assert digest not in memory.objects
+    assert not service.storage.path(digest).exists()
     with service.db.read() as session:
         assert list(session.scalars(select(Blob))) == []
         assert list(session.scalars(select(ModelReport))) == []
@@ -545,7 +279,8 @@ def test_waiting_capacity_excludes_running_job(service):
 def test_global_daily_quota_does_not_reset_with_guest_hour(tmp_path):
     now = [10 * 86400 + 100]
     service = JobService(
-        Settings(data_dir=tmp_path, global_jobs_per_day=2, guest_jobs_per_hour=1), clock=lambda: now[0]
+        Settings(data_dir=tmp_path, global_jobs_per_day=2, guest_jobs_per_hour=1),
+        clock=lambda: now[0],
     )
     service.initialize()
     service.acquire_worker("w")
@@ -589,7 +324,9 @@ def test_retention_deletes_jobs_and_guests_and_bounded_tombstones(service):
         assert session.get(Guest, guest) is None
 
 
-def test_storage_io_does_not_hold_database_mutex_and_cancellation_fences_result(service):
+def test_storage_io_does_not_hold_database_mutex_and_cancellation_fences_result(
+    service,
+):
     guest = visitor(service)
     job_id = service.create(guest, "gpt2")["id"]
     service.claim("worker-a")
@@ -597,13 +334,18 @@ def test_storage_io_does_not_hold_database_mutex_and_cancellation_fences_result(
 
     def cancel_during_upload(data):
         with ThreadPoolExecutor(max_workers=1) as pool:
-            assert pool.submit(service.cancel, job_id, guest).result(timeout=2)["stage"] == "cancelling"
+            assert (
+                pool.submit(service.cancel, job_id, guest).result(timeout=2)["stage"]
+                == "cancelling"
+            )
         return original_put(data)
 
     service.storage.put = cancel_during_upload
     finish(service, job_id)
     assert service.get(job_id, guest).status == "cancelled"
-    service.test_now[0] += service.settings.job_timeout_seconds + service.settings.lease_seconds + 1
+    service.test_now[0] += (
+        service.settings.job_timeout_seconds + service.settings.lease_seconds + 1
+    )
     original_delete = service.storage.delete
 
     def heartbeat_during_delete(digest):

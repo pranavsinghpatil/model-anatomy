@@ -3,18 +3,25 @@
 from pathlib import Path
 from typing import Literal
 
-from pydantic import AliasChoices, Field, SecretStr, model_validator
+from pydantic import AliasChoices, Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from model_anatomy.runtime_paths import project_root
 from model_anatomy.src.version import ENGINE_VERSION
 
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_prefix="MODEL_ANATOMY_", frozen=True, populate_by_name=True, hide_input_in_errors=True
+        env_prefix="MODEL_ANATOMY_",
+        env_file=project_root() / "backend" / ".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+        frozen=True,
+        populate_by_name=True,
+        hide_input_in_errors=True,
     )
 
-    port: int = Field(default=8000, ge=1024, le=65535)
+    port: int = Field(default=8001, ge=1024, le=65535)
     allowed_hosts: list[str] = Field(
         default_factory=lambda: ["127.0.0.1", "localhost", "[::1]"], min_length=1
     )
@@ -63,6 +70,11 @@ class Settings(BaseSettings):
     nebius_timeout_seconds: int = Field(default=30, ge=1, le=60)
     ai_context_bytes: int = Field(default=24000, ge=2048, le=48000)
 
+    @field_validator("data_dir")
+    @classmethod
+    def project_data_directory(cls, value: Path) -> Path:
+        return value if value.is_absolute() else project_root() / value
+
     @model_validator(mode="after")
     def production_is_explicit(self) -> "Settings":
         if "*" in self.cors_origins:
@@ -89,6 +101,12 @@ class Settings(BaseSettings):
     @property
     def resolved_database_url(self) -> str:
         value = self.database_url or f"sqlite:///{(self.data_dir / 'jobs.sqlite3').resolve().as_posix()}"
+        if value.startswith("sqlite:"):
+            from sqlalchemy.engine import make_url
+
+            url = make_url(value)
+            if url.database not in {None, ":memory:"} and not Path(url.database).is_absolute():
+                value = url.set(database=str(project_root() / url.database)).render_as_string(hide_password=False)
         if value.startswith("postgresql://"):
             value = value.replace("postgresql://", "postgresql+psycopg://", 1)
         return value
