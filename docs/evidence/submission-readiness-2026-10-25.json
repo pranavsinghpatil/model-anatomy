@@ -25,7 +25,12 @@
     "github_default_branch_license": null,
     "baseline_branch_license": "MIT",
     "live_nebius_nvidia_inference_verified": false,
-    "public_video_verified": false
+    "public_video_verified": false,
+    "pr_preview": {
+      "url": "https://model-anatomy-git-codex-s-7c223e-pranavsinghs-projects-f89c3d20.vercel.app/",
+      "deployment_status": "success",
+      "anonymous_access": "Redirects to Vercel login/SSO; not verified as a judge-accessible application."
+    }
   },
   "baseline_findings": {
     "pytest_collection_errors": 13,
@@ -134,7 +139,13 @@
     },
     "containers": {
       "local_execution": "not run: Docker unavailable",
-      "required_followup": "GitHub containers CI builds and real primary-model smoke on the PR"
+      "required_followup": "GitHub containers CI builds and real primary-model smoke on the PR",
+      "first_pr_ci": {
+        "head_sha": "8c5e87b0bf2a1db2823e5a572fbadaca1538ad03",
+        "status": "passed",
+        "job_url": "https://github.com/pranavsinghpatil/model-anatomy/actions/runs/40193183019/job/121168367413",
+        "scope": "Linux API/worker/frontend images and real pinned primary-model container acceptance."
+      }
     },
     "frontend": {
       "typecheck": "passed",
@@ -191,6 +202,22 @@
         "browser",
         "containers"
       ]
+    },
+    "cross_platform_audit_manifests": {
+      "initial_linux_ci": {
+        "passed": 837,
+        "failed": 3,
+        "skipped": 23
+      },
+      "cause": "Git normalized the originally pinned CRLF audit manifests to LF, changing their byte digests.",
+      "repair": "Preserve exact audited bytes for both packaged manifests and their documentation copies using Git attributes.",
+      "audit_digest_constants_changed": false,
+      "json_content_changed": false,
+      "followup": "Verify final-head Linux CI in PR #58.",
+      "focused_checks": {
+        "passed": 33,
+        "seconds": 15.43
+      }
     }
   },
   "engine_version": "2026.10.25.2-submission-audit"

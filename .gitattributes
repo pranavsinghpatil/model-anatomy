@@ -14,3 +14,9 @@ backend/tests/fixtures/gpt2-report.json -text whitespace=cr-at-eol linguist-gene
 
 # Keep the frontend formatter stable in clean Windows and Linux checkouts.
 frontend/** text=auto eol=lf
+
+# Digest-pinned audit manifests must retain the original audited bytes.
+backend/model_anatomy/src/data/deepseek-v41-headers.json -text whitespace=cr-at-eol
+backend/model_anatomy/src/data/deepseek-v41-name-coverage.json -text whitespace=cr-at-eol
+docs/evidence/deepseek-v41-headers.json -text whitespace=cr-at-eol
+docs/evidence/deepseek-v41-name-coverage.json -text whitespace=cr-at-eol

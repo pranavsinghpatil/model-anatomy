@@ -97,3 +97,16 @@ without browser errors. One cold and two cached runs were observed, including a
 desktop screenshot capture. Temporary test services were stopped. PR CI remains
 separate from these local results. These checks do not close the external
 submission gates above.
+
+The first Linux PR run exposed three audit-binding failures that Windows did
+not: Git had normalized the pinned audit manifests from CRLF to LF. The repair
+preserves the original manifest bytes and matching documentation copies through
+Git attributes. JSON content and both approved digest constants are unchanged.
+Final-head Linux CI is tracked in PR #58 separately from the local results.
+
+The first PR container job passed: all three Linux images built and the real
+pinned primary-model acceptance completed. The new Vercel preview deployment
+also reports success, but anonymous requests redirect to Vercel login/SSO.
+A green frontend deployment therefore does not establish judge access or a
+working public API/worker. The original listed production URL still needs a
+working replacement or repair.
