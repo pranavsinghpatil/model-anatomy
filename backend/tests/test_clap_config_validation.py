@@ -23,9 +23,9 @@ CLAP_CONFIG = {
 def test_real_clap_audio_schedule_is_accepted():
     config = registry.load_native_config(CLAP_CONFIG)
 
-    assert config.audio_config.depths == [2, 2, 6, 2]
+    assert list(config.audio_config.depths) == [2, 2, 6, 2]
     assert config.audio_config.num_hidden_layers == 4
-    assert config.audio_config.num_attention_heads == [4, 8, 16, 32]
+    assert list(config.audio_config.num_attention_heads) == [4, 8, 16, 32]
     assert config.text_config.num_attention_heads == 12
 
 
@@ -45,7 +45,11 @@ def test_omitted_nested_clap_schedule_field_uses_installed_default(field, expect
 
     config = registry.load_native_config(source)
 
-    assert getattr(config.audio_config, field) == expected
+    value = getattr(config.audio_config, field)
+    if isinstance(expected, list):
+        assert list(value) == expected
+    else:
+        assert value == expected
     assert field not in source["audio_config"]
 
 
@@ -55,9 +59,9 @@ def test_all_omitted_nested_and_direct_clap_audio_schedules_use_installed_defaul
 
     config = registry.load_native_config(source)
 
-    assert config.audio_config.depths == [2, 2, 6, 2]
+    assert list(config.audio_config.depths) == [2, 2, 6, 2]
     assert config.audio_config.num_hidden_layers == 4
-    assert config.audio_config.num_attention_heads == [4, 8, 16, 32]
+    assert list(config.audio_config.num_attention_heads) == [4, 8, 16, 32]
     assert source == {"model_type": "clap", "audio_config": {"model_type": "clap_audio_model"}}
 
 

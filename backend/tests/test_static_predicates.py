@@ -150,7 +150,7 @@ def test_same_name_or_shadowed_predicates_remain_unknown_without_execution(model
     assert all("conditional" in event.metadata for event in flow.events)
 
 
-def test_tiny_native_gpt2_no_longer_has_an_opaque_padding_guard():
+def test_pinned_native_gpt2_keeps_unreviewed_guards_unresolved():
     from model_anatomy.src.registry import instantiate_native, load_native_config
 
     model, _ = instantiate_native(
@@ -170,14 +170,10 @@ def test_tiny_native_gpt2_no_longer_has_an_opaque_padding_guard():
     flow = StaticFlowAnalyzer(model, "transformer", paths).analyze()
     # Every native block now proves the same primary port, so the downstream
     # view is resolved without borrowing a default hidden-state shape.
-    assert not any("padding" in warning or "is_torch_fx_proxy" in warning for warning in flow.warnings)
-    assert not any("view has no proven output contract" in warning for warning in flow.warnings)
-    assert any(
-        event.metadata.get("contract") == "reviewed_native_module_list_member.v1"
-        and event.metadata["output_port_specs"]["0"]["shape"] == ["B", "S", 8]
-        for event in flow.events
-    )
-    assert any("is_torch_fx_proxy" in item["predicate"] for item in flow.profile_assumptions)
+    assert any("Conditional source path is unresolved: is_tracing" in warning for warning in flow.warnings)
+    assert any("view has no proven output contract" in warning for warning in flow.warnings)
+    assert not any(event.metadata.get("contract") == "reviewed_native_module_list_member.v1" for event in flow.events)
+    assert flow.profile_assumptions == []
 
 
 @pytest.mark.parametrize("model_class", [ConditionalReturns, TwoConditionalReturns])
@@ -299,7 +295,7 @@ def test_unknown_generic_input_dtype_does_not_inherit_parameter_profile():
     assert not any(item["predicate"] == "tensor.dtype" for item in flow.profile_assumptions)
 
 
-def test_t5_canonical_mask_and_float_guard_are_not_left_unresolved():
+def test_pinned_native_t5_keeps_unreviewed_float_guard_unresolved():
     from model_anatomy.src.registry import instantiate_native, load_native_config
 
     model, _ = instantiate_native(
@@ -321,5 +317,5 @@ def test_t5_canonical_mask_and_float_guard_are_not_left_unresolved():
     encoder = StaticFlowAnalyzer(model, "encoder", paths).analyze()
     block = StaticFlowAnalyzer(model, "decoder.block.0", paths).analyze()
     assert not any("attention_mask is not None" in warning for warning in encoder.warnings)
-    # The native normalization contract now carries the activation dtype.
-    assert not any("hidden_states.dtype == torch.float16" in warning for warning in block.warnings)
+    # The native normalization contract was reviewed against an older source.
+    assert any("hidden_states.dtype == torch.float16" in warning for warning in block.warnings)

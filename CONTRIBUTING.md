@@ -6,7 +6,7 @@
 issue / bounded task → topic branch → implementation → deterministic checks → PR → CI + review → merge
 ```
 
-Use `pranav/` branches exclusively and target `b-mvp` for application integration.
+Use `codex/` topic branches by default and target `feat/vv` for application integration.
 Promotion to `main` requires a separate reviewed PR. Keep each increment focused
 and include its purpose, verification evidence, limitations and next task.
 

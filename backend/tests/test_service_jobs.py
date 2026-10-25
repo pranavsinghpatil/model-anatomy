@@ -6,7 +6,7 @@ import pytest
 from sqlalchemy import select
 
 from model_anatomy.api.settings import Settings
-from model_anatomy.service.database import Blob, CacheEntry, Guest, Job, Tombstone
+from model_anatomy.service.database import Blob, Guest, Job, Tombstone
 from model_anatomy.service.errors import ServiceError
 from model_anatomy.service.jobs import JobService, cache_key, ir_summary
 from model_anatomy.service.storage import LocalStorage
@@ -31,7 +31,7 @@ def visitor(service):
 
 def document():
     return json.loads(
-        (Path(__file__).resolve().parents[2] / "output/gpt2/model.json").read_text()
+        (Path(__file__).resolve().parent / "fixtures/gpt2-report.json").read_text()
     )
 
 
@@ -212,10 +212,11 @@ def test_expiry_is_410_for_owner_404_for_other_and_retention_is_seven_days(servi
     service.test_now[0] += 604800
     service.cleanup()
     assert service.cached_result(key) is None
-    assert not service.storage.path(digest).exists()
+    # Expiring the reusable cache does not remove the durable catalog report.
+    assert digest in memory.objects
     with service.db.read() as session:
-        assert list(session.scalars(select(Blob))) == []
-        assert list(session.scalars(select(ModelReport))) == []
+        assert [blob.digest for blob in session.scalars(select(Blob))] == [digest]
+        assert len(list(session.scalars(select(ModelReport)))) == 1
 
 
 def test_revision_and_artifact_and_engine_and_schema_are_cache_identity():

@@ -33,7 +33,7 @@ def stored_analysis(client):
     service.acquire_worker("worker")
     detail = client.post("/api/v1/analyses", json={"model": "gpt2"}).json()
     assert service.claim("worker") == detail["id"]
-    data = (Path(__file__).resolve().parents[2] / "output/gpt2/model.json").read_bytes()
+    data = (Path(__file__).resolve().parent / "fixtures/gpt2-report.json").read_bytes()
     report = json.loads(data)
     service.resolved(detail["id"], "worker", report["model_id"], report["metadata"]["revision"])
     key = cache_key(

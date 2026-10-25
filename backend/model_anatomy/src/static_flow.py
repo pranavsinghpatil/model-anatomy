@@ -18,9 +18,9 @@ from transformers.masking_utils import create_causal_mask, create_sliding_window
 from transformers.pytorch_utils import apply_chunking_to_forward
 from transformers.utils.import_utils import is_torch_fx_proxy, is_torchdynamo_compiling
 
-from .inputs import InputResolver
 from .ir import TensorSpec
 from .static_dtypes import cast_dtype, factory_dtype
+from .static_input_facts import InputResolver
 from .static_tensors import TensorFactoryFact, analyze_tensor_factory_call
 from .tensor_contracts import tensor_outputs
 

@@ -1299,3 +1299,32 @@ weight-payload bytes read. Other model families and older saved partial reports
 are unchanged. Advance engine/cache identity to `2026.10.24.6` so a new
 submission does not reuse a report from the previous extractor. See
 [Mistral static closure](MISTRAL_STATIC_CLOSURE.md).
+
+
+## D-080 - Audit the integrated submission candidate before public release
+
+**2026-10-25 - submission readiness and verification**
+
+Use Van's `feat/vv` at `7ce638e` as the audit baseline after PR #57.
+Application PRs now target `feat/vv`, and quality CI runs for that branch as
+well as `main`; promotion to `main` remains a reviewed PR.
+
+Repair clean-checkout test reproducibility with an explicitly historical,
+metadata-only GPT-2 fixture, preserving the distinction between regression
+fixtures and actual visitor analyses. Keep the new registered-module topology
+scope intact while repairing compatibility and validation regressions.
+
+AI output retains citation/numeric validation and is explicitly labeled as
+interpretation whose remaining prose is not independently verified. It cannot
+establish or mutate reconstructed graph facts.
+
+The dependency scan found five advisories in certifi, filelock and setuptools;
+upgrade only those locked packages to patched versions and require patched
+setuptools for source builds. Record scan limitations rather than equating a
+clean advisory lookup with a complete security guarantee.
+
+No public release or submission is certified by these code changes. The listed
+Vercel URL returned 404 and GitHub reported the repository private. Public
+source/license visibility, hosted judging access, actual Nebius/NVIDIA inference,
+video and final release evidence remain explicit gates in
+[submission readiness](SUBMISSION_READINESS.md).

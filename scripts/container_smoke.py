@@ -16,10 +16,10 @@ def require(response, status=200):
     return response
 
 
-def run():
+def run(base_url: str = "http://127.0.0.1:8001"):
     result = {"model_id": MODEL, "revision": REVISION, "analyses": []}
     first_analysis_path = None
-    with httpx.Client(base_url="http://127.0.0.1:8001", trust_env=False, timeout=15) as client:
+    with httpx.Client(base_url=base_url, trust_env=False, timeout=15) as client:
         for _ in range(60):
             try:
                 if client.get("/health").status_code == 200:
@@ -51,11 +51,17 @@ def run():
             report = require(client.get(f"{path}/exports/json")).json()
             assert report["metadata"]["artifacts"]["weight_payload_bytes_read"] == 0
             graph = require(client.get(f"{path}/graphs/{detail['root_graph_id']}")).json()
-            repeated = next(n for n in graph["nodes"] if n["repeat"] == 30)
-            child = require(client.get(f"{path}/graphs/{repeated['child_graph_id']}")).json()
-            assert child["nodes"]
-            node = next(n for n in graph["nodes"] if n["kind"] == "embedding")
-            inspection = require(client.get(f"{path}/nodes/{graph['id']}/{node['id']}")).json()
+            backbone = next(n for n in graph["nodes"] if n["module_path"] == "model")
+            assert backbone["child_graph_id"] and backbone["evidence"]
+            backbone_graph = require(client.get(f"{path}/graphs/{backbone['child_graph_id']}")).json()
+            layers = next(n for n in backbone_graph["nodes"] if n["module_path"] == "model.layers")
+            assert layers["metadata"]["instance_count"] == 30
+            child = require(client.get(f"{path}/graphs/{layers['child_graph_id']}")).json()
+            assert {n["module_path"] for n in child["nodes"]} == {f"model.layers.{i}" for i in range(30)}
+            assert len(child["nodes"]) == 30
+            node = next(n for n in backbone_graph["nodes"] if n["module_path"] == "model.embed_tokens")
+            assert node["module_type"] == "torch.nn.modules.sparse.Embedding" and node["evidence"]
+            inspection = require(client.get(f"{path}/nodes/{backbone_graph['id']}/{node['id']}")).json()
             assert inspection["tensor_count"] > 0 and inspection["evidence"]
             archive = require(client.get(f"{path}/exports/zip"))
             assert archive.content.startswith(b"PK\x03\x04")
@@ -79,7 +85,7 @@ def run():
         "pinned primary model",
         "no weight payload",
         "immutable cache",
-        "nested graph",
+        "nested graph with all 30 registered layer instances",
         "tensor evidence",
         "exports",
         "visitor isolation",

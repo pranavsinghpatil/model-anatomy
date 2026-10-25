@@ -56,17 +56,13 @@ def _member_event(flow):
     return next(event for event in flow.events if event.metadata.get("native_container") == "layers")
 
 
-def test_modulelist_loop_proves_common_tuple_primary_port_without_arity() -> None:
+def test_unreviewed_member_source_does_not_claim_common_tuple_output() -> None:
     flow = _analyze(LoopBlocks([_block(), _block()]))
-    event = _member_event(flow)
-
-    assert event.metadata["contract"] == "reviewed_native_module_list_member.v1"
-    assert event.metadata["output_port_specs"] == {
-        "0": {"shape": ["B", "S", 16], "dtype": "F32", "semantic_name": "hidden_states"}
-    }
-    assert "output_arity" not in event.metadata
-    assert flow.outputs.spec.shape == ["B", "S", 16]
-
+    assert not any(
+        event.metadata.get("contract") == "reviewed_native_module_list_member.v1"
+        for event in flow.events
+    )
+    assert flow.outputs.spec is None or flow.outputs.spec.shape is None
 
 def test_direct_modulelist_call_does_not_receive_member_contract() -> None:
     flow = _analyze(DirectContainerCall([_block()]))

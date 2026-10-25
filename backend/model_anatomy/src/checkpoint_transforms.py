@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 import hashlib
 import inspect
 import math
 import re
+from dataclasses import dataclass
 from typing import Any
 
 from transformers import core_model_loading as native
@@ -78,7 +78,7 @@ def _symbolic_operations(rule: Any, groups: dict[str, list[Layout]], expected: d
             merged = {}
             for pattern, inputs in state.items():
                 if not isinstance(inputs, list):
-                    raise ValueError('Stack requires a source tensor list')
+                    raise TypeError('Stack requires a source tensor list')
                 merged[targets[0] if len(state) == 1 and len(targets) == 1 else pattern] = _combine(inputs, operation.dim, stack=True)
             state = merged
         elif cls is native.Concatenate:

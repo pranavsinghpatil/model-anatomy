@@ -255,6 +255,12 @@ export function Report({ detail }: { detail: AnalysisDetail }) {
     native_architecture: "Native architecture compatibility",
     module_topology: "Bounded module-call dependencies",
   };
+  const hasCompleteArchitectureChecks = Object.keys(checkLabels).every(
+    (key) => architectureChecks?.[key] === true,
+  );
+  const hasIncompleteArchitectureChecks = Object.keys(checkLabels).some(
+    (key) => architectureChecks?.[key] === false,
+  );
   const checks: [string, string | number][] = [
     ...Object.entries(checkLabels).map(([key, label]): [string, string] => [
       label,
@@ -304,11 +310,17 @@ export function Report({ detail }: { detail: AnalysisDetail }) {
           <div>
             <span className="eyebrow">AUDIT STATUS</span>
             <h3>
-              {detail.status === "completed"
-                ? "Complete Architecture"
-                : detail.status === "partial"
-                  ? "Partial Reconstruction"
-                  : "Artifact Inspection"}
+              {artifact
+                ? "Artifact Inspection"
+                : detail.status === "completed"
+                  ? hasCompleteArchitectureChecks
+                    ? "Complete Architecture"
+                    : hasIncompleteArchitectureChecks
+                      ? "Inspection completed with gaps"
+                      : "Inspection completed"
+                  : detail.status === "partial"
+                    ? "Partial Reconstruction"
+                    : "Inspection not completed"}
             </h3>
             <p>
               {artifact
@@ -319,7 +331,11 @@ export function Report({ detail }: { detail: AnalysisDetail }) {
                       ? "This partial graph comes from reviewed publisher source. Separate pinned audits verified shard headers and checkpoint-name correspondence; shapes, parameter totals, and runtime flow remain unverified."
                       : "This partial graph comes from reviewed publisher source. A separate pinned audit verified shard headers; tensor ownership and runtime flow remain unverified."
                     : "This partial graph comes from reviewed publisher source. Checkpoint shard headers and tensor ownership are unverified."
-                  : "Architecture facts come from inspected checkpoint metadata and native PyTorch module definitions."}
+                  : hasCompleteArchitectureChecks
+                    ? "Architecture facts come from inspected checkpoint metadata and native PyTorch module definitions."
+                    : hasIncompleteArchitectureChecks
+                      ? "One or more required architecture checks are incomplete. Review the recorded results and limits below."
+                      : "The inspection was marked completed, but required architecture-check results are not reported, so complete architecture coverage cannot be confirmed."}
             </p>
           </div>
         </div>
@@ -335,13 +351,13 @@ export function Report({ detail }: { detail: AnalysisDetail }) {
           <div className="audit-mini-stat">
             <span className="stat-label">Engine Version</span>
             <strong className="stat-value font-mono">
-              {detail.engine_version ?? "Current"}
+              {detail.engine_version ?? "Not reported"}
             </strong>
           </div>
           <div className="audit-mini-stat">
             <span className="stat-label">Execution Mode</span>
             <strong className="stat-value font-mono">
-              {q?.mode ?? "Static IR"}
+              {q?.mode ?? "Unknown"}
             </strong>
           </div>
         </div>

@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import hashlib
 import inspect
-import torch
 from typing import Any
 
+import torch
 from torch import nn
 
 # These exact native implementations contain no registered-module callbacks.

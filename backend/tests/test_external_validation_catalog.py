@@ -48,7 +48,9 @@ def _source_row(input_row, model_id, status, revision, **overrides):
 
 
 def test_real_csv_is_pinned_deduplicated_and_public_safe():
-    csv_path = Path(__file__).resolve().parents[2] / SOURCE_PATH
+    # Keep the exact source bytes from the attributed integration commit. The
+    # repository's current output CSV is a later, distinct historical run.
+    csv_path = Path(__file__).parent / "fixtures" / "vv-validation-56ffad8.csv"
     raw = csv_path.read_bytes()
     assert hashlib.sha256(raw).hexdigest() == "53332c2c68c8ff23b837ebb7fd299bd0d9834b056a39e3e7174d5bdf897bd9a4"
     publication_id, publication, rows = prepare_publication(

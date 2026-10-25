@@ -243,13 +243,11 @@ def test_native_family_reconstructs_with_trustworthy_graph_and_api_views(
     assert ir.architecture == architecture
     assert ir.metadata["revision"] == REVISION
     assert ir.metadata["unique_parameter_count"] == unique_parameters
-    assert ir.metadata["inputs"]["input_specs"] == {
-        name: {
-            "shape": shape,
-            "dtype": "I64" if name in {"input_ids", "decoder_input_ids"} else "F32",
-        }
-        for name, shape in expected_inputs.items()
-    }
+    input_specs = ir.metadata["inputs"]["input_specs"]
+    assert set(expected_inputs) <= set(input_specs)
+    assert all(input_specs[name] == {"shape": None, "dtype": None} for name in expected_inputs)
+    assert all(set(spec) == {"shape", "dtype"} for spec in input_specs.values())
+    assert ir.metadata["analysis_report"]["mode"] == "static_module_architecture"
     assert ir.metadata["analysis_report"]["checkpoint_parameter_coverage"] == 1
     assert ir.metadata["artifacts"]["weight_payload_bytes_read"] == 0
     assert ir.metadata["analysis_report"]["forward_executed"] is False
@@ -274,14 +272,14 @@ def test_native_family_reconstructs_with_trustworthy_graph_and_api_views(
             created_at=0,
             expires_at=3600,
             engine_version=ir.metadata.get("engine_version"),
+            summary=summary,
         ),
-        summary,
     )
     parsed_detail = AnalysisDetail.model_validate(detail)
     assert parsed_detail.architecture == architecture
     assert parsed_detail.stage == parsed_detail.status
     assert parsed_detail.parameter_count == unique_parameters
-    assert parsed_detail.input_names == sorted(expected_inputs)
+    assert parsed_detail.input_names == sorted(input_specs)
 
     parsed_graph = GraphResponse.model_validate(graph_view(ir, ir.root_graph.id))
     assert parsed_graph.id == ir.root_graph.id
@@ -295,7 +293,7 @@ def test_native_family_reconstructs_with_trustworthy_graph_and_api_views(
     assert all(tensor.name in ir.tensors for tensor in inspection.tensors)
 
 
-def test_gpt_neox_fused_attention_and_mlp_roles_require_verified_topology():
+def test_gpt_neox_preserves_native_roles_without_claiming_activation_shapes():
     config = {
         "model_type": "gpt_neox",
         "architectures": ["GPTNeoXForCausalLM"],
@@ -310,20 +308,20 @@ def test_gpt_neox_fused_attention_and_mlp_roles_require_verified_topology():
     checkpoint = header_only_checkpoint(model)
     ir = reconstruct("fixtures/gpt_neox", client=HeaderFixtureClient(config, checkpoint))
     classifications = ir.raw_structure["semantic_diagnostics"]["classifications"]
-    assert classifications["gpt_neox.layers.0.attention"]["kind"] == "self_attention"
-    assert classifications["gpt_neox.layers.0.mlp"]["kind"] == "feed_forward"
-    assert classifications["gpt_neox.layers.0"]["kind"] == "decoder_block"
-    assert not ir.raw_structure["semantic_diagnostics"]["unknown_components"]
+    assert classifications["gpt_neox.layers.0.attention"]["kind"] == "module"
+    assert classifications["gpt_neox.layers.0.mlp"]["kind"] == "mlp"
+    assert classifications["gpt_neox.layers.0"]["kind"] == "module"
+    assert "gpt_neox.layers.0.attention" in ir.raw_structure["semantic_diagnostics"]["unclassified_roles"]
     assert ir.metadata["analysis_report"]["checkpoint_parameter_coverage"] == 1
     graph_kinds = {node.kind for graph in ir.root_graph.walk() for node in graph.nodes}
-    assert {"self_attention", "feed_forward", "decoder_block"} <= graph_kinds
+    assert {"module", "mlp"} <= graph_kinds
 
-    # Similar names with incompatible projection dimensions are not evidence.
+    # Altered dimensions do not become an inferred activation-shape contract.
     attention = model.gpt_neox.layers[0].attention
     attention.query_key_value = torch.nn.Linear(16, 32, device="meta")
     mlp = model.gpt_neox.layers[0].mlp
     mlp.dense_4h_to_h = torch.nn.Linear(32, 16, device="meta")
     altered = SemanticAnalyzer(model, inspect_native_model(model, CheckpointMetadata({}, {}, {})))
-    assert altered.classifications["gpt_neox.layers.0.attention"].kind == "unknown"
-    assert altered.classifications["gpt_neox.layers.0.mlp"].kind == "unknown"
-    assert altered.classifications["gpt_neox.layers.0"].kind == "unknown"
+    assert altered.classifications["gpt_neox.layers.0.attention"].kind == "module"
+    assert altered.classifications["gpt_neox.layers.0.mlp"].kind == "mlp"
+    assert altered.classifications["gpt_neox.layers.0"].kind == "module"

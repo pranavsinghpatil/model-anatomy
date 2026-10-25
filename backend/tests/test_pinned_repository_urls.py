@@ -61,7 +61,7 @@ def test_pinned_catalog_flow_resolves_and_caches_exact_commit(tmp_path):
     service.initialize()
     service.acquire_worker("worker")
     guest, _ = service.guest(None)
-    ir = load_ir((Path(__file__).resolve().parents[2] / "output/gpt2/model.json").read_bytes())
+    ir = load_ir((Path(__file__).resolve().parent / "fixtures/gpt2-report.json").read_bytes())
     revision = ir.metadata["revision"]
     url = f"https://huggingface.co/{ir.model_id}/tree/{revision}"
     resolved = []

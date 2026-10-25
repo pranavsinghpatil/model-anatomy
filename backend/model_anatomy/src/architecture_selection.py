@@ -9,11 +9,11 @@ from transformers import PretrainedConfig
 
 from . import limits
 from .artifacts import CheckpointMetadata, InspectionBudgetError, SafetensorsMetadata
+from .checkpoint_scope import buffer_storage_relation, classify_inactive_components
 from .errors import ArtifactError, NativeShapeMismatchError, UnsupportedModelError
 from .facts import inspect_native_model
-from .registry import _auto_model_candidates, instantiate_candidate
 from .metadata_types import DTYPES
-from .checkpoint_scope import buffer_storage_relation, classify_inactive_components
+from .registry import _auto_model_candidates, instantiate_candidate
 
 
 def compatible_dtype(native: str, stored: str | None) -> bool:
@@ -107,11 +107,18 @@ def select_checkpoint_architecture(
         "initial_model_class": declared_class, "selected_model_class": declared_class,
         "status": "declared_metadata_match" if config.architectures else "default_metadata_match",
         "search_performed": False, "search_complete": None,
-        "candidates": [dict(model_class=declared_class, auto_class=selection["auto_class"], compatibility=initial)],
+        "candidates": [{"model_class": declared_class, "auto_class": selection["auto_class"], "compatibility": initial}],
         "matching_candidates": [], "forward_executed": False, "weight_payload_bytes_read": 0,
         "scope": "Checkpoint-compatible native interpretation, not proof of publisher intent or runtime behavior",
     }
     selection = dict(selection, architecture_selection=proof)
+    if checkpoint.format == "absent":
+        proof.update(
+            status="checkpoint_unavailable",
+            checkpoint_ownership_complete=False,
+            scope="Declared native implementation from configuration; no checkpoint was available for compatibility comparison",
+        )
+        return model, selection, raw
     if initial["status"] == "exact_metadata_match":
         proof["matching_candidates"] = [declared_class]
         return model, selection, raw

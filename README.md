@@ -14,6 +14,10 @@ The first release proves that path for one decoder-only Transformer. A node must
 
 ## Current state
 
+The October 25 submission audit and remaining release gates are tracked in
+[submission readiness](docs/SUBMISSION_READINESS.md). A working local build does
+not establish a publicly judgeable release.
+
 The working CLI engine has been integrated from `feat/vv`. Fresh metadata-only
 runs verify GPT-2 and the primary target `HuggingFaceTB/SmolLM2-135M`, with no
 weight payload downloads or forward execution. See [engine acceptance](docs/ENGINE_ACCEPTANCE.md)
@@ -139,6 +143,6 @@ For the Nebius × NVIDIA Global AI Hackathon, reconstruction remains determinist
 
 ## Development workflow
 
-The active integration base is `b-mvp`. Use `pranav/` topic branches exclusively,
-test each increment and open PRs targeting `b-mvp`. Promotion to `main` requires
+The active integration base is `feat/vv`. Use `codex/` topic branches by default,
+test each increment and open PRs targeting `feat/vv`. Promotion to `main` requires
 a separate reviewed PR. See [CONTRIBUTING.md](CONTRIBUTING.md).

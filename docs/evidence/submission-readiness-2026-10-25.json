@@ -1,0 +1,163 @@
+{
+  "audit_date": "2026-10-25",
+  "baseline": {
+    "branch": "feat/vv",
+    "commit": "7ce638e599b81799b179392912cbf310158d5e8f",
+    "includes_merged_pr": 57
+  },
+  "audit_branch": "codex/submission-readiness",
+  "submission_ready": false,
+  "official_event": {
+    "url": "https://nebiusglobalaihackathon.devpost.com",
+    "source": "Authenticated Devpost event overview, rules, requirements, criteria and key dates",
+    "checked_at": "2026-10-25T07:44:23Z",
+    "status": "submissions_open",
+    "deadline_utc": "2026-10-30T17:00:00Z",
+    "deadline_ist": "2026-10-30 22:30",
+    "judging_ends_utc": "2026-12-15T20:00:00Z"
+  },
+  "external_observations": {
+    "known_demo_url": "https://model-anatomy-eight.vercel.app/",
+    "demo_http_status": 404,
+    "alternate_working_demo_verified": false,
+    "repository": "https://github.com/pranavsinghpatil/model-anatomy",
+    "repository_private": true,
+    "github_default_branch_license": null,
+    "baseline_branch_license": "MIT",
+    "live_nebius_nvidia_inference_verified": false,
+    "public_video_verified": false
+  },
+  "baseline_findings": {
+    "pytest_collection_errors": 13,
+    "ruff_findings": 24,
+    "clean_checkout_missing_gpt2_test_report": true,
+    "quota_rejection_checks_commented_out": true,
+    "ci_missing_active_integration_branch": true,
+    "legacy_report_could_claim_complete_architecture_without_checks": true
+  },
+  "verification": {
+    "backend_full_suite": {
+      "passed": 838,
+      "skipped": 25,
+      "failed": 0,
+      "seconds": 56.76,
+      "skip_scope": "Opt-in external/live integrations and platform-specific cases"
+    },
+    "browser_full_suite": {
+      "passed": 214,
+      "skipped": 34,
+      "failed": 0,
+      "discovered": 248,
+      "workers": 2,
+      "minutes": 9.2,
+      "skip_scope": "Opt-in live API/model environments and published benchmark evidence"
+    },
+    "pinned_primary_models": {
+      "passed": 2,
+      "deselected": 2,
+      "seconds": 24.91,
+      "models": [
+        "openai-community/gpt2",
+        "HuggingFaceTB/SmolLM2-135M"
+      ],
+      "weight_payload_bytes_read": 0
+    },
+    "isolated_live_http": {
+      "passed": 3,
+      "failed": 0,
+      "seconds": 74.36,
+      "models": [
+        "HuggingFaceTB/SmolLM2-135M",
+        "HuggingFaceTB/SmolLM2-360M",
+        "google/vit-base-patch16-224"
+      ],
+      "checks": [
+        "cold and exact-revision cached reports",
+        "registered nested graph and all 30 primary-model layer instances",
+        "owned tensor metadata and provenance",
+        "JSON and ZIP exports",
+        "visitor isolation",
+        "quota rejection",
+        "honest missing-model failure",
+        "explicit unavailable AI"
+      ],
+      "scope": "Real local HTTP API, durable worker and Hugging Face metadata; not a container or hosted deployment."
+    },
+    "python_advisories": {
+      "baseline_findings": [
+        {
+          "package": "certifi",
+          "from": "2026.7.22",
+          "to": "2026.10.19",
+          "ids": [
+            "PYSEC-2026-4320"
+          ]
+        },
+        {
+          "package": "filelock",
+          "from": "4.0.12",
+          "to": "4.2.1",
+          "ids": [
+            "CVE-2026-112940",
+            "CVE-2026-112913",
+            "CVE-2026-112907"
+          ]
+        },
+        {
+          "package": "setuptools",
+          "from": "84.0.0",
+          "to": "84.1.0",
+          "ids": [
+            "GHSA-xmj3-9gf7-h52w"
+          ]
+        }
+      ],
+      "installed_distributions_seen": 67,
+      "post_upgrade_known_findings": 0,
+      "scanner_exclusions": [
+        "local model-anatomy package",
+        "torch 2.14.1+cpu (not on PyPI)"
+      ],
+      "separate_upstream_torch_version": "2.14.1",
+      "upstream_torch_known_findings": 0,
+      "scope": "Advisory database lookup; not an audit of the CPU wheel binary or proof of absence of vulnerabilities"
+    },
+    "wheel": {
+      "built": true,
+      "application_only": true,
+      "tests_and_frozen_report_excluded": true,
+      "runtime_evidence_resources": [
+        "deepseek-v41-headers.json",
+        "deepseek-v41-name-coverage.json"
+      ],
+      "engine_version": "2026.10.25.2-submission-audit"
+    },
+    "containers": {
+      "local_execution": "not run: Docker unavailable",
+      "required_followup": "GitHub containers CI builds and real primary-model smoke on the PR"
+    },
+    "frontend": {
+      "typecheck": "passed",
+      "production_build": "passed",
+      "format_check": "passed",
+      "npm_audit_known_vulnerabilities": 0,
+      "nonblocking_warning": "Vite chunks larger than 500 KB; public-network performance not measured"
+    },
+    "deterministic_checks": {
+      "ruff": "passed",
+      "python_compilation": "passed",
+      "lock_consistency": "passed",
+      "git_diff_check": "passed",
+      "api_schema_regeneration": "no diff"
+    },
+    "staged_common_credential_pattern_scan": {
+      "matching_paths": 0,
+      "scope": "Common credential patterns in 63 staged files; not a full history or secret-detection guarantee."
+    },
+    "independent_review": {
+      "quota_serialization": "reviewed; no normal-path bypass found",
+      "checkpoint_provenance_and_summary": "reviewed; no concrete issue found"
+    }
+  },
+  "engine_version": "2026.10.25.2-submission-audit"
+}

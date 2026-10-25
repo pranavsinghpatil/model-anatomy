@@ -288,7 +288,7 @@ def test_invalid_factory_argument_binding_does_not_establish_a_tensor(source):
     assert fact is not None and not fact.native
 
 
-def test_tiny_native_t5_keeps_sequence_length_unresolved_without_mask_rank_warning():
+def test_pinned_native_t5_does_not_infer_decoder_activation_shape():
     from model_anatomy.src.registry import instantiate_native, load_native_config
 
     model, _ = instantiate_native(
@@ -309,5 +309,5 @@ def test_tiny_native_t5_keeps_sequence_length_unresolved_without_mask_rank_warni
     paths = {path: SimpleNamespace(kind="backbone") for path, _ in model.named_modules()}
     flow = StaticFlowAnalyzer(model, "decoder", paths).analyze()
 
-    assert any("sequence_length != 1" in warning for warning in flow.warnings)
+    assert flow.outputs.spec is None
     assert not any("attention_mask.dim() == 4" in warning for warning in flow.warnings)

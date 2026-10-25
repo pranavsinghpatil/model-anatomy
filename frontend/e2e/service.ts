@@ -31,16 +31,14 @@ type Artifact = {
 };
 // Tests project real engine artifacts into the agreed shallow HTTP contract.
 // No fixture is included in the production app or used as an API fallback.
-const load = (directory: string) =>
-  JSON.parse(
-    readFileSync(
-      fileURLToPath(
-        new URL(`../../output/${directory}/model.json`, import.meta.url),
-      ),
-      "utf8",
+const artifact = JSON.parse(
+  readFileSync(
+    fileURLToPath(
+      new URL("../../backend/tests/fixtures/gpt2-report.json", import.meta.url),
     ),
-  ) as Artifact;
-const artifact = load("gpt2");
+    "utf8",
+  ),
+) as Artifact;
 const graphMap = (root: RawGraph): Map<string, ArchitectureGraph> => {
   const result = new Map<string, ArchitectureGraph>();
   function visit(graph: RawGraph) {
@@ -300,7 +298,9 @@ export async function mockService(page: Page, scenario: Scenario = {}) {
         ],
         model: "test-evidence-provider",
         ai_generated: true,
-        warnings: [],
+        warnings: [
+          "AI interpretation is not independently verified. Citations and numeric values are checked; confirm other claims against the cited evidence.",
+        ],
       });
     }
     if (parts[2] === "exports")

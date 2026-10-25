@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import hashlib
 import json
-from dataclasses import replace
 from collections.abc import Callable
+from dataclasses import replace
 from typing import Any
 
 from .artifacts import CheckpointMetadata, MetadataClient, ModelReference
@@ -69,8 +69,8 @@ def discover_components(
                 proof = compatibility(model, raw)
                 record["candidates"].append({"model_class": name, "compatibility": proof})
                 if proof["status"] == "exact_metadata_match":
-                    matches.append(dict(model=model, selection=selection, config=model.config,
-                                        config_data=data, checkpoint=scoped, record=record))
+                    matches.append({"model": model, "selection": selection, "config": model.config,
+                                    "config_data": data, "checkpoint": scoped, "record": record})
             except UnsupportedModelError as exc:
                 search_complete = False
                 record["candidates"].append({"model_class": name, "error": str(exc)[:1024]})
@@ -120,7 +120,8 @@ def build_component_report(
             profile=dict(profile), progress=progress,
         )
         identity = "component_" + hashlib.sha256(namespace.encode()).hexdigest()[:12]
-        qualify = lambda name: namespace + name if name else namespace.removesuffix(".")
+        def qualify(name: str, prefix: str = namespace) -> str:
+            return prefix + name if name else prefix.removesuffix(".")
         for graph in report.root_graph.walk():
             graph.id = identity + "_" + graph.id
             graph.metadata["component_scope"] = scope
