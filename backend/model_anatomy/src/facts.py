@@ -164,23 +164,18 @@ def inspect_native_model(
         ]
     except ImportError:
         pass
-    legacy_converter = None
-    legacy_source = None
-    legacy_source_sha256 = None
-    try:
-        # Transformers 4.x exposes its canonical loader normalization here. Call the
-        # base implementation directly; model-specific overrides are not trusted hooks.
-        from transformers.modeling_utils import PreTrainedModel
-
-        legacy_converter = PreTrainedModel._fix_state_dict_key_on_load
-        legacy_source = f"{PreTrainedModel.__module__}.{PreTrainedModel.__name__}._fix_state_dict_key_on_load"
-        legacy_source_sha256 = hashlib.sha256(
-            inspect.getsource(legacy_converter).encode()
-        ).hexdigest()
-    except (ImportError, AttributeError, OSError, TypeError):
-        pass
     checkpoint_names: dict[str, str] = {}
     name_conversions = {}
+    renaming_evidence = {}
+    for rule in renamings:
+        rule_type = type(rule)
+        qualified_rule = f"{rule_type.__module__}.{rule_type.__qualname__}"
+        renaming_evidence[id(rule)] = {
+            "rule": qualified_rule,
+            "source_sha256": hashlib.sha256(inspect.getsource(rule_type).encode()).hexdigest(),
+            "source_patterns": list(rule.source_patterns),
+            "target_patterns": list(rule.target_patterns),
+        }
     legacy_normalizer = getattr(model, "_fix_state_dict_key_on_load", None)
     normalizer_evidence = None
     if inspect.isfunction(
@@ -205,7 +200,10 @@ def inspect_native_model(
             if converted != name:
                 steps.append(dict(normalizer_evidence, target=converted))
         for rule in renamings:
+            before_rule = converted
             converted, _ = rule.rename_source_key(converted)
+            if converted != before_rule:
+                steps.append(renaming_evidence[id(rule)])
         if converted != name:
             name_conversions[name] = {
                 "target": converted,

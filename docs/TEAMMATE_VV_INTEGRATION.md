@@ -7,6 +7,14 @@ and adapts staged report-file publication with rollback for ordinary write error
 
 ## Source evidence and scope
 
+The October 25 audit found that later integration commits replaced
+`output/hf_model_parse_results.csv` with a newer run. The original publication
+below remains pinned to `56ffad8`; its exact bytes are now retained separately
+as `backend/tests/fixtures/vv-validation-56ffad8.csv` for reproducible tests.
+The current output CSV is preserved unchanged. Do not apply the older digest or
+counts to the newer run, or overwrite a historical publication with it.
+
+
 The source files are retained byte-for-byte, including their original newlines
 and whitespace inside diagnostic fields. These two evidence CSVs are exempt from
 Git newline normalization and whitespace lint through `.gitattributes`:

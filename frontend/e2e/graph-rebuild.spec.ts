@@ -228,8 +228,8 @@ test("distinguishes graph boundaries, repeats, module paths, and isolated invent
 
   const first = page.locator(`.model-node[data-node-id="${firstLayer.id}"]`);
   const second = page.locator(`.model-node[data-node-id="${secondLayer.id}"]`);
-  await expect(first.locator(".node-title")).toHaveText("0");
-  await expect(second.locator(".node-title")).toHaveText("1");
+  await expect(first.locator(".node-title")).toHaveText("SharedLayer [0]");
+  await expect(second.locator(".node-title")).toHaveText("SharedLayer [1]");
   await expect(first.locator(".node-kind")).toHaveText("module");
   await expect(second.locator(".node-kind")).toHaveText("module");
   await expect(first.locator(".node-title")).toHaveAttribute(

@@ -11,6 +11,11 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from .errors import ServiceError
 from .views import graph, node_view
 
+INTERPRETATION_WARNING = (
+    "AI interpretation is not independently verified. Citations and numeric values are checked; "
+    "confirm other claims against the cited evidence."
+)
+
 
 class ProviderAnswer(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
@@ -158,5 +163,5 @@ class ExplanationService:
             "citations": [{k: e[k] for k in ("id", "source", "kind", "locator")} for e in cited],
             "model": self.settings.nebius_model_id,
             "ai_generated": True,
-            "warnings": [],
+            "warnings": [INTERPRETATION_WARNING],
         }

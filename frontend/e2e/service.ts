@@ -490,7 +490,9 @@ export async function mockService(page: Page, scenario: Scenario = {}) {
         ],
         model: "test-evidence-provider",
         ai_generated: true,
-        warnings: [],
+        warnings: [
+          "AI interpretation is not independently verified. Citations and numeric values are checked; confirm other claims against the cited evidence.",
+        ],
       });
     }
     if (parts[2] === "exports")

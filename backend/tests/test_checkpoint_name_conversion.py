@@ -5,10 +5,9 @@ from __future__ import annotations
 import hashlib
 import inspect
 import json
-import re
 
 import pytest
-from transformers.modeling_utils import PreTrainedModel
+from transformers.core_model_loading import WeightRenaming
 from transformers.models.bert.modeling_bert import BertForMaskedLM
 
 from model_anatomy.src.artifacts import DTYPE_BYTES, CheckpointMetadata, parse_safetensors_header
@@ -27,7 +26,7 @@ BERT_CONFIG = {
     "max_position_embeddings": 16,
     "type_vocab_size": 2,
 }
-LEGACY_SOURCE = "transformers.modeling_utils.PreTrainedModel._fix_state_dict_key_on_load"
+LEGACY_SOURCE = "native Transformers checkpoint loading and conversion rules"
 
 
 @pytest.fixture(scope="module")
@@ -78,7 +77,9 @@ def test_bert_legacy_layer_norm_keys_are_fully_owned_with_conversion_provenance(
     def reject_model_override(_key):
         raise AssertionError("Model-specific checkpoint conversion hooks are not trusted")
 
-    monkeypatch.setattr(type(bert_model), "_fix_state_dict_key_on_load", staticmethod(reject_model_override))
+    monkeypatch.setattr(
+        type(bert_model), "_fix_state_dict_key_on_load", staticmethod(reject_model_override), raising=False
+    )
     raw = inspect_native_model(bert_model, checkpoint)
 
     assert all(parameter["checkpoint_matched"] for parameter in raw["parameters"].values())
@@ -95,14 +96,19 @@ def test_bert_legacy_layer_norm_keys_are_fully_owned_with_conversion_provenance(
         expected_name = module_path + "." + ("weight" if legacy_name == "gamma" else "bias")
         assert converted["target"] == expected_name
         assert converted["source"] == LEGACY_SOURCE
-        assert re.fullmatch(r"[0-9a-f]{64}", converted["source_sha256"])
+        rule = next(
+            item
+            for item in converted["steps"]
+            if item["rule"] == "transformers.core_model_loading.WeightRenaming"
+        )
+        expected_target = "LayerNorm.weight" if legacy_name == "gamma" else "LayerNorm.bias"
+        assert rule["source_patterns"] == [f"LayerNorm.{legacy_name}"]
+        assert rule["target_patterns"] == [expected_target]
+        assert rule["source_sha256"] == hashlib.sha256(
+            inspect.getsource(WeightRenaming).encode()
+        ).hexdigest()
         assert raw["checkpoint_name_mapping"][expected_name] == source_name
         assert raw["parameters"][expected_name]["tensor_name"] == source_name
-
-    converter = inspect.getsource(PreTrainedModel._fix_state_dict_key_on_load)
-    assert {item["source_sha256"] for item in conversions.values()} == {
-        hashlib.sha256(converter.encode()).hexdigest()
-    }
 
 
 def test_legacy_layer_norm_shape_mismatch_is_rejected(bert_model):

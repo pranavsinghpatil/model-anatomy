@@ -129,7 +129,7 @@ def test_renderer_rolls_back_complete_report_when_late_publish_fails(tmp_path, m
     ir.metadata["source_config"]["value"] = 2
     replace = output_transaction.os.replace
     failed = False
-    expected_late_path = preview / "REPORTS_PREVIEW.md"
+    expected_late_path = next(path for path in first_paths if path.parent == preview)
 
     def fail_preview(source, target):
         nonlocal failed

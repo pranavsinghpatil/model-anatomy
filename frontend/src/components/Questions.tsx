@@ -167,7 +167,7 @@ export function Questions({
               : available === undefined
                 ? "AI availability unknown"
                 : available
-                  ? "Evidence-bound answers"
+                  ? "Evidence-assisted answers"
                   : "AI unavailable"}
           </span>
           <button

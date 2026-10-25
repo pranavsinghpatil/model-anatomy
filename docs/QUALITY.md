@@ -15,7 +15,12 @@ Use deterministic evidence before judgment:
 - `git diff` to verify scope;
 - a pinned benchmark before milestone and release completion.
 
-The current `quality` workflow runs installation, bytecode compilation, and `pytest` on pull requests to `main`. Keep it passing and expand it with lint/type checks when those tools are added.
+The `quality` workflow runs for pull requests and pushes to `main` and the active
+integration branch, `feat/vv`. It checks locked installation, compilation, backend
+and infrastructure tests, Ruff, generated API types, frontend build/formatting,
+desktop/mobile browser tests, and the bounded container smoke flow. Opt-in live
+provider tests still require separate evidence; green CI alone does not certify
+public deployment or NVIDIA inference.
 
 ## Benchmark
 

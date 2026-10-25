@@ -53,7 +53,7 @@ def check_architecture(client, path, detail, report):
 def run():
     result = {"model_id": MODEL, "revision": REVISION, "analyses": []}
     first_analysis_path = None
-    with httpx.Client(base_url="http://127.0.0.1:8001", trust_env=False, timeout=15) as client:
+    with httpx.Client(base_url=base_url, trust_env=False, timeout=15) as client:
         for _ in range(60):
             try:
                 if client.get("/health").status_code == 200:
@@ -107,7 +107,7 @@ def run():
         "pinned primary model",
         "no weight payload",
         "immutable cache",
-        "nested graph",
+        "nested graph with all 30 registered layer instances",
         "tensor evidence",
         "exports",
         "visitor isolation",

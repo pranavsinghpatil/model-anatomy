@@ -9,10 +9,10 @@ from __future__ import annotations
 
 import ast
 import builtins
+import functools
 import hashlib
 import inspect
 import itertools
-import functools
 import math
 import operator
 import textwrap
@@ -24,7 +24,13 @@ from typing import Any
 import torch
 
 from . import limits
-from .callable_metadata import MISSING, AttentionInterface, ExpertsInterface, attention_dispatch, static_attribute
+from .callable_metadata import (
+    MISSING,
+    AttentionInterface,
+    ExpertsInterface,
+    attention_dispatch,
+    static_attribute,
+)
 from .module_primitives import functional_primitive, primitive_proof, script_primitive_proof
 
 UNKNOWN = object()
@@ -573,9 +579,14 @@ class ModuleTopology:
                 text = ''.join(value.literal for value in values)
                 if len(text) <= 4096:
                     return Value(literal=text)
-            if isinstance(node, ast.FormattedValue) and values and type(values[0].literal) in (int, float, str, bool, type(None)):
-                if node.format_spec is None and len(str(values[0].literal)) <= 1024:
-                    return Value(literal=repr(values[0].literal) if node.conversion == 114 else str(values[0].literal))
+            if (
+                isinstance(node, ast.FormattedValue)
+                and values
+                and type(values[0].literal) in (int, float, str, bool, type(None))
+                and node.format_spec is None
+                and len(str(values[0].literal)) <= 1024
+            ):
+                return Value(literal=repr(values[0].literal) if node.conversion == 114 else str(values[0].literal))
             return Value(origins=dependencies(values).origins, origin_guards=dependencies(values).origin_guards)
         if isinstance(node, ast.Attribute):
             base = self.expression(node.value, env)
@@ -669,9 +680,13 @@ class ModuleTopology:
             left, right = self.expression(node.left, env), self.expression(node.right, env)
             if isinstance(node.op, ast.BitOr) and type(left.type_object) is type and type(right.type_object) is type:
                 return Value(type_object=left.type_object | right.type_object)
-            if isinstance(node.op, ast.Add) and left.items is not None and right.items is not None:
-                if len(left.items) + len(right.items) <= limits.MAX_MODEL_LAYERS:
-                    return Value(items=left.items + right.items)
+            if (
+                isinstance(node.op, ast.Add)
+                and left.items is not None
+                and right.items is not None
+                and len(left.items) + len(right.items) <= limits.MAX_MODEL_LAYERS
+            ):
+                return Value(items=left.items + right.items)
             arithmetic = {ast.Add: operator.add, ast.Sub: operator.sub, ast.Mult: operator.mul,
                           ast.FloorDiv: operator.floordiv, ast.Mod: operator.mod, ast.Div: operator.truediv,
                           ast.BitAnd: operator.and_, ast.BitOr: operator.or_}

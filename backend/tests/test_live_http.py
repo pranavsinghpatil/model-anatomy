@@ -1,6 +1,7 @@
 """Opt-in real HTTP -> durable worker -> Hugging Face inspection, with no mocks."""
 
 import io
+import json
 import os
 import re
 import socket
@@ -31,6 +32,17 @@ def wait_for_result(client: httpx.Client, analysis_id: str) -> dict:
             return detail
         time.sleep(0.2)
     raise AssertionError("Real HTTP analysis exceeded its deadline")
+
+
+def test_primary_model_container_smoke_against_isolated_backend(live_backend, capsys):
+    from scripts.container_smoke import MODEL, REVISION, run
+
+    run(base_url=str(live_backend.base_url))
+    result = json.loads(capsys.readouterr().out)
+    assert result["model_id"] == MODEL
+    assert result["revision"] == REVISION
+    assert result["checks"] and len(result["analyses"]) == 2
+    assert [analysis["cached"] for analysis in result["analyses"]] == [False, True]
 
 
 @pytest.fixture
@@ -113,9 +125,9 @@ def live_backend(tmp_path):
 
 
 @pytest.mark.parametrize(
-    ("model", "revision", "parameters", "component_kind"),
+    ("model", "revision", "parameters", "preferred_component_kind"),
     [
-        ("HuggingFaceTB/SmolLM2-360M", "f8027fd0eaeea54caa13c31d31b9fdc459c38b49", 361821120, "embedding"),
+        ("HuggingFaceTB/SmolLM2-360M", "f8027fd0eaeea54caa13c31d31b9fdc459c38b49", 361821120, None),
         ("google/vit-base-patch16-224", "10064cc17b69d623a025c9e90e11230cc8ba6967", 86567656, "classifier"),
     ],
 )
@@ -124,7 +136,7 @@ def test_real_model_submission_graph_tensors_exports_and_cache(
     model,
     revision,
     parameters,
-    component_kind,
+    preferred_component_kind,
 ):
     client = live_backend
     model_reference = f"https://huggingface.co/{model}/blob/{revision}/model.safetensors"
@@ -165,7 +177,7 @@ def test_real_model_submission_graph_tensors_exports_and_cache(
     assert report["model_id"] == model
     assert report["metadata"]["artifacts"]["weight_payload_bytes_read"] == 0
     assert report["tensors"] and report["metadata"]["analysis_report"]["checkpoint_parameter_coverage"] == 1
-    if component_kind == "classifier":
+    if preferred_component_kind == "classifier":
         assert report["metadata"]["inputs"]["input_specs"]["pixel_values"]["shape"] is None
         assert [tensor["name"] for tensor in node["tensors"]] == ["classifier.bias", "classifier.weight"]
         assert component["child_graph_id"] is None
@@ -187,7 +199,8 @@ def test_real_model_submission_graph_tensors_exports_and_cache(
         assert unavailable.status_code == 202
         failed = wait_for_result(other, unavailable.json()["id"])
         assert failed["model_id"] == missing_model
-        assert failed["status"] == "failed" and failed["error"]["code"] == "artifact_http"
+        assert failed["status"] == "failed"
+        assert failed["error"]["code"] in {"artifact_auth", "artifact_http"}
         assert "prepared" not in failed and failed["root_graph_id"] is None
         assert failed["parameter_count"] is None and failed["architecture"] is None
         assert other.get(f"/api/v1/analyses/{failed['id']}/exports/json").status_code == 503

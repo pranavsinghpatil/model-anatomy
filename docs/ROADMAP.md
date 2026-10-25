@@ -1,8 +1,22 @@
 # Roadmap and release train
 
-**Last updated:** 2026-10-19 · **External deadline:** [2026-10-30 10:00 PDT](https://nebiusglobalaihackathon.devpost.com/rules) (22:30 IST)
+**Last updated:** 2026-10-25 · **External deadline:**
+[2026-10-30 10:00 PDT](https://nebiusglobalaihackathon.devpost.com/rules) (22:30 IST)
 
 ## Current truth
+
+The October 25 submission audit starts from Van's integrated `feat/vv`
+commit `7ce638e`, including PR #57 and its follow-ups. The release remains
+**not ready to submit**: the listed public demo returns 404, the repository is
+private, and live Nebius/NVIDIA inference and the public video are unverified.
+Current checks, fixes and ordered release gates are recorded in
+[submission readiness](SUBMISSION_READINESS.md). Earlier counts below are
+dated historical evidence, not a certification of this candidate.
+
+The current native completion report is scoped to registered module
+architecture, checkpoint binding and bounded module-call dependencies. A
+complete result does not certify intermediate activation shapes, runtime branch
+selection, or numerical equivalence to publisher custom code.
 
 The October 19 compatibility increment attempts 120 distinct pinned Hugging Face
 repositories, then reruns 22 affected/control cases after measured fixes. Latest
@@ -35,7 +49,7 @@ views. Local verification passes 92 deterministic browser tests and 14 separate
 live cases across the primary text, existing ViT, artifact-only and selected GGUF
 paths. Both themes and responsive layouts are checked. See
 [the redesign verification record](UI_REDESIGN.md#verification-record). This UI
-work is delivered as dependent PR increments targeting `b-mvp`; it does not close
+work is delivered as historical dependent PR increments targeting `b-mvp`; it does not close
 the hosted or live AI release requirements above.
 
 ## Milestones

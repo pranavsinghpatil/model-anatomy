@@ -1,5 +1,10 @@
 import { expect, test } from "@playwright/test";
-import type { AnalysisDetail, ArchitectureGraph } from "../src/api/contract";
+import { fileURLToPath } from "node:url";
+import type {
+  AnalysisDetail,
+  ArchitectureGraph,
+  NodeDetail,
+} from "../src/api/contract";
 import { expectGraphFramed, graphNode } from "./helpers";
 
 test("live entry opens directly and only continues a recent analysis when selected", async ({
@@ -108,7 +113,18 @@ test("live workspace submits, inspects a component, and exports", async ({
   await expect(page.getByTestId("graph-canvas")).toBeVisible({
     timeout: 130_000,
   });
-  if (testInfo.project.name === "desktop") await expectGraphFramed(page);
+  if (testInfo.project.name === "desktop") {
+    await expectGraphFramed(page);
+    await page.screenshot({
+      path: fileURLToPath(
+        new URL(
+          "../../.local/audit/live-ui-current-desktop.png",
+          import.meta.url,
+        ),
+      ),
+      animations: "disabled",
+    });
+  }
   const root = (await (
     await page.request.get(
       `/api/v1/analyses/${created.id}/graphs/${result.root_graph_id}`,
@@ -125,16 +141,22 @@ test("live workspace submits, inspects a component, and exports", async ({
     .getByTestId("inspector");
   await expect(inspector).toBeVisible();
   await expect(
-    inspector.getByRole("heading", { name: component!.label }),
+    inspector.getByRole("heading", { name: component.label }),
   ).toBeVisible();
   await inspector.getByRole("tab", { name: /^Tensors/ }).click();
   await expect(
     inspector.getByRole("heading", { name: "Owned tensors" }),
   ).toBeVisible();
+  await expect(inspector.getByRole("tab", { name: /^Tensors/ })).toContainText(
+    String(componentDetail.tensor_count),
+  );
   await inspector.getByRole("tab", { name: /^Evidence/ }).click();
   await expect(
     inspector.getByRole("heading", { name: "Provenance" }),
   ).toBeVisible();
+  await expect(inspector.locator(".evidence-item")).toHaveCount(
+    componentDetail.evidence.length,
+  );
 
   await page.getByLabel("Export analysis", { exact: true }).click();
   const download = page.waitForEvent("download");
