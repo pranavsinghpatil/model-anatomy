@@ -9,3 +9,23 @@ The documentation is intentionally small. Each file has one job:
 5. [DECISION_LOG.md](DECISION_LOG.md) — permanent record of binding decisions.
 
 Read [AGENTS.md](../AGENTS.md) first when performing repository work.
+
+For application users, [Reading Reports](READING_REPORTS.md) explains status,
+revision, coverage checks, actual warnings, analysis scope and manual verification.
+
+The [120-repository matrix](HUNDRED_MODEL_BENCHMARK.md) describes cross-family
+validation and its limits. [Family reconstruction strategies](MODEL_FAMILY_STRATEGIES.md)
+sets separate acceptance gates for native models, diffusion, audio/video, RL,
+adapters and GGUF.
+[Backend reliability](BACKEND_RELIABILITY.md) records the current measured gap,
+the stepwise acceptance approach and the next reconstruction gate.
+[Teammate handoff](TEAMMATE_HANDOFF.md) contains review dependencies, reproduction
+commands and the next bounded backend task.
+[Dtype evidence](DTYPE_EVIDENCE.md) describes the supported value-specific source
+facts and the limits of native input profiles.
+[Top integration validation](TOP_INTEGRATION_2026-10-23.md) records the combined
+branch, live catalog count and final checks.
+
+[UI redesign](UI_REDESIGN.md) documents the application flow, design system,
+responsive workspace and validation requirements. Its annotated
+[wireframes](design/workspace-wireframes.svg) describe desktop and mobile layouts.

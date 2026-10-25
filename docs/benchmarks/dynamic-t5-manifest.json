@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "purpose": "Pinned T5 mask/cast fact rechecks, shared cast control, and unchanged canonical text controls. No payload loads or forward execution.",
+  "cases": [
+    {
+      "model_id": "HuggingFaceTB/SmolLM2-135M",
+      "category": "causal-lm",
+      "revision": "93efa2f097d58c2a74874c7e644dbc9b0cee75a2"
+    },
+    {
+      "model_id": "openai-community/gpt2",
+      "category": "causal-lm",
+      "revision": "607a30d783dfa663caf39e06633721c8d4cfcd7e"
+    },
+    {
+      "model_id": "google-t5/t5-small",
+      "category": "seq2seq",
+      "revision": "df1b051c49625cf57a3d0d8d3863ed4d13564fe4"
+    },
+    {
+      "model_id": "google/flan-t5-small",
+      "category": "seq2seq-instruct",
+      "revision": "0fc9ddf78a1e988dac52e2dac162b0ede4fd74ab"
+    },
+    {
+      "model_id": "openai/whisper-tiny",
+      "category": "speech-recognition",
+      "revision": "169d4a4341b33bc18d8881c4b69c2e104e1cc0af"
+    },
+    {
+      "model_id": "google-t5/t5-base",
+      "category": "translation",
+      "revision": "a9723ea7f1b39c1eae772870f3b547bf6ef7e6c1"
+    },
+    {
+      "model_id": "amazon/chronos-t5-small",
+      "category": "time-series-forecasting",
+      "revision": "a971ba21945c4f1796b17a91fe69214b5f4ad472"
+    }
+  ]
+}

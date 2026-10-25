@@ -1,0 +1,620 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-10-20T00:29:35.769651+00:00",
+  "manifest": "docs/benchmarks/model-matrix-250-recheck-manifest.json",
+  "record_file": "Raw diagnostics retained locally; excluded from the portable evidence.",
+  "cases": 8,
+  "status_counts": {
+    "completed": 1,
+    "partial": 5,
+    "inspected": 2
+  },
+  "environment": {
+    "python": "3.11.4",
+    "platform": "Windows-10-10.0.26300-SP0",
+    "engine_version": "2026.10.20.2",
+    "runner_sha256": "4fbf82bc7a52b1a35b5bca526e2d9b7c4073feb09bda4a96a2ac266252f9c034",
+    "engine_source_sha256": "c40feb354f398f683d4b25d7ba25681c36d20781274cb31e5f5dc975138ad6fe",
+    "engine_source_root": "backend/model_anatomy",
+    "dependencies": {
+      "torch": "2.14.1+cpu",
+      "transformers": "4.57.6",
+      "safetensors": "0.8.0",
+      "requests": "2.34.2",
+      "huggingface-hub": "0.36.2",
+      "pydantic": "2.13.5",
+      "psutil": "7.2.2"
+    },
+    "workers": 1,
+    "wall_timeout_seconds": 120,
+    "process_tree_rss_limit_bytes": 4294967296,
+    "rss_sampling_interval_ms": 50,
+    "weight_payload_loading_enabled": false,
+    "forward_execution_enabled": false
+  },
+  "observed_invariants": {
+    "zero_weight_payload_bytes": {
+      "value": true,
+      "observed_cases": 8,
+      "total_cases": 8
+    },
+    "forward_not_executed": {
+      "value": true,
+      "observed_cases": 8,
+      "total_cases": 8
+    }
+  },
+  "results": [
+    {
+      "architecture": "LlamaForCausalLM",
+      "artifact_inspection_schema": {
+        "error_count": 0,
+        "kind": "architecture",
+        "valid": true
+      },
+      "case_identity": "a3e4e27b009e3ff7f8a452e798748fb6b4c46f2d2160c2235ebf087fe6efbec8",
+      "category": "causal-lm",
+      "coverage": {
+        "checkpoint_parameter_coverage": 1.0,
+        "module_semantic_coverage": 1.0,
+        "semantic_coverage": 1.0,
+        "tensor_shape_coverage": 1.0
+      },
+      "edge_count": 58,
+      "elapsed_seconds": 37.016,
+      "engine_source_sha256": "c40feb354f398f683d4b25d7ba25681c36d20781274cb31e5f5dc975138ad6fe",
+      "engine_version": "2026.10.20.2",
+      "finished_at": "2026-10-20T00:24:06.707200+00:00",
+      "forward_executed": false,
+      "graph_count": 6,
+      "graph_validation": {
+        "count": 6,
+        "errors_count": 0,
+        "node_inspection": {
+          "graph_id": "overview",
+          "node_id": "embed_tokens",
+          "tensor_count": 1
+        },
+        "valid": true
+      },
+      "inspection_only": false,
+      "model_id": "HuggingFaceTB/SmolLM2-135M",
+      "node_count": 50,
+      "parameter_counts": {
+        "checkpoint_tensor_elements": 134515008,
+        "logical": 162826560,
+        "unique": 134515008
+      },
+      "peak_process_tree_rss_bytes": 333328384,
+      "public_graph_schema": {
+        "errors_count": 0,
+        "graphs": 6,
+        "valid": true
+      },
+      "report_roundtrip": {
+        "errors_count": 0,
+        "schema_version": "1.1",
+        "valid": true
+      },
+      "resumed": true,
+      "revision": "93efa2f097d58c2a74874c7e644dbc9b0cee75a2",
+      "runner_sha256": "4fbf82bc7a52b1a35b5bca526e2d9b7c4073feb09bda4a96a2ac266252f9c034",
+      "serialized_report_bytes": 1113521,
+      "service_contract_valid": true,
+      "service_storage_limit_bytes": 33554432,
+      "started_at": "2026-10-20T00:23:24.742996+00:00",
+      "status": "completed",
+      "storage_contract_valid": true,
+      "tensor_count": 272,
+      "wall_seconds": 41.941,
+      "warning_count": 0,
+      "weight_payload_bytes_read": 0,
+      "zero_weight_payload_bytes": true,
+      "reason_codes": [],
+      "diagnostic_notes": []
+    },
+    {
+      "architecture": "SegformerForSemanticSegmentation",
+      "artifact_inspection_schema": {
+        "error_count": 0,
+        "kind": "architecture",
+        "valid": true
+      },
+      "case_identity": "5fc6eb6b8b7681385254ba0110b211873c4e38b4a3543e3870d9b735b96e7483",
+      "category": "image-segmentation",
+      "coverage": {
+        "checkpoint_parameter_coverage": 1.0,
+        "module_semantic_coverage": 0.7934272300469484,
+        "semantic_coverage": 0.8722466960352423,
+        "tensor_shape_coverage": 0.49056603773584906
+      },
+      "edge_count": 335,
+      "elapsed_seconds": 45.108,
+      "engine_source_sha256": "c40feb354f398f683d4b25d7ba25681c36d20781274cb31e5f5dc975138ad6fe",
+      "engine_version": "2026.10.20.2",
+      "finished_at": "2026-10-20T00:24:59.846829+00:00",
+      "forward_executed": false,
+      "graph_count": 55,
+      "graph_validation": {
+        "count": 55,
+        "errors_count": 0,
+        "node_inspection": {
+          "graph_id": "overview",
+          "node_id": "segformer",
+          "tensor_count": 192
+        },
+        "valid": true
+      },
+      "inspection_only": false,
+      "model_id": "nvidia/segformer-b0-finetuned-ade-512-512",
+      "node_count": 334,
+      "parameter_counts": {
+        "checkpoint_tensor_elements": 3753207,
+        "logical": 3752694,
+        "unique": 3752694
+      },
+      "peak_process_tree_rss_bytes": 340271104,
+      "public_graph_schema": {
+        "errors_count": 0,
+        "graphs": 55,
+        "valid": true
+      },
+      "report_roundtrip": {
+        "errors_count": 0,
+        "schema_version": "1.1",
+        "valid": true
+      },
+      "resumed": true,
+      "revision": "489d5cd81a0b59fab9b7ea758d3548ebe99677da",
+      "runner_sha256": "4fbf82bc7a52b1a35b5bca526e2d9b7c4073feb09bda4a96a2ac266252f9c034",
+      "serialized_report_bytes": 2912338,
+      "service_contract_valid": true,
+      "service_storage_limit_bytes": 33554432,
+      "started_at": "2026-10-20T00:24:06.717318+00:00",
+      "status": "partial",
+      "storage_contract_valid": true,
+      "tensor_count": 208,
+      "wall_seconds": 53.127,
+      "warning_count": 2,
+      "weight_payload_bytes_read": 0,
+      "zero_weight_payload_bytes": true,
+      "reason_codes": [
+        "coverage_not_complete"
+      ],
+      "diagnostic_notes": [
+        "The recorded static coverage is incomplete.",
+        "Static-analysis warnings were recorded. Run a pinned inspection for full diagnostics."
+      ]
+    },
+    {
+      "architecture": null,
+      "artifact_inspection_schema": {
+        "error_count": 0,
+        "kind": "artifact_inspection",
+        "valid": true
+      },
+      "case_identity": "7a2644788df1a231093efc97f1f50eeffc840345fd99c3abe44218ba6dd9d37e",
+      "category": "image-text-embedding",
+      "coverage": {
+        "checkpoint_parameter_coverage": null,
+        "module_semantic_coverage": null,
+        "semantic_coverage": null,
+        "tensor_shape_coverage": null
+      },
+      "edge_count": 0,
+      "elapsed_seconds": 27.389,
+      "engine_source_sha256": "c40feb354f398f683d4b25d7ba25681c36d20781274cb31e5f5dc975138ad6fe",
+      "engine_version": "2026.10.20.2",
+      "finished_at": "2026-10-20T00:25:34.860151+00:00",
+      "forward_executed": false,
+      "graph_count": 0,
+      "graph_validation": {
+        "count": 0,
+        "errors_count": 0,
+        "valid": true
+      },
+      "inspection_only": true,
+      "model_id": "openai/clip-vit-base-patch32",
+      "node_count": 0,
+      "parameter_counts": {
+        "checkpoint_tensor_elements": null,
+        "logical": null,
+        "unique": null
+      },
+      "peak_process_tree_rss_bytes": 279687168,
+      "public_graph_schema": {
+        "errors_count": 0,
+        "graphs": 0,
+        "valid": true
+      },
+      "report_roundtrip": {
+        "errors_count": 0,
+        "schema_version": "1.1",
+        "valid": true
+      },
+      "resumed": true,
+      "revision": "3d74acf9a28c67741b2f4f2ea7635f0aaf6f0268",
+      "runner_sha256": "4fbf82bc7a52b1a35b5bca526e2d9b7c4073feb09bda4a96a2ac266252f9c034",
+      "serialized_report_bytes": 9079,
+      "service_contract_valid": true,
+      "service_storage_limit_bytes": 33554432,
+      "started_at": "2026-10-20T00:24:59.850861+00:00",
+      "status": "inspected",
+      "storage_contract_valid": true,
+      "tensor_count": 0,
+      "wall_seconds": 35.008,
+      "warning_count": 0,
+      "weight_payload_bytes_read": 0,
+      "zero_weight_payload_bytes": true,
+      "reason_codes": [
+        "safetensors_unavailable",
+        "coverage_not_complete"
+      ],
+      "diagnostic_notes": [
+        "This repository has no Safetensors checkpoint. Only the pinned repository file inventory is available; no architecture graph was inferred.",
+        "The recorded static coverage is incomplete."
+      ]
+    },
+    {
+      "architecture": "ClapModel",
+      "artifact_inspection_schema": {
+        "error_count": 0,
+        "kind": "architecture",
+        "valid": true
+      },
+      "case_identity": "81cf240776c4c1c1ba89bc0fd68b01b32ddb657e04d68a69fb3c32267cf85622",
+      "category": "audio-classification",
+      "coverage": {
+        "checkpoint_parameter_coverage": 1.0,
+        "module_semantic_coverage": 0.9329388560157791,
+        "semantic_coverage": 0.926829268292683,
+        "tensor_shape_coverage": 0.8608923884514436
+      },
+      "edge_count": 381,
+      "elapsed_seconds": 36.947,
+      "engine_source_sha256": "c40feb354f398f683d4b25d7ba25681c36d20781274cb31e5f5dc975138ad6fe",
+      "engine_version": "2026.10.20.2",
+      "finished_at": "2026-10-20T00:26:17.363922+00:00",
+      "forward_executed": false,
+      "graph_count": 61,
+      "graph_validation": {
+        "count": 61,
+        "errors_count": 0,
+        "node_inspection": {
+          "graph_id": "overview",
+          "node_id": "audio_model",
+          "tensor_count": 239
+        },
+        "valid": true
+      },
+      "inspection_only": false,
+      "model_id": "laion/clap-htsat-fused",
+      "node_count": 370,
+      "parameter_counts": {
+        "checkpoint_tensor_elements": 153558323,
+        "logical": 153507530,
+        "unique": 153507530
+      },
+      "peak_process_tree_rss_bytes": 347934720,
+      "public_graph_schema": {
+        "errors_count": 0,
+        "graphs": 61,
+        "valid": true
+      },
+      "report_roundtrip": {
+        "errors_count": 0,
+        "schema_version": "1.1",
+        "valid": true
+      },
+      "resumed": true,
+      "revision": "365dea6ef167def6676140ed93bbc43f84dabb28",
+      "runner_sha256": "4fbf82bc7a52b1a35b5bca526e2d9b7c4073feb09bda4a96a2ac266252f9c034",
+      "serialized_report_bytes": 4176276,
+      "service_contract_valid": true,
+      "service_storage_limit_bytes": 33554432,
+      "started_at": "2026-10-20T00:25:34.863686+00:00",
+      "status": "partial",
+      "storage_contract_valid": true,
+      "tensor_count": 477,
+      "wall_seconds": 42.496,
+      "warning_count": 41,
+      "weight_payload_bytes_read": 0,
+      "zero_weight_payload_bytes": true,
+      "reason_codes": [
+        "coverage_not_complete"
+      ],
+      "diagnostic_notes": [
+        "The recorded static coverage is incomplete.",
+        "Static-analysis warnings were recorded. Run a pinned inspection for full diagnostics."
+      ]
+    },
+    {
+      "architecture": "CLIPModel",
+      "artifact_inspection_schema": {
+        "error_count": 0,
+        "kind": "architecture",
+        "valid": true
+      },
+      "case_identity": "fdd6ff96454e88de69a3d30cb3daa2ef8c5b8c759f621c97656867a5f4dd0d6a",
+      "category": "zero-shot-image-classification",
+      "coverage": {
+        "checkpoint_parameter_coverage": 1.0,
+        "module_semantic_coverage": 0.9933333333333333,
+        "semantic_coverage": 0.9605263157894737,
+        "tensor_shape_coverage": 0.5966386554621849
+      },
+      "edge_count": 119,
+      "elapsed_seconds": 37.719,
+      "engine_source_sha256": "c40feb354f398f683d4b25d7ba25681c36d20781274cb31e5f5dc975138ad6fe",
+      "engine_version": "2026.10.20.2",
+      "finished_at": "2026-10-20T00:26:59.803982+00:00",
+      "forward_executed": false,
+      "graph_count": 17,
+      "graph_validation": {
+        "count": 17,
+        "errors_count": 0,
+        "node_inspection": {
+          "graph_id": "overview",
+          "node_id": "vision_model",
+          "tensor_count": 391
+        },
+        "valid": true
+      },
+      "inspection_only": false,
+      "model_id": "openai/clip-vit-large-patch14",
+      "node_count": 111,
+      "parameter_counts": {
+        "checkpoint_tensor_elements": 427616847,
+        "logical": 427616513,
+        "unique": 427616513
+      },
+      "peak_process_tree_rss_bytes": 341434368,
+      "public_graph_schema": {
+        "errors_count": 0,
+        "graphs": 17,
+        "valid": true
+      },
+      "report_roundtrip": {
+        "errors_count": 0,
+        "schema_version": "1.1",
+        "valid": true
+      },
+      "resumed": true,
+      "revision": "32bd64288804d66eefd0ccbe215aa642df71cc41",
+      "runner_sha256": "4fbf82bc7a52b1a35b5bca526e2d9b7c4073feb09bda4a96a2ac266252f9c034",
+      "serialized_report_bytes": 2361077,
+      "service_contract_valid": true,
+      "service_storage_limit_bytes": 33554432,
+      "started_at": "2026-10-20T00:26:17.378686+00:00",
+      "status": "partial",
+      "storage_contract_valid": true,
+      "tensor_count": 592,
+      "wall_seconds": 42.421,
+      "warning_count": 4,
+      "weight_payload_bytes_read": 0,
+      "zero_weight_payload_bytes": true,
+      "reason_codes": [
+        "coverage_not_complete"
+      ],
+      "diagnostic_notes": [
+        "The recorded static coverage is incomplete.",
+        "Static-analysis warnings were recorded. Run a pinned inspection for full diagnostics."
+      ]
+    },
+    {
+      "architecture": "XCLIPModel",
+      "artifact_inspection_schema": {
+        "error_count": 0,
+        "kind": "architecture",
+        "valid": true
+      },
+      "case_identity": "658c537640338e65a2d84809315561236a1982aaa0bebf21a07321d523b16863",
+      "category": "video-classification",
+      "coverage": {
+        "checkpoint_parameter_coverage": 1.0,
+        "module_semantic_coverage": 0.9844789356984479,
+        "semantic_coverage": 0.9636363636363636,
+        "tensor_shape_coverage": 0.62109375
+      },
+      "edge_count": 256,
+      "elapsed_seconds": 51.208,
+      "engine_source_sha256": "c40feb354f398f683d4b25d7ba25681c36d20781274cb31e5f5dc975138ad6fe",
+      "engine_version": "2026.10.20.2",
+      "finished_at": "2026-10-20T00:27:55.788124+00:00",
+      "forward_executed": false,
+      "graph_count": 34,
+      "graph_validation": {
+        "count": 34,
+        "errors_count": 0,
+        "node_inspection": {
+          "graph_id": "overview",
+          "node_id": "vision_model",
+          "tensor_count": 343
+        },
+        "valid": true
+      },
+      "inspection_only": false,
+      "model_id": "microsoft/xclip-base-patch16-zero-shot",
+      "node_count": 234,
+      "parameter_counts": {
+        "checkpoint_tensor_elements": 194941715,
+        "logical": 194941441,
+        "unique": 194941441
+      },
+      "peak_process_tree_rss_bytes": 343711744,
+      "public_graph_schema": {
+        "errors_count": 0,
+        "graphs": 34,
+        "valid": true
+      },
+      "report_roundtrip": {
+        "errors_count": 0,
+        "schema_version": "1.1",
+        "valid": true
+      },
+      "resumed": true,
+      "revision": "6746d6a5202bf24300cd9bf36f457f174483d41b",
+      "runner_sha256": "4fbf82bc7a52b1a35b5bca526e2d9b7c4073feb09bda4a96a2ac266252f9c034",
+      "serialized_report_bytes": 2990571,
+      "service_contract_valid": true,
+      "service_storage_limit_bytes": 33554432,
+      "started_at": "2026-10-20T00:26:59.810640+00:00",
+      "status": "partial",
+      "storage_contract_valid": true,
+      "tensor_count": 593,
+      "wall_seconds": 55.972,
+      "warning_count": 7,
+      "weight_payload_bytes_read": 0,
+      "zero_weight_payload_bytes": true,
+      "reason_codes": [
+        "coverage_not_complete"
+      ],
+      "diagnostic_notes": [
+        "The recorded static coverage is incomplete.",
+        "Static-analysis warnings were recorded. Run a pinned inspection for full diagnostics."
+      ]
+    },
+    {
+      "architecture": "CLIPModel",
+      "artifact_inspection_schema": {
+        "error_count": 0,
+        "kind": "architecture",
+        "valid": true
+      },
+      "case_identity": "dc7e8e8eeeb2e29dc7191d7615e39193d81773a0adb625588d483110937a0fd5",
+      "category": "zero-shot-image-classification",
+      "coverage": {
+        "checkpoint_parameter_coverage": 1.0,
+        "module_semantic_coverage": 0.9901960784313726,
+        "semantic_coverage": 0.9605263157894737,
+        "tensor_shape_coverage": 0.5966386554621849
+      },
+      "edge_count": 119,
+      "elapsed_seconds": 33.594,
+      "engine_source_sha256": "c40feb354f398f683d4b25d7ba25681c36d20781274cb31e5f5dc975138ad6fe",
+      "engine_version": "2026.10.20.2",
+      "finished_at": "2026-10-20T00:28:39.566668+00:00",
+      "forward_executed": false,
+      "graph_count": 17,
+      "graph_validation": {
+        "count": 17,
+        "errors_count": 0,
+        "node_inspection": {
+          "graph_id": "overview",
+          "node_id": "vision_model",
+          "tensor_count": 199
+        },
+        "valid": true
+      },
+      "inspection_only": false,
+      "model_id": "laion/CLIP-ViT-B-32-laion2B-s34B-b79K",
+      "node_count": 111,
+      "parameter_counts": {
+        "checkpoint_tensor_elements": 151277440,
+        "logical": 151277313,
+        "unique": 151277313
+      },
+      "peak_process_tree_rss_bytes": 336744448,
+      "public_graph_schema": {
+        "errors_count": 0,
+        "graphs": 17,
+        "valid": true
+      },
+      "report_roundtrip": {
+        "errors_count": 0,
+        "schema_version": "1.1",
+        "valid": true
+      },
+      "resumed": true,
+      "revision": "1a25a446712ba5ee05982a381eed697ef9b435cf",
+      "runner_sha256": "4fbf82bc7a52b1a35b5bca526e2d9b7c4073feb09bda4a96a2ac266252f9c034",
+      "serialized_report_bytes": 1761132,
+      "service_contract_valid": true,
+      "service_storage_limit_bytes": 33554432,
+      "started_at": "2026-10-20T00:27:55.791656+00:00",
+      "status": "partial",
+      "storage_contract_valid": true,
+      "tensor_count": 400,
+      "wall_seconds": 43.773,
+      "warning_count": 4,
+      "weight_payload_bytes_read": 0,
+      "zero_weight_payload_bytes": true,
+      "reason_codes": [
+        "coverage_not_complete"
+      ],
+      "diagnostic_notes": [
+        "The recorded static coverage is incomplete.",
+        "Static-analysis warnings were recorded. Run a pinned inspection for full diagnostics."
+      ]
+    },
+    {
+      "model_id": "openai/clip-vit-large-patch14-336",
+      "category": "zero-shot-image-classification",
+      "revision": "ce19dc912ca5cd21c8a653c79e251e808ccabcd1",
+      "engine_version": "2026.10.20.2",
+      "status": "inspected",
+      "architecture": null,
+      "inspection_only": true,
+      "coverage": {
+        "semantic_coverage": null,
+        "module_semantic_coverage": null,
+        "checkpoint_parameter_coverage": null,
+        "tensor_shape_coverage": null
+      },
+      "warning_count": 0,
+      "graph_count": 0,
+      "node_count": 0,
+      "edge_count": 0,
+      "tensor_count": 0,
+      "serialized_report_bytes": 9661,
+      "service_storage_limit_bytes": 33554432,
+      "storage_contract_valid": true,
+      "service_contract_valid": true,
+      "parameter_counts": {
+        "unique": null,
+        "logical": null,
+        "checkpoint_tensor_elements": null
+      },
+      "weight_payload_bytes_read": 0,
+      "zero_weight_payload_bytes": true,
+      "forward_executed": false,
+      "report_roundtrip": {
+        "valid": true,
+        "schema_version": "1.1",
+        "errors_count": 0
+      },
+      "graph_validation": {
+        "count": 0,
+        "errors_count": 0,
+        "valid": true
+      },
+      "public_graph_schema": {
+        "graphs": 0,
+        "errors_count": 0,
+        "valid": true
+      },
+      "artifact_inspection_schema": {
+        "valid": true,
+        "error_count": 0,
+        "kind": "artifact_inspection"
+      },
+      "elapsed_seconds": 23.181,
+      "runner_sha256": "4fbf82bc7a52b1a35b5bca526e2d9b7c4073feb09bda4a96a2ac266252f9c034",
+      "peak_process_tree_rss_bytes": 278974464,
+      "wall_seconds": 27.253,
+      "case_identity": "79996f27541396f4b64a881cf76d5cb42313488bb8bb9f12032da5fc75e60ab7",
+      "engine_source_sha256": "c40feb354f398f683d4b25d7ba25681c36d20781274cb31e5f5dc975138ad6fe",
+      "started_at": "2026-10-20T00:29:08.484699+00:00",
+      "finished_at": "2026-10-20T00:29:35.755263+00:00",
+      "resumed": false,
+      "reason_codes": [
+        "safetensors_unavailable",
+        "coverage_not_complete"
+      ],
+      "diagnostic_notes": [
+        "This repository has no Safetensors checkpoint. Only the pinned repository file inventory is available; no architecture graph was inferred.",
+        "The recorded static coverage is incomplete."
+      ]
+    }
+  ]
+}

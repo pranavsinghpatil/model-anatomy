@@ -1,0 +1,39 @@
+{
+  "model_id": "EleutherAI/pythia-70m-deduped",
+  "revision": "e93a9faa9c77e5d09219f6c868bfc7a1bd65593c",
+  "result_status": "partial",
+  "stored_report_id": "16a4a1cfbd25b66ddfdad8cf7ea5885d4857f529051eda85b93b9100aabcc3ef",
+  "graph_count": 5,
+  "tensor_count": 94,
+  "unique_parameters": 70426624,
+  "absent_before": true,
+  "automatically_saved": true,
+  "automatic_visible_refresh": true,
+  "exact_cached_revisit": true,
+  "separate_visitor_revisit": true,
+  "visitor_history_isolated": true,
+  "fits_320px": true,
+  "gated_model": "meta-llama/Llama-3.2-3B",
+  "gated_revision": "13afe5124825b4f3751f836b40dafda64c1ed062",
+  "gated_outcome": "artifact_error",
+  "failed_pin_preserved": true,
+  "failed_metrics_unknown": true,
+  "all_250_benchmark_models_preserved": true,
+  "discovery_total": 255,
+  "status_counts": {
+    "artifact_error": 2,
+    "partial": 88,
+    "completed": 19,
+    "inspected": 142,
+    "http_access": 4
+  },
+  "failure_survives_api_restart": true,
+  "historical_reports_enriched": 398,
+  "historical_report_ids_digests_pins_statuses_timestamps_preserved": true,
+  "migration_head": "0004_inspection_failures",
+  "failure_table_rls_enabled": true,
+  "browser_role_select_denied": [
+    "anon",
+    "authenticated"
+  ]
+}

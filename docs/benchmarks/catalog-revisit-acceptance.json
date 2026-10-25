@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "validated_at": "2026-10-21T12:08:58.075516+00:00",
+  "method": "Live app UI/API inspection and saved-report revisit; not an inference-quality benchmark.",
+  "live": {
+    "model_id": "HuggingFaceTB/SmolLM2-1.7B",
+    "revision": "effd688a12921b4cc83e3312b6feb579f70f9c71",
+    "absent_before": true,
+    "status": "completed",
+    "cached_on_first_validation": false,
+    "saved_automatically_in_supabase": true,
+    "appeared_without_manual_refresh": true,
+    "newest_first": true,
+    "survives_reload": true,
+    "exact_cached_revisit": true,
+    "separate_visitor_revisit": true,
+    "original_analysis_isolated": true,
+    "fits_320px": true,
+    "stored_report_id": "22143e9939da3fb452f93b64b5d20f3d4f16a90fbc0a588f443658a54d1e6819"
+  },
+  "checks": {
+    "backend_api_tests_passed": 74,
+    "saved_catalog_browser_tests_passed": 12,
+    "benchmark_browser_checks_passed": 32,
+    "frontend_build_passed": true,
+    "database_storage_worker_healthy": true
+  }
+}

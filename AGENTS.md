@@ -17,6 +17,7 @@ Build Model Anatomy as a serious engineering project, not a collection of discon
 9. Unsupported/custom models fail honestly.
 10. Keep documentation aligned with implementation.
 11. Every work update states: done, evidence, blocked, next.
+12. Start substantial changes on a new topic branch and open a PR. Bundle related minor fixes into that increment instead of opening a PR for every small correction.
 
 ## Current build order
 HF model → artifact resolver → config / AutoConfig → instantiated nn.Module → module tree + graph tracing where possible → Safetensors metadata → Raw Architecture IR → Semantic Architecture IR → interactive graph → tensor / parameter inspection → Model Autopsy
@@ -35,6 +36,34 @@ HF model → artifact resolver → config / AutoConfig → instantiated nn.Modul
 - Explicit evidence/provenance
 - Prefer metadata inspection before full weight loading
 - Never commit model weights, credentials, or secrets
+
+## Reproducible build and test setup
+
+Use the same setup as `.github/workflows/quality.yml`, from the repository root:
+
+```sh
+uv sync --frozen --extra api --extra engine --extra dev
+uv run --no-sync pytest -q
+uv run --no-sync ruff check backend scripts infra
+npm ci --prefix frontend
+npm run build --prefix frontend
+npm run format:check --prefix frontend
+cd frontend
+npx playwright install --with-deps chromium
+npm run test:e2e -- --workers=2
+```
+
+Python tests need the API extras even when reviewing an engine-only change.
+`frontend/e2e/*.spec.ts` are Playwright browser tests: run them with Playwright
+from `frontend`, not `node --test` or `tsx --test`. The Playwright configuration
+starts the loopback Vite server. The live HTTP/model specs require the separate
+API and worker setup documented in `frontend/README.md`; they skip explicitly
+without it. Do not replace live acceptance with a prepared-report fallback.
+
+`model_anatomy` is this repository's first-party Python package, discovered from
+`backend` by setuptools in `pyproject.toml`. Its internal imports do not require
+a separate PyPI package. If installation fails before collection, report the
+setup failure separately from an executed test failure.
 
 ## Definition of done
 A change is done only when:
