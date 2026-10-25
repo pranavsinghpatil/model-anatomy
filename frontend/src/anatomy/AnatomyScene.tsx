@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ArrowLeft,
   ArrowRight,
@@ -49,22 +49,25 @@ export function AnatomyScene({
   evidence: (node: GraphNode) => void;
   technical: () => void;
 }) {
-  const assembly = useMemo(
-    () => buildAssembly(graph, selected?.id),
-    [graph, selected?.id],
-  );
+  const [page, setPage] = useState(0);
+  const pages = Math.max(1, Math.ceil(graph.nodes.length / 24));
+  const currentPage = Math.min(page, pages - 1);
   useEffect(() => {
-    if (!selected && assembly.stations.length)
-      focus(
-        (
-          assembly.stations.find((station) => station.node.repeat > 1) ??
-          assembly.stations.find(
-            (station) => station.node.kind === "embedding",
-          ) ??
-          assembly.stations[0]
-        ).node,
-      );
-  }, [assembly, selected, focus]);
+    setPage(0);
+  }, [graph.id]);
+  useEffect(() => {
+    const index = graph.nodes.findIndex((node) => node.id === selected?.id);
+    if (index >= 0) setPage(Math.floor(index / 24));
+  }, [graph.id, selected?.id]);
+  function turnPage(next: number) {
+    setPage(next);
+    const node = graph.nodes[next * 24];
+    if (node) focus(node);
+  }
+  const assembly = useMemo(
+    () => buildAssembly(graph, selected?.id, currentPage),
+    [graph, selected?.id, currentPage],
+  );
   const patch = (update: Partial<AnatomyView>) =>
     onView({ ...view, ...update });
   const current = selected ?? assembly.stations[0]?.node;
@@ -165,6 +168,30 @@ export function AnatomyScene({
           reported relationships
         </span>
       </div>
+      {pages > 1 && (
+        <nav
+          className="anatomy-pagination"
+          aria-label="Illustration component pages"
+        >
+          <Button
+            disabled={currentPage === 0}
+            onClick={() => turnPage(currentPage - 1)}
+          >
+            Previous components
+          </Button>
+          <span aria-live="polite">
+            Page {currentPage + 1} of {pages} · components{" "}
+            {currentPage * 24 + 1}–
+            {Math.min((currentPage + 1) * 24, graph.nodes.length)}
+          </span>
+          <Button
+            disabled={currentPage + 1 >= pages}
+            onClick={() => turnPage(currentPage + 1)}
+          >
+            Next components
+          </Button>
+        </nav>
+      )}
       <AssemblyDrawing
         assembly={assembly}
         view={view}
@@ -218,10 +245,12 @@ export function AnatomyScene({
                     : count(current.parameter_count, true)}
                 </dd>
               </div>
-              <div>
-                <dt>First output shape</dt>
-                <dd>{shape(current.outputs[0]?.shape ?? null)}</dd>
-              </div>
+              {current.outputs[0]?.shape != null && (
+                <div>
+                  <dt>First output shape</dt>
+                  <dd>{shape(current.outputs[0]?.shape ?? null)}</dd>
+                </div>
+              )}
             </dl>
           </div>
           <div className="anatomy-part-actions">
@@ -243,7 +272,7 @@ export function AnatomyScene({
         <span>
           Illustrative geometry, not model hardware or a runtime simulation.
           Links retain the reported dependency type, not runtime tensor flow.
-          Repeated structures use a bounded representative sample.
+          Each page displays up to 24 actual components.
         </span>
         <Button variant="ghost" onClick={technical}>
           Technical graph <ArrowRight size={13} />
@@ -257,14 +286,15 @@ export function AnatomyScene({
       )}
       {assembly.omitted > 0 && (
         <p className="anatomy-boundary">
-          {assembly.omitted} further components are available in the Components
-          list and technical graph.
+          {assembly.omitted} components are outside this illustration page. Use
+          component pages, the Components tree, or the technical graph to
+          inspect them.
         </p>
       )}
       {analysis.status === "partial" && (
         <p className="anatomy-boundary">
-          This reconstruction is partial. Unknown roles and shapes remain
-          unknown; the Report view contains its recorded findings.
+          Some architecture checks remain incomplete. Open the Report view for
+          the recorded reasons. Activation shapes are outside these checks.
         </p>
       )}
     </section>

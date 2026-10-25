@@ -6,6 +6,8 @@ import pytest
 from fastapi.testclient import TestClient
 
 from model_anatomy.api.app import create_app
+from test_service_views import contract_report
+
 from model_anatomy.api.settings import Settings
 from model_anatomy.service.errors import ServiceError
 from model_anatomy.service.jobs import JobService, model_reference, request_selector
@@ -61,7 +63,7 @@ def test_pinned_catalog_flow_resolves_and_caches_exact_commit(tmp_path):
     service.initialize()
     service.acquire_worker("worker")
     guest, _ = service.guest(None)
-    ir = load_ir((Path(__file__).resolve().parent / "fixtures/gpt2-report.json").read_bytes())
+    ir = load_ir(contract_report().to_json().encode())
     revision = ir.metadata["revision"]
     url = f"https://huggingface.co/{ir.model_id}/tree/{revision}"
     resolved = []

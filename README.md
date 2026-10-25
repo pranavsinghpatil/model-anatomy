@@ -10,7 +10,12 @@ Model Anatomy lets an engineer understand a specific checkpoint without manually
 model ID / URL → artifact inventory → Raw IR → Semantic IR → graph → inspection
 ```
 
-The first release proves that path for one decoder-only Transformer. A node must lead to its module path, tensors, dimensions, parameter ownership, and the evidence that established it. Model Autopsy is a later layer built on this representation.
+The explorer follows the registered module hierarchy from a model overview down
+to basic modules such as Linear, Embedding, LayerNorm, Activation, Conv and
+Dropout. Basic modules are the expansion boundary. Nodes expose recorded module
+attributes, checkpoint tensor metadata, parameter ownership and evidence.
+Intermediate expressions such as individual `log` or `exp` operations are outside
+this architecture view. Model Autopsy is a later layer built on this representation.
 
 ## Current state
 
@@ -26,6 +31,13 @@ The application includes durable anonymous analyses, a separate inspection worke
 an interactive nested graph and tensor inspector, exports, and an evidence-bound
 Nemotron explanation integration. Hosted operation still requires cloud setup
 and deployment verification; configured integration is not live inference evidence.
+
+The frontend provides a lazy model tree, search across the model hierarchy,
+nested graph/node links that survive refresh, per-graph view restoration, and
+Graph and Anatomy presentations. Anatomy pages through all components in groups
+of 24. Dependency and conditional-dependency edges retain backend evidence; they
+do not establish runtime tensor flow. See the [frontend README](frontend/README.md)
+for navigation, inspection and API integration details.
 
 Repositories whose architecture cannot be reconstructed can return a distinct
 **Artifacts inspected** result with pinned files and verified tensor headers,
@@ -44,89 +56,145 @@ pipelines require component selection. See
 
 ## Inspect a model
 
-```powershell
-uv sync --frozen --extra engine --extra api --extra dev
+Run from the project root:
+
+```bash
+uv sync --frozen --extra engine
 uv run --no-sync model-anatomy openai-community/gpt2 --inspect
 ```
 
-The command produces a model report, nested Mermaid diagrams, diagnostics,
-artifact audit, and Markdown preview. Use `--revision` to pin the model and
-`--preview-dir` to isolate previews. Network access to Hugging Face is required.
+The CLI writes configuration to `config/<slug>/`, JSON and Mermaid graphs to
+`output/<slug>/`, and an English Markdown preview to `preview/`. It also prints
+the resolved revision, output paths and, with `--inspect`, diagnostics. See the
+[CLI README](backend/model_anatomy/src/README.md) for all arguments, filenames,
+completion rules and the optional `--artifacts` inspection mode.
 
-## Run the Application
+The architecture support target is anonymously readable, publisher-provided
+Safetensors checkpoints with a compatible installed native implementation.
+Repositories without Safetensors and models requiring private/gated access are
+outside that target. Fresh metadata inspection requires Hugging Face network
+access. Weight payload downloads and forward execution are disabled.
 
-```powershell
-uv sync --frozen --extra api --extra engine --extra dev
-uv run --no-sync uvicorn model_anatomy.api.app:create_app --factory --host 127.0.0.1 --port 8000 --no-access-log
+## Run the application
+
+Use three terminals for normal local development. Prerequisites are Python 3.11+,
+`uv`, and Node.js 20.19+ on the 20.x line or Node.js 22.12+.
+Run the Python commands from the project root.
+
+Install once, or when dependencies change:
+
+```bash
+uv sync --frozen --extra api --extra engine
+cd frontend
+npm ci
 ```
 
-Run the worker in a second terminal:
+Select only the extras needed by each environment. A CLI environment needs
+`engine`; an API-only environment needs `api`; a worker needs both. A shared
+local API/worker environment needs both extras as above. The `dev` extra is
+optional for development tools. Keep the required extras when synchronizing
+again: plain `uv sync` does not select them. API-only deployment does not require
+Torch. API and worker startup provide readable missing-dependency checks.
 
-```powershell
+**Terminal 1 — API**
+
+```bash
+uv run --no-sync model-anatomy-api
+```
+
+**Terminal 2 — worker**
+
+```bash
 uv run --no-sync python -m model_anatomy.service.worker
 ```
 
-Run the browser application in a third terminal:
+**Terminal 3 — frontend**
 
-```powershell
+```bash
 cd frontend
-npm ci
-$env:API_PROXY_TARGET = 'http://127.0.0.1:8000'
 npm run dev
 ```
 
-For manual testing with higher local quotas, stop the existing API, worker and frontend,
-then run `powershell -ExecutionPolicy Bypass -File scripts/start-local.ps1`.
-It starts the API, worker, and frontend in hidden windows, uses
-the existing `.local/app-v1` data, and writes logs beneath that directory. The
-local profile allows up to 100 jobs per visitor/hour, 500 jobs globally/day,
-100 AI questions per visitor/hour, and 500 AI questions globally/day. Each
-limit can be lowered or raised up to 1,000 with the script parameters. This
-does not change the normal 2/20 job and 10/100 AI defaults. The script refuses
-to reuse listeners on ports 8000/5173 or an active worker lease, since those processes would
-keep their current settings; it does not stop processes or clear quota records.
-The launcher defaults to API port 8000 and passes that address to the frontend
-proxy. Use `-ApiPort` to choose another local port.
+The API serves HTTP requests, visitor-owned analyses, saved reports and the job
+queue. The worker claims queued jobs, runs reconstruction in a separate child
+process, and stores the resulting report. Both use the same backend settings and
+database. One worker owns the execution lease; starting a second worker against
+the same local database is rejected.
 
-Open [the application](http://127.0.0.1:5173) or [API docs](http://127.0.0.1:8000/docs).
+Open [the application](http://127.0.0.1:5173) or [API docs](http://127.0.0.1:8001/docs).
 No sign-in is required. There are no prepared reports or demo endpoints: paste
-a model ID or URL to create a real analysis. New models require Hugging Face network access.
-`/health` checks the actual database, storage and worker and reports configured
-AI availability. HTTP 503 means new analyses are unavailable; stored reports
-remain inspectable when their database and storage are reachable. The app starts with your recent job or an empty workspace,
-not a fixed model. These commands bind only to loopback.
+a model ID or URL to create an analysis. Exact-revision caching may reuse a
+compatible saved report. `/health` checks the database, storage and worker and
+reports configured AI availability. HTTP 503 means new analyses are unavailable;
+stored reports remain inspectable when their database and storage are reachable.
+These commands bind only to loopback.
 
-Configuration uses `MODEL_ANATOMY_` environment variables. For example:
+### Persistent local configuration
 
-```powershell
-$env:MODEL_ANATOMY_PORT = '8000'
-$env:MODEL_ANATOMY_CORS_ORIGINS = '["http://localhost:5173"]'
-```
+Configuration files are optional. Missing files use defaults; existing process
+environment variables take precedence. To customize settings, copy
+`backend/.env.example` to `backend/.env` and `frontend/.env.example` to
+`frontend/.env` if those files do not already exist. Edit existing files when
+present. No temporary shell environment variables are required for normal use.
 
-Local defaults use SQLite and private local report objects under `.local/`.
+| File            | Setting                      | Default                               |
+| --------------- | ---------------------------- | ------------------------------------- |
+| `backend/.env`  | `MODEL_ANATOMY_PORT`         | `8001`                                |
+| `backend/.env`  | `MODEL_ANATOMY_DATA_DIR`     | `.local/model-anatomy`                |
+| `backend/.env`  | `MODEL_ANATOMY_CORS_ORIGINS` | Local frontend origins on port `5173` |
+| `frontend/.env` | `FRONTEND_PORT`              | `5173`                                |
+| `frontend/.env` | `API_PROXY_TARGET`           | `http://127.0.0.1:8001`               |
+
+If the API port changes, update `API_PROXY_TARGET` to match. If the frontend port
+changes, update backend allowed origins to match. Restart affected services
+after editing configuration. Backend credentials belong only in backend
+configuration, never in frontend environment files.
+
+Local defaults use SQLite and private local report objects. Web inspections store
+job records in `.local/model-anatomy/jobs.sqlite3` and immutable report objects
+under `.local/model-anatomy/objects/`. They do not populate the CLI's `config/`,
+`output/` or `preview/` directories. Download web reports using Export.
+
 Production uses Supabase PostgreSQL and a private Storage bucket. Backend-only
 `NEBIUS_API_KEY` and `NEBIUS_MODEL` enable Nemotron explanations; choose a real
-available NVIDIA Nemotron ID, never a placeholder. Graph facts do not depend on AI.
-Do not commit secrets or model weights.
+available NVIDIA Nemotron ID, never a placeholder. Graph facts do not depend on
+AI. Do not commit secrets or model weights.
 
-For a step-by-step manual check and expected real-model facts, use the
-[local testing guide](docs/LOCAL_TESTING.md). Completed reports still describe
-canonical static architecture, not executed model predictions.
+### Optional launchers
 
-```powershell
-uv run --no-sync pytest -q backend/tests
-uv run --no-sync ruff check backend
-$env:RUN_HTTP_INTEGRATION = '1'
-uv run --no-sync pytest -q -s backend/tests/test_live_http.py
+On Linux, after installing dependencies, the local launcher runs all three
+processes in one terminal:
+
+```bash
+uv run --no-sync python scripts/start-local.py
 ```
 
-From `frontend`, run `npm run generate:api`, `npm run build` and `npm run test:e2e`.
-See [service integration](docs/SERVICE_INTEGRATION.md) for configuration, the trust
-boundary and release gates, and [live backend acceptance](docs/LIVE_BACKEND_ACCEPTANCE.md)
-for real HTTP-to-worker evidence. Cloud deployment remains a separate delivery.
-The [CPU deployment candidate](docs/DEPLOYMENT.md), [real-job benchmarks](docs/BENCHMARKS.md)
-and [submission checklist](docs/HACKATHON_SUBMISSION.md) describe setup and the
-unmet hosted-release gates. No cloud credentials are needed for local inspection.
+It reads the same per-directory configuration, refuses occupied ports or an
+active worker lease, writes logs under the configured data directory's
+`local-launcher/`, and stops only its own processes on Ctrl+C. It does not install
+packages or submit models. Do not run it alongside the three manual processes.
+
+The existing Windows launcher is
+`powershell -ExecutionPolicy Bypass -File scripts/start-local.ps1`. It uses a
+separate local testing profile under `.local/app-v1`, defaults to API port `8000`
+and frontend port `5173`, and provides explicit port/quota options. Its defaults
+are distinct from the normal API entry point and Linux launcher.
+
+### Development checks
+
+From `frontend`, run `npm run typecheck`, `npm run build` and `npm run test:e2e`.
+The API must be running before `npm run generate:api` can refresh the generated
+contract from its default OpenAPI URL. See the frontend README for offline schema
+generation, deterministic fixtures and the separate opt-in live tests.
+Completed reports describe static architecture, not executed model predictions.
+
+See [service integration](docs/SERVICE_INTEGRATION.md) for the trust boundary and
+release gates, and [live backend acceptance](docs/LIVE_BACKEND_ACCEPTANCE.md) for
+HTTP-to-worker evidence. Historical acceptance documents describe the code and
+configuration used at the time of each run; use the commands above for current
+local defaults. Cloud deployment is separate: see [deployment](docs/DEPLOYMENT.md),
+[benchmarks](docs/BENCHMARKS.md) and the
+[submission checklist](docs/HACKATHON_SUBMISSION.md).
 
 ## Hackathon fit
 

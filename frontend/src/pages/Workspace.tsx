@@ -30,9 +30,14 @@ import { Overview, Report } from "../components/AnalysisSummary";
 import { ArtifactInspection } from "../components/ArtifactInspection";
 import { ArchitectureWorkspace } from "../components/ArchitectureWorkspace";
 import { Progress, Recovery } from "../components/Progress";
-import { matchesCitation } from "../components/Inspector";
 import { useRecent, useService } from "../state/queries";
-import { useWorkspaceSession, type Crumb } from "../state/workspace";
+import {
+  useArchitectureNavigation,
+  graphIndexQuery,
+  citationTarget,
+  graphPath,
+  viewHref,
+} from "../state/navigation";
 import { count, dimensionCount } from "../format";
 import { DotPattern } from "../components/vendor/dot-pattern";
 import {
@@ -59,7 +64,6 @@ function Workspace({ id }: { id: string }) {
   const client = useQueryClient();
   const { service, available } = useService();
   const recent = useRecent();
-  const [state, setState] = useWorkspaceSession(id);
   const [citation, setCitation] = useState<Citation | null>(null);
   const [copiedModelId, setCopiedModelId] = useState(false);
   const [exporting, setExporting] = useState<ExportFormat | null>(null);
@@ -98,6 +102,14 @@ function Workspace({ id }: { id: string }) {
     detail?.quality?.mode === "publisher_reference_topology";
   const previousStatus = useRef(detail?.status);
   const ready = graphReady(detail?.status) && !analysis.error;
+  const navigation = useArchitectureNavigation(
+    id,
+    detail?.root_graph_id
+      ? { id: detail.root_graph_id, label: detail.model_id.split("/").at(-1)! }
+      : null,
+    ready,
+  );
+  const { state, setState } = navigation;
   const viewParam = search.get("view");
   const awaiting = search.get("awaiting") === "1";
   const handoff =
@@ -134,13 +146,26 @@ function Workspace({ id }: { id: string }) {
       return;
     }
     if (!views.some((v) => v === viewParam))
-      setSearch({ view }, { replace: true });
+      setSearch(
+        (params) => {
+          const next = new URLSearchParams(params);
+          next.set("view", view);
+          return next;
+        },
+        { replace: true },
+      );
   }, [detail, awaiting, viewParam, view, search, setSearch, client]);
-  const graphId = state.path.at(-1)?.id ?? detail?.root_graph_id;
+  const graphId = navigation.graphId;
   const graph = useQuery({
     queryKey: ["graph", id, graphId],
     queryFn: ({ signal }) => api.graph(id, graphId!, signal),
-    enabled: ready && Boolean(graphId) && view === "architecture",
+    enabled:
+      ready &&
+      Boolean(graphId) &&
+      view === "architecture" &&
+      !navigation.restoring &&
+      !navigation.error,
+    staleTime: Infinity,
   });
   const cancel = useMutation({
     mutationFn: api.cancel,
@@ -188,60 +213,21 @@ function Workspace({ id }: { id: string }) {
       }));
       return;
     }
-    const root: Crumb = {
-      id: detail.root_graph_id,
-      label: detail.model_id.split("/").at(-1)!,
-    };
-    const queue = [{ id: root.id, path: [root] }];
-    const visited = new Set<string>();
-    while (queue.length && visited.size < 100) {
-      const next = queue.shift()!;
-      if (visited.has(next.id)) continue;
-      visited.add(next.id);
-      const data = await client.fetchQuery({
-        queryKey: ["graph", id, next.id],
-        queryFn: ({ signal }) => api.graph(id, next.id, signal),
-      });
-      if (!active.current) return;
-      const found =
-        data.nodes.find(
-          (node) =>
-            target.source === "stored_ir" &&
-            target.locator === `node:${data.id}/${node.id}`,
-        ) ||
-        data.nodes.find((node) =>
-          node.evidence.some((item) => matchesCitation(item, target)),
-        ) ||
-        data.nodes.find((node) =>
-          client
-            .getQueriesData<{ evidence?: Citation[] }>({
-              queryKey: ["node", id, next.id, node.id],
-            })
-            .some(([, item]) =>
-              item?.evidence?.some((e) => matchesCitation(e, target)),
-            ),
-        );
-      if (found) {
-        setCitation(target);
-        setState((s) => ({
-          ...s,
-          path: next.path,
-          selected: { ...s.selected, [data.id]: found.id },
-          inspectorOpen: true,
-          questions: false,
-          inspectorTab: "evidence",
-        }));
-        return;
-      }
-      for (const node of data.nodes)
-        if (node.child_graph_id)
-          queue.push({
-            id: node.child_graph_id,
-            path: [
-              ...next.path,
-              { id: node.child_graph_id, label: node.label },
-            ],
-          });
+    const index = await client.fetchQuery(graphIndexQuery(id));
+    if (!active.current) return;
+    const found = citationTarget(index, target);
+    const path = found ? graphPath(index, found.graph_id) : null;
+    if (found && path) {
+      setCitation(target);
+      setState((s) => ({
+        ...s,
+        path,
+        selected: { ...s.selected, [found.graph_id]: found.node_id },
+        inspectorOpen: true,
+        questions: false,
+        inspectorTab: "evidence",
+      }));
+      return;
     }
     throw new Error(
       "No component association was found. The citation’s source and locator remain available in the answer.",
@@ -404,7 +390,7 @@ function Workspace({ id }: { id: string }) {
                 key={item}
                 onPointerEnter={(event) => highlightView(event.currentTarget)}
                 onFocus={(event) => highlightView(event.currentTarget)}
-                to={`?view=${item}`}
+                to={viewHref(search, item)}
                 aria-current={view === item ? "page" : undefined}
                 aria-disabled={!ready && !artifact ? true : undefined}
                 tabIndex={!ready && !artifact ? -1 : undefined}
@@ -427,7 +413,10 @@ function Workspace({ id }: { id: string }) {
           {detail && ready && !artifact && (
             <>
               {detail.status === "partial" && (
-                <Link to="?view=report" className="viewbar-findings">
+                <Link
+                  to={viewHref(search, "report")}
+                  className="viewbar-findings"
+                >
                   View findings
                   <ChevronRight size={13} aria-hidden="true" />
                 </Link>
@@ -517,7 +506,10 @@ function Workspace({ id }: { id: string }) {
                       </div>
                     )}
                   </dl>
-                  <Link to="?view=report" className="context-report">
+                  <Link
+                    to={viewHref(search, "report")}
+                    className="context-report"
+                  >
                     Inspection findings
                     <ChevronRight size={13} aria-hidden="true" />
                   </Link>
@@ -596,18 +588,26 @@ function Workspace({ id }: { id: string }) {
                     )}
                     <Link
                       className="button button-primary"
-                      to="?view=artifacts"
+                      to={viewHref(search, "artifacts")}
                     >
                       Explore artifacts
                     </Link>
                   </div>
-                ) : graph.error ? (
+                ) : navigation.error || graph.error ? (
                   <div className="page-state">
                     <ErrorNotice
-                      error={graph.error}
-                      retry={() => void graph.refetch()}
+                      error={(navigation.error ?? graph.error)!}
+                      retry={() => {
+                        if (navigation.error) void navigation.retry();
+                        else void graph.refetch();
+                      }}
                     />
+                    <button className="button" onClick={navigation.reset}>
+                      Back to root graph
+                    </button>
                   </div>
+                ) : navigation.restoring ? (
+                  <Loading text="Restoring model hierarchy" />
                 ) : graph.data ? (
                   <>
                     {sourceTopology && (

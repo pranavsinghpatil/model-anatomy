@@ -44,30 +44,15 @@ def test_pinned_mistral_family_has_complete_static_report(model_id, revision, pa
     assert report["forward_executed"] is False
     assert report["runtime_trace_available"] is False
     assert summary["result_status"] == "completed"
-    assert summary["warnings"] == []
     assert summary["partial_reasons"] == []
-    assert all(
-        summary["quality"][key] == 1
-        for key in (
-            "semantic_coverage",
-            "module_semantic_coverage",
-            "checkpoint_parameter_coverage",
-            "tensor_shape_coverage",
-        )
+    assert summary["quality"]["architecture_checks"] == dict.fromkeys(
+        ("module_inventory", "parameter_mapping", "native_architecture", "module_topology"), True
     )
+    assert summary["quality"]["checkpoint_parameter_coverage"] == 1
     assert summary["quality"]["unknown_nodes"] == 0
     assert summary["quality"]["unmapped_checkpoint_tensors"] == 0
-    assert any(
-        item["code"] == "reviewed_native_mask_alias"
-        for flow in ir.raw_structure["static_flow_reports"].values()
-        for item in flow["diagnostics"]
-    )
-    assert any("mask values and attention-mask dataflow" in item for item in ir.metadata["limitations"])
-    assert all(
-        edge.tensor is not None and edge.tensor.shape is not None
-        for graph in ir.root_graph.walk()
-        for edge in graph.edges
-        if edge.relation == "dataflow"
-    )
+    assert report["mode"] == "static_module_architecture"
+    assert all(node.module_path is not None or node.kind in {"input", "output"}
+               for graph in ir.root_graph.walk() for node in graph.nodes)
     ir.root_graph.validate()
     assert ModelIR.from_json(ir.to_json()).to_dict() == ir.to_dict()

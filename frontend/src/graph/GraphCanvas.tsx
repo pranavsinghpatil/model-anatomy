@@ -96,6 +96,17 @@ function Canvas({
   );
   const flow = useReactFlow<AnatomyNode, AnatomyEdge>();
   const canvasWidth = useStore((s) => s.width);
+  const canvasElement = useStore((s) => s.domNode);
+  const viewportInitialized = useStore((s) => Boolean(s.panZoom));
+  const savedViewport = useRef(viewport);
+  const initializedViewport = useRef(false);
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
   const canvasHeight = useStore((s) => s.height);
   const lastSelection = useRef({ node: selectedNode, width: 0 });
   const fitAfterLayout = useRef(false);
@@ -107,7 +118,16 @@ function Canvas({
       (!previous.width || previous.width === canvasWidth)
     )
       return;
-    if (!selectedNode || !layout || !canvasWidth || !canvasHeight) return;
+    if (
+      !selectedNode ||
+      !layout ||
+      !canvasWidth ||
+      !canvasHeight ||
+      !initializedViewport.current ||
+      !canvasElement?.clientWidth ||
+      !canvasElement.clientHeight
+    )
+      return;
     const node = flow.getNode(scopedNodeId(graph.id, selectedNode));
     if (!node) return;
     const current = flow.getViewport();
@@ -124,7 +144,10 @@ function Canvas({
         node.position.y + (node.height ?? 64) / 2,
         {
           zoom: current.zoom,
-          duration: reduceMotion ? 0 : 150,
+          // Resize can temporarily hide the canvas. Avoid interpolating a
+          // zoom transition against an element with zero dimensions.
+          duration: reduceMotion || previous.width !== canvasWidth ? 0 : 150,
+          interpolate: "linear",
         },
       );
   }, [
@@ -132,6 +155,7 @@ function Canvas({
     layout,
     canvasWidth,
     canvasHeight,
+    canvasElement,
     flow,
     graph.id,
     reduceMotion,
@@ -171,33 +195,47 @@ function Canvas({
       !layout ||
       !canvasWidth ||
       !canvasHeight ||
+      !viewportInitialized ||
       layoutSignature !== `${direction}:${density}` ||
-      (viewport && !fitAfterLayout.current)
+      (initializedViewport.current && viewport && !fitAfterLayout.current)
     )
       return;
-    const preferReadableInitialView =
-      !viewport && !fitAfterLayout.current && canvasHeight < 500;
+    const restore =
+      !initializedViewport.current &&
+      savedViewport.current &&
+      !fitAfterLayout.current;
+    const readable =
+      !restore && !viewport && !fitAfterLayout.current && canvasHeight < 500;
     fitAfterLayout.current = false;
-    const frame = requestAnimationFrame(() => {
+    let active = true;
+    const frame = requestAnimationFrame(async () => {
       if (!layout.nodes.length) return;
-      if (preferReadableInitialView) {
-        void flow.fitView({
+      if (restore)
+        await flow.setViewport(savedViewport.current!, { duration: 0 });
+      else if (readable)
+        await flow.fitView({
           nodes: [readableAnchor(layout.nodes, selectedNode)],
           padding: 0.18,
           minZoom: 0.75,
           maxZoom: 0.85,
           duration: 0,
         });
-      } else {
-        void flow.fitView({
+      else
+        await flow.fitView({
           padding: 0.12,
           minZoom: 0.08,
           maxZoom: 1,
           duration: 0,
         });
+      if (active) {
+        initializedViewport.current = true;
+        onViewportChange?.(flow.getViewport());
       }
     });
-    return () => cancelAnimationFrame(frame);
+    return () => {
+      active = false;
+      cancelAnimationFrame(frame);
+    };
   }, [
     layout,
     layoutSignature,
@@ -205,6 +243,8 @@ function Canvas({
     density,
     flow,
     viewport,
+    viewportInitialized,
+    canvasWidth,
     canvasHeight,
     selectedNode,
   ]);
@@ -333,7 +373,7 @@ function Canvas({
         // resynchronizes the pan/zoom engine and interrupts fit operations.
         defaultViewport={viewport}
         onViewportChange={(nextViewport) => {
-          setZoom(nextViewport.zoom);
+          if (Number.isFinite(nextViewport.zoom)) setZoom(nextViewport.zoom);
         }}
         nodeTypes={nodeTypes}
         onNodeClick={(_, node) => select(node.data.original)}
@@ -365,9 +405,17 @@ function Canvas({
           }
         }}
         onMoveEnd={(_, nextViewport) => {
+          if (
+            !mounted.current ||
+            !Object.values(nextViewport).every(Number.isFinite) ||
+            nextViewport.zoom <= 0
+          )
+            return;
           setZoom(nextViewport.zoom);
-          onViewportChange?.(nextViewport);
+          // Initialization events must not overwrite a saved view with 0,0,1.
+          if (initializedViewport.current) onViewportChange?.(nextViewport);
         }}
+        onlyRenderVisibleElements={graph.nodes.length > 150}
         nodesDraggable={false}
         nodesConnectable={false}
         deleteKeyCode={null}

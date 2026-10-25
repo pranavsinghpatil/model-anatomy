@@ -873,3 +873,8 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+.graph-legend i.conditional {
+  border-top: 2px dotted var(--graph-semantic-edge);
+  background: none;
+}

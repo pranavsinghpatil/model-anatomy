@@ -297,6 +297,7 @@ def job_detail(job: Job) -> dict:
     return {
         "id": job.id,
         "model_id": job.model_id,
+        "model_input": job.model_input,
         "revision": job.revision,
         "architecture": summary.get("architecture"),
         "status": job.status,
@@ -390,6 +391,10 @@ class JobService:
                     "rate_limited",
                     f"{scope} {action_label} allowance reached ({limit}). Try again in {max(1, minutes)} minutes.",
                 )
+            if bucket:
+                bucket.count += 1
+            else:
+                session.add(RateBucket(key=key, window=window, count=1))
 
     def _record_failure_outcome(
         self, session, job: Job, code: str, status: str, finished_at: float
@@ -443,6 +448,34 @@ class JobService:
         ).hexdigest()
         if session.get(InspectionFailure, failure_id) is None:
             session.add(InspectionFailure(id=failure_id, **identity))
+
+    def _quota_available(self, session, guest_id: str, action: str) -> None:
+        """Reject already-exhausted visitors before any report blob is read."""
+        suffix = "jobs" if action == "jobs" else "questions"
+        limits = [
+            (
+                f"global:{action}:day",
+                getattr(self.settings, f"global_{suffix}_per_day"),
+                86400,
+            ),
+            (
+                f"guest:{guest_id}:{action}:hour",
+                getattr(self.settings, f"guest_{suffix}_per_hour"),
+                3600,
+            ),
+        ]
+        for key, limit, seconds in limits:
+            window = int(self.clock() // seconds)
+            bucket = session.get(RateBucket, (key, window))
+            if bucket and bucket.count >= limit:
+                minutes = math.ceil(((window + 1) * seconds - self.clock()) / 60)
+                scope = "Daily shared" if key.startswith("global:") else "Hourly visitor"
+                action_label = "analysis" if action == "jobs" else "AI question"
+                raise ServiceError(
+                    429,
+                    "rate_limited",
+                    f"{scope} {action_label} allowance reached ({limit}). Try again in {max(1, minutes)} minutes.",
+                )
 
     def question_quota(self, guest_id: str) -> None:
         with self.db.write() as session:

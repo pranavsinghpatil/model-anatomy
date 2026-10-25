@@ -29,6 +29,7 @@ import {
 } from "../format";
 import { ErrorNotice, IconButton, Loading, Warnings } from "./Common";
 import { componentPurpose } from "./component-purpose";
+import { ModuleProperties } from "./ModuleProperties";
 import "./inspection.css";
 import { nodeTitle } from "../graph/presentation";
 
@@ -384,6 +385,8 @@ export function Inspector({
   const resolved = detail.data?.node ?? node;
   const sourceTopology =
     analysis.quality?.mode === "publisher_reference_topology";
+  const moduleArchitecture =
+    analysis.quality?.mode === "static_module_architecture";
   const checkpointNameCount = resolved.metadata?.checkpoint_state_key_count;
   const evidence = detail.data?.evidence ?? resolved.evidence;
   return (
@@ -447,42 +450,56 @@ export function Inspector({
         <div className="inspector-content">
           <Tabs.Content value="module">
             <>
-              <section className="inspector-section">
-                <h3>Inputs</h3>
-                {resolved.inputs.length ? (
-                  resolved.inputs.map((tensor, index) => (
-                    <div className="port" key={index}>
-                      <span>{tensor.semantic_name}</span>
-                      <code>{shape(tensor.shape)}</code>
-                      <small>{tensor.dtype ?? "Unknown dtype"}</small>
-                    </div>
-                  ))
-                ) : (
+              <ModuleProperties node={resolved} />
+              <details
+                className="metadata"
+                open={moduleArchitecture ? undefined : true}
+              >
+                <summary>Optional input and output specifications</summary>
+                {moduleArchitecture && (
                   <p className="empty-copy">
-                    {sourceTopology
-                      ? "Input shape not verified."
-                      : "No input specifications returned."}
+                    Activation shapes are not collected by module architecture
+                    inspection. Their absence does not make the architecture
+                    partial.
                   </p>
                 )}
-              </section>
-              <section className="inspector-section">
-                <h3>Outputs</h3>
-                {resolved.outputs.length ? (
-                  resolved.outputs.map((tensor, index) => (
-                    <div className="port" key={index}>
-                      <span>{tensor.semantic_name}</span>
-                      <code>{shape(tensor.shape)}</code>
-                      <small>{tensor.dtype ?? "Unknown dtype"}</small>
-                    </div>
-                  ))
-                ) : (
-                  <p className="empty-copy">
-                    {sourceTopology
-                      ? "Output shape not verified."
-                      : "No output specifications returned."}
-                  </p>
-                )}
-              </section>
+                <section className="inspector-section">
+                  <h3>Inputs</h3>
+                  {resolved.inputs.length ? (
+                    resolved.inputs.map((tensor, index) => (
+                      <div className="port" key={index}>
+                        <span>{tensor.semantic_name}</span>
+                        <code>{shape(tensor.shape)}</code>
+                        <small>{tensor.dtype ?? "Unknown dtype"}</small>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="empty-copy">
+                      {sourceTopology
+                        ? "Input shape not verified."
+                        : "No input specifications returned."}
+                    </p>
+                  )}
+                </section>
+                <section className="inspector-section">
+                  <h3>Outputs</h3>
+                  {resolved.outputs.length ? (
+                    resolved.outputs.map((tensor, index) => (
+                      <div className="port" key={index}>
+                        <span>{tensor.semantic_name}</span>
+                        <code>{shape(tensor.shape)}</code>
+                        <small>{tensor.dtype ?? "Unknown dtype"}</small>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="empty-copy">
+                      {sourceTopology
+                        ? "Output shape not verified."
+                        : "No output specifications returned."}
+                    </p>
+                  )}
+                </section>
+              </details>
               <div className="inspector-stat">
                 <span>Parameters</span>
                 <strong

@@ -16,7 +16,41 @@ def require(response, status=200):
     return response
 
 
-def run(base_url: str = "http://127.0.0.1:8001"):
+def check_architecture(client, path, detail, report):
+    """Check registered layers and checkpoint evidence through public endpoints."""
+    checks = detail["quality"]["architecture_checks"]
+    assert checks == dict.fromkeys(
+        ("module_inventory", "parameter_mapping", "native_architecture", "module_topology"), True
+    )
+    assert detail["quality"]["mode"] == "static_module_architecture"
+    assert report["metadata"]["analysis_report"]["forward_executed"] is False
+    index = require(client.get(f"{path}/graph-index")).json()
+    assert index["root_graph_id"] == detail["root_graph_id"]
+    graphs = []
+    pending = [report["root_graph"]]
+    while pending:
+        graph = pending.pop()
+        graphs.append(graph)
+        pending.extend(node["child_graph"] for node in graph["nodes"] if node.get("child_graph"))
+    assert {graph["id"] for graph in graphs} == {graph["id"] for graph in index["graphs"]}
+    layers = detail["dimensions"]["layers"]
+    assert type(layers) is int and layers > 0
+    container = next(
+        node for graph in graphs for node in graph["nodes"]
+        if node["metadata"].get("instance_count") == layers and node.get("child_graph")
+    )
+    instances = container["metadata"]["instance_paths"]
+    assert len(instances) == len(set(instances)) == layers
+    child = require(client.get(f"{path}/graphs/{container['child_graph']['id']}")).json()
+    assert {node["module_path"] for node in child["nodes"] if node["module_path"]} == set(instances)
+    embedding = next(node for node in index["nodes"] if node["kind"] == "embedding")
+    inspection = require(client.get(f"{path}/nodes/{embedding['graph_id']}/{embedding['id']}")).json()
+    assert inspection["tensor_count"] > 0 and inspection["evidence"]
+    assert inspection["node"]["child_graph_id"] is None
+    assert all(tensor["shape"] and tensor["dtype"] for tensor in inspection["tensors"])
+
+
+def run():
     result = {"model_id": MODEL, "revision": REVISION, "analyses": []}
     first_analysis_path = None
     with httpx.Client(base_url=base_url, trust_env=False, timeout=15) as client:
@@ -45,24 +79,12 @@ def run(base_url: str = "http://127.0.0.1:8001"):
             else:
                 raise RuntimeError("Container inspection exceeded its deadline")
             assert detail["status"] == "completed", detail.get("error", {})
-            assert detail["warnings"] == []
+            assert detail["partial_reasons"] == []
             assert detail["revision"] == REVISION
             assert detail["parameter_count"] == 134515008
             report = require(client.get(f"{path}/exports/json")).json()
             assert report["metadata"]["artifacts"]["weight_payload_bytes_read"] == 0
-            graph = require(client.get(f"{path}/graphs/{detail['root_graph_id']}")).json()
-            backbone = next(n for n in graph["nodes"] if n["module_path"] == "model")
-            assert backbone["child_graph_id"] and backbone["evidence"]
-            backbone_graph = require(client.get(f"{path}/graphs/{backbone['child_graph_id']}")).json()
-            layers = next(n for n in backbone_graph["nodes"] if n["module_path"] == "model.layers")
-            assert layers["metadata"]["instance_count"] == 30
-            child = require(client.get(f"{path}/graphs/{layers['child_graph_id']}")).json()
-            assert {n["module_path"] for n in child["nodes"]} == {f"model.layers.{i}" for i in range(30)}
-            assert len(child["nodes"]) == 30
-            node = next(n for n in backbone_graph["nodes"] if n["module_path"] == "model.embed_tokens")
-            assert node["module_type"] == "torch.nn.modules.sparse.Embedding" and node["evidence"]
-            inspection = require(client.get(f"{path}/nodes/{backbone_graph['id']}/{node['id']}")).json()
-            assert inspection["tensor_count"] > 0 and inspection["evidence"]
+            check_architecture(client, path, detail, report)
             archive = require(client.get(f"{path}/exports/zip"))
             assert archive.content.startswith(b"PK\x03\x04")
             with httpx.Client(base_url=str(client.base_url), trust_env=False) as other:

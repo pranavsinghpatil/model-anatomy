@@ -32,6 +32,7 @@ export const defaultAnatomyView: AnatomyView = {
 export function buildAssembly(
   graph: ArchitectureGraph,
   selectedId?: string | null,
+  page = 0,
 ): Assembly {
   const ids = new Set(graph.nodes.map((node) => node.id));
   if (
@@ -40,7 +41,15 @@ export function buildAssembly(
   )
     throw new Error("The report has unresolved component relationships.");
   const selected = graph.nodes.find((node) => node.id === selectedId);
-  const nodes = graph.nodes.slice(0, 24);
+  const start =
+    Math.max(
+      0,
+      Math.min(
+        Math.floor(page),
+        Math.max(0, Math.ceil(graph.nodes.length / 24) - 1),
+      ),
+    ) * 24;
+  const nodes = graph.nodes.slice(start, start + 24);
   if (selected && !nodes.includes(selected)) nodes[nodes.length - 1] = selected;
   const included = new Set(nodes.map((node) => node.id));
   const edges = graph.edges.filter(

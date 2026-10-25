@@ -107,11 +107,32 @@ def _build_run(manifest_bytes: bytes, summary: dict, *, expected_cases: int) -> 
                     raise ValueError("artifact-only result cannot claim an architecture graph")
             elif not row.get("graph_count", 0):
                 raise ValueError("architecture outcome requires measured graphs")
-            if status == "completed" and (
+            completion = row.get("architecture_completion")
+            if completion is not None:
+                required = {"module_inventory", "parameter_mapping", "native_architecture", "module_topology"}
+                checks = completion.get("checks") if isinstance(completion, dict) else None
+                if (
+                    not isinstance(completion, dict)
+                    or type(completion.get("version")) is not int
+                    or completion["version"] != 3
+                    or completion.get("status") != status
+                    or status not in {"completed", "partial"}
+                    or not isinstance(checks, dict)
+                    or set(checks) != required
+                    or any(type(value) is not bool for value in checks.values())
+                    or (status == "completed" and not all(checks.values()))
+                    or (status == "completed" and (
+                        type(row.get("coverage", {}).get("checkpoint_parameter_coverage")) not in (int, float)
+                        or row["coverage"]["checkpoint_parameter_coverage"] != 1
+                    ))
+                ):
+                    raise ValueError("architecture outcome disagrees with its completion contract")
+            elif status == "completed" and (
                 any(row.get("coverage", {}).get(key) != 1 for key in COVERAGE_KEYS)
                 or row.get("warning_count") != 0
                 or bool(row.get("warnings"))
             ):
+                # Historical captures keep their original expression/shape gate.
                 raise ValueError("complete report requires full bounded coverage and no warnings")
         item = {key: row[key] for key in PUBLIC_FIELDS if key in row}
         # Native blockers and warnings can include exception text or local paths.
@@ -120,6 +141,7 @@ def _build_run(manifest_bytes: bytes, summary: dict, *, expected_cases: int) -> 
         safe_messages = {
             **INSPECTION_MESSAGES,
             "coverage_not_complete": "The recorded static coverage is incomplete.",
+            "architecture_incomplete": "The recorded static coverage is incomplete.",
         }
         reasons = list(dict.fromkeys(reason for reason in raw_reasons if reason in safe_messages))
         notes = [safe_messages[reason] for reason in reasons]

@@ -1,4 +1,4 @@
-"""Opt-in pinned acceptance for the native T5 mask dependency chain."""
+"""Opt-in pinned acceptance for native T5 encoder/decoder module architecture."""
 
 import os
 
@@ -17,7 +17,7 @@ from model_anatomy.src.pipeline import reconstruct
         ("google-t5/t5-base", "a9723ea7f1b39c1eae772870f3b547bf6ef7e6c1"),
     ],
 )
-def test_pinned_t5_mask_facts_reach_the_decoder(model_id, revision):
+def test_pinned_t5_registered_modules_and_checkpoint_binding(model_id, revision):
     ir = reconstruct(model_id, revision=revision)
     assert ir.model_id == model_id
     assert ir.metadata["revision"] == revision
@@ -25,36 +25,19 @@ def test_pinned_t5_mask_facts_reach_the_decoder(model_id, revision):
     assert ir.metadata["artifacts"]["weight_payload_bytes_read"] == 0
     analysis = ir.metadata["analysis_report"]
     assert analysis["forward_executed"] is False
-    for metric in ("semantic_coverage", "module_semantic_coverage", "checkpoint_parameter_coverage"):
-        assert analysis[metric] == 1
-    assert analysis["tensor_shape_coverage"] > 0.9035087719298246
-
-    decoder = next(graph for graph in ir.root_graph.walk() if graph.id == "decoder")
-    required = {
-        "torch.full",
-        "torch.triu",
-        "torch.Tensor.expand",
-        "torch.Tensor.clone",
-        "torch.Tensor.masked_fill",
-    }
-    operations = {node.metadata.get("callable"): node for node in decoder.nodes}
-    assert required <= operations.keys()
-    for name in required:
-        node = operations[name]
-        assert node.outputs and all(output.shape is not None and output.dtype == "F32" for output in node.outputs)
-    for name in ("torch.Tensor.expand", "torch.Tensor.clone", "torch.Tensor.masked_fill"):
-        assert operations[name].outputs[0].shape == ["B", 1, "T", "T"]
-
-    # The padding update must feed decoder execution, rather than becoming an
-    # orphan node while the original pre-update clone is returned.
-    reachable = {operations["torch.Tensor.masked_fill"].id}
-    while True:
-        expanded = reachable | {
-            edge.target for edge in decoder.edges if edge.relation == "dataflow" and edge.source in reachable
-        }
-        if expanded == reachable:
-            break
-        reachable = expanded
-    assert any(node.id in reachable and node.module_path == "decoder.block" for node in decoder.nodes)
+    assert analysis["mode"] == "static_module_architecture"
+    assert analysis["checkpoint_parameter_coverage"] == 1
+    assert analysis["completion"]["checks"]["module_inventory"] is True
+    assert analysis["completion"]["checks"]["parameter_mapping"] is True
+    nodes = [node for graph in ir.root_graph.walk() for node in graph.nodes]
+    paths = {node.module_path for node in nodes}
+    assert {"encoder", "decoder", "encoder.block", "decoder.block"} <= paths
+    for branch in ("encoder", "decoder"):
+        container = next(node for node in nodes if node.module_path == f"{branch}.block")
+        instances = container.metadata["instance_paths"]
+        assert len(instances) == container.metadata["instance_count"]
+        assert container.child_graph is not None
+        assert {node.module_path for node in container.child_graph.nodes if node.module_path} == set(instances)
+    assert all(node.module_path is not None or node.kind in {"input", "output"} for node in nodes)
     ir.root_graph.validate()
     assert ModelIR.from_json(ir.to_json()).to_dict() == ir.to_dict()

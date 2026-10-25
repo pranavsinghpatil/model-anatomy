@@ -77,7 +77,7 @@ function tensorArtifactUrl(
         )
     )
       return null;
-    return url.href;
+    return artifactUrl(modelId, revision, segments.slice(4).join("/"));
   } catch {
     return null;
   }

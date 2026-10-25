@@ -30,6 +30,7 @@ export function nodeCategory(kind: string) {
   if (["block", "model", "layer"].some((part) => value.includes(part)))
     return "structure";
   if (value === "embedding") return "embedding";
+  if (["backbone", "container", "module"].includes(value)) return "structure";
   return "other";
 }
 export function nodeSize(node: GraphNode, density: "compact" | "detailed") {

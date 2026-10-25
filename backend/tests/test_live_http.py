@@ -169,36 +169,9 @@ def test_real_model_submission_graph_tensors_exports_and_cache(
     graph = client.get(f"{path}/graphs/{detail['root_graph_id']}").json()
     repeated = next(node for node in graph["nodes"] if node["child_graph_id"])
     assert client.get(f"{path}/graphs/{repeated['child_graph_id']}").json()["nodes"]
-    graphs = [graph]
-    visited_graphs = {graph["id"]}
-    for current in graphs:
-        for candidate in current["nodes"]:
-            child_graph_id = candidate.get("child_graph_id")
-            if child_graph_id and child_graph_id not in visited_graphs:
-                visited_graphs.add(child_graph_id)
-                child = client.get(f"{path}/graphs/{child_graph_id}")
-                child.raise_for_status()
-                graphs.append(child.json())
-    candidates = [
-        (current, item)
-        for current in graphs
-        for item in current["nodes"]
-        if item.get("module_path") is not None
-        and (preferred_component_kind is None or item["kind"] == preferred_component_kind)
-    ]
-    inspected = next(
-        (
-            (current, item, response.json())
-            for current, item in candidates
-            for response in [client.get(f"{path}/nodes/{current['id']}/{item['id']}")]
-            if response.status_code == 200
-            and response.json()["tensor_count"] > 0
-            and response.json()["evidence"]
-        ),
-        None,
-    )
-    assert inspected is not None, "No registered module with tensor ownership and evidence was inspectable"
-    _, component, node = inspected
+    index = client.get(f"{path}/graph-index").json()
+    component = next(node for node in index["nodes"] if node["kind"] == component_kind)
+    node = client.get(f"{path}/nodes/{component['graph_id']}/{component['id']}").json()
     assert node["tensor_count"] > 0 and node["evidence"]
     report = client.get(f"{path}/exports/json").json()
     assert report["model_id"] == model

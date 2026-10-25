@@ -1,187 +1,229 @@
 # Model Anatomy Frontend
 
-React + TypeScript + Vite workspace for the service's IR 1.1 architecture graphs.
-The primary canvas uses React Flow and ELK layout in a bundled WebWorker. Only
-backend-returned shallow graphs are rendered; nested graphs are fetched on demand.
-No model artifacts or fabricated graph fallback are bundled with the application.
+React + TypeScript + Vite explorer for the service's IR 1.1 architecture reports.
+React Flow renders the graph; ELK computes layout in a bundled WebWorker.
+Graphs and module attributes come from backend reports. Nested graphs are fetched
+on demand. No production graph fixture or fabricated fallback is bundled.
 
-## Local Run
+## Local run
 
-```powershell
+Start the API and worker in two separate terminals using the
+[root README](../README.md#run-the-application). In a third terminal:
+
+```bash
 cd frontend
 npm ci
 npm run dev
 ```
 
-Open the URL printed by Vite. `/api` and `/health` proxy to `http://127.0.0.1:8001` by default.
-Set `API_PROXY_TARGET` in the environment or `.env.local` to change the upstream.
+Skip `npm ci` when dependencies are already installed and unchanged. Use Node.js
+20.19+ on the 20.x line or Node.js 22.12+. The default browser address is
+`http://127.0.0.1:5173`; `/api` and `/health` proxy to
+`http://127.0.0.1:8001`. New inspections require a running worker. Saved reports
+can remain available while the worker is offline.
+
+Optional persistent configuration belongs in `frontend/.env`. Copy
+[.env.example](.env.example) if no local file exists, then edit as needed:
+
+```dotenv
+FRONTEND_PORT=5173
+API_PROXY_TARGET=http://127.0.0.1:8001
+```
+
+Missing files use defaults; existing process environment variables take priority.
+Vite also supports its standard mode-specific and local environment files.
+Restart Vite after editing configuration. If the browser port changes, update
+`MODEL_ANATOMY_CORS_ORIGINS` in `backend/.env` and restart the API. Backend
+credentials belong only in backend configuration.
+
+For production, serve `dist/`, reverse-proxy both `/api` and `/health` to the HTTP
+service, and return `index.html` for application routes. Hosted deployment has
+separate acceptance requirements.
+
+## Explore a report
+
+Both `/` and `/app` open the model submission and recent-analysis screen. A new
+visitor sees an empty history; opening a recent report is explicit. Report views
+use `/app/analyses/:id?view=architecture|overview|artifacts|report`.
+Legacy `/?analysis=:id` links redirect to the report.
+
+The Architecture workspace follows the report hierarchy from overview to basic
+modules such as Linear, Embedding, LayerNorm, Activation, Conv and Dropout. Basic
+modules are leaves. Individual tensor expressions are outside this view.
+
+- Select a component to open its inspector. Opening its child graph is a separate
+  action; breadcrumbs return to an ancestor.
+- **Current graph** lists the fetched graph. **Model tree** expands the full
+  registered hierarchy lazily and provides keyboard navigation.
+- **Find in current graph** searches visible graph records. **Find across model**
+  in Model tree searches names, kinds and module paths after two characters.
+  Results use the lightweight location index; selecting one fetches its target
+  graph, without fetching every intervening graph. Longer lists offer Show more.
+- Graph and selected-node identities are encoded in the URL as `graph` and
+  `node`. Refresh, browser history and switching report views preserve that
+  location. Invalid locations show an explicit recovery action.
+- Fit frames the graph; Readable focuses a component. Direction, card detail,
+  connection labels and neighbor focus are available in graph controls. Desktop
+  panels resize; narrow screens use a component drawer and separate graph and
+  inspector views with Back to graph navigation.
+
+Graph coordinates and inspector/panel state are retained in memory for recently
+visited analyses in the current page session. Layout preferences and Graph/Anatomy
+choice are also saved in sessionStorage. URL identities restore graph/node
+location after reload; exact pan/zoom coordinates are not persisted across reload.
+Theme preferences persist separately. Model reports are not stored in localStorage.
+
+Native module paths distinguish repeated class names. Every layer instance in the
+returned graph remains available. The UI opens only backend-provided child graphs
+and representative repetition records; it does not create extra instances or
+merge layers based on their names.
+
+## Inspect modules and relationships
+
+The Component tab prioritizes recorded native module type, scalar attributes and
+basic-module boundary. Tensors shows checkpoint shapes, storage dtypes and
+parameter ownership; Evidence shows recorded provenance. Missing attributes stay
+unreported. Optional input/output specifications are collapsed for static module
+architecture reports. Missing activation shapes are not fabricated.
+
+Connections preserve their backend relation:
+
+| Relation                 | Graph appearance | Meaning                                                            |
+| ------------------------ | ---------------- | ------------------------------------------------------------------ |
+| `dependency`             | Dashed           | Recorded module dependency with intermediate expressions omitted.  |
+| `conditional_dependency` | Dotted           | Dependency whose recorded source conditions remain inspectable.    |
+| `dataflow`               | Solid            | A relation supplied by the report, including older report formats. |
+
+The legend reflects the current graph. Selecting an edge exposes its relationship,
+ports and recorded conditions. Other returned relations remain distinguishable;
+the UI does not turn dependencies into runtime tensor flow. Unconnected modules
+appear separately, without invented connections.
+
+Complete and partial are backend decisions. The report shows native module
+inventory, checkpoint parameter mapping, native architecture selection and module
+topology checks, plus blocking diagnostics and warnings. Unknown intermediate
+math expressions or absent activation shapes alone do not make a static module
+architecture partial. Artifact-only results show files and metadata without an
+architecture graph; publisher reference topology remains explicitly partial.
+
+Edit model and retry uses the API's original `model_input`, preserving an explicit
+checkpoint file or pinned reference. Older responses fall back to a browser-saved
+submission, then a pinned repository reference when available. Tensor artifact
+links open a validated, pinned Hugging Face preview page instead of a direct
+weight-download URL. Export downloads the backend report, not model weights.
+
+## Anatomy presentation
+
+Architecture also offers **Anatomy** (`scene=anatomy`): an SVG isometric
+illustration of the fetched graph. Its geometry is explanatory, not model
+hardware, neuron counts, activation values or measured execution.
+
+Each page contains up to 24 actual components. Previous/Next components exposes
+the remaining pages; selecting a component moves to its page. Links retain the
+reported dependency type and are drawn only when both endpoints are on the
+current page. A page's illustrated-link count can therefore be smaller than the
+graph's total relationship count. Graph remains available for the full diagram.
+Selection, nesting, tensors and evidence share the same inspector. Camera pose
+and separate/reassemble controls are local presentation state.
+
+## API integration
+
+`src/api/generated.ts` is generated from the actual service OpenAPI schema.
+`src/api/contract.ts` provides aliases; `src/api/client.ts` is the HTTP boundary.
+After backend schema changes, start the API and run from `frontend/`:
+
+```bash
+npm run generate:api
+npm run typecheck
+```
+
+The generator defaults to `http://127.0.0.1:8001/openapi.json`. Supply a different
+OpenAPI URL or an existing schema exported from `app.openapi()` as an argument:
+
+```bash
+npm run generate:api -- path/to/openapi.json
+```
+
+The offline file is a contract, not application data. Generation includes formatting.
+Restart the API after updating backend code so it exposes the current schema.
+
 Browser requests use `/api/v1` and root `/health` with same-origin guest cookies.
-In production, serve `dist/` and reverse-proxy both `/api` and `/health` to the HTTP service.
-Configure the production server to return `index.html` for application routes.
-Both `/` and `/app` open the same directly usable submission and history screen;
-reports use `/app/analyses/:id?view=overview|architecture|artifacts|report`.
-Legacy `/?analysis=:id` links redirect to the report. Recent analyses require an
-explicit Continue action; a new visitor sees an empty history.
+Health HTTP 200 and 503 share the same response schema. New analyses require
+healthy database, storage and worker checks plus `analysis_available`; optional
+AI availability is independent. Degradation does not hide reachable stored reports.
 
-There is one inspection flow; Learn/Research modes and their saved preference
-have been removed. General component definitions remain available in the inspector's
-About this component type disclosure. Theme (Light by default) is remembered
-locally. Graph selection, breadcrumbs, viewports, inspector tab and panel sizes
-are retained per analysis during the browser session. No model report is stored
-in localStorage.
+Required endpoints include analyses, detail/cancel, graphs, paginated node and
+artifact inspection, catalogs, questions and exports. Two navigation contracts
+support the current explorer:
 
-The interface uses a 75% page scale at the browser's normal zoom. The workspace
-height compensates for that scale to fill the visible viewport. Graph zoom remains
-an independent control for the inspected diagram. Earlier validation records below
-describe the interface at the time of those runs, including the former modes.
+- `GET /api/v1/analyses/{id}` includes nullable `model_input`, the original
+  submitted reference used for retry.
+- `GET /api/v1/analyses/{id}/graph-index` returns existing graph parent links,
+  node locations and evidence locators. It copies no tensor payload or raw source,
+  performs no reconstruction and enforces the existing visitor ownership checks.
+  Artifact-only reports have no architecture index.
 
-The canvas starts with the complete graph framed using compact components.
-Readable view focuses the selected component at an inspection scale. Direction,
-node density and connection-label preferences are retained per graph. Search is scoped to the current
-graph. Selecting a component opens its inspector; opening a nested graph requires
-an explicit action. The component list provides a keyboard alternative to the
-canvas. Desktop panels resize; narrower screens use a component drawer, and
-below 1024px the graph and inspector have separate views with return navigation.
+Graph/node identities remain scoped by graph ID. Citation navigation uses exact
+source/kind/locator matches or the stored IR node locator
+`node:{graph_id}/{node_id}`. It uses the index without the former 100-graph
+traversal limit. Unresolved associations remain explicit. AI text is rendered as
+plain text and cannot create or alter architecture facts.
 
-Native class inventories use their recorded module paths to distinguish repeated
-class names. Components without returned edges appear in a separate inventory
-area; no missing dataflow is supplied by the UI. See [CANVAS_WORKSPACE.md](../docs/CANVAS_WORKSPACE.md).
+## Performance and accessibility
 
-Architecture also offers an optional **Anatomy** presentation (`&scene=anatomy`).
-This is an original SVG isometric illustration built from the current fetched
-graph. Its mechanisms explain recorded component kinds; their geometry is not
-model hardware, neuron counts, weights, activations or measured execution.
-Selection, nested navigation, tensors and evidence use the same inspector as
-Graph. Separate/reassemble, camera controls and per-graph pose are local UI state.
-Only returned dataflow links are drawn; unknown kinds remain closed housings.
-See [ANATOMY_ILLUSTRATION.md](../docs/ANATOMY_ILLUSTRATION.md) for the part mapping,
-bounded rendering and verification boundaries.
+Layouts are reused per immutable fetched graph, direction and card density.
+Graphs with more than 150 nodes render only visible canvas elements; the model
+tree loads children on demand. The catalog refreshes once per minute or manually,
+and recovers its current page when records shrink. Decorative animation pauses
+when the page is hidden and honors reduced-motion preferences.
 
-Light and dark semantic tokens, local Inter/JetBrains Mono fonts, Radix controls,
-and reduced-motion support form the shared design system. See
-[UI_REDESIGN.md](../docs/UI_REDESIGN.md) and [THIRD_PARTY.md](THIRD_PARTY.md).
-
-This is the primary frontend, replacing the earlier single-page implementation.
-It preserves the current API's declared repository profiles, explicit pipeline
-checkpoint selection and staged head dimensions.
+Light/dark tokens, local Inter/JetBrains Mono fonts, keyboard controls and Radix
+primitives form the shared design system. Build output still includes a chunk
+above Vite's size-warning threshold; the build succeeds, but further bundle
+splitting remains possible.
 
 ## Verification
 
-```powershell
+From `frontend/`, the normal development checks are:
+
+```bash
 npm run typecheck
 npm run build
 npm run format:check
-npx playwright install chromium
 npm run test:e2e
 ```
 
-Playwright runs desktop and mobile Chromium checks on port 5174, with the `job-test`
-route fixture derived from the repository's real `output/gpt2` IR artifact.
-Lifecycle/error scenarios are test-only. The production app has no
-mock mode. With the HTTP service running on 8001, set `E2E_LIVE_API=1` to include
-the separate `e2e/live.spec.ts` integration tests, which use no route interception.
-Before starting the local HTTP service for live tests, include
-the test server's port 5174 in its explicit allowed origins:
+Install Playwright Chromium beforehand if it is unavailable. The shared Playwright
+configuration starts or reuses a test frontend on port 5174. Default artifacts go
+to Playwright's test-results and HTML report directories. Local artifact routing
+can be supplied by a local runner without changing shared project configuration.
 
-```powershell
-$env:MODEL_ANATOMY_CORS_ORIGINS = '["http://127.0.0.1:5173","http://localhost:5173","http://127.0.0.1:5174"]'
-```
+`e2e/service.ts` supplies self-contained HTTP contract fixtures, including legacy
+repetition/dataflow examples. It no longer requires `output/gpt2/model.json`.
+Those fixtures verify UI behavior, not parser completeness. Production has no
+mock mode.
 
-Restart the HTTP process after changing this setting. The proxy preserves the
-browser Origin header, and the API rejects unlisted mutation origins. These are
-explicit local development origins, not production settings. `E2E_BASE_URL` can
-override the browser URL (for example, port 5173 with the default API configuration).
-Both a running HTTP service and worker are required for live submission. Each
-viewport exercises both Research and Learn journeys with real SmolLM2-360M jobs,
-graph/component/tensor/evidence inspection, JSON export, and explicit recent
-analysis continuation. Other `live-*.spec.ts` files cover artifact-only, GGUF and
-ViT results. Screenshots and traces go to ignored `test-results*/` directories.
+Separate `live-*.spec.ts` cases opt in through the test process's `E2E_LIVE_API`
+setting and require real API/worker services. `E2E_BASE_URL` can override the test
+browser address. These Playwright process settings are not automatically loaded
+from application `.env` files. For live tests on port 5174, add that exact browser
+origin to `MODEL_ANATOMY_CORS_ORIGINS` in `backend/.env`, preserving existing
+origins, and restart the API. Test quotas and external metadata access can affect
+live results.
 
-The deterministic suite includes keyboard interaction, scoped citations,
-pagination, cancellation and recovery, unavailable AI, clipboard/export failures,
-and responsive axe checks. These route fixtures are test data only. Their evidence
-does not replace the separate live service acceptance run.
+The latest frontend integration verification passed 146 selected deterministic
+desktop/mobile cases, 18 additional local regression cases, type checking and a
+production build. A separate fresh-database run exercised the actual API, spawned
+worker and frozen parser using pinned cached GPT-2 and GPT-Neo configuration and
+header metadata. It verified nesting, search, refresh, tensors, evidence, reports,
+exports and mobile navigation, while preserving the parser's complete/partial
+outcomes. No weight payloads or forward execution were used. This is local
+integration evidence, not a new all-model or hosted-deployment acceptance claim.
 
-On 2026-10-13 the redesign passed the production build, formatting and unchanged
-generated-contract checks, **92 deterministic desktop/mobile tests**, and all
-**14 separate live cases**. Both modes and themes passed the six target widths
-from 320 to 1920px, long identifiers and a 200% CSS zoom regression. Twelve axe
-scans reported no violations. See the [verification record](../docs/UI_REDESIGN.md#verification-record)
-for model evidence and the limits of local Chromium validation.
-
-The October 16 [art-direction revision](../docs/FRONTEND_ART_DIRECTION.md)
-strengthens the direct-entry composition, moves named workspace views into the
-header, reserves graph-control space, and increases technical typography. It
-introduces no component dependencies or API changes. New visual regression checks
-cover header collisions, graph framing and inspector/artifact/report layouts.
-Verification covers 134 distinct deterministic cases: 132 passes in the broad
-run, followed by both long-identifier matrix cases passing after their overflow
-fix. Formatting, typecheck, and the production build also pass.
-After explicit user approval resumed the existing services, eight distinct live
-desktop/mobile cases were verified across an initial run (6 passes, 2 failures)
-and a targeted rerun (2 passes). The initial 360M metadata timeout remains a
-backend reliability limitation; the rerun used completed real cached reports.
-See the art-direction record for pinned model evidence and these limits.
-
-The subsequent [white workspace revision](../docs/WHITE_WORKSPACE.md) makes the
-canvas primary: two compact global rows, one local graph header, a reserved
-control dock, and opt-in model facts/component navigation. Entry uses one model
-input/action group and concise example choices. Shared controls use consistent
-focus, press and hover feedback; the existing Radix primitives provide menus,
-tabs and dialogs. Light is the default; explicit Dark/System preferences persist.
-No decorative animation or new component dependency is required.
-Verification covers 142 distinct deterministic cases across a broad run and
-targeted reruns, plus all eight selected real desktop/mobile journeys. See the
-white-workspace record for the initial failures, their resolution, pinned reports
-and remaining cold-analysis limitation.
-
-The compact-scale follow-up reduces desktop controls to 32px, the entry heading
-to 36px maximum, and the workspace header/views to 48/40px. Touch controls retain
-44px targets. Mode selection, copy/theme icons, menus and drawers have purposeful
-motion with reduced-motion support. Graph controls respond to the actual canvas
-width, and inspector ports align name, shape and dtype on one row. See the same
-record for the production-build verification and local development-server limits.
-
-## Contract Integration
-
-`src/api/generated.ts` is generated from the actual service's `/openapi.json` using
-`npm run generate:api`. This command includes formatting, so an unchanged schema
-produces the same file for CI drift checks. For an offline schema exported from
-the actual Python app's `app.openapi()`, use `npm run generate:api -- path/to/openapi.json`.
-The offline input is a generated contract, not application data or a graph fallback.
-`src/api/contract.ts` contains aliases
-imported from that generated file; no handwritten response schemas remain.
-Regenerate after backend schema changes, then type-check. `src/api/client.ts` is the
-single HTTP boundary and uses generated request and response schemas.
-
-Readiness and optional AI configuration come from the single root `GET /health`.
-A 503 health response uses the same health schema as 200; its check results and
-reason are retained, and the UI indicates degradation without hiding stored
-reports. Only new analyses require confirmed healthy database, storage, and
-worker checks plus `analysis_available`. AI availability is independent.
-
-Other required endpoints use `/api/v1`: analyses (list/create), analysis
-detail/cancel, graph, paginated node inspection, questions, and exports
-(`json`, `zip`, `mermaid`, `markdown`, `diagnostics`, `audit`). HTTP failures must
-provide `{error:{code,message,request_id}}`, except for the structured 503 health
-response. A visitor with no stored jobs sees an empty workspace. Cached analyses
-remain visitor-owned reports and are marked as cached.
-
-Graph/node identities stay scoped by graph ID. Repeated blocks open only the
-engine-provided representative child graph; collapsing returns to its parent.
-The UI never expands repeated instances into invented nodes. Null dimensions,
-parameter counts, dtypes, and shapes remain unknown; numeric zero remains zero.
-
-Citations resolve through exact evidence source/kind/locator matches, or the
-service's `stored_ir` locator forms `node:{graph_id}/{node_id}` and `metadata`.
-Navigation follows at most 100 returned child graphs; an unresolved association
-shows an honest error while retaining the citation source and locator. AI text is
-rendered as plain text and cannot change architecture data.
-
-## Scope
-
-This redesign changes frontend presentation and project documentation. Backend
-API contracts, reconstruction logic, ownership checks and report schemas remain
-unchanged. Artifact-only results expose files, tensors, metadata and supported
-exports; they do not gain a fabricated architecture, runtime verification or AI
-answers. Model comparison, Model Autopsy and inference remain separate work.
+Historical design and verification records remain in
+[CANVAS_WORKSPACE.md](../docs/CANVAS_WORKSPACE.md),
+[ANATOMY_ILLUSTRATION.md](../docs/ANATOMY_ILLUSTRATION.md),
+[UI_REDESIGN.md](../docs/UI_REDESIGN.md),
+[FRONTEND_ART_DIRECTION.md](../docs/FRONTEND_ART_DIRECTION.md) and
+[WHITE_WORKSPACE.md](../docs/WHITE_WORKSPACE.md).
+See [THIRD_PARTY.md](THIRD_PARTY.md) for asset and dependency notices.

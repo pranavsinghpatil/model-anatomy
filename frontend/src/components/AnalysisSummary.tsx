@@ -1,4 +1,5 @@
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
+import { viewHref } from "../state/navigation";
 import {
   ArrowRight,
   BookOpen,
@@ -17,6 +18,7 @@ import { Status } from "./Common";
 import "./analysis-summary.css";
 
 export function Overview({ detail }: { detail: AnalysisDetail }) {
+  const [search] = useSearchParams();
   const artifact = detail.status === "inspected";
   const sourceTopology =
     detail.quality?.mode === "publisher_reference_topology";
@@ -176,7 +178,7 @@ export function Overview({ detail }: { detail: AnalysisDetail }) {
         <div className="next-actions">
           <Link
             className={artifact ? "summary-primary-link" : undefined}
-            to={`?view=${artifact ? "artifacts" : "architecture"}`}
+            to={viewHref(search, artifact ? "artifacts" : "architecture")}
           >
             {artifact ? (
               <FileSearch size={21} aria-hidden="true" />
@@ -198,7 +200,7 @@ export function Overview({ detail }: { detail: AnalysisDetail }) {
             <ArrowRight size={18} aria-hidden="true" />
           </Link>
           {!artifact && (
-            <Link to="?view=artifacts">
+            <Link to={viewHref(search, "artifacts")}>
               <FileSearch size={21} aria-hidden="true" />
               <div>
                 <h3>Inspect Safetensors & files</h3>
@@ -210,7 +212,7 @@ export function Overview({ detail }: { detail: AnalysisDetail }) {
               <ArrowRight size={18} aria-hidden="true" />
             </Link>
           )}
-          <Link to="?view=report">
+          <Link to={viewHref(search, "report")}>
             <FileCheck2 size={21} aria-hidden="true" />
             <div>
               <h3>Review report scope</h3>

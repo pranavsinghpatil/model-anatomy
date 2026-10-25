@@ -130,30 +130,12 @@ test("live workspace submits, inspects a component, and exports", async ({
       `/api/v1/analyses/${created.id}/graphs/${result.root_graph_id}`,
     )
   ).json()) as ArchitectureGraph;
-  let selected:
-    | { node: ArchitectureGraph["nodes"][number]; detail: NodeDetail }
-    | undefined;
-  for (const node of root.nodes.filter(
-    (item) => item.module_path !== null && item.evidence.length > 0,
-  )) {
-    const inspection = await page.request.get(
-      `/api/v1/analyses/${created.id}/nodes/${root.id}/${node.id}`,
-    );
-    expect(inspection.ok()).toBe(true);
-    const detail = (await inspection.json()) as NodeDetail;
-    if (detail.tensor_count > 0 && detail.evidence.length > 0) {
-      selected = { node, detail };
-      break;
-    }
-  }
-  if (!selected) {
-    throw new Error(
-      "the registered root graph should expose a module with owned tensors and evidence",
-    );
-  }
-  const { node: component, detail: componentDetail } = selected;
-  expect(componentDetail.module).not.toBeNull();
-  await graphNode(page, component.label);
+  const component =
+    root.nodes.find(
+      (node) => node.child_graph_id && node.parameter_count! > 0,
+    ) ?? root.nodes[0];
+  expect(component).toBeTruthy();
+  await graphNode(page, component!.label);
   const inspector = page
     .getByRole("tabpanel", { name: "Details" })
     .getByTestId("inspector");

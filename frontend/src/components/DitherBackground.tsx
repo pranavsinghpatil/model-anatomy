@@ -35,7 +35,7 @@ interface AntigravityParticle {
  * - Serene, steady ambient radiant light pools with gentle harmonic waves
  * - Constellation of 220 upward-floating zero-gravity quantum stipples drifting calmly
  * - Multi-tier smoothstep Bayer luminance quantization (deep obsidian, midnight navy, sapphire, cobalt, starlight, specular)
- * - 60fps native performance with direct Uint32Array memory blits
+ * - At most 24fps with direct Uint32Array memory blits; static under reduced motion
  * - Pure ambient background with no intrusive cursor shadow, halo, or dither warping
  */
 export function DitherBackground({
@@ -51,7 +51,8 @@ export function DitherBackground({
     const ctx = canvas.getContext("2d", { willReadFrequently: false });
     if (!ctx) return;
 
-    let animationFrameId: number;
+    let animationFrameId = 0;
+    let previousFrame = -Infinity;
     let width = 0;
     let height = 0;
     let cols = 0;
@@ -59,9 +60,10 @@ export function DitherBackground({
     let imgData: ImageData | null = null;
     let buf32: Uint32Array | null = null;
 
-    const prefersReducedMotion = window.matchMedia(
+    const motionPreference = window.matchMedia(
       "(prefers-reduced-motion: reduce)",
-    ).matches;
+    );
+    let prefersReducedMotion = motionPreference.matches;
 
     // Helper: pack 32-bit unsigned ABGR
     const packABGR = (r: number, g: number, b: number, a: number = 255) =>
@@ -146,6 +148,8 @@ export function DitherBackground({
 
     const handleResize = () => {
       updateDimensions();
+      cancelAnimationFrame(animationFrameId);
+      previousFrame = -Infinity;
       renderFrame(performance.now());
     };
 
@@ -153,6 +157,12 @@ export function DitherBackground({
 
     // Main frame rendering loop (calm, steady, and unwarped)
     const renderFrame = (timestamp: number) => {
+      if (document.hidden) return;
+      if (!prefersReducedMotion && timestamp - previousFrame < 1000 / 24) {
+        animationFrameId = requestAnimationFrame(renderFrame);
+        return;
+      }
+      previousFrame = timestamp;
       if (!ctx || !imgData || !buf32 || cols <= 0 || rows <= 0) return;
 
       const now = timestamp || performance.now();
@@ -245,7 +255,7 @@ export function DitherBackground({
       const particles = particlesRef.current;
       const numParticles = particles.length;
 
-      for (let i = 0; i < numParticles; i++) {
+      for (let i = 0; i < (prefersReducedMotion ? 0 : numParticles); i++) {
         const p = particles[i];
 
         // Defy gravity: continuous upward buoyancy
@@ -294,12 +304,23 @@ export function DitherBackground({
 
       ctx.putImageData(imgData, 0, 0);
 
-      animationFrameId = requestAnimationFrame(renderFrame);
+      if (!prefersReducedMotion)
+        animationFrameId = requestAnimationFrame(renderFrame);
     };
 
-    animationFrameId = requestAnimationFrame(renderFrame);
+    const resume = () => {
+      cancelAnimationFrame(animationFrameId);
+      previousFrame = -Infinity;
+      prefersReducedMotion = motionPreference.matches;
+      if (!document.hidden) renderFrame(performance.now());
+    };
+    document.addEventListener("visibilitychange", resume);
+    motionPreference.addEventListener("change", resume);
+    resume();
 
     return () => {
+      document.removeEventListener("visibilitychange", resume);
+      motionPreference.removeEventListener("change", resume);
       cancelAnimationFrame(animationFrameId);
       window.removeEventListener("resize", handleResize);
     };

@@ -162,6 +162,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/analyses/{analysis_id}/graph-index": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get Graph Index */
+    get: operations["get_graph_index_api_v1_analyses__analysis_id__graph_index_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/analyses/{analysis_id}/nodes/{graph_id}/{node_id}": {
     parameters: {
       query?: never;
@@ -228,6 +245,8 @@ export interface components {
       id: string;
       /** Model Id */
       model_id: string;
+      /** Model Input */
+      model_input?: string | null;
       /** Architecture */
       architecture: string | null;
       /** Revision */
@@ -317,6 +336,8 @@ export interface components {
       id: string;
       /** Model Id */
       model_id: string;
+      /** Model Input */
+      model_input?: string | null;
       /** Architecture */
       architecture: string | null;
       /** Revision */
@@ -521,6 +542,22 @@ export interface components {
       /** Locator */
       locator: string;
     };
+    /** CitationLocation */
+    CitationLocation: {
+      /** Source */
+      source: string;
+      /**
+       * Kind
+       * @enum {string}
+       */
+      kind: "direct" | "derived" | "reconstructed" | "unknown";
+      /** Locator */
+      locator: string;
+      /** Graph Id */
+      graph_id: string;
+      /** Node Id */
+      node_id: string;
+    };
     /** CreateAnalysis */
     CreateAnalysis: {
       /**
@@ -625,6 +662,28 @@ export interface components {
       evidence: components["schemas"]["Evidence"][];
       /** Relation */
       relation: string;
+    };
+    /** GraphIndexResponse */
+    GraphIndexResponse: {
+      /** Root Graph Id */
+      root_graph_id: string;
+      /** Graphs */
+      graphs: components["schemas"]["GraphLocation"][];
+      /** Nodes */
+      nodes: components["schemas"]["NodeLocation"][];
+      /** Citations */
+      citations: components["schemas"]["CitationLocation"][];
+    };
+    /** GraphLocation */
+    GraphLocation: {
+      /** Id */
+      id: string;
+      /** Label */
+      label: string;
+      /** Parent Graph Id */
+      parent_graph_id: string | null;
+      /** Parent Node Id */
+      parent_node_id: string | null;
     };
     /** GraphNode */
     GraphNode: {
@@ -793,6 +852,21 @@ export interface components {
       } | null;
       /** Warnings */
       warnings: string[];
+    };
+    /** NodeLocation */
+    NodeLocation: {
+      /** Id */
+      id: string;
+      /** Graph Id */
+      graph_id: string;
+      /** Label */
+      label: string;
+      /** Kind */
+      kind: string;
+      /** Module Path */
+      module_path: string | null;
+      /** Child Graph Id */
+      child_graph_id: string | null;
     };
     /** Question */
     Question: {
@@ -1724,6 +1798,82 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["GraphResponse"];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Conflict */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Gone */
+      410: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Unprocessable Entity */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Too Many Requests */
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Service Unavailable */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  get_graph_index_api_v1_analyses__analysis_id__graph_index_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        analysis_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["GraphIndexResponse"];
         };
       };
       /** @description Not Found */
