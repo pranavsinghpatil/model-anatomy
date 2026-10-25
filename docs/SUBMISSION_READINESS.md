@@ -110,3 +110,17 @@ also reports success, but anonymous requests redirect to Vercel login/SSO.
 A green frontend deployment therefore does not establish judge access or a
 working public API/worker. The original listed production URL still needs a
 working replacement or repair.
+
+The Linux browser run initially passed 213 cases and failed one responsive
+geometry check: a transient zero-height measurement produced NaN. That check
+now waits for positive finite dimensions and uses the same captured snapshot;
+the original position and drawing-area thresholds remain unchanged. The final
+desktop/mobile responsive cases passed locally.
+
+Autter also flagged valid first-party imports as absent external packages and
+alleged a quota race without accounting for the database write mutex. Import
+resolution/package inspection confirms the local modules. Four real concurrent
+20-request SQLite bursts, across four service instances, each admitted exactly
+3 and rejected 17 with accurate guest/global counters. PostgreSQL locking was
+source-reviewed separately. Evidence is included in the PR for reviewer
+classification; the automated review gate has not been disabled.

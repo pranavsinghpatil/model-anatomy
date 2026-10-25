@@ -73,9 +73,8 @@ test("technical graph keeps a clear drawing area and controls across responsive 
       page.getByRole("button", { name: "Readable view", exact: true }),
     ).toBeVisible();
 
-    const geometry = await page
-      .getByTestId("graph-canvas")
-      .evaluate((canvas) => {
+    const readGeometry = () =>
+      page.getByTestId("graph-canvas").evaluate((canvas) => {
         const box = (selector: string) => {
           const element = canvas.querySelector<HTMLElement>(selector);
           if (!element) return null;
@@ -91,6 +90,21 @@ test("technical graph keeps a clear drawing area and controls across responsive 
           duplicateToolbar: Boolean(canvas.querySelector(".canvas-toolbar")),
         };
       });
+    let geometry = await readGeometry();
+    // A responsive resize can briefly leave React Flow with zero height while
+    // its parent layout settles. Wait only for valid geometry before checking
+    // the same layout thresholds below.
+    await expect
+      .poll(async () => {
+        geometry = await readGeometry();
+        return (
+          Number.isFinite(geometry.height) &&
+          geometry.height > 0 &&
+          Number.isFinite(geometry.viewport?.height) &&
+          geometry.viewport!.height > 0
+        );
+      })
+      .toBe(true);
     expect(geometry.header).not.toBeNull();
     expect(geometry.viewport).not.toBeNull();
     expect(geometry.dock).not.toBeNull();

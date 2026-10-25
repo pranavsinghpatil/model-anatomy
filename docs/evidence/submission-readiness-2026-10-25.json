@@ -218,6 +218,47 @@
         "passed": 33,
         "seconds": 15.43
       }
+    },
+    "browser_resize_measurement": {
+      "first_linux_browser_run": {
+        "passed": 213,
+        "failed": 1,
+        "skipped": 34
+      },
+      "failure": "A one-shot responsive geometry measurement divided two zero heights and produced NaN.",
+      "repair": "Poll for positive finite canvas/viewport dimensions and assert against that same captured geometry snapshot.",
+      "original_layout_thresholds_retained": true,
+      "focused_final": {
+        "passed": 2,
+        "seconds": 19.8,
+        "projects": [
+          "desktop",
+          "mobile"
+        ]
+      },
+      "broader_spec_before_snapshot_refinement": {
+        "passed": 4,
+        "seconds": 29.7
+      }
+    },
+    "quota_concurrency_counterexample": {
+      "service_instances": 4,
+      "concurrent_requests_per_case": 20,
+      "cases": [
+        "guest analyses",
+        "global analyses",
+        "guest questions",
+        "global questions"
+      ],
+      "accepted_per_case": 3,
+      "rate_limited_per_case": 17,
+      "guest_and_global_counters_per_case": 3,
+      "scope": "Real SQLite transactions; PostgreSQL mutex locking independently source-reviewed, not live-tested."
+    },
+    "automated_review_triage": {
+      "missing_package_findings": "Four flagged imports resolve to declared first-party model_anatomy modules and are present in the built application package.",
+      "race_finding": "Database.write serializes quota writes; four concurrent burst checks retained exact allowances.",
+      "gate_status": "See current PR gate; findings require reviewer classification. No gate was disabled or findings silently suppressed."
     }
   },
   "engine_version": "2026.10.25.2-submission-audit"
