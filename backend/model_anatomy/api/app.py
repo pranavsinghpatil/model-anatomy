@@ -23,7 +23,7 @@ from model_anatomy.service.benchmark_catalog import BenchmarkCatalogService
 from model_anatomy.service.discovery_catalog import DiscoveryCatalogService
 from model_anatomy.service.errors import ServiceError
 from model_anatomy.service.jobs import JobService
-from model_anatomy.service.views import artifact_view, export, graph_view, load_ir, node_view
+from model_anatomy.service.views import artifact_view, export, graph_index, graph_view, load_ir, node_view
 
 from .schemas import (
     AnalysesResponse,
@@ -35,6 +35,7 @@ from .schemas import (
     DiscoveryCatalogResponse,
     ErrorResponse,
     GraphResponse,
+    GraphIndexResponse,
     Health,
     HealthChecks,
     NodeInspection,
@@ -318,6 +319,10 @@ def create_app(settings: Settings | None = None, *, service=None, explanation=No
     @app.get("/api/v1/analyses/{analysis_id}/graphs/{graph_id}", response_model=GraphResponse)
     def get_graph(analysis_id: str, graph_id: str, request: Request):
         return graph_view(artifact(request, analysis_id), graph_id)
+
+    @app.get("/api/v1/analyses/{analysis_id}/graph-index", response_model=GraphIndexResponse)
+    def get_graph_index(analysis_id: str, request: Request):
+        return graph_index(artifact(request, analysis_id))
 
     @app.get("/api/v1/analyses/{analysis_id}/nodes/{graph_id}/{node_id}", response_model=NodeInspection)
     def get_node(

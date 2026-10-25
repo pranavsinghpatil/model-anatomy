@@ -31,6 +31,7 @@ import type {
 import { shape } from "../format";
 import { GraphCanvas } from "../graph/GraphCanvas";
 import { nodeTitle } from "../graph/presentation";
+import { ComponentTree } from "./ComponentTree";
 import { Inspector, EvidenceList } from "./Inspector";
 import { Questions } from "./Questions";
 import { Button, Drawer } from "./ui";
@@ -74,6 +75,9 @@ export function ArchitectureWorkspace({
   const desktop = useMedia("(min-width: 1280px)");
   const docked = useMedia("(min-width: 1024px)");
   const [drawer, setDrawer] = useState(false);
+  const [navigationMode, setNavigationMode] = useState<"current" | "tree">(
+    "current",
+  );
   const [edge, setEdge] = useState<GraphEdge | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
   const requestedScene = searchParams.get("scene");
@@ -89,7 +93,7 @@ export function ArchitectureWorkspace({
   }, [requestedScene, setState]);
   const changeScene = (value: "graph" | "anatomy") => {
     setState((s) => ({ ...s, scene: value }));
-    const next = new URLSearchParams(searchParams);
+    const next = new URLSearchParams(window.location.search);
     if (value === "graph") next.delete("scene");
     else next.set("scene", value);
     setSearchParams(next, { replace: true });
@@ -185,7 +189,7 @@ export function ArchitectureWorkspace({
       target?.focus();
     });
   }
-  const outline = (
+  const currentOutline = (
     <div className="component-outline">
       <p className="outline-scope">
         Current graph · {graph.nodes.length} components
@@ -225,6 +229,52 @@ export function ArchitectureWorkspace({
         ))}
       </ul>
     </div>
+  );
+  const outline = (
+    <>
+      <div
+        className="navigator-modes"
+        role="group"
+        aria-label="Component navigation scope"
+      >
+        <button
+          type="button"
+          aria-pressed={navigationMode === "current"}
+          onClick={() => setNavigationMode("current")}
+        >
+          Current graph
+        </button>
+        <button
+          type="button"
+          aria-pressed={navigationMode === "tree"}
+          onClick={() => setNavigationMode("tree")}
+        >
+          Model tree
+        </button>
+      </div>
+      {navigationMode === "current" ? (
+        currentOutline
+      ) : (
+        <ComponentTree
+          analysisId={analysis.id}
+          root={root}
+          currentPath={crumbs}
+          selectedId={selected?.id}
+          navigate={(path, node) => {
+            setEdge(null);
+            onClearCitation();
+            setDrawer(false);
+            setState((s) => ({
+              ...s,
+              path,
+              selected: { ...s.selected, [path.at(-1)!.id]: node.id },
+              inspectorOpen: true,
+              questions: false,
+            }));
+          }}
+        />
+      )}
+    </>
   );
   const navigator = (
     <aside className="component-navigator" aria-label="Component navigator">
@@ -409,14 +459,39 @@ export function ArchitectureWorkspace({
           header={graphHeader}
           legend={
             <>
-              <span>
-                <i />
-                Dataflow
-              </span>
-              <span>
-                <i className="structural" />
-                Structural relation
-              </span>
+              {graph.edges.some((edge) => edge.relation === "dataflow") && (
+                <span>
+                  <i />
+                  Dataflow
+                </span>
+              )}
+              {graph.edges.some((edge) => edge.relation === "dependency") && (
+                <span>
+                  <i className="structural" />
+                  Module dependency
+                </span>
+              )}
+              {graph.edges.some(
+                (edge) => edge.relation === "conditional_dependency",
+              ) && (
+                <span>
+                  <i className="conditional" />
+                  Conditional dependency
+                </span>
+              )}
+              {graph.edges.some(
+                (edge) =>
+                  ![
+                    "dataflow",
+                    "dependency",
+                    "conditional_dependency",
+                  ].includes(edge.relation),
+              ) && (
+                <span>
+                  <i className="structural" />
+                  Other reported relation
+                </span>
+              )}
             </>
           }
           viewport={state.viewports[graph.id]}
@@ -507,6 +582,36 @@ export function ArchitectureWorkspace({
                   <code>{shape(edge.tensor?.shape)}</code>
                 </dd>
               </dl>
+              <details className="metadata">
+                <summary>
+                  {edge.relation === "conditional_dependency"
+                    ? "Recorded branch conditions"
+                    : "Dependency conditions"}
+                </summary>
+                {Array.from(
+                  new Set(
+                    edge.evidence.flatMap((item) =>
+                      [
+                        item.details?.conditions,
+                        item.details?.source_conditions,
+                      ].flatMap((value) =>
+                        Array.isArray(value)
+                          ? value.filter(
+                              (condition): condition is string =>
+                                typeof condition === "string",
+                            )
+                          : [],
+                      ),
+                    ),
+                  ),
+                ).map((condition) => (
+                  <p key={condition}>{condition}</p>
+                ))}
+                <p>
+                  These are recorded static conditions, not an observed runtime
+                  execution path.
+                </p>
+              </details>
               <h3>Evidence</h3>
               <EvidenceList items={edge.evidence} />
             </div>

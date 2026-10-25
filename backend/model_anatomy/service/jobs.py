@@ -288,6 +288,7 @@ def job_detail(job: Job) -> dict:
     return {
         "id": job.id,
         "model_id": job.model_id,
+        "model_input": job.model_input,
         "revision": job.revision,
         "architecture": summary.get("architecture"),
         "status": job.status,

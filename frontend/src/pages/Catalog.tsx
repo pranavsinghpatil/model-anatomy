@@ -15,128 +15,22 @@ import { EntryHeader, PageFooter } from "./Entry";
 import "./benchmark-catalog.css";
 import "./entry.css";
 
+import {
+  statusLabel,
+  successful,
+  provenanceLabel,
+  outcomeLabel,
+  dateTime,
+  publicationFileUrl,
+  hfUrl,
+  recordKey,
+  scopeStatus,
+  hasOutOfScopeExternalHistory,
+  scopeReasonLabel,
+} from "./catalog-model";
 const pageSize = 24;
 const number = (value: number | null | undefined) =>
   value == null ? "Unknown" : value.toLocaleString();
-
-function statusLabel(status: string) {
-  if (status === "reported_complete")
-    return "Reported complete · module anatomy";
-  if (status === "reported_partial") return "Reported partial · module anatomy";
-  if (status === "out_of_scope") return "Outside scope · no Safetensors/access";
-  if (status === "reported_failure")
-    return "Reported failure · teammate validation";
-  if (status === "completed") return "Complete static report";
-  if (status === "partial") return "Partial graph";
-  if (status === "inspected") return "Artifacts inspected";
-  const failures: Record<string, string> = {
-    http_access: "HF request failed",
-    network: "Network request failed",
-    artifact_error: "Artifact processing failed",
-    unsupported: "Reconstruction unavailable",
-    invalid_report: "Report validation failed",
-    failure: "Inspection failed",
-    memorylimit: "Memory limit reached",
-    timeout: "Time limit reached",
-  };
-  return failures[status] ?? status.replaceAll("_", " ");
-}
-
-function successful(item: DiscoveryCatalogResult) {
-  if (item.source === "external_validation") return false;
-  return ["completed", "partial", "inspected"].includes(item.status);
-}
-
-function provenanceLabel(item: DiscoveryCatalogResult) {
-  if (item.source === "external_validation") return "Teammate CSV";
-  if (item.source === "benchmark") return "Benchmark attempt";
-  if (!successful(item)) return "Inspection attempt";
-  return item.stored_report_id ? "Saved inspection" : "Inspection outcome";
-}
-
-function outcomeLabel(item: DiscoveryCatalogResult) {
-  if (item.source === "external_validation") return statusLabel(item.status);
-  return item.source === "inspection" && !successful(item)
-    ? `Recorded failure · ${statusLabel(item.status)}`
-    : statusLabel(item.status);
-}
-
-function dateTime(value: string | null | undefined) {
-  if (!value) return "Unknown";
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? value : date.toLocaleString();
-}
-
-function publicationFileUrl(
-  repository: string | null | undefined,
-  commit: string | null | undefined,
-  path: string | null | undefined,
-) {
-  if (!repository || !commit || !path) return null;
-  const encodedPath = path
-    .split("/")
-    .map((segment) => encodeURIComponent(segment))
-    .join("/");
-  return `${repository.replace(/\/$/, "")}/blob/${encodeURIComponent(commit)}/${encodedPath}`;
-}
-
-function hfUrl(item: DiscoveryCatalogResult) {
-  if (item.reference) return item.reference;
-  const repo = `https://huggingface.co/${encodeURIComponent(item.model_id).replaceAll("%2F", "/")}`;
-  return item.revision
-    ? `${repo}/tree/${encodeURIComponent(item.revision)}`
-    : repo;
-}
-
-function recordKey(item: DiscoveryCatalogResult) {
-  return [
-    item.model_id,
-    item.revision ?? "revision-unknown",
-    item.artifact ?? "artifact-unspecified",
-    item.selection_id ?? "selection-unspecified",
-    item.explicit_artifact ? "explicit" : "implicit",
-    item.source,
-  ].join("|");
-}
-
-function scopeStatus(item: DiscoveryCatalogResult) {
-  if (item.scope_status) return item.scope_status;
-  if (item.status === "out_of_scope") return "out_of_scope";
-  if (
-    item.external_observations?.some(
-      (observation) => observation.status === "out_of_scope",
-    )
-  )
-    return "out_of_scope";
-  if (
-    (item.source === "external_validation" &&
-      ["reported_complete", "reported_partial", "reported_failure"].includes(
-        item.status,
-      )) ||
-    item.external_observations?.some((observation) =>
-      ["reported_complete", "reported_partial", "reported_failure"].includes(
-        observation.status ?? "",
-      ),
-    )
-  )
-    return "in_scope";
-  return "unknown";
-}
-
-function hasOutOfScopeExternalHistory(item: DiscoveryCatalogResult) {
-  return (
-    item.external_observations?.some(
-      (observation) => observation.status === "out_of_scope",
-    ) ?? false
-  );
-}
-
-function scopeReasonLabel(reason: string | null | undefined) {
-  if (reason === "no_safetensors" || reason === "safetensors_unavailable")
-    return "Safetensors unavailable";
-  if (reason === "access_restricted") return "Access restricted";
-  return reason ? reason.replaceAll("_", " ") : "Unknown";
-}
 
 export default function Catalog() {
   const navigate = useNavigate();
@@ -156,7 +50,7 @@ export default function Catalog() {
     retry: retryQuery,
     staleTime: 0,
     refetchOnWindowFocus: true,
-    refetchInterval: 15_000,
+    refetchInterval: 60_000,
     refetchIntervalInBackground: false,
   });
   const inspect = useMutation({
@@ -215,7 +109,13 @@ export default function Catalog() {
     [results, normalizedQuery, category, outcome, scope, source],
   );
   const pageCount = Math.ceil(filtered.length / pageSize);
-  const visible = filtered.slice(page * pageSize, (page + 1) * pageSize);
+  const currentPage = Math.min(page, Math.max(0, pageCount - 1));
+  const visible = filtered.slice(
+    currentPage * pageSize,
+    (currentPage + 1) * pageSize,
+  );
+
+  useEffect(() => setPage(currentPage), [currentPage]);
 
   useEffect(
     () => setPage(0),
@@ -1030,19 +930,19 @@ export default function Catalog() {
                   <button
                     type="button"
                     className="catalog-empty-btn"
-                    disabled={page === 0}
-                    onClick={() => setPage(page - 1)}
+                    disabled={currentPage === 0}
+                    onClick={() => setPage(Math.max(0, currentPage - 1))}
                   >
                     Previous
                   </button>
                   <span aria-live="polite">
-                    Page {page + 1} of {pageCount}
+                    Page {currentPage + 1} of {pageCount}
                   </span>
                   <button
                     type="button"
                     className="catalog-empty-btn"
-                    disabled={page + 1 >= pageCount}
-                    onClick={() => setPage(page + 1)}
+                    disabled={currentPage + 1 >= pageCount}
+                    onClick={() => setPage(currentPage + 1)}
                   >
                     Next
                   </button>

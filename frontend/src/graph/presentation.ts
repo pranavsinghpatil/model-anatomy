@@ -3,7 +3,10 @@ import type { GraphNode } from "../api/contract";
 export function nodeTitle(node: GraphNode) {
   // Reported paths distinguish repeated native class labels without inventing
   // semantic classification or dataflow from their names.
-  if (node.module_path && ["module", "unknown", "unclassified"].includes(node.kind)) {
+  if (
+    node.module_path &&
+    ["module", "unknown", "unclassified"].includes(node.kind)
+  ) {
     const part = node.module_path.split(".").filter(Boolean).at(-1);
     if (part && /^\d+$/.test(part)) {
       return `${node.label || node.module_type || "Module"} [${part}]`;
@@ -27,6 +30,7 @@ export function nodeCategory(kind: string) {
   if (["block", "model", "layer"].some((part) => value.includes(part)))
     return "structure";
   if (value === "embedding") return "embedding";
+  if (["backbone", "container", "module"].includes(value)) return "structure";
   return "other";
 }
 export function nodeSize(node: GraphNode, density: "compact" | "detailed") {

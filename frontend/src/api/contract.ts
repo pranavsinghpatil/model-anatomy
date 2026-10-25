@@ -28,3 +28,4 @@ export type CatalogResponse = components["schemas"]["CatalogResponse"];
 export type QuestionRequest = components["schemas"]["Question"];
 export type ExportFormat =
   "json" | "mermaid" | "markdown" | "diagnostics" | "audit" | "zip";
+export type GraphIndex = components["schemas"]["GraphIndexResponse"];

@@ -1,5 +1,7 @@
+import { rememberSubmission } from "../state/submissions";
 import type {
   AnalysisDetail,
+  GraphIndex,
   ArtifactInspectionResponse,
   AnalysesResponse,
   ArchitectureGraph,
@@ -290,13 +292,16 @@ export const api = {
     request<AnalysisDetail>(`/catalog/${segment(id)}/inspect`, {
       method: "POST",
     }),
-  analyze: (model: string) =>
-    request<AnalysisDetail>("/analyses", {
+  analyze: async (model: string) => {
+    const job = await request<AnalysisDetail>("/analyses", {
       method: "POST",
       body: JSON.stringify({
         model,
       } satisfies CreateAnalysisRequest),
-    }),
+    });
+    rememberSubmission(job.id, model);
+    return job;
+  },
   analysis: (id: string, signal?: AbortSignal) =>
     request<AnalysisDetail>(`/analyses/${segment(id)}`, { signal }),
   artifacts: (id: string, offset = 0, limit = 50, signal?: AbortSignal) =>
@@ -306,6 +311,8 @@ export const api = {
     ),
   cancel: (id: string) =>
     request<AnalysisDetail>(`/analyses/${segment(id)}`, { method: "DELETE" }),
+  graphIndex: (id: string, signal?: AbortSignal) =>
+    request<GraphIndex>(`/analyses/${segment(id)}/graph-index`, { signal }),
   graph: (id: string, graphId: string, signal?: AbortSignal) =>
     request<ArchitectureGraph>(
       `/analyses/${segment(id)}/graphs/${segment(graphId)}`,

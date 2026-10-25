@@ -1,5 +1,3 @@
-import { readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
 import type { Page } from "@playwright/test";
 import type {
   AnalysisDetail,
@@ -29,18 +27,147 @@ type Artifact = {
   tensors: Record<string, Record<string, unknown>>;
   raw_structure: { modules: Record<string, Record<string, unknown>> };
 };
-// Tests project real engine artifacts into the agreed shallow HTTP contract.
-// No fixture is included in the production app or used as an API fallback.
-const load = (directory: string) =>
-  JSON.parse(
-    readFileSync(
-      fileURLToPath(
-        new URL(`../../output/${directory}/model.json`, import.meta.url),
+// Self-contained HTTP contract fixtures exercise renderer behavior, including
+// legacy repetition and dataflow. They are not evidence that a parser model is
+// complete. Parser acceptance uses actual metadata through the real API/worker.
+const fixtureEvidence: Evidence[] = [
+  {
+    source: "contract_fixture",
+    kind: "direct",
+    locator: "test-only",
+    details: {},
+  },
+];
+const port = {
+  shape: ["B", "S", 768],
+  dtype: "F32",
+  semantic_name: "hidden_states",
+};
+const moduleNode = (
+  id: string,
+  label: string,
+  kind: string,
+  path: string | null = null,
+  extra: Partial<RawNode> = {},
+): RawNode => ({
+  id,
+  label,
+  kind,
+  module_path: path,
+  module_type: kind,
+  repeat: 1,
+  inputs: [port],
+  outputs: [port],
+  parameter_count: 0,
+  metadata: {},
+  evidence: fixtureEvidence,
+  confidence: 1,
+  source_modules: path ? [path] : [],
+  repetition: null,
+  child_graph: null,
+  ...extra,
+});
+const chain = (id: string, nodes: RawNode[]): RawGraph => ({
+  id,
+  nodes,
+  metadata: {},
+  edges: nodes.slice(1).map((node, index) => ({
+    source: nodes[index].id,
+    target: node.id,
+    source_port: "output",
+    target_port: "input",
+    tensor: port,
+    label: null,
+    relation: "dataflow",
+    evidence: fixtureEvidence,
+  })),
+});
+const attention = chain("attention", [
+  moduleNode(
+    "qkv",
+    "QKV Projection",
+    "projection",
+    "transformer.h.0.attn.c_attn",
+  ),
+  moduleNode(
+    "attention_out",
+    "Output Projection",
+    "projection",
+    "transformer.h.0.attn.c_proj",
+  ),
+]);
+const decoder = chain("decoder", [
+  moduleNode(
+    "norm1",
+    "Attention LayerNorm",
+    "layer_norm",
+    "transformer.h.0.ln_1",
+  ),
+  moduleNode(
+    "attn",
+    "Self Attention",
+    "self_attention",
+    "transformer.h.0.attn",
+    { child_graph: attention },
+  ),
+  moduleNode("norm2", "MLP LayerNorm", "layer_norm", "transformer.h.0.ln_2"),
+  moduleNode("mlp", "MLP", "mlp", "transformer.h.0.mlp"),
+]);
+const fixtureRoot = chain("root", [
+  moduleNode("input", "Token IDs", "input"),
+  moduleNode("embedding", "Token Embedding", "embedding", "transformer.wte", {
+    parameter_count: 38597376,
+    metadata: { attributes: { num_embeddings: 50257, embedding_dim: 768 } },
+  }),
+  moduleNode("block", "Decoder Block", "transformer_block", "transformer.h", {
+    repeat: 12,
+    child_graph: decoder,
+    repetition: {
+      count: 12,
+      mode: "sequential",
+      instance_paths: Array.from(
+        { length: 12 },
+        (_, index) => `transformer.h.${index}`,
       ),
-      "utf8",
-    ),
-  ) as Artifact;
-const artifact = load("gpt2");
+    },
+    parameter_count: 85000000,
+  }),
+  moduleNode("norm", "Final LayerNorm", "layer_norm", "transformer.ln_f"),
+  moduleNode("head", "LM Head", "lm_head", "lm_head"),
+  moduleNode("output", "Output", "output"),
+]);
+const tensorName = "transformer.wte.weight";
+const artifact: Artifact = {
+  model_id: "openai-community/gpt2",
+  architecture: "GPT2LMHeadModel",
+  root_graph: fixtureRoot,
+  metadata: {
+    revision: "607a30d783dfa663caf39e06633721c8d4cfcd7e",
+    unique_parameter_count: 124439808,
+    dimensions: { hidden: 768, heads: 12, layers: 12, vocabulary: 50257 },
+    inputs: { input_specs: { input_ids: {} } },
+    analysis_report: { warnings: [] },
+  },
+  tensors: {
+    [tensorName]: {
+      name: tensorName,
+      shape: [50257, 768],
+      dtype: "F32",
+      parameter_count: 38597376,
+      artifact:
+        "https://huggingface.co/openai-community/gpt2/resolve/607a30d783dfa663caf39e06633721c8d4cfcd7e/model.safetensors",
+      parameter_refs: [tensorName],
+    },
+  },
+  raw_structure: {
+    modules: {
+      "transformer.wte": {
+        type: "Embedding",
+        attributes: { num_embeddings: 50257, embedding_dim: 768 },
+      },
+    },
+  },
+};
 const graphMap = (root: RawGraph): Map<string, ArchitectureGraph> => {
   const result = new Map<string, ArchitectureGraph>();
   function visit(graph: RawGraph) {
@@ -78,6 +205,21 @@ export function analysisFor(id = "job-test"): AnalysisDetail {
     parameter_count: artifact.metadata.unique_parameter_count,
     root_graph_id: artifact.root_graph.id,
     cached: false,
+    quality: {
+      mode: "static_module_architecture",
+      architecture_scope: "Native registered module architecture",
+      architecture_checks: {
+        module_inventory: true,
+        parameter_mapping: true,
+        native_architecture: true,
+        module_topology: true,
+      },
+      checkpoint_parameter_coverage: 1,
+      unknown_nodes: 0,
+      unmapped_checkpoint_tensors: 0,
+      forward_executed: false,
+      runtime_trace_available: false,
+    },
     dimensions: artifact.metadata.dimensions,
     input_names: Object.keys(artifact.metadata.inputs.input_specs),
   };
@@ -180,7 +322,7 @@ export async function mockService(page: Page, scenario: Scenario = {}) {
             ...(status === "partial"
               ? {
                   partial_reasons: [
-                    "Tensor shape comparison could not be completed.",
+                    "Checkpoint parameter mapping is incomplete.",
                   ],
                 }
               : {}),
@@ -208,6 +350,54 @@ export async function mockService(page: Page, scenario: Scenario = {}) {
     }
     if (id !== "job-test") return error(404, "not_found", "Analysis not found");
     const collection = graphMap(artifact.root_graph);
+    if (parts[2] === "graph-index") {
+      const locations: {
+        id: string;
+        label: string;
+        parent_graph_id: string | null;
+        parent_node_id: string | null;
+      }[] = [];
+      function visit(
+        graph: RawGraph,
+        label: string,
+        parentGraph: string | null,
+        parentNode: string | null,
+      ) {
+        locations.push({
+          id: graph.id,
+          label,
+          parent_graph_id: parentGraph,
+          parent_node_id: parentNode,
+        });
+        for (const node of graph.nodes)
+          if (node.child_graph)
+            visit(node.child_graph, node.label, graph.id, node.id);
+      }
+      visit(artifact.root_graph, "gpt2", null, null);
+      return json({
+        root_graph_id: rootGraph.id,
+        graphs: locations,
+        nodes: [...collection.values()].flatMap((graph) =>
+          graph.nodes.map((node) => ({
+            id: node.id,
+            graph_id: graph.id,
+            label: node.label,
+            kind: node.kind,
+            module_path: node.module_path,
+            child_graph_id: node.child_graph_id,
+          })),
+        ),
+        citations: [...collection.values()].flatMap((graph) =>
+          graph.nodes.flatMap((node) =>
+            node.evidence.map((item) => ({
+              ...item,
+              graph_id: graph.id,
+              node_id: node.id,
+            })),
+          ),
+        ),
+      });
+    }
     if (parts[2] === "artifacts") {
       const offset = Number(url.searchParams.get("offset") ?? 0);
       const page = scenario.artifactPages?.find(

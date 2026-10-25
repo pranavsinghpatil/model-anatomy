@@ -185,6 +185,7 @@ class InspectionSummary(BaseModel):
 class AnalysisDetail(BaseModel):
     id: str
     model_id: str
+    model_input: str | None = None
     architecture: str | None
     revision: str | None
     status: AnalysisStatus
@@ -268,6 +269,37 @@ class GraphResponse(BaseModel):
     nodes: list[GraphNode]
     edges: list[GraphEdge]
     metadata: dict[str, Any]
+
+
+class GraphLocation(BaseModel):
+    id: str
+    label: str
+    parent_graph_id: str | None
+    parent_node_id: str | None
+
+
+class NodeLocation(BaseModel):
+    id: str
+    graph_id: str
+    label: str
+    kind: str
+    module_path: str | None
+    child_graph_id: str | None
+
+
+class CitationLocation(BaseModel):
+    source: str
+    kind: EvidenceKind
+    locator: str
+    graph_id: str
+    node_id: str
+
+
+class GraphIndexResponse(BaseModel):
+    root_graph_id: str
+    graphs: list[GraphLocation]
+    nodes: list[NodeLocation]
+    citations: list[CitationLocation]
 
 
 class TensorRecord(BaseModel):

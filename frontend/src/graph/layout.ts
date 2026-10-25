@@ -1,4 +1,4 @@
-import ELK from "elkjs/lib/elk-api";
+import ELK, { type ElkNode } from "elkjs/lib/elk-api";
 import ElkWorker from "elkjs/lib/elk-worker.min.js?worker";
 import { MarkerType, type Edge, type Node } from "@xyflow/react";
 import type { ArchitectureGraph, GraphNode } from "../api/contract";
@@ -21,6 +21,7 @@ export type AnatomyEdge = Edge<{
   original: ArchitectureGraph["edges"][number];
 }>;
 const elk = new ELK({ workerFactory: () => new ElkWorker() });
+const layouts = new WeakMap<ArchitectureGraph, Map<string, Promise<ElkNode>>>();
 if (import.meta.hot) import.meta.hot.dispose(() => elk.terminateWorker());
 
 export async function layoutGraph(
@@ -67,7 +68,11 @@ export async function layoutGraph(
           ? "var(--graph-edge)"
           : "var(--graph-semantic-edge)",
       strokeWidth: 1.3,
-      ...(edge.relation !== "dataflow" ? { strokeDasharray: "5 4" } : {}),
+      ...(edge.relation === "conditional_dependency"
+        ? { strokeDasharray: "2 5" }
+        : edge.relation !== "dataflow"
+          ? { strokeDasharray: "8 4" }
+          : {}),
     },
     labelStyle: { fill: "var(--muted)", fontSize: 10 },
     labelBgStyle: { fill: "var(--surface)", fillOpacity: 0.96 },
@@ -82,25 +87,40 @@ export async function layoutGraph(
   const connectedNodes = graph.edges.length
     ? graph.nodes.filter((node) => connectedIds.has(node.id))
     : graph.nodes;
-  const result = await elk.layout({
-    id: graph.id,
-    layoutOptions: {
-      "elk.algorithm": "layered",
-      "elk.direction": direction,
-      "elk.spacing.nodeNode": "20",
-      "elk.layered.spacing.nodeNodeBetweenLayers": "20",
-      "elk.layered.considerModelOrder.strategy": "NODES_AND_EDGES",
-    },
-    children: connectedNodes.map((node) => ({
-      id: scopedNodeId(graph.id, node.id),
-      ...nodeSize(node, density),
-    })),
-    edges: edges.map((edge) => ({
-      id: edge.id,
-      sources: [edge.source],
-      targets: [edge.target],
-    })),
-  });
+  let graphLayouts = layouts.get(graph);
+  if (!graphLayouts) {
+    graphLayouts = new Map();
+    layouts.set(graph, graphLayouts);
+  }
+  const signature = `${direction}:${density}`;
+  let pendingLayout = graphLayouts.get(signature);
+  if (!pendingLayout) {
+    pendingLayout = elk.layout({
+      id: graph.id,
+      layoutOptions: {
+        "elk.algorithm": "layered",
+        "elk.direction": direction,
+        "elk.spacing.nodeNode": "20",
+        "elk.layered.spacing.nodeNodeBetweenLayers": "20",
+        "elk.layered.considerModelOrder.strategy": "NODES_AND_EDGES",
+      },
+      children: connectedNodes.map((node) => ({
+        id: scopedNodeId(graph.id, node.id),
+        ...nodeSize(node, density),
+      })),
+      edges: edges.map((edge) => ({
+        id: edge.id,
+        sources: [edge.source],
+        targets: [edge.target],
+      })),
+    });
+    graphLayouts.set(signature, pendingLayout);
+    pendingLayout.catch(() => {
+      if (graphLayouts.get(signature) === pendingLayout)
+        graphLayouts.delete(signature);
+    });
+  }
+  const result = await pendingLayout;
   const positions = new Map(
     result.children?.map((node) => [
       node.id,

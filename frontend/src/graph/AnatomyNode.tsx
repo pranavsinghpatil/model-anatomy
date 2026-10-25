@@ -79,11 +79,14 @@ export function ModelNode({ data, selected }: NodeProps<NodeType>) {
                 {count(node.parameter_count, true)}
               </span>
             )}
-            {boundary && (
-              <span className="node-mini-shape">
-                {shape((node.kind === "input" ? output : input)?.shape ?? null)}
-              </span>
-            )}
+            {boundary &&
+              (node.kind === "input" ? output : input)?.shape != null && (
+                <span className="node-mini-shape">
+                  {shape(
+                    (node.kind === "input" ? output : input)?.shape ?? null,
+                  )}
+                </span>
+              )}
           </div>
           <div
             className="node-title"
@@ -95,7 +98,7 @@ export function ModelNode({ data, selected }: NodeProps<NodeType>) {
       </div>
       {detailed && (
         <div className="anatomy-node-facts">
-          {!boundary && (
+          {!boundary && (input?.shape != null || output?.shape != null) && (
             <div
               className="node-ports"
               aria-label="First reported input and output shapes"
@@ -121,9 +124,11 @@ export function ModelNode({ data, selected }: NodeProps<NodeType>) {
             </div>
           )}
           {boundary ? (
-            <code className="boundary-shape">
-              {shape((node.kind === "input" ? output : input)?.shape ?? null)}
-            </code>
+            (node.kind === "input" ? output : input)?.shape != null && (
+              <code className="boundary-shape">
+                {shape((node.kind === "input" ? output : input)?.shape ?? null)}
+              </code>
+            )
           ) : (
             <div className="node-footer">
               <span>

@@ -141,6 +141,13 @@ test("completed report separates revision, scope, checks, and warnings", async (
     limitations: ["Forward execution was not requested."],
     partial_reasons: [],
     quality: {
+      architecture_scope: "Native registered module architecture",
+      architecture_checks: {
+        module_inventory: true,
+        parameter_mapping: true,
+        native_architecture: true,
+        module_topology: true,
+      },
       semantic_coverage: 1,
       module_semantic_coverage: 1,
       checkpoint_parameter_coverage: 1,
@@ -166,9 +173,10 @@ test("completed report separates revision, scope, checks, and warnings", async (
     checks.getByRole("heading", { name: "Coverage and checks" }),
   ).toBeVisible();
   await expect(checks.locator("dd").filter({ hasText: "100.0%" })).toHaveCount(
-    4,
+    1,
   );
-  await expect(checks).toContainText("Unknown nodes");
+  await expect(checks).toContainText("Unknown graph components");
+  await expect(checks).toContainText("Native module inventory");
   await expect(checks).toContainText("Forward executed");
   await expect(checks).toContainText("No");
 
@@ -194,7 +202,7 @@ test("partial report shows specific missing checks and unknown quality", async (
   const analysis = {
     ...analysisFor("job-test"),
     status: "partial" as const,
-    partial_reasons: ["Tensor shape comparison could not be completed."],
+    partial_reasons: ["Checkpoint parameter mapping is incomplete."],
     limitations: ["Custom module details are unavailable."],
     quality: {
       semantic_coverage: null,
@@ -225,7 +233,7 @@ test("partial report shows specific missing checks and unknown quality", async (
   ).toBeVisible();
   await expect(checks).toContainText("Unknown");
   await expect(page.locator(".report-warning-section")).toContainText(
-    "Tensor shape comparison could not be completed.",
+    "Checkpoint parameter mapping is incomplete.",
   );
   await expect(checks).not.toContainText("100.0%");
 
@@ -235,7 +243,7 @@ test("partial report shows specific missing checks and unknown quality", async (
   ).toBeVisible();
   await expect(scope).toContainText("Custom module details are unavailable.");
   await expect(page.locator(".report-warning-section")).toContainText(
-    "Tensor shape comparison could not be completed.",
+    "Checkpoint parameter mapping is incomplete.",
   );
 });
 

@@ -94,6 +94,35 @@ def graph_view(ir: ModelIR, graph_id: str) -> dict:
     }
 
 
+def graph_index(ir: ModelIR) -> dict:
+    """Index existing graph locations and evidence without copying tensor metadata."""
+    root = graph(ir, ir.root_graph.id)
+    graphs, nodes, citations = [], [], []
+    pending = [(root, ir.model_id.rsplit("/", 1)[-1], None, None)]
+    seen_citations = set()
+    while pending:
+        current, label, parent_graph, parent_node = pending.pop()
+        graphs.append({"id": current.id, "label": label,
+                       "parent_graph_id": parent_graph, "parent_node_id": parent_node})
+        children = []
+        for node in current.nodes:
+            nodes.append({"id": node.id, "graph_id": current.id, "label": node.label,
+                          "kind": node.kind, "module_path": node.module_path,
+                          "child_graph_id": node.child_graph.id if node.child_graph else None})
+            for item in node.evidence:
+                key = (item.source, item.kind, item.locator, current.id, node.id)
+                if key not in seen_citations:
+                    seen_citations.add(key)
+                    citations.append(dict(zip(
+                        ("source", "kind", "locator", "graph_id", "node_id"), key,
+                    )))
+            if node.child_graph:
+                children.append((node.child_graph, node.label, current.id, node.id))
+        pending.extend(reversed(children))
+    return {"root_graph_id": root.id, "graphs": graphs, "nodes": nodes,
+            "citations": citations}
+
+
 def node_view(ir: ModelIR, graph_id: str, node_id: str, offset=0, limit=50) -> dict:
     selected = graph(ir, graph_id)
     node = next((n for n in selected.nodes if n.id == node_id), None)

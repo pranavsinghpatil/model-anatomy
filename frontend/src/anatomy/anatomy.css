@@ -367,3 +367,13 @@
     display: none;
   }
 }
+
+.anatomy-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 6px 12px;
+  font-size: 12px;
+}

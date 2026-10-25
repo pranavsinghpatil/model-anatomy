@@ -12,6 +12,7 @@ import type { AnalysisDetail } from "../api/contract";
 import { Button } from "./ui";
 import { Status } from "./Common";
 import "./progress.css";
+import { retryReference } from "../state/submissions";
 const stages: Record<string, [string, string]> = {
   queued: [
     "Waiting for the worker",
@@ -40,6 +41,10 @@ const stages: Record<string, [string, string]> = {
   analyzing_components: [
     "Mapping model components",
     "Associating semantic components with recorded modules and tensor facts.",
+  ],
+  storing_metadata: [
+    "Saving the report",
+    "Persisting the inspected architecture and metadata.",
   ],
   validating: [
     "Validating the report",
@@ -157,7 +162,7 @@ export function Recovery({ detail }: { detail: AnalysisDetail }) {
       )}
       <Link
         className="button button-primary"
-        to={`/?model=${encodeURIComponent(detail.model_id)}`}
+        to={`/?model=${encodeURIComponent(retryReference(detail))}`}
       >
         Edit model and retry
       </Link>

@@ -408,7 +408,10 @@ test("inspected artifacts stay graph-free and paginate verified metadata", async
     .getByRole("row")
     .filter({ hasText: longTensorName })
     .getByRole("link");
-  await expect(tensorLink).toHaveAttribute("href", longArtifactUrl);
+  await expect(tensorLink).toHaveAttribute(
+    "href",
+    longArtifactUrl.replace("/resolve/", "/blob/"),
+  );
   await expect(inspection.getByText("0 of 3")).toHaveCount(0);
 
   // Long names and source URLs must scroll within the table at every supported
@@ -420,7 +423,10 @@ test("inspected artifacts stay graph-free and paginate verified metadata", async
       await browser
         .getByRole("menuitemradio", { name: theme, exact: true })
         .click();
-      await expect(tensorLink).toHaveAttribute("href", longArtifactUrl);
+      await expect(tensorLink).toHaveAttribute(
+        "href",
+        longArtifactUrl.replace("/resolve/", "/blob/"),
+      );
       await expect
         .poll(
           () => browser.evaluate(hasNoHorizontalOverflow),

@@ -1,6 +1,18 @@
 import type { GraphNode } from "../api/contract";
 
 const componentDefinitions: Record<string, string> = {
+  module:
+    "An observed native module. Inspect its type, children, and checkpoint bindings for its recorded structure.",
+  backbone:
+    "The native model backbone containing the main feature-processing modules.",
+  container:
+    "Groups registered child modules. Registration alone does not establish execution order.",
+  dropout:
+    "Applies dropout during training according to the recorded module configuration.",
+  activation: "Applies the activation defined by the native module type.",
+  convolution: "Extracts features using learned convolution kernels.",
+  lm_head:
+    "Projects model representations into the language-model output vocabulary.",
   embedding: "Maps discrete token or category IDs to learned vectors.",
   position_embedding:
     "Adds learned position information to token representations.",
