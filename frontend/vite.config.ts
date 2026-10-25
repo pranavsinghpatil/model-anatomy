@@ -3,7 +3,6 @@ import { fileURLToPath } from "node:url";
 import { defineConfig, loadEnv, searchForWorkspaceRoot } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
-import { fileURLToPath } from "node:url";
 
 export default defineConfig(({ mode }) => {
   const frontendRoot = fileURLToPath(new URL(".", import.meta.url));
@@ -23,6 +22,8 @@ export default defineConfig(({ mode }) => {
     plugins: [react(), tailwindcss()],
     cacheDir: ".local/vite-cache",
     server: {
+      port,
+      strictPort: true,
       fs: {
         allow: [
           searchForWorkspaceRoot(fileURLToPath(new URL(".", import.meta.url))),
@@ -47,11 +48,11 @@ export default defineConfig(({ mode }) => {
       },
       proxy: {
         "/health": {
-          target: env.API_PROXY_TARGET || "http://127.0.0.1:8000",
+          target: env.API_PROXY_TARGET || "http://127.0.0.1:8001",
           changeOrigin: true,
         },
         "/api": {
-          target: env.API_PROXY_TARGET || "http://127.0.0.1:8000",
+          target: env.API_PROXY_TARGET || "http://127.0.0.1:8001",
           changeOrigin: true,
         },
       },

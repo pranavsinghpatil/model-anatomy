@@ -227,6 +227,9 @@ def ir_summary(data: dict) -> dict:
         if completion["status"] != "complete" and not reasons:
             reasons.append("Architecture report is partial.")
         quality["architecture_scope"] = completion["scope"]
+        quality["architecture_checks"] = {
+            key: checks[key] for key in sorted(required)
+        }
     if quality["checkpoint_parameter_coverage"] != 1:
         reasons.append("Checkpoint parameter mapping is incomplete or unverified.")
     if quality["unmapped_checkpoint_tensors"] != 0:

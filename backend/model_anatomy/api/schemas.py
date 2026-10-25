@@ -126,6 +126,7 @@ class DiscoveryCatalogResponse(BaseModel):
 
 class AnalysisQuality(BaseModel):
     architecture_scope: str | None = None
+    architecture_checks: dict[str, bool] = Field(default_factory=dict)
     semantic_coverage: float | None = Field(default=None, ge=0, le=1)
     module_semantic_coverage: float | None = Field(default=None, ge=0, le=1)
     checkpoint_parameter_coverage: float | None = Field(default=None, ge=0, le=1)

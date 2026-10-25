@@ -169,6 +169,14 @@ export function AssemblyDrawing({
               <path
                 key={edge.id}
                 data-reported-edge={edge.id}
+                data-relation={edge.relation}
+                strokeDasharray={
+                  edge.relation === "conditional_dependency"
+                    ? "3 5"
+                    : edge.relation === "dependency"
+                      ? "7 4"
+                      : undefined
+                }
                 className={
                   edge.source === selected?.id || edge.target === selected?.id
                     ? "is-selected"
@@ -180,7 +188,9 @@ export function AssemblyDrawing({
                       `${i ? "L" : "M"}${project(point, view.angle).join(",")}`,
                   )
                   .join(" ")}
-              />
+              >
+                <title>{edge.relation.replaceAll("_", " ")}</title>
+              </path>
             );
           })}
         </g>

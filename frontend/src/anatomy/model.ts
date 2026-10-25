@@ -12,7 +12,13 @@ export type Assembly = {
   omitted: number;
   relationCount: number;
   hasDataflow: boolean;
-  connections: { id: string; source: string; target: string }[];
+  hasConnections: boolean;
+  connections: {
+    id: string;
+    source: string;
+    target: string;
+    relation: string;
+  }[];
 };
 export type AnatomyView = { separation: number; angle: number; zoom: number };
 export const defaultAnatomyView: AnatomyView = {
@@ -21,8 +27,8 @@ export const defaultAnatomyView: AnatomyView = {
   zoom: 1,
 };
 
-// Presentation ranks are derived only from returned dataflow edges. They do
-// not supply missing edges or turn hierarchy into an execution trace.
+// Presentation ranks use only reported dataflow or module dependencies.
+// Dependency placement does not establish runtime execution order.
 export function buildAssembly(
   graph: ArchitectureGraph,
   selectedId?: string | null,
@@ -39,7 +45,9 @@ export function buildAssembly(
   const included = new Set(nodes.map((node) => node.id));
   const edges = graph.edges.filter(
     (edge) =>
-      edge.relation === "dataflow" &&
+      ["dataflow", "dependency", "conditional_dependency"].includes(
+        edge.relation,
+      ) &&
       included.has(edge.source) &&
       included.has(edge.target),
   );
@@ -76,19 +84,19 @@ export function buildAssembly(
   }
   const inventoryRow = Math.max(1, ...branchCounts.values()) + 1;
   let inventoryIndex = 0;
-  const hasDataflow = edges.length > 0;
+  const hasConnections = edges.length > 0;
   const stations = nodes.map((node, index): Station => {
     const disconnected =
-      hasDataflow && (!connected.has(node.id) || !visited.has(node.id));
+      hasConnections && (!connected.has(node.id) || !visited.has(node.id));
     const inventory = disconnected ? inventoryIndex++ : index;
     const rank =
-      hasDataflow && !disconnected ? ranks.get(node.id)! : inventory % 6;
+      hasConnections && !disconnected ? ranks.get(node.id)! : inventory % 6;
     const row = disconnected
       ? inventoryRow + Math.floor(inventory / 6)
-      : hasDataflow
+      : hasConnections
         ? (rows.get(rank) ?? 0)
         : Math.floor(index / 6);
-    if (!disconnected && hasDataflow) rows.set(rank, row + 1);
+    if (!disconnected && hasConnections) rows.set(rank, row + 1);
     return { node, origin: [rank * 104, row * 108, 0], disconnected };
   });
   const width =
@@ -101,11 +109,13 @@ export function buildAssembly(
     depth,
     omitted: graph.nodes.length - nodes.length,
     relationCount: graph.edges.length,
-    hasDataflow,
+    hasDataflow: edges.some((edge) => edge.relation === "dataflow"),
+    hasConnections,
     connections: edges.map((edge, index) => ({
       id: `${edge.source}:${edge.source_port}:${edge.target}:${edge.target_port}:${index}`,
       source: edge.source,
       target: edge.target,
+      relation: edge.relation,
     })),
   };
 }

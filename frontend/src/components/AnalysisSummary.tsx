@@ -131,7 +131,7 @@ export function Overview({ detail }: { detail: AnalysisDetail }) {
           <div className="spec-cell">
             <span className="spec-label">Architecture Class</span>
             <span className="spec-val font-mono">
-              {detail.architecture ?? "Decoder-only Transformer"}
+              {detail.architecture ?? "Unknown"}
             </span>
           </div>
           <div className="spec-cell">
@@ -139,7 +139,7 @@ export function Overview({ detail }: { detail: AnalysisDetail }) {
             <span className="spec-val">
               {sourceTopology
                 ? "Reviewed publisher source · partial"
-                : "Deterministic PyTorch IR"}
+                : "Native PyTorch modules + checkpoint metadata"}
             </span>
           </div>
           <div className="spec-cell">
@@ -147,9 +147,7 @@ export function Overview({ detail }: { detail: AnalysisDetail }) {
             <span className="spec-val font-mono">
               {detail.input_names?.length
                 ? detail.input_names.join(", ")
-                : sourceTopology
-                  ? "Not verified"
-                  : "token_ids"}
+                : "Not verified"}
             </span>
           </div>
           <div className="spec-cell">
@@ -205,8 +203,8 @@ export function Overview({ detail }: { detail: AnalysisDetail }) {
               <div>
                 <h3>Inspect Safetensors & files</h3>
                 <p>
-                  Zero-download tensor headers, shapes, and sharded weight
-                  offsets.
+                  Tensor headers, shapes, and shard offsets without weight
+                  downloads.
                 </p>
               </div>
               <ArrowRight size={18} aria-hidden="true" />
@@ -250,15 +248,27 @@ export function Report({ detail }: { detail: AnalysisDetail }) {
   const headerAudit = detail.verified_checkpoint_headers;
   const nameAudit = detail.verified_checkpoint_names;
   const inspection = detail.inspection;
+  const architectureChecks = q?.architecture_checks;
+  const checkLabels: Record<string, string> = {
+    module_inventory: "Native module inventory",
+    parameter_mapping: "Checkpoint parameter mapping",
+    native_architecture: "Native architecture compatibility",
+    module_topology: "Bounded module-call dependencies",
+  };
   const checks: [string, string | number][] = [
-    ["Semantic coverage", coverage(q?.semantic_coverage)],
-    ["Module semantic coverage", coverage(q?.module_semantic_coverage)],
+    ...Object.entries(checkLabels).map(([key, label]): [string, string] => [
+      label,
+      architectureChecks?.[key] == null
+        ? "Not reported"
+        : architectureChecks[key]
+          ? "Complete"
+          : "Incomplete",
+    ]),
     [
       "Checkpoint parameter coverage",
       coverage(q?.checkpoint_parameter_coverage),
     ],
-    ["Tensor shape coverage", coverage(q?.tensor_shape_coverage)],
-    ["Unknown nodes", q?.unknown_nodes ?? "Unknown"],
+    ["Unknown graph components", q?.unknown_nodes ?? "Unknown"],
     [
       "Unmapped checkpoint tensors",
       q?.unmapped_checkpoint_tensors ?? "Unknown",
@@ -295,7 +305,7 @@ export function Report({ detail }: { detail: AnalysisDetail }) {
             <span className="eyebrow">AUDIT STATUS</span>
             <h3>
               {detail.status === "completed"
-                ? "Verified Reconstruction"
+                ? "Complete Architecture"
                 : detail.status === "partial"
                   ? "Partial Reconstruction"
                   : "Artifact Inspection"}
@@ -315,10 +325,10 @@ export function Report({ detail }: { detail: AnalysisDetail }) {
         </div>
         <div className="audit-stats-grid">
           <div className="audit-mini-stat">
-            <span className="stat-label">Coverage Quality</span>
+            <span className="stat-label">Checkpoint parameter coverage</span>
             <strong className="stat-value">
-              {q?.semantic_coverage != null
-                ? `${(q.semantic_coverage * 100).toFixed(0)}%`
+              {q?.checkpoint_parameter_coverage != null
+                ? `${(q.checkpoint_parameter_coverage * 100).toFixed(1)}%`
                 : "Not measured"}
             </strong>
           </div>
@@ -459,6 +469,7 @@ export function Report({ detail }: { detail: AnalysisDetail }) {
       ) : (
         <section className="report-section" data-testid="report-checks">
           <h2>Coverage and checks</h2>
+          {q?.architecture_scope && <p>{q.architecture_scope}</p>}
           <dl className="report-checks">
             {checks.map(([label, value]) => (
               <div key={label}>
@@ -479,7 +490,7 @@ export function Report({ detail }: { detail: AnalysisDetail }) {
               ? "The result records a pinned repository inventory and any bounded checkpoint headers that were safe to inspect. It does not reconstruct an architecture."
               : sourceTopology
                 ? "The pinned configuration and reviewed publisher source describe reference modules and their order. This result does not verify runtime flow or checkpoint ownership."
-                : "Static inspection describes artifact-backed structure. Coverage does not establish runtime correctness or every possible execution path."}
+                : "Completeness covers native modules, checkpoint bindings, and bounded module-call dependencies. Intermediate math expressions, activation shapes, and numerical equivalence are outside this architecture check. Forward execution is disabled."}
           </p>
           {detail.limitations?.length ? (
             <ul>

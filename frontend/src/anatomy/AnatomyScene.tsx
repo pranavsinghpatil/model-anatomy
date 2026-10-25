@@ -157,11 +157,11 @@ export function AnatomyScene({
       <div className="anatomy-scene-caption">
         <span>
           <Boxes size={14} />
-          {assembly.hasDataflow ? "Model assembly" : "Component inventory"}
+          {assembly.hasConnections ? "Model assembly" : "Component inventory"}
         </span>
         <span>
           {assembly.stations.length} of {graph.nodes.length} components ·{" "}
-          {assembly.connections.length} dataflow links · {graph.edges.length}{" "}
+          {assembly.connections.length} illustrated links · {graph.edges.length}{" "}
           reported relationships
         </span>
       </div>
@@ -242,6 +242,7 @@ export function AnatomyScene({
       <div className="anatomy-scope">
         <span>
           Illustrative geometry, not model hardware or a runtime simulation.
+          Links retain the reported dependency type, not runtime tensor flow.
           Repeated structures use a bounded representative sample.
         </span>
         <Button variant="ghost" onClick={technical}>
@@ -250,8 +251,8 @@ export function AnatomyScene({
       </div>
       {assembly.stations.some((station) => station.disconnected) && (
         <p className="anatomy-boundary">
-          Some components have no reported dataflow and sit separately in the
-          assembly. Their presence does not establish an execution path.
+          Components without an acyclic dependency layout sit separately in the
+          assembly. Their position does not establish execution order.
         </p>
       )}
       {assembly.omitted > 0 && (

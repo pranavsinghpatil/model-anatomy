@@ -286,6 +286,12 @@ export interface components {
     };
     /** AnalysisQuality */
     AnalysisQuality: {
+      /** Architecture Scope */
+      architecture_scope?: string | null;
+      /** Architecture Checks */
+      architecture_checks?: {
+        [key: string]: boolean;
+      };
       /** Semantic Coverage */
       semantic_coverage?: number | null;
       /** Module Semantic Coverage */
