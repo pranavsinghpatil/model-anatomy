@@ -1350,3 +1350,17 @@ preserving the responsive geometry thresholds. Record the branch order and
 remaining release requirements in [teammate handover](TEAMMATE_HANDOVER.md).
 Run quality CI for PRs to any base branch so the stacked dependency follow-up
 receives the same checks before its final integration into `feat/vv`.
+
+### 2026-10-25 - Correct the dependency follow-up against the current app
+
+Update PR #59 on top of #58 instead of the obsolete `main` baseline, preserving
+its branch history. Raise the engine dependency floor from `torch>=2.8` to
+`torch>=2.10.0` for the reviewed advisory
+[PYSEC-2026-2286](https://osv.dev/vulnerability/PYSEC-2026-2286). Keep the exact
+Transformers `5.20.2` pin because the native source contracts audit that version.
+The existing lock already resolves newer Torch `2.14.1` / `2.14.1+cpu`; only the
+project requirement metadata changes in the lock. A packaging-aware regression
+guard checks the engine extras, known affected Torch versions, the Transformers
+source contract, all platform lock entries, and root requirement metadata.
+It fails against the previous floor and passes after the correction. This
+addresses the reviewed advisories without claiming future vulnerability coverage.
