@@ -2,7 +2,6 @@ name: quality
 
 on:
   pull_request:
-    branches: [main, feat/vv]
   push:
     branches: [main, feat/vv]
 

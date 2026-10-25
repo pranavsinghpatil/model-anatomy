@@ -1,6 +1,7 @@
 # Roadmap and release train
 
-**Last updated:** 2026-10-25 · **External deadline:** [2026-10-30 10:00 PDT](https://nebiusglobalaihackathon.devpost.com/rules) (22:30 IST)
+**Last updated:** 2026-10-25 · **External deadline:**
+[2026-10-30 10:00 PDT](https://nebiusglobalaihackathon.devpost.com/rules) (22:30 IST)
 
 ## Current truth
 
@@ -12,11 +13,10 @@ Current checks, fixes and ordered release gates are recorded in
 [submission readiness](SUBMISSION_READINESS.md). Earlier counts below are
 dated historical evidence, not a certification of this candidate.
 
-The current native completion report is scoped to registered module architecture,
-checkpoint binding and bounded module-call dependencies. A complete result does
-not certify intermediate activation shapes, runtime branch selection, or
-numerical equivalence to publisher custom code.
-
+The current native completion report is scoped to registered module
+architecture, checkpoint binding and bounded module-call dependencies. A
+complete result does not certify intermediate activation shapes, runtime branch
+selection, or numerical equivalence to publisher custom code.
 
 The October 19 compatibility increment attempts 120 distinct pinned Hugging Face
 repositories, then reruns 22 affected/control cases after measured fixes. Latest

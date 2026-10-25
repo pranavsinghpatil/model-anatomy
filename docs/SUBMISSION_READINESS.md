@@ -11,8 +11,8 @@ and event API were checked October 25. Submissions were open with a deadline of
 **October 30, 2026 at 17:00 UTC (22:30 IST)**. Judging ends **December 15,
 2026 at 20:00 UTC**. Recheck the event page before submission.
 
-The sanitized [audit evidence record](evidence/submission-readiness-2026-10-25.json)
-tracks the exact baseline and verification results.
+The sanitized audit evidence record tracks the exact baseline and verification
+results. See the [JSON record](evidence/submission-readiness-2026-10-25.json).
 
 ## Current Blockers
 

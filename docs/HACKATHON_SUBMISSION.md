@@ -1,6 +1,6 @@
 # Hackathon Submission
 
-Status: **not ready to submit**. This is a requirements and evidence record, not a
+Status: **not ready to submit**. This requirements and evidence record does not
 claim that the application is deployed or that a submission has been published.
 Use [submission readiness](SUBMISSION_READINESS.md) as the prioritized release
 gate. Update pending rows only when the corresponding evidence exists.
@@ -17,9 +17,9 @@ Recheck the official page before submitting in case the event changes its dates.
 The official rules state:
 
 > Entrants must create a working software application that runs on either Nebius Token Factory or Nebius AI Cloud and uses at least one NVIDIA open source model
-
+>
 > The repository must be public and open source by including an open source license file (such as Apache 2.0, MIT, or MPL 2.0).
-
+>
 > should be less than three (3) minutes. Judges are not required to watch beyond three minutes
 
 The runtime definition accepts a Token Factory inference API call or qualifying

@@ -18,9 +18,15 @@ test("short initial workspaces open on a readable representative component", asy
   await expect
     .poll(() =>
       repeatedNode.evaluate((node) => {
-        const title = node.querySelector<HTMLElement>(".node-title")!;
+        const title = node.querySelector<HTMLElement>(".node-title");
+        const flowElement = node.closest<HTMLElement>(".react-flow");
+        if (!(node instanceof HTMLElement) || !title || !flowElement) {
+          throw new Error(
+            "graph node title and React Flow container must exist",
+          );
+        }
         const rect = node.getBoundingClientRect();
-        const flow = node.closest(".react-flow")!.getBoundingClientRect();
+        const flow = flowElement.getBoundingClientRect();
         return {
           titleSize:
             Number.parseFloat(getComputedStyle(title).fontSize) *
@@ -37,7 +43,10 @@ test("short initial workspaces open on a readable representative component", asy
   await expect
     .poll(() =>
       repeatedNode.evaluate((node) => {
-        const title = node.querySelector<HTMLElement>(".node-title")!;
+        const title = node.querySelector<HTMLElement>(".node-title");
+        if (!(node instanceof HTMLElement) || !title) {
+          throw new Error("graph node title must exist");
+        }
         return (
           Number.parseFloat(getComputedStyle(title).fontSize) *
           (node.getBoundingClientRect().width /
@@ -101,21 +110,19 @@ test("technical graph keeps a clear drawing area and controls across responsive 
           Number.isFinite(geometry.height) &&
           geometry.height > 0 &&
           Number.isFinite(geometry.viewport?.height) &&
-          geometry.viewport!.height > 0
+          (geometry.viewport?.height ?? 0) > 0
         );
       })
       .toBe(true);
-    expect(geometry.header).not.toBeNull();
-    expect(geometry.viewport).not.toBeNull();
-    expect(geometry.dock).not.toBeNull();
+    if (!geometry.header || !geometry.viewport || !geometry.dock) {
+      throw new Error("graph header, viewport, and dock geometry must exist");
+    }
     expect(geometry.duplicateToolbar).toBe(false);
-    expect(geometry.viewport!.top).toBeGreaterThanOrEqual(
-      geometry.header!.bottom - 1,
+    expect(geometry.viewport.top).toBeGreaterThanOrEqual(
+      geometry.header.bottom - 1,
     );
-    expect(geometry.viewport!.bottom).toBeLessThanOrEqual(
-      geometry.dock!.top + 1,
-    );
-    expect(geometry.viewport!.height / geometry.height).toBeGreaterThanOrEqual(
+    expect(geometry.viewport.bottom).toBeLessThanOrEqual(geometry.dock.top + 1);
+    expect(geometry.viewport.height / geometry.height).toBeGreaterThanOrEqual(
       width >= 1024 ? 0.7 : 0.62,
     );
     await page.screenshot({
@@ -128,10 +135,10 @@ test("technical graph keeps a clear drawing area and controls across responsive 
       .fill("embedding");
     await expect(page.locator(".search-results")).toBeVisible();
     const searchBounds = await page.locator(".search-results").boundingBox();
-    expect(searchBounds).not.toBeNull();
-    expect(searchBounds!.x + searchBounds!.width).toBeLessThanOrEqual(
-      width + 1,
-    );
+    if (!searchBounds) {
+      throw new Error("component search results must have visible bounds");
+    }
+    expect(searchBounds.x + searchBounds.width).toBeLessThanOrEqual(width + 1);
     await page.getByRole("textbox", { name: "Find component" }).fill("");
 
     await page.getByText("Options", { exact: true }).click();

@@ -1300,10 +1300,9 @@ are unchanged. Advance engine/cache identity to `2026.10.24.6` so a new
 submission does not reuse a report from the previous extractor. See
 [Mistral static closure](MISTRAL_STATIC_CLOSURE.md).
 
-
 ## D-080 - Audit the integrated submission candidate before public release
 
-**2026-10-25 - submission readiness and verification**
+### 2026-10-25 - submission readiness and verification
 
 Use Van's `feat/vv` at `7ce638e` as the audit baseline after PR #57.
 Application PRs now target `feat/vv`, and quality CI runs for that branch as
@@ -1338,3 +1337,16 @@ and source digests. Engine/cache identity advances to
 `2026.10.25.2-submission-audit` so fixed fresh reports do not silently reuse
 earlier cached results. Current UI reports require explicitly successful
 architecture checks before claiming complete architecture.
+
+### 2026-10-25 - Review follow-up and teammate handover
+
+Document the exact dependency installation and test runners in `AGENTS.md`.
+The first-party package imports do not represent missing PyPI dependencies;
+Playwright specs require Playwright, and Python service tests require API extras.
+Add a permanent concurrent quota regression covering independent SQLite service
+instances, both quota scopes and both actions at a nearly exhausted allowance.
+Replace browser-test non-null assertions with explicit failure guards while
+preserving the responsive geometry thresholds. Record the branch order and
+remaining release requirements in [teammate handover](TEAMMATE_HANDOVER.md).
+Run quality CI for PRs to any base branch so the stacked dependency follow-up
+receives the same checks before its final integration into `feat/vv`.

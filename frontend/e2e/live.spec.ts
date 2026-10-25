@@ -146,11 +146,12 @@ test("live workspace submits, inspects a component, and exports", async ({
       break;
     }
   }
-  expect(
-    selected,
-    "the registered root graph should expose a module with owned tensors and evidence",
-  ).toBeDefined();
-  const { node: component, detail: componentDetail } = selected!;
+  if (!selected) {
+    throw new Error(
+      "the registered root graph should expose a module with owned tensors and evidence",
+    );
+  }
+  const { node: component, detail: componentDetail } = selected;
   expect(componentDetail.module).not.toBeNull();
   await graphNode(page, component.label);
   const inspector = page
@@ -158,7 +159,7 @@ test("live workspace submits, inspects a component, and exports", async ({
     .getByTestId("inspector");
   await expect(inspector).toBeVisible();
   await expect(
-    inspector.getByRole("heading", { name: component!.label }),
+    inspector.getByRole("heading", { name: component.label }),
   ).toBeVisible();
   await inspector.getByRole("tab", { name: /^Tensors/ }).click();
   await expect(
