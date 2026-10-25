@@ -10,10 +10,12 @@ from typing import Any
 
 from transformers import PretrainedConfig
 from transformers.modeling_utils import AttentionInterface
+from transformers.integrations.moe import ExpertsInterface
 from transformers.utils.generic import GeneralInterface
 
 MISSING = object()
 _ATTENTION_LOOKUP = AttentionInterface.get_interface
+_EXPERTS_LOOKUP = ExpertsInterface.get_interface
 _MAPPING_LOOKUP = GeneralInterface.__getitem__
 
 
@@ -47,8 +49,9 @@ def attention_dispatch(owner: Any, selector: Any, default: Any) -> tuple[Any, di
     This is provider metadata routing, not an attention formula or model-name
     rule. Unknown selectors and overridden lookup methods are never guessed.
     """
-    if (type(owner) is not AttentionInterface
-            or inspect.getattr_static(owner, "get_interface", None) is not _ATTENTION_LOOKUP
+    lookup = {AttentionInterface: _ATTENTION_LOOKUP, ExpertsInterface: _EXPERTS_LOOKUP}.get(type(owner))
+    if (lookup is None
+            or inspect.getattr_static(owner, "get_interface", None) is not lookup
             or inspect.getattr_static(owner, "__getitem__", None) is not _MAPPING_LOOKUP):
         return MISSING, {}
     if selector is not None and type(selector) is not str:
@@ -58,7 +61,7 @@ def attention_dispatch(owner: Any, selector: Any, default: Any) -> tuple[Any, di
     if type(local) is not dict or type(global_mapping) is not dict:
         return MISSING, {}
     key = selector
-    if isinstance(key, str) and key.startswith("paged|") and key != "paged|eager":
+    if type(owner) is AttentionInterface and isinstance(key, str) and key.startswith("paged|") and key != "paged|eager":
         key = key.removeprefix("paged|")
     if key not in local and key not in global_mapping and key not in {None, "eager"}:
         return MISSING, {}
@@ -66,7 +69,8 @@ def attention_dispatch(owner: Any, selector: Any, default: Any) -> tuple[Any, di
     proof = {
         "rule": "native_registry_snapshot", "selector": selector, "normalized_selector": key,
         "local_override": key in local,
-        "lookup_source_sha256": hashlib.sha256(inspect.getsource(AttentionInterface.get_interface).encode()).hexdigest(),
+        "registry_type": type(owner).__name__,
+        "lookup_source_sha256": hashlib.sha256(inspect.getsource(lookup).encode()).hexdigest(),
         "mapping_source_sha256": hashlib.sha256(inspect.getsource(GeneralInterface.__getitem__).encode()).hexdigest(),
         "helper_executed": False,
     }

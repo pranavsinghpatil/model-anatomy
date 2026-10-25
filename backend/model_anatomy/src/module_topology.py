@@ -24,7 +24,7 @@ from typing import Any
 import torch
 
 from . import limits
-from .callable_metadata import MISSING, AttentionInterface, attention_dispatch, static_attribute
+from .callable_metadata import MISSING, AttentionInterface, ExpertsInterface, attention_dispatch, static_attribute
 from .module_primitives import functional_primitive, primitive_proof, script_primitive_proof
 
 UNKNOWN = object()
@@ -192,7 +192,7 @@ class ModuleTopology:
             return Value(items=tuple(self.value(item) for item in obj))
         if type(obj) in (dict, OrderedDict, MappingProxyType) and len(obj) <= limits.MAX_MODEL_LAYERS:
             return Value(mapping={key: self.value(item) for key, item in obj.items() if type(key) in (str, int)})
-        if isinstance(obj, ModuleType) or type(obj) is AttentionInterface:
+        if isinstance(obj, ModuleType) or type(obj) in (AttentionInterface, ExpertsInterface):
             return Value(namespace=obj)
         if type(obj) in (int, float, bool, str, type(None)):
             return Value(literal=obj)
@@ -265,7 +265,7 @@ class ModuleTopology:
         if base.namespace is not None:
             if isinstance(base.namespace, ModuleType):
                 return self.value(vars(base.namespace).get(name, MISSING))
-            if type(base.namespace) is AttentionInterface:
+            if type(base.namespace) in (AttentionInterface, ExpertsInterface):
                 return Value(namespace=base.namespace, method=name)
             if type(base.namespace) is CodeType and name in {'co_varnames', 'co_argcount', 'co_kwonlyargcount', 'co_posonlyargcount'}:
                 return self.value(getattr(base.namespace, name))
@@ -862,7 +862,11 @@ class ModuleTopology:
                         if item.literal == key:
                             return Value(literal=index)
             if target.namespace is not None and target.method == "get_interface":
-                selector = args[0].literal if args else kwargs.get("attn_implementation", Value()).literal
+                if unknown_positional or unknown_star:
+                    self.boundary(node, "Registry selector binding is unknown because call arguments are expanded")
+                    return Value(deferred=True)
+                selector_name = "experts_implementation" if type(target.namespace) is ExpertsInterface else "attn_implementation"
+                selector = args[0].literal if args else kwargs.get(selector_name, Value()).literal
                 default = args[1].function if len(args) > 1 else kwargs.get("default", Value()).function
                 selected, proof = attention_dispatch(target.namespace, selector, default)
                 if selected is not MISSING and inspect.isfunction(selected):

@@ -502,11 +502,22 @@ def build_native_report(
     model, selection, raw = select_checkpoint_architecture(
         config, checkpoint, model, selection, raw
     )
+    from .architecture_selection import compatibility
+    from .checkpoint_scope import checkpoint_differences
+
+    state_compatibility = compatibility(model, raw)
+    state_differences = checkpoint_differences(raw, state_compatibility)
     profile["native_resolution"] = selection.get("native_resolution")
     analyzer = SemanticAnalyzer(model, raw)
     progress("analyzing_components")
     builder = HierarchyBuilder(model, raw, analyzer)
     root = builder.build()
+    inactive_state = {
+        name: item for name, item in raw['checkpoint_extras'].items()
+        if item['kind'] == 'inactive_component_state'
+    }
+    if inactive_state:
+        root.metadata['checkpoint_components_outside_selected_graph'] = inactive_state
     raw["semantic_diagnostics"] = analyzer.diagnostics()
     raw["module_topology"] = builder.topology.reports
     raw["model_selection"] = selection
@@ -530,6 +541,11 @@ def build_native_report(
                 "reconstructed"
                 if name in parameter_refs
                 else raw["checkpoint_extras"][name]["evidence_kind"]
+            ),
+            "binding_evidence": (
+                {'layout_record_paths': [path for path in parameter_refs[name]
+                                         if raw['parameters'][path].get('checkpoint_layout')]}
+                if name in parameter_refs else raw['checkpoint_extras'][name]
             ),
         }
     shard_audit = {
@@ -638,6 +654,7 @@ def build_native_report(
         "parameter_count_policy": "Model parameter object identity is unique; checkpoint duplicates and hierarchy references are reported separately",
         "analysis_report": {
             "architecture_selection": selection["architecture_selection"],
+            "checkpoint_differences": state_differences,
             "completion": completion,
             "mode": "static_module_architecture",
             "forward_executed": False,

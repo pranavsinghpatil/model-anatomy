@@ -151,13 +151,15 @@ def inspect_native_model(
     named = dict(named_items)
     prefix = model.base_model_prefix + "." if model.base_model_prefix else ""
     renamings = []
+    conversion_rules = []
     try:
         from transformers.conversion_mapping import get_model_conversion_mapping
         from transformers.core_model_loading import WeightRenaming
 
+        conversion_rules = get_model_conversion_mapping(model)
         renamings = [
             rule
-            for rule in get_model_conversion_mapping(model)
+            for rule in conversion_rules
             if isinstance(rule, WeightRenaming)
         ]
     except ImportError:
@@ -225,6 +227,27 @@ def inspect_native_model(
             ):
                 raise ArtifactError(f"Ambiguous checkpoint naming for {module_name}")
             checkpoint_names[module_name] = name
+    from .checkpoint_transforms import converted_bindings
+
+    packed, conversion_failures = converted_bindings(
+        model, checkpoint,
+        {name: item['target'] for name, item in name_conversions.items()},
+        conversion_rules,
+    )
+    for target, binding in packed.items():
+        if target in checkpoint_names and checkpoint_names[target] not in binding['sources']:
+            raise ArtifactError(f"Direct and converted checkpoint bindings conflict for {target}")
+    converted_sources = {source for binding in packed.values() for source in binding['sources']}
+    failed_conversion_sources = {
+        source for failure in conversion_failures
+        if {failure['target'], prefix + failure['target'], failure['target'].removeprefix(prefix)} & named.keys()
+        for source in failure['sources']
+    }
+    checkpoint_names = {
+        name: source for name, source in checkpoint_names.items()
+        if (source not in converted_sources or name in packed)
+        and source not in failed_conversion_sources
+    }
     aliases: dict[int, list[str]] = {}
     for name, parameter in named.items():
         aliases.setdefault(id(parameter), []).append(name)
@@ -237,9 +260,17 @@ def inspect_native_model(
     for name, parameter in named.items():
         shared = aliases[id(parameter)]
         stored = sorted(
-            {checkpoint_names[alias] for alias in shared if alias in checkpoint_names}
+            {source for alias in shared for source in (
+                packed[alias]['sources'] if alias in packed else
+                [checkpoint_names[alias]] if alias in checkpoint_names else []
+            )}
         )
-        for tensor_name in stored:
+        layout = next((packed[alias] for alias in shared if alias in packed), None)
+        direct_sources = {
+            checkpoint_names[alias] for alias in shared
+            if alias in checkpoint_names and alias not in packed
+        }
+        for tensor_name in direct_sources:
             if tuple(parameter.shape) != checkpoint.tensors[tensor_name].shape:
                 raise NativeShapeMismatchError(
                     f"Checkpoint/module shape mismatch: {tensor_name}"
@@ -247,23 +278,24 @@ def inspect_native_model(
         if name == shared[0]:
             if not stored and checkpoint.tensors:
                 warnings.append(f"No checkpoint tensor matched model parameter {name}")
-            elif len(stored) > 1:
+            elif len(stored) > 1 and layout is None:
                 warnings.append(
                     f"Model shares {shared}, but checkpoint stores multiple tensors; equality of their values is unverified"
                 )
-        tensor_name = checkpoint_names.get(name, stored[0] if stored else None)
+        tensor_name = None if layout else checkpoint_names.get(name, stored[0] if stored else None)
         parameters[name] = {
             "name": name,
             "shape": list(parameter.shape),
             "parameter_count": parameter.numel(),
             "device": parameter.device.type,
             "module_dtype": str(parameter.dtype),
-            "dtype": checkpoint.tensors[tensor_name].dtype if tensor_name else None,
+            "dtype": layout['dtype'] if layout else checkpoint.tensors[tensor_name].dtype if tensor_name else None,
             "tensor_name": tensor_name,
             "tensor_names": stored,
             "aliases": shared,
             "canonical_parameter": shared[0],
             "checkpoint_matched": bool(stored),
+            "checkpoint_layout": layout,
         }
     buffers = {
         name: {
@@ -275,8 +307,11 @@ def inspect_native_model(
     }
     extras = {}
     native_buffers = dict(buffer_items)
+    bound_sources = set(checkpoint_names.values()) | {
+        name for binding in packed.values() for name in binding['sources']
+    }
     for name, tensor in checkpoint.tensors.items():
-        if name in checkpoint_names.values():
+        if name in bound_sources:
             continue
         converted = name_conversions.get(name, {}).get("target", name)
         candidates = {
@@ -320,6 +355,8 @@ def inspect_native_model(
         "source_types": source_types,
         "checkpoint_name_mapping": checkpoint_names,
         "checkpoint_name_conversions": name_conversions,
+        "checkpoint_layout_conversions": packed,
+        "checkpoint_conversion_failures": conversion_failures,
         "unique_parameter_count": sum(p.numel() for p in model.parameters()),
         "logical_parameter_count": sum(p.numel() for p in named.values()),
         "parameter_alias_groups": [

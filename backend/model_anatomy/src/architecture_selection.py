@@ -13,6 +13,7 @@ from .errors import ArtifactError, NativeShapeMismatchError, UnsupportedModelErr
 from .facts import inspect_native_model
 from .registry import _auto_model_candidates, instantiate_candidate
 from .metadata_types import DTYPES
+from .checkpoint_scope import buffer_storage_relation, classify_inactive_components
 
 
 def compatible_dtype(native: str, stored: str | None) -> bool:
@@ -28,7 +29,8 @@ def compatibility(model: torch.nn.Module, raw: dict[str, Any]) -> dict[str, Any]
     """Require all checkpoint tensors and required native state to have verified owners."""
     missing = [name for name, item in raw["parameters"].items()
                if name == item["canonical_parameter"] and not item["checkpoint_matched"]]
-    unowned = [name for name, item in raw["checkpoint_extras"].items() if item["kind"] != "buffer"]
+    unowned = [name for name, item in raw["checkpoint_extras"].items()
+               if item["kind"] not in {"buffer", "inactive_component_state"}]
     supplied_buffers = {path for item in raw["checkpoint_extras"].values()
                         if item["kind"] == "buffer" for path in item["buffer_paths"]}
     missing_buffers = []
@@ -42,8 +44,19 @@ def compatibility(model: torch.nn.Module, raw: dict[str, Any]) -> dict[str, Any]
         module = model.get_submodule(owner) if owner else model
         if local not in module._non_persistent_buffers_set and name not in supplied_buffers:
             missing_buffers.append(name)
-    alias_conflicts = [item["aliases"] for name, item in raw["parameters"].items()
-                       if name == item["canonical_parameter"] and len(item["tensor_names"]) > 1]
+    alias_conflicts = []
+    for name, item in raw['parameters'].items():
+        if name != item['canonical_parameter'] or len(item['tensor_names']) < 2:
+            continue
+        if item.get('checkpoint_layout') is None:
+            alias_conflicts.append(item['aliases'])
+            continue
+        layouts = raw.get('checkpoint_layout_conversions', {})
+        direct = raw['checkpoint_name_mapping']
+        groups = {tuple(layouts[alias]['sources']) if alias in layouts else (direct[alias],)
+                  for alias in item['aliases'] if alias in layouts or alias in direct}
+        if len(groups) > 1:
+            alias_conflicts.append(item['aliases'])
     dtype_conflicts = [{"parameter": name, "native_dtype": item["module_dtype"], "checkpoint_dtype": item["dtype"]}
                        for name, item in raw["parameters"].items()
                        if name == item["canonical_parameter"] and item["checkpoint_matched"]
@@ -52,7 +65,12 @@ def compatibility(model: torch.nn.Module, raw: dict[str, Any]) -> dict[str, Any]
                             "native_dtype": raw["buffers"][path]["dtype"], "checkpoint_dtype": item["checkpoint_dtype"]}
                           for name, item in raw["checkpoint_extras"].items() if item["kind"] == "buffer"
                           for path in item["buffer_paths"]
-                          if not compatible_dtype(raw["buffers"][path]["dtype"], item["checkpoint_dtype"]))
+                          if not compatible_dtype(raw["buffers"][path]["dtype"], item["checkpoint_dtype"])
+                          and buffer_storage_relation(raw["buffers"][path]["dtype"], item["checkpoint_dtype"]) is None)
+    buffer_notes = [dict(buffer=path, checkpoint_tensor=name, **note)
+                    for name, item in raw["checkpoint_extras"].items() if item["kind"] == "buffer"
+                    for path in item["buffer_paths"]
+                    if (note := buffer_storage_relation(raw["buffers"][path]["dtype"], item["checkpoint_dtype"]))]
     return {
         "status": "exact_metadata_match" if not (missing or unowned or missing_buffers or dtype_conflicts) else "incompatible",
         "missing_parameters": missing, "unowned_checkpoint_tensors": unowned,
@@ -61,12 +79,17 @@ def compatibility(model: torch.nn.Module, raw: dict[str, Any]) -> dict[str, Any]
         "missing_persistent_buffers": missing_buffers, "unverified_tied_values": alias_conflicts,
         "numerical_integrity": {"verified": False, "blocking_for_architecture": False,
                                 "tied_checkpoint_values_not_compared": alias_conflicts,
+                                "buffer_storage_notes": buffer_notes,
                                 "basis": "Native parameter identity establishes aliases; headers establish shapes, not payload equality"},
         "parameter_alias_groups": raw["parameter_alias_groups"],
         "key_conversions": raw["checkpoint_name_conversions"],
+        "layout_conversions": raw.get("checkpoint_layout_conversions", {}),
+        "conversion_failures": raw.get("checkpoint_conversion_failures", []),
+        "inactive_checkpoint_components": {name: item for name, item in raw['checkpoint_extras'].items()
+                                           if item['kind'] == 'inactive_component_state'},
         "parameter_shapes_checked": True, "tensor_values_verified": False,
         "dtype_conflicts": dtype_conflicts,
-        "dtype_policy": "F16/BF16/F32/F64 storage may feed native floating parameters/buffers; integer and boolean types require an exact metadata dtype match; quantized semantics are not inferred",
+        "dtype_policy": "F16/BF16/F32/F64 storage may feed native floating state; integer and boolean parameters require an exact metadata dtype match. Owned boolean buffers may retain U8 storage as a numerical-only note. Quantized semantics are not inferred",
         "scope": "Complete native-state ownership and shapes; storage dtypes remain header evidence, not numerical equivalence",
     }
 
@@ -130,6 +153,16 @@ def select_checkpoint_architecture(
             record["native_class"] = f"{type(probe).__module__}.{type(probe).__qualname__}"
             record["forward_source"] = facts["source_fingerprints"].get("")
             record["compatibility"] = compatibility(probe, facts)
+            classify_inactive_components(model, raw, probe, facts)
+            if compatibility(model, raw)['status'] == 'exact_metadata_match':
+                proof['initial_compatibility'] = initial
+                proof['candidates'][0]['compatibility'] = compatibility(model, raw)
+                proof.update(status='declared_with_inactive_checkpoint_components',
+                             selected_model_class=declared_class,
+                             selected_compatibility=compatibility(model, raw),
+                             search_complete=False,
+                             scope='Declared native graph with separately identified disabled checkpoint components; no alternate execution graph claimed')
+                return model, selection, raw
             spent += len(facts["modules"]) + len(facts["parameters"]) + len(facts["buffers"])
             if record["compatibility"]["status"] == "exact_metadata_match":
                 matches.append(candidate)

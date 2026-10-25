@@ -21,6 +21,7 @@ def completion_report(raw: dict[str, Any], represented: set[str], covered_by_lea
         "parameter_mapping": not missing_parameters and not unmapped,
         "native_architecture": native_status in {
             "declared_metadata_match", "default_metadata_match", "checkpoint_selected", "declared_native_with_ignored_tensors",
+            "declared_with_inactive_checkpoint_components",
         },
         "module_topology": not boundaries,
     }

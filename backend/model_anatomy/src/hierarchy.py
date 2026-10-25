@@ -76,6 +76,10 @@ class HierarchyBuilder:
                 if path in self.topology.calls
                 else "registration_only"
             ),
+            "checkpoint_layout_refs": [
+                name for name in self.raw.get('checkpoint_layout_conversions', {})
+                if not path or name.startswith(path + '.')
+            ],
         }
         if record["container"] in {"module_list", "sequential"}:
             children = record["children"]
