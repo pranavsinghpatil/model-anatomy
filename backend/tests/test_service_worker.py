@@ -12,6 +12,8 @@ import pytest
 from sqlalchemy import inspect
 from sqlalchemy.exc import OperationalError
 
+from test_service_views import contract_report
+
 from model_anatomy.api.settings import Settings
 from model_anatomy.service.errors import ServiceError
 from model_anatomy.service.jobs import JobService, cache_key
@@ -69,7 +71,7 @@ def test_resolve_once_before_extraction_and_cache_hit_skips_engine(tmp_path):
     service.storage = MemoryStorage()
     service.acquire_worker("w")
     guest, _ = service.guest(None)
-    ir = load_ir((Path(__file__).resolve().parents[2] / "output/gpt2/model.json").read_bytes())
+    ir = load_ir(contract_report().to_json().encode())
     metadata = MetadataMock(ir.metadata["revision"])
     calls = []
 
@@ -86,7 +88,7 @@ def test_resolve_once_before_extraction_and_cache_hit_skips_engine(tmp_path):
     service.claim("w")
     execute_job(service, first, "w", metadata, reconstruct, parse)
     second = service.create(guest, "gpt2")["id"]
-    assert service.get(second, guest).status == "partial"
+    assert service.get(second, guest).status == "completed"
     assert service.get(second, guest).attempts == 0
     assert len(calls) == 1
     assert len(metadata.resolved) == 1
@@ -121,7 +123,7 @@ def sleeping_child(settings, job_id, owner):
 
 def successful_child(settings, job_id, owner):
     service = JobService(settings)
-    data = (Path(__file__).resolve().parents[2] / "output/gpt2/model.json").read_bytes()
+    data = contract_report().to_json().encode()
     document = json.loads(data)
     service.resolved(job_id, owner, document["model_id"], document["metadata"]["revision"])
     key = cache_key(document["model_id"], document["metadata"]["revision"], settings.engine_version, "1.1")
@@ -130,7 +132,7 @@ def successful_child(settings, job_id, owner):
 
 
 @pytest.mark.parametrize(
-    "target,timeout,status", [(successful_child, 10, "partial"), (sleeping_child, 1, "timed_out")]
+    "target,timeout,status", [(successful_child, 10, "completed"), (sleeping_child, 1, "timed_out")]
 )
 def test_real_spawn_child_finishes_or_is_killed(tmp_path, monkeypatch, target, timeout, status):
     import model_anatomy.service.worker as worker_module

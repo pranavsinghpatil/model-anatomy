@@ -1,15 +1,12 @@
 import { expect, test } from "@playwright/test";
-import type { AnalysisDetail, ArchitectureGraph } from "../src/api/contract";
-import {
-  expectReadableGraph,
-  graphNode,
-  openNestedGraph,
-  showDetails,
-} from "./helpers";
+import type {
+  AnalysisDetail,
+  ArchitectureGraph,
+  GraphIndex,
+} from "../src/api/contract";
 
-test("live ViT patches, CLS selection and tensor inspection", async ({
+test("live ViT native module hierarchy and checkpoint tensor inspection", async ({
   page,
-  isMobile,
 }, testInfo) => {
   test.setTimeout(180_000);
   test.skip(
@@ -29,114 +26,135 @@ test("live ViT patches, CLS selection and tensor inspection", async ({
     exact: true,
   });
   await expect(submit).toBeEnabled({ timeout: 60_000 });
-  const createdResponse = page.waitForResponse(
+  const submitted = page.waitForResponse(
     (response) =>
       response.request().method() === "POST" &&
       response.url().endsWith("/api/v1/analyses"),
   );
   await submit.click();
-  const response = await createdResponse;
+  const response = await submitted;
   expect(response.status()).toBe(202);
   const created = (await response.json()) as AnalysisDetail;
-  await expect(page).toHaveURL(new RegExp(`/app/analyses/${created.id}`));
   const path = `/api/v1/analyses/${created.id}`;
   await expect
-    .poll(
-      async () =>
-        (
-          (await page.request
-            .get(path)
-            .then((response) => response.json())) as AnalysisDetail
-        ).status,
-      { timeout: 130_000 },
-    )
+    .poll(async () => (await (await page.request.get(path)).json()).status, {
+      timeout: 130_000,
+    })
     .toBe("completed");
   const result = (await (
     await page.request.get(path)
   ).json()) as AnalysisDetail;
-  expect(result.status).toBe("completed");
   expect(result.parameter_count).toBe(86_567_656);
-  expect(result.warnings).toEqual([]);
-  expect(result.input_names).toEqual(["pixel_values"]);
-  await expect(page.getByTestId("model-metric-vocabulary")).toHaveCount(0);
-  await expect(page.getByTestId("report-checks")).toHaveCount(0);
-  await expect(page.getByTestId("analysis-scope")).toHaveCount(0);
+  expect(result.input_names).toContain("pixel_values");
   expect(result.partial_reasons).toEqual([]);
-  expect(result.limitations?.length ?? 0).toBeGreaterThan(0);
   expect(result.quality).toMatchObject({
-    semantic_coverage: 1,
-    module_semantic_coverage: 1,
+    mode: "static_module_architecture",
     checkpoint_parameter_coverage: 1,
-    tensor_shape_coverage: 1,
     unknown_nodes: 0,
     unmapped_checkpoint_tensors: 0,
     forward_executed: false,
     runtime_trace_available: false,
+    architecture_checks: {
+      module_inventory: true,
+      parameter_mapping: true,
+      native_architecture: true,
+      module_topology: true,
+    },
   });
   await page.getByRole("link", { name: "Report", exact: true }).click();
   const checks = page.getByTestId("report-checks");
   await expect(checks).toBeVisible();
-  await expect(checks.locator("dd").filter({ hasText: "100.0%" })).toHaveCount(
-    4,
-  );
-  const scope = page.getByTestId("analysis-scope");
-  await expect(scope).toBeVisible();
-  const identity = page.locator(".report-section").filter({
-    has: page.getByRole("heading", { name: "Artifact identity" }),
-  });
-  await expect(identity).toContainText(result.engine_version!);
+  await expect(checks).toContainText("Native module inventory");
+  await expect(checks).toContainText("Native architecture");
+  await expect(checks).not.toContainText("Tensor shape coverage");
+  await expect(page.getByTestId("analysis-scope")).toBeVisible();
   await page.screenshot({
     path: testInfo.outputPath("vit-report-checks.png"),
     animations: "disabled",
   });
   const report = await (await page.request.get(`${path}/exports/json`)).json();
-  expect(report.metadata.engine_version).toMatch(/^\d{4}\.\d{2}\.\d{2}\.\d+$/);
   expect(report.metadata.engine_version).toBe(result.engine_version);
   expect(report.metadata.artifacts.weight_payload_bytes_read).toBe(0);
-  await page.getByRole("link", { name: "Architecture", exact: true }).click();
-  await expect(page.getByTestId("graph-canvas")).toBeVisible({
-    timeout: 130_000,
-  });
+  expect(report.metadata.analysis_report.completion.status).toBe("complete");
+  const index = (await (
+    await page.request.get(`${path}/graph-index`)
+  ).json()) as GraphIndex;
   const root = (await (
     await page.request.get(`${path}/graphs/${result.root_graph_id}`)
   ).json()) as ArchitectureGraph;
-  const selection = root.nodes.find((node) => node.kind === "selection")!;
-  expect(selection.inputs[0].shape).toEqual(["B", 197, 768]);
-  expect(selection.outputs[0].shape).toEqual(["B", 768]);
-  await expectReadableGraph(page);
-  const classifier = root.nodes.find((node) => node.kind === "classifier")!;
-  await graphNode(page, classifier.label);
-  await showDetails(page, isMobile);
-  await page.getByRole("tab", { name: /^Tensors/ }).click();
-  await expect(page.locator(".tensor-row")).toHaveCount(2);
-  await page.screenshot({
-    path: testInfo.outputPath("vit-classifier.png"),
-    animations: "disabled",
-  });
-  if (isMobile)
-    await page.getByRole("button", { name: "Back to graph" }).click();
-  let graph = root;
-  for (const kind of ["backbone", "embeddings", "patch_embedding"]) {
-    const node = graph.nodes.find((item) => item.kind === kind)!;
-    expect(node.child_graph_id).toBeTruthy();
-    await graphNode(page, node.label);
-    await openNestedGraph(page, node.label);
-    graph = (await (
-      await page.request.get(`${path}/graphs/${node.child_graph_id}`)
-    ).json()) as ArchitectureGraph;
-    await expect(page.locator(".react-flow__node")).toHaveCount(
-      graph.nodes.length,
-    );
+  expect(root.nodes.length).toBeGreaterThan(0);
+  expect(index.graphs.length).toBeGreaterThan(1);
+  await page.getByRole("link", { name: "Architecture", exact: true }).click();
+  await expect(page.getByTestId("graph-canvas")).toBeVisible();
+
+  async function inspectModule(modulePath: string) {
+    const back = page.getByRole("button", {
+      name: "Back to graph",
+      exact: true,
+    });
+    if (await back.isVisible()) await back.click();
+    const components = page.getByRole("button", {
+      name: "Open components",
+      exact: true,
+    });
+    if (await components.isVisible()) await components.click();
+    await page.getByRole("button", { name: "Model tree", exact: true }).click();
+    await page
+      .getByLabel("Find across model", { exact: true })
+      .fill(modulePath);
+    const match = page.locator(".model-component-tree .component-select");
+    await expect(match).toHaveCount(1);
+    await match.click();
+    await expect(page.getByTestId("inspector")).toBeVisible();
+    return page.getByTestId("inspector");
   }
-  expect(
-    graph.nodes.find((node) => node.metadata.method === "transpose")!.outputs[0]
-      .shape,
-  ).toEqual(["B", 196, 768]);
-  await expectReadableGraph(page);
+  const classifier = index.nodes.find((node) => node.kind === "classifier")!;
+  expect(classifier.module_path).toBeTruthy();
+  expect(classifier.child_graph_id).toBeNull();
+  let panel = await inspectModule(classifier.module_path!);
+  await expect(
+    panel.getByRole("region", { name: "Recorded module properties" }),
+  ).toContainText("Linear");
+  await expect(
+    panel.getByRole("button", { name: "Open nested graph", exact: true }),
+  ).toHaveCount(0);
+  await panel.getByRole("tab", { name: /^Tensors/ }).click();
+  await expect(panel.locator(".tensor-row")).toHaveCount(2);
+  expect(report.tensors[`${classifier.module_path}.weight`].shape).toEqual([
+    1000, 768,
+  ]);
+  expect(report.tensors[`${classifier.module_path}.bias`].shape).toEqual([
+    1000,
+  ]);
+  await panel.getByRole("tab", { name: /^Evidence/ }).click();
+  await expect(panel.locator(".evidence-item").first()).toBeVisible();
+
+  const patch = index.nodes.find((node) =>
+    node.module_path?.endsWith("patch_embeddings.projection"),
+  )!;
+  expect(patch.child_graph_id).toBeNull();
+  panel = await inspectModule(patch.module_path!);
+  await panel.getByRole("tab", { name: /^Component/ }).click();
+  await expect(
+    panel.getByRole("region", { name: "Recorded module properties" }),
+  ).toContainText("Conv2d");
+  expect(report.tensors[`${patch.module_path}.weight`].shape).toEqual([
+    768, 3, 16, 16,
+  ]);
   await page.screenshot({
-    path: testInfo.outputPath("vit-patches.png"),
+    path: testInfo.outputPath("vit-patch-module.png"),
     animations: "disabled",
   });
+  await page.reload();
+  await expect(page.getByTestId("inspector")).toBeVisible();
+  await expect(
+    page.getByRole("region", { name: "Recorded module properties" }),
+  ).toContainText("Conv2d");
+  const back = page.getByRole("button", { name: "Back to graph", exact: true });
+  if (await back.isVisible()) await back.click();
+  await expect(
+    page.getByRole("navigation", { name: "Graph path" }),
+  ).toContainText("ViT");
   await page.getByLabel("Export analysis", { exact: true }).click();
   const download = page.waitForEvent("download");
   await page

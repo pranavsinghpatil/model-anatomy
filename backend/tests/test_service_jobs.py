@@ -1,9 +1,10 @@
 import json
 from concurrent.futures import ThreadPoolExecutor
-from pathlib import Path
 
 import pytest
 from sqlalchemy import select
+
+from test_service_views import contract_report
 
 from model_anatomy.api.settings import Settings
 from model_anatomy.service.database import Blob, CacheEntry, Guest, Job, Tombstone
@@ -30,9 +31,7 @@ def visitor(service):
 
 
 def document():
-    return json.loads(
-        (Path(__file__).resolve().parents[2] / "output/gpt2/model.json").read_text()
-    )
+    return contract_report().to_dict()
 
 
 class MemoryStorage:
@@ -188,7 +187,7 @@ def test_cancel_queued_running_and_completed(service):
     assert service.cancel(complete, guest)["status"] in {"completed", "partial"}
 
 
-def test_expiry_is_410_for_owner_404_for_other_and_retention_is_seven_days(service):
+def test_expired_job_and_cache_do_not_delete_a_durable_catalog_report(service):
     from model_anatomy.service.database import ModelReport
 
     memory = MemoryStorage()
@@ -212,10 +211,10 @@ def test_expiry_is_410_for_owner_404_for_other_and_retention_is_seven_days(servi
     service.test_now[0] += 604800
     service.cleanup()
     assert service.cached_result(key) is None
-    assert not service.storage.path(digest).exists()
+    assert digest in memory.objects
     with service.db.read() as session:
-        assert list(session.scalars(select(Blob))) == []
-        assert list(session.scalars(select(ModelReport))) == []
+        assert [blob.digest for blob in session.scalars(select(Blob))] == [digest]
+        assert [report.blob_digest for report in session.scalars(select(ModelReport))] == [digest]
 
 
 def test_revision_and_artifact_and_engine_and_schema_are_cache_identity():

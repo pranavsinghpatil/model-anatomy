@@ -194,6 +194,7 @@ def _bounded(items: Any, limit: int = MAX_WARNINGS) -> list[str]:
 def _analyze_case(case: dict[str, Any], *, report_directory: Path | None = None) -> dict[str, Any]:
     """Worker entry point; imports the reconstruction engine only in the fresh child."""
     from model_anatomy.api.schemas import ArtifactInspectionResponse, GraphResponse, NodeInspection
+    from model_anatomy.service.jobs import ir_summary
     from model_anatomy.service.views import artifact_view, graph_view, node_view
     from model_anatomy.src.ir import ModelIR
     from model_anatomy.src.pipeline import reconstruct
@@ -288,23 +289,10 @@ def _analyze_case(case: dict[str, Any], *, report_directory: Path | None = None)
         or not storage_contract_valid
     )
     coverages = {key: analysis.get(key) for key in COVERAGE_KEYS}
-    fully_covered = all(
-        isinstance(coverages[key], (int, float)) and coverages[key] == 1 for key in COVERAGE_KEYS
-    )
-    if not fully_covered:
-        reasons.append("coverage_not_complete")
-    status = (
-        "invalid_report"
-        if invalid_report
-        else "inspected"
-        if inspection_only
-        else "completed"
-        if fully_covered
-        and not analysis.get("warnings")
-        and not analysis.get("unknown_nodes", 0)
-        and not analysis.get("unmapped_checkpoint_tensors", [])
-        else "partial"
-    )
+    assessment = ir_summary(ir.to_dict())
+    if assessment["result_status"] == "partial":
+        reasons.append("architecture_incomplete")
+    status = "invalid_report" if invalid_report else assessment["result_status"]
     report_digest = None
     if report_directory is not None and status in {"completed", "partial", "inspected"}:
         report_digest = hashlib.sha256(report_json.encode("utf-8")).hexdigest()
@@ -330,6 +318,11 @@ def _analyze_case(case: dict[str, Any], *, report_directory: Path | None = None)
         "architecture": None if inspection_only else ir.architecture,
         "inspection_only": inspection_only,
         "coverage": coverages,
+        "architecture_completion": {
+            "version": 3,
+            "status": assessment["result_status"],
+            "checks": assessment["quality"].get("architecture_checks", {}),
+        } if assessment["quality"].get("architecture_checks") else None,
         "warning_count": len(analysis.get("warnings", []))
         if isinstance(analysis.get("warnings", []), list)
         else 0,

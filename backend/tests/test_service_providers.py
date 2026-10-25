@@ -1,10 +1,11 @@
 import hashlib
 import json
-from pathlib import Path
 
 import httpx
 import pytest
 from pydantic import ValidationError
+
+from test_service_views import contract_report
 
 from model_anatomy.api.settings import Settings
 from model_anatomy.service.ai import ExplanationService, context
@@ -15,7 +16,7 @@ from model_anatomy.service.views import load_ir
 
 @pytest.fixture
 def ir():
-    return load_ir((Path(__file__).resolve().parents[2] / "output/gpt2/model.json").read_bytes())
+    return load_ir(contract_report().to_json().encode())
 
 
 def provider(ir, answer, citations=None, status=200):
@@ -37,7 +38,7 @@ def provider(ir, answer, citations=None, status=200):
 
 
 def test_provider_actual_json_http_call_and_valid_citations(ir):
-    ai, requests = provider(ir, "The model has 124439808 parameters, recorded in static metadata.")
+    ai, requests = provider(ir, "The model has 40 parameters, recorded in static metadata.")
     result = ai.answer(ir, "How many parameters?")
     assert result["ai_generated"] is True
     assert result["model"] == "nvidia/mock-nemotron"
@@ -63,7 +64,7 @@ def test_provider_actual_json_http_call_and_valid_citations(ir):
         "The model has +9e+99 parameters.",
         "The model has -9.0e-99 parameters.",
         "The model has .9e99 parameters.",
-        "The model has 1.24439808e8 parameters.",
+        "The model has 4e1 parameters.",
     ],
 )
 def test_provider_rejects_scientific_notation_even_when_numeric_value_is_supported(ir, answer):
@@ -74,9 +75,9 @@ def test_provider_rejects_scientific_notation_even_when_numeric_value_is_support
 
 
 def test_provider_preserves_model_and_evidence_identifiers_and_exact_numbers(ir):
-    ai, _ = provider(ir, "GPT2 is described by e1; the exact parameter count is 124439808.")
+    ai, _ = provider(ir, "GPT2 is described by e1; the exact parameter count is 40.")
     result = ai.answer(ir, "How many parameters?")
-    assert result["answer"].endswith("124439808.")
+    assert result["answer"].endswith("40.")
 
 
 @pytest.mark.parametrize(

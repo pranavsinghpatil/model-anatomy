@@ -15,6 +15,8 @@ from pydantic import ValidationError
 from sqlalchemy.exc import SQLAlchemyError
 
 from model_anatomy.api.app import COOKIE, create_app
+from test_service_views import contract_report
+
 from model_anatomy.api.settings import Settings
 from model_anatomy.service.errors import ServiceError
 from model_anatomy.service.jobs import JobService, cache_key
@@ -28,12 +30,12 @@ def client(tmp_path):
 
 @pytest.fixture
 def stored_analysis(client):
-    # Test-only saved engine output exercises job ownership and views without networking.
+    # Synthetic HTTP contract data exercises ownership and views without networking.
     service = client.app.state.jobs
     service.acquire_worker("worker")
     detail = client.post("/api/v1/analyses", json={"model": "gpt2"}).json()
     assert service.claim("worker") == detail["id"]
-    data = (Path(__file__).resolve().parents[2] / "output/gpt2/model.json").read_bytes()
+    data = contract_report().to_json().encode()
     report = json.loads(data)
     service.resolved(detail["id"], "worker", report["model_id"], report["metadata"]["revision"])
     key = cache_key(
@@ -268,7 +270,7 @@ def test_validation_failures_have_structured_envelope(client, body):
 
 def test_missing_provider_does_not_block_owned_report_graph_and_inspection(client, stored_analysis):
     path = f"/api/v1/analyses/{stored_analysis['id']}"
-    assert stored_analysis["parameter_count"] == 124439808
+    assert stored_analysis["parameter_count"] == 40
     graph = client.get(f"{path}/graphs/{stored_analysis['root_graph_id']}").json()
     assert graph["nodes"] and graph["edges"]
     assert all("child_graph" not in n and "child_graph_id" in n for n in graph["nodes"])

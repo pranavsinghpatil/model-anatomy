@@ -90,14 +90,36 @@ def _case(row: dict, directory: Path) -> dict:
     unmapped = analysis.get("unmapped_checkpoint_tensors")
     if not isinstance(unmapped, list) or any(not isinstance(item, str) for item in unmapped):
         raise AuditInputError("invalid report unmapped tensors")
-    gaps = [key for key, value in coverage.items() if value != 1]
+    current_contract = (
+        "completion" in analysis or analysis.get("mode") == "static_module_architecture"
+    )
+    if current_contract:
+        # Saved native reports use the same contract as the API. Optional math
+        # detail and unclassified role annotations are not completion gates.
+        from model_anatomy.service.jobs import ir_summary
+
+        assessment = ir_summary(report)
+        checks = assessment["quality"].get("architecture_checks", {})
+        gaps = [name for name, passed in checks.items() if not passed] if checks else ["completion_contract"]
+        basis = (
+            "native_architecture_gates_passed"
+            if assessment["result_status"] == "completed"
+            else "native_architecture_gap"
+        )
+        agrees = status == assessment["result_status"]
+        case["architecture_checks"] = checks
+    else:
+        # Keep the original gate when diagnosing historical expression reports.
+        # Never upgrade a saved capture merely because today's policy differs.
+        gaps = [key for key, value in coverage.items() if value != 1]
+        basis = "coverage_or_ownership_gap" if gaps or unknown or unmapped else "source_warnings_only" if warnings else "recorded_static_gates_passed"
+        agrees = (status == "completed") == (basis == "recorded_static_gates_passed")
     warning_counts = {name: sum(marker in warning for warning in warnings) for name, marker in WARNING_MARKERS.items()}
     warning_counts["other"] = sum(not any(marker in warning for marker in WARNING_MARKERS.values()) for warning in warnings)
     operations = [name for name, markers in OPERATION_COHORTS.items() if any(
         "Opaque call" in warning and any(marker in warning for marker in markers) for warning in warnings
     )]
-    basis = "coverage_or_ownership_gap" if gaps or unknown or unmapped else "source_warnings_only" if warnings else "recorded_static_gates_passed"
-    if (status == "completed") != (basis == "recorded_static_gates_passed"):
+    if not agrees:
         raise AuditInputError("report status disagrees with recorded completion gates")
     return {**case, "completion_basis": basis, "coverage": coverage, "coverage_gaps": gaps,
             "unknown_nodes": unknown, "unmapped_checkpoint_tensor_count": len(unmapped),

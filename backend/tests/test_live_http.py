@@ -157,8 +157,9 @@ def test_real_model_submission_graph_tensors_exports_and_cache(
     graph = client.get(f"{path}/graphs/{detail['root_graph_id']}").json()
     repeated = next(node for node in graph["nodes"] if node["child_graph_id"])
     assert client.get(f"{path}/graphs/{repeated['child_graph_id']}").json()["nodes"]
-    component = next(node for node in graph["nodes"] if node["kind"] == component_kind)
-    node = client.get(f"{path}/nodes/{graph['id']}/{component['id']}").json()
+    index = client.get(f"{path}/graph-index").json()
+    component = next(node for node in index["nodes"] if node["kind"] == component_kind)
+    node = client.get(f"{path}/nodes/{component['graph_id']}/{component['id']}").json()
     assert node["tensor_count"] > 0 and node["evidence"]
     report = client.get(f"{path}/exports/json").json()
     assert report["model_id"] == model

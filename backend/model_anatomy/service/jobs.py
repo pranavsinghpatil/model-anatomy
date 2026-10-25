@@ -358,15 +358,15 @@ class JobService:
         for key, limit, seconds in limits:
             window = int(self.clock() // seconds)
             bucket = session.get(RateBucket, (key, window))
-            # if bucket and bucket.count >= limit:
-            #     minutes = math.ceil(((window + 1) * seconds - self.clock()) / 60)
-            #     scope = "Daily shared" if key.startswith("global:") else "Hourly visitor"
-            #     action_label = "analysis" if action == "jobs" else "AI question"
-            #     raise ServiceError(
-            #         429,
-            #         "rate_limited",
-            #         f"{scope} {action_label} allowance reached ({limit}). Try again in {max(1, minutes)} minutes.",
-            #     )
+            if bucket and bucket.count >= limit:
+                minutes = math.ceil(((window + 1) * seconds - self.clock()) / 60)
+                scope = "Daily shared" if key.startswith("global:") else "Hourly visitor"
+                action_label = "analysis" if action == "jobs" else "AI question"
+                raise ServiceError(
+                    429,
+                    "rate_limited",
+                    f"{scope} {action_label} allowance reached ({limit}). Try again in {max(1, minutes)} minutes.",
+                )
             if bucket:
                 bucket.count += 1
             else:
@@ -443,19 +443,15 @@ class JobService:
         for key, limit, seconds in limits:
             window = int(self.clock() // seconds)
             bucket = session.get(RateBucket, (key, window))
-            # if bucket and bucket.count >= limit:
-            #     minutes = math.ceil(((window + 1) * seconds - self.clock()) / 60)
-            #     scope = "Daily shared" if key.startswith("global:") else "Hourly visitor"
-            #     action_label = "analysis" if action == "jobs" else "AI question"
-            #     raise ServiceError(
-            #         429,
-            #         "rate_limited",
-            #         f"{scope} {action_label} allowance reached ({limit}). Try again in {max(1, minutes)} minutes.",
-            #     )
-            if bucket:
-                bucket.count += 1
-            else:
-                session.add(RateBucket(key=key, window=window, count=1))
+            if bucket and bucket.count >= limit:
+                minutes = math.ceil(((window + 1) * seconds - self.clock()) / 60)
+                scope = "Daily shared" if key.startswith("global:") else "Hourly visitor"
+                action_label = "analysis" if action == "jobs" else "AI question"
+                raise ServiceError(
+                    429,
+                    "rate_limited",
+                    f"{scope} {action_label} allowance reached ({limit}). Try again in {max(1, minutes)} minutes.",
+                )
 
     def question_quota(self, guest_id: str) -> None:
         with self.db.write() as session:

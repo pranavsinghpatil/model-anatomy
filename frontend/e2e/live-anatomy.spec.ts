@@ -91,6 +91,12 @@ test("live SmolLM2-135M supports graph, anatomy, lazy children, evidence, and ex
   expect(analysis.revision).toBeTruthy();
   expect(analysis.parameter_count).toBeGreaterThan(0);
   expect(analysis.input_names).toContain("input_ids");
+  expect(analysis.quality?.architecture_checks).toEqual({
+    module_inventory: true,
+    parameter_mapping: true,
+    native_architecture: true,
+    module_topology: true,
+  });
 
   const graphResponse = await page.request.get(
     `${analysisPath}/graphs/${analysis.root_graph_id}`,
@@ -104,8 +110,8 @@ test("live SmolLM2-135M supports graph, anatomy, lazy children, evidence, and ex
       (edge) => nodeIds.has(edge.source) && nodeIds.has(edge.target),
     ),
   ).toBe(true);
-  const representative = root.nodes.find(
-    (node) => node.repeat > 1 && node.child_graph_id,
+  const representative = root.nodes.find((node) =>
+    Boolean(node.child_graph_id),
   );
   expect(representative).toBeTruthy();
   const evidenceNode = root.nodes.find(

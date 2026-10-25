@@ -75,13 +75,7 @@ for (const item of cases) {
     expect(Object.keys(report.tensors)).toHaveLength(item.tensors);
     expect(report.metadata.artifacts.weight_payload_bytes_read).toBe(0);
     if (item.architecture === "VideoMAEForVideoClassification")
-      expect(report.metadata.inputs.input_specs.pixel_values.shape).toEqual([
-        "B",
-        16,
-        3,
-        224,
-        224,
-      ]);
+      expect(report.metadata.inputs.input_specs.pixel_values.shape).toBeNull();
     expect(
       await page.evaluate(
         () => document.documentElement.scrollWidth > innerWidth,

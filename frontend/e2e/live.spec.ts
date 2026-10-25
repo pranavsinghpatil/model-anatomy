@@ -102,7 +102,7 @@ test("live workspace submits, inspects a component, and exports", async ({
     await page.request.get(analysisPath)
   ).json()) as AnalysisDetail;
   expect(result.architecture).toMatch(/llama/i);
-  expect(result.input_names).toEqual(["input_ids"]);
+  expect(result.input_names).toContain("input_ids");
   expect(result.parameter_count).toBe(361_821_120);
 
   await expect(page.getByTestId("graph-canvas")).toBeVisible({
@@ -115,10 +115,8 @@ test("live workspace submits, inspects a component, and exports", async ({
     )
   ).json()) as ArchitectureGraph;
   const component =
-    root.nodes.find((node) =>
-      ["transformer_block", "attention", "mlp", "embedding"].includes(
-        node.kind,
-      ),
+    root.nodes.find(
+      (node) => node.child_graph_id && node.parameter_count! > 0,
     ) ?? root.nodes[0];
   expect(component).toBeTruthy();
   await graphNode(page, component!.label);
