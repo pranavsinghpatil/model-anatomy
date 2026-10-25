@@ -24,6 +24,12 @@ The GitHub `quality`, `browser`, and `containers` jobs passed for #58 at
 `53e5e2b`; see [the CI run](https://github.com/pranavsinghpatil/model-anatomy/actions/runs/40195549006).
 Check the latest commit's jobs before merging further updates.
 
+The handover follow-up passed 842 local backend tests (25 skips) for #58,
+39 service tests, and all four desktop/mobile layout tests. The #59 follow-up
+passed 853 local backend tests (25 skips), including all 11 dependency checks.
+Ruff, compilation, frontend type checking, targeted formatting, and diff
+checks passed. Skips retain their documented opt-in/platform requirements.
+
 The dependency guard fails against the previous `torch>=2.8` constraint and
 passes after raising the floor. `uv lock --check --offline` passes; the resolved
 versions remain Torch `2.14.1` / `2.14.1+cpu` and Transformers `5.20.2`. The floor
@@ -44,10 +50,11 @@ sizes. Preserve those manifests' exact bytes and `.gitattributes`: their digests
 are part of the reconstruction evidence contract.
 Autter's reported test failures used missing Python extras and a Node runner
 for Playwright files; correctly configured GitHub CI passed. The owner disabled
-the repository in Autter during handover. On October 25 GitHub still required
-`autter/review-gate` on `feat/vv`; disabling the integration does not remove that
-branch-protection requirement. The owner must choose the replacement review
-policy before this can be considered merge-ready.
+the repository in Autter during handover and explicitly chose to keep the
+current GitHub merge policy. GitHub still requires `autter/review-gate` on
+`feat/vv`; disabling the integration does not remove that branch-protection
+requirement. The required gate must pass under that policy before merging.
+No replacement or bypass was authorized or applied.
 
 ## Submission gates still open
 
