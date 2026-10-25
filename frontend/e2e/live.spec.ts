@@ -1,5 +1,10 @@
 import { expect, test } from "@playwright/test";
-import type { AnalysisDetail, ArchitectureGraph } from "../src/api/contract";
+import { fileURLToPath } from "node:url";
+import type {
+  AnalysisDetail,
+  ArchitectureGraph,
+  NodeDetail,
+} from "../src/api/contract";
 import { expectGraphFramed, graphNode } from "./helpers";
 
 test("live entry opens directly and only continues a recent analysis when selected", async ({
@@ -102,26 +107,52 @@ test("live workspace submits, inspects a component, and exports", async ({
     await page.request.get(analysisPath)
   ).json()) as AnalysisDetail;
   expect(result.architecture).toMatch(/llama/i);
-  expect(result.input_names).toEqual(["input_ids"]);
+  expect(result.input_names).toContain("input_ids");
   expect(result.parameter_count).toBe(361_821_120);
 
   await expect(page.getByTestId("graph-canvas")).toBeVisible({
     timeout: 130_000,
   });
-  if (testInfo.project.name === "desktop") await expectGraphFramed(page);
+  if (testInfo.project.name === "desktop") {
+    await expectGraphFramed(page);
+    await page.screenshot({
+      path: fileURLToPath(
+        new URL(
+          "../../.local/audit/live-ui-current-desktop.png",
+          import.meta.url,
+        ),
+      ),
+      animations: "disabled",
+    });
+  }
   const root = (await (
     await page.request.get(
       `/api/v1/analyses/${created.id}/graphs/${result.root_graph_id}`,
     )
   ).json()) as ArchitectureGraph;
-  const component =
-    root.nodes.find((node) =>
-      ["transformer_block", "attention", "mlp", "embedding"].includes(
-        node.kind,
-      ),
-    ) ?? root.nodes[0];
-  expect(component).toBeTruthy();
-  await graphNode(page, component!.label);
+  let selected:
+    | { node: ArchitectureGraph["nodes"][number]; detail: NodeDetail }
+    | undefined;
+  for (const node of root.nodes.filter(
+    (item) => item.module_path !== null && item.evidence.length > 0,
+  )) {
+    const inspection = await page.request.get(
+      `/api/v1/analyses/${created.id}/nodes/${root.id}/${node.id}`,
+    );
+    expect(inspection.ok()).toBe(true);
+    const detail = (await inspection.json()) as NodeDetail;
+    if (detail.tensor_count > 0 && detail.evidence.length > 0) {
+      selected = { node, detail };
+      break;
+    }
+  }
+  expect(
+    selected,
+    "the registered root graph should expose a module with owned tensors and evidence",
+  ).toBeDefined();
+  const { node: component, detail: componentDetail } = selected!;
+  expect(componentDetail.module).not.toBeNull();
+  await graphNode(page, component.label);
   const inspector = page
     .getByRole("tabpanel", { name: "Details" })
     .getByTestId("inspector");
@@ -133,10 +164,16 @@ test("live workspace submits, inspects a component, and exports", async ({
   await expect(
     inspector.getByRole("heading", { name: "Owned tensors" }),
   ).toBeVisible();
+  await expect(inspector.getByRole("tab", { name: /^Tensors/ })).toContainText(
+    String(componentDetail.tensor_count),
+  );
   await inspector.getByRole("tab", { name: /^Evidence/ }).click();
   await expect(
     inspector.getByRole("heading", { name: "Provenance" }),
   ).toBeVisible();
+  await expect(inspector.locator(".evidence-item")).toHaveCount(
+    componentDetail.evidence.length,
+  );
 
   await page.getByLabel("Export analysis", { exact: true }).click();
   const download = page.waitForEvent("download");

@@ -1328,3 +1328,13 @@ Vercel URL returned 404 and GitHub reported the repository private. Public
 source/license visibility, hosted judging access, actual Nebius/NVIDIA inference,
 video and final release evidence remain explicit gates in
 [submission readiness](SUBMISSION_READINESS.md).
+
+
+The bounded repair also restores the configured guest/global quota rejection
+inside serialized write transactions and preserves verified checkpoint header/
+name evidence in analysis summaries. Missing checkpoints cannot establish
+native compatibility. Native checkpoint renaming records exact rule patterns
+and source digests. Engine/cache identity advances to
+`2026.10.25.2-submission-audit` so fixed fresh reports do not silently reuse
+earlier cached results. Current UI reports require explicitly successful
+architecture checks before claiming complete architecture.

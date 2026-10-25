@@ -90,6 +90,10 @@ SmolLM2-135M cold/cache flow, all 30 registered layer instances, tensor evidence
 exports, visitor isolation and quotas. Fresh pinned GPT-2 and SmolLM2-135M engine
 checks also passed with zero weight payload bytes read. The final wheel was
 rebuilt with the current engine identity and its package contents inspected.
-PR CI and the separate real browser acceptance result are tracked in the linked
-evidence record. These local checks do not close the external submission gates
-above.
+Real desktop and mobile browser submissions also passed against the current
+API/worker: SmolLM2-360M resolved to `f8027fd0eaeea54caa13c31d31b9fdc459c38b49`,
+reported 361,821,120 parameters, exposed owned tensors and evidence, and exported
+without browser errors. One cold and two cached runs were observed, including a
+desktop screenshot capture. Temporary test services were stopped. PR CI remains
+separate from these local results. These checks do not close the external
+submission gates above.

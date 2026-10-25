@@ -157,6 +157,40 @@
     "independent_review": {
       "quota_serialization": "reviewed; no normal-path bypass found",
       "checkpoint_provenance_and_summary": "reviewed; no concrete issue found"
+    },
+    "isolated_live_browser": {
+      "passed": 2,
+      "failed": 0,
+      "projects": [
+        "desktop",
+        "mobile"
+      ],
+      "minutes": 1.5,
+      "model": "HuggingFaceTB/SmolLM2-360M",
+      "resolved_revision": "f8027fd0eaeea54caa13c31d31b9fdc459c38b49",
+      "unique_parameters": 361821120,
+      "checks": [
+        "real browser submission through API and worker",
+        "completed current native architecture",
+        "registered module with owned tensors and evidence shown in inspector",
+        "report JSON export",
+        "no browser page errors"
+      ],
+      "observed_runs": {
+        "uncached": 1,
+        "cached": 2,
+        "note": "Includes one additional desktop screenshot capture."
+      },
+      "scope": "Local isolated services, not the public demo or live Nemotron inference",
+      "temporary_services_stopped": true
+    },
+    "ci": {
+      "scope": "GitHub PR checks are a separate verification record; inspect the pull request's final-head checks.",
+      "required_checks": [
+        "quality",
+        "browser",
+        "containers"
+      ]
     }
   },
   "engine_version": "2026.10.25.2-submission-audit"
