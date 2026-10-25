@@ -77,7 +77,11 @@ def _clap_audio_schedule_defaults() -> dict[str, Any]:
 
     parameters = signature(ClapAudioConfig.__init__).parameters
     return {
-        name: parameters[name].default
+        name: (
+            list(parameters[name].default)
+            if isinstance(parameters[name].default, tuple)
+            else parameters[name].default
+        )
         for name in ("depths", "num_hidden_layers", "num_attention_heads")
     }
 
@@ -108,6 +112,17 @@ def _validate_embedded_config(
                 if isinstance(item, (dict, list))
             )
             continue
+        if not validate_native_fields:
+            pending.extend(
+                (item, depth + 1, None, False)
+                for item in value.values()
+                if isinstance(item, (dict, list))
+            )
+            continue
+        if value.get("auto_map") and not (allow_root_auto_map and depth == 0):
+            raise UnsupportedModelError(
+                "Native configuration is required; remote code is disabled"
+            )
 
         construction_config = construction_config or isinstance(
             value.get("model_type"), str
@@ -262,7 +277,33 @@ def load_native_config(data: dict[str, Any]) -> PretrainedConfig:
         raise UnsupportedModelError(
             "A native Transformers config is required; remote code is disabled"
         )
+    from transformers.models.auto.configuration_auto import CONFIG_MAPPING
+
+    if model_type not in CONFIG_MAPPING and model_type in _IMPLICIT_BACKBONE_STAGE_TYPES:
+        _validate_embedded_config(data)
     implementation = config_class(model_type)
+    publisher_auto_map = data.get("auto_map")
+    if publisher_auto_map is not None and not isinstance(publisher_auto_map, dict):
+        raise ArtifactError("Invalid publisher auto_map; expected an object")
+    ignored_auto_map = bool(publisher_auto_map)
+    declared_architectures = data.get("architectures")
+    native_data = {
+        key: value for key, value in data.items()
+        if key != _IGNORED_AUTO_MAP_MARKER
+    }
+    if ignored_auto_map:
+        if (
+            not isinstance(declared_architectures, list)
+            or not declared_architectures
+            or any(not isinstance(name, str) or not name for name in declared_architectures)
+        ):
+            raise UnsupportedModelError(
+                "Publisher auto_map can be ignored only with nonempty declared native architectures"
+            )
+        native_data.pop("auto_map", None)
+    elif publisher_auto_map is None:
+        native_data.pop("auto_map", None)
+    _validate_embedded_config(data, allow_root_auto_map=ignored_auto_map)
     pending = [(implementation, data, "config")]
     while pending:
         parent_class, values, path = pending.pop()
@@ -272,8 +313,10 @@ def load_native_config(data: dict[str, Any]) -> PretrainedConfig:
                 child = config_class(nested["model_type"], f"{path}.{name}")
                 pending.append((child, nested, f"{path}.{name}"))
     try:
+        # Native config normalization must not mutate the artifact JSON.
+        native_data = deepcopy(native_data)
         config = AutoConfig.for_model(
-            model_type, **{k: v for k, v in data.items() if k != "model_type"}
+            model_type, **{k: v for k, v in native_data.items() if k != "model_type"}
         )
     except ImportError as exc:
         raise NativeResolutionError(
@@ -470,18 +513,6 @@ def _construct_native(
         raise ArtifactError(
             "Native construction allocated non-meta model tensors; no CPU fallback is allowed"
         )
-    return model
-
-
-def native_auto_candidates(config: PretrainedConfig) -> list[tuple[str, type, str]]:
-    return _auto_model_candidates(config)
-
-
-def instantiate_native(
-    config: PretrainedConfig,
-) -> tuple[torch.nn.Module, dict[str, Any]]:
-    auto_class, warnings = select_auto_class(config)
-    model = construct_native(config, auto_class)
     return model, {
         "auto_class": auto_name,
         "model_class": type(model).__name__,
@@ -495,3 +526,15 @@ def instantiate_native(
         "warnings": warnings,
         "native_resolution": implementation_evidence(model),
     }
+
+
+def construct_native(config: PretrainedConfig, auto_class: type) -> torch.nn.Module:
+    """Construct a native model through the shared metadata-only guards."""
+    model, _selection = _construct_native(
+        config, auto_class.from_config, auto_class.__name__, []
+    )
+    return model
+
+
+def native_auto_candidates(config: PretrainedConfig) -> list[tuple[str, type, str]]:
+    return _auto_model_candidates(config)

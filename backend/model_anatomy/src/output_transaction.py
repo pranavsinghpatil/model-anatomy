@@ -26,6 +26,8 @@ def publish_files(contents: dict[Path, str], obsolete: set[Path]) -> None:
     changed: list[Path] = []
     retained: set[Path] = set()
     targets = list(contents) + sorted(obsolete - contents.keys())
+    if any(path.is_symlink() for path in targets):
+        raise ValueError("Report output targets cannot be symlinks")
     if len({path.resolve() for path in targets}) != len(targets):
         raise ValueError("Report output paths overlap")
     try:

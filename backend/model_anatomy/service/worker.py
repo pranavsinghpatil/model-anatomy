@@ -15,6 +15,8 @@ import time
 from dataclasses import replace
 from uuid import uuid4
 
+from sqlalchemy.exc import DBAPIError, OperationalError
+
 from model_anatomy.dependencies import require_dependencies
 from model_anatomy.api.settings import Settings
 from model_anatomy.src.errors import AnatomyError, ArtifactError, UnsupportedModelError

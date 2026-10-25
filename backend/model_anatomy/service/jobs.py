@@ -17,7 +17,9 @@ from .database import (
     CacheEntry,
     Database,
     Guest,
+    InspectionFailure,
     Job,
+    ModelReport,
     Mutex,
     RateBucket,
     Tombstone,
@@ -34,6 +36,7 @@ TERMINAL = {
     "timed_out",
     "cancelled",
 }
+REVISION_RE = re.compile(r"^[0-9a-f]{40}$")
 
 
 def timestamp(value: float) -> str:
@@ -245,6 +248,14 @@ def ir_summary(data: dict) -> dict:
     quality["mode"] = (
         report.get("mode") if isinstance(report.get("mode"), str) else None
     )
+
+    def graph_total(graph: dict) -> int:
+        return 1 + sum(
+            graph_total(node["child_graph"])
+            for node in graph.get("nodes", [])
+            if isinstance(node.get("child_graph"), dict)
+        )
+
     return {
         "architecture": data["architecture"],
         "root_graph_id": data["root_graph"]["id"],
