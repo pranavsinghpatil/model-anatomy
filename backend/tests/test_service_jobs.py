@@ -1,12 +1,13 @@
 import json
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
+from threading import Barrier
 
 import pytest
 from sqlalchemy import select
 
 from model_anatomy.api.settings import Settings
-from model_anatomy.service.database import Blob, CacheEntry, Guest, Job, Tombstone
+from model_anatomy.service.database import Blob, Guest, Job, RateBucket, Tombstone
 from model_anatomy.service.errors import ServiceError
 from model_anatomy.service.jobs import JobService, cache_key, ir_summary
 from model_anatomy.service.storage import LocalStorage
@@ -31,7 +32,7 @@ def visitor(service):
 
 def document():
     return json.loads(
-        (Path(__file__).resolve().parents[2] / "output/gpt2/model.json").read_text()
+        (Path(__file__).resolve().parent / "fixtures/gpt2-report.json").read_text()
     )
 
 
@@ -156,6 +157,58 @@ def test_quota_is_atomic_global_guest_and_persists_restarts(tmp_path):
     reopened.db.engine.dispose()
 
 
+@pytest.mark.parametrize("action", ["jobs", "questions"])
+@pytest.mark.parametrize("scope", ["guest", "global"])
+def test_quota_serializes_concurrent_requests_across_service_instances(tmp_path, action, scope):
+    """A near-exhausted allowance admits only one of twenty simultaneous requests."""
+    settings = Settings(
+        data_dir=tmp_path,
+        **{
+            f"guest_{action}_per_hour": 3 if scope == "guest" else 100,
+            f"global_{action}_per_day": 3 if scope == "global" else 100,
+        },
+    )
+    services = [JobService(settings, clock=lambda: 10000.0) for _ in range(4)]
+    try:
+        for instance in services:
+            instance.initialize()
+        services[0].acquire_worker("quota-test")
+        guests = [visitor(services[0]) for _ in range(20 if scope == "global" else 1)]
+
+        def spend(instance, guest):
+            if action == "jobs":
+                instance.create(guest, "gpt2")
+            else:
+                instance.question_quota(guest)
+
+        for _ in range(2):
+            spend(services[0], guests[0])
+        start = Barrier(20)
+
+        def request(index):
+            start.wait(timeout=20)
+            try:
+                spend(services[index % 4], guests[index % len(guests)])
+            except ServiceError as exc:
+                assert (exc.status, exc.code) == (429, "rate_limited")
+                return "rate_limited"
+            return "accepted"
+
+        with ThreadPoolExecutor(max_workers=20) as pool:
+            outcomes = list(pool.map(request, range(20)))
+        assert outcomes.count("accepted") == 1
+        assert outcomes.count("rate_limited") == 19
+        with services[0].db.read() as session:
+            buckets = session.scalars(select(RateBucket)).all()
+            assert sum(b.count for b in buckets if b.key.startswith("global:")) == 3
+            assert sum(b.count for b in buckets if b.key.startswith("guest:")) == 3
+            if action == "jobs":
+                assert len(session.scalars(select(Job)).all()) == 3
+    finally:
+        for instance in services:
+            instance.db.engine.dispose()
+
+
 def test_queue_full_does_not_spend_quota_and_worker_offline(service):
     service.settings = service.settings.model_copy(update={"queue_capacity": 1})
     guest = visitor(service)
@@ -212,10 +265,11 @@ def test_expiry_is_410_for_owner_404_for_other_and_retention_is_seven_days(servi
     service.test_now[0] += 604800
     service.cleanup()
     assert service.cached_result(key) is None
-    assert not service.storage.path(digest).exists()
+    # Expiring the reusable cache does not remove the durable catalog report.
+    assert digest in memory.objects
     with service.db.read() as session:
-        assert list(session.scalars(select(Blob))) == []
-        assert list(session.scalars(select(ModelReport))) == []
+        assert [blob.digest for blob in session.scalars(select(Blob))] == [digest]
+        assert len(list(session.scalars(select(ModelReport)))) == 1
 
 
 def test_revision_and_artifact_and_engine_and_schema_are_cache_identity():

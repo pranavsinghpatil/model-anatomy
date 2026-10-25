@@ -145,6 +145,12 @@ test("completed report separates revision, scope, checks, and warnings", async (
       module_semantic_coverage: 1,
       checkpoint_parameter_coverage: 1,
       tensor_shape_coverage: 1,
+      architecture_checks: {
+        module_inventory: true,
+        parameter_mapping: true,
+        native_architecture: true,
+        module_topology: true,
+      },
       unknown_nodes: 0,
       unmapped_checkpoint_tensors: 0,
       forward_executed: false,
@@ -165,10 +171,12 @@ test("completed report separates revision, scope, checks, and warnings", async (
   await expect(
     checks.getByRole("heading", { name: "Coverage and checks" }),
   ).toBeVisible();
-  await expect(checks.locator("dd").filter({ hasText: "100.0%" })).toHaveCount(
-    4,
-  );
-  await expect(checks).toContainText("Unknown nodes");
+  await expect(
+    checks.locator("dd").filter({ hasText: "Complete" }),
+  ).toHaveCount(4);
+  await expect(checks).toContainText("Checkpoint parameter coverage");
+  await expect(checks.getByText("100.0%", { exact: true })).toBeVisible();
+  await expect(checks).toContainText("Unknown graph components");
   await expect(checks).toContainText("Forward executed");
   await expect(checks).toContainText("No");
 
@@ -186,6 +194,37 @@ test("completed report separates revision, scope, checks, and warnings", async (
   await expect(
     page.getByTestId("report-checks").locator("details"),
   ).toHaveCount(0);
+});
+
+test("legacy completed report does not claim complete architecture or current engine", async ({
+  page,
+}) => {
+  const analysis = { ...analysisFor(), quality: undefined };
+  await mockService(page, { job: analysis });
+  await openAnalysis(page, analysis.id, "report");
+
+  const audit = page.getByLabel("Inspection audit highlights");
+  await expect(
+    audit.getByRole("heading", { name: "Inspection completed", exact: true }),
+  ).toBeVisible();
+  await expect(audit).toContainText("Not reported");
+  await expect(audit).toContainText("Unknown");
+  await expect(
+    audit.getByRole("heading", { name: "Complete Architecture", exact: true }),
+  ).toHaveCount(0);
+
+  const checks = page.getByTestId("report-checks");
+  for (const label of [
+    "Native module inventory",
+    "Checkpoint parameter mapping",
+    "Native architecture compatibility",
+    "Bounded module-call dependencies",
+  ]) {
+    const check = checks
+      .locator(".report-checks > div")
+      .filter({ hasText: label });
+    await expect(check.locator("dd")).toHaveText("Not reported");
+  }
 });
 
 test("partial report shows specific missing checks and unknown quality", async ({

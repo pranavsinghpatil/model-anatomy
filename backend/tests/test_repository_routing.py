@@ -199,6 +199,7 @@ def test_api_serves_staged_dimensions_instead_of_returning_503(tmp_path):
         created = client.post("/api/v1/analyses", json={"model": "org/staged-model"}).json()
         assert service.claim("worker") == created["id"]
         from test_engine import CONFIG, FixtureClient, checkpoint_for
+
         from model_anatomy.src.registry import instantiate_native, load_native_config
         model, _ = instantiate_native(load_native_config(CONFIG))
         report = reconstruct("org/staged-model", client=FixtureClient(checkpoint_for(model), CONFIG)).to_dict()

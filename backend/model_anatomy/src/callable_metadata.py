@@ -9,8 +9,8 @@ import textwrap
 from typing import Any
 
 from transformers import PretrainedConfig
-from transformers.modeling_utils import AttentionInterface
 from transformers.integrations.moe import ExpertsInterface
+from transformers.modeling_utils import AttentionInterface
 from transformers.utils.generic import GeneralInterface
 
 MISSING = object()

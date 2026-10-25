@@ -134,12 +134,13 @@ def test_prior_header_audit_binds_only_to_matching_new_report(monkeypatch):
     files = client.files | set(verification["shards"])
     assert bind_pinned_header_audit(ir, client_ref(), REVISION, files)
     summary = ir_summary(ir.to_dict())
+    headers = artifact_view(ir)["verified_checkpoint_headers"]
     assert summary["result_status"] == "partial"
     assert summary["parameter_count"] is None
-    assert summary["verified_checkpoint_headers"]["tensor_count"] == 96085
-    assert summary["verified_checkpoint_headers"]["tensor_element_count_including_scales"] == 508182659298
-    assert artifact_view(ir)["verified_checkpoint_headers"] == summary["verified_checkpoint_headers"]
-    assert VerifiedCheckpointHeaders.model_validate(summary["verified_checkpoint_headers"])
+    assert summary["verified_checkpoint_headers"] == headers
+    assert headers["tensor_count"] == 96085
+    assert headers["tensor_element_count_including_scales"] == 508182659298
+    assert VerifiedCheckpointHeaders.model_validate(headers)
     assert ArtifactInspectionResponse.model_validate(artifact_view(ir))
     assert ir.metadata["source_topology"]["checkpoint_headers_verified"] is True
     assert ir.metadata["artifacts"]["header_audit_binding"] == {"status": "bound"}

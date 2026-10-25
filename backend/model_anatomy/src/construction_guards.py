@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterator
 from contextlib import ExitStack, contextmanager
-from typing import Any, Iterator
+from typing import Any
 from unittest.mock import patch
 
 from .native_provider import NativeResolutionError

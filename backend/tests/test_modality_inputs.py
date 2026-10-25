@@ -7,6 +7,7 @@ from transformers import CLIPConfig, SiglipConfig, T5Config, VideoMAEConfig, Whi
 
 from model_anatomy.src.inputs import describe_inputs
 from model_anatomy.src.registry import instantiate_native
+from model_anatomy.src.static_input_facts import InputResolver
 
 
 def test_videomae_interface_does_not_infer_frame_axes():
@@ -72,10 +73,10 @@ def test_native_siglip_records_configured_pixel_axes_from_native_vision_source()
     )
     model, _ = instantiate_native(config)
 
-    description = InputResolver(model).describe()
-    assert description["input_specs"]["pixel_values"]["shape"] == ["B", 1, 32, 32]
-    assert "native config" in description["shape_basis"]
-    assert description["execution"] == "disabled"
+    assert InputResolver(model).spec("pixel_values").shape == ["B", 1, 32, 32]
+    # The public input summary remains interface-only; static config facts are
+    # consumed internally by the source analyzer and are not presented as observed inputs.
+    assert describe_inputs(model, ["pixel_values"])["input_specs"]["pixel_values"]["shape"] is None
 
 
 def test_native_t5_input_and_cross_attention_axes_keep_encoder_and_decoder_lengths_distinct():
@@ -91,8 +92,10 @@ def test_native_t5_input_and_cross_attention_axes_keep_encoder_and_decoder_lengt
     model, _ = instantiate_native(config)
     resolver = InputResolver(model)
 
-    assert resolver.describe()["input_specs"]["input_ids"]["shape"] == ["B", "S"]
-    assert resolver.describe()["input_specs"]["decoder_input_ids"]["shape"] == ["B", "T"]
+    assert describe_inputs(model, ["input_ids", "decoder_input_ids"])["input_specs"] == {
+        "input_ids": {"shape": None, "dtype": None},
+        "decoder_input_ids": {"shape": None, "dtype": None},
+    }
     cross_path = "decoder.block.0.layer.1.EncDecAttention"
     assert resolver.spec("hidden_states", cross_path).shape == ["B", "T", 16]
     assert resolver.spec("key_value_states", cross_path).shape == ["B", "S", 16]
@@ -117,10 +120,13 @@ def test_native_whisper_describes_mel_features_without_running_forward():
     )
     model, _ = instantiate_native(config)
 
-    description = InputResolver(model).describe()
-    assert description["input_specs"]["input_features"]["shape"] == ["B", 8, "Frames"]
-    assert description["input_specs"]["decoder_input_ids"]["shape"] == ["B", "T"]
-    assert description["execution"] == "disabled"
+    resolver = InputResolver(model)
+    assert resolver.spec("input_features").shape == ["B", 8, "Frames"]
+    assert resolver.spec("decoder_input_ids").shape == ["B", "T"]
+    assert describe_inputs(model, ["input_features", "decoder_input_ids"])["input_specs"] == {
+        "input_features": {"shape": None, "dtype": None},
+        "decoder_input_ids": {"shape": None, "dtype": None},
+    }
 
 
 class CompositeModel(torch.nn.Module):

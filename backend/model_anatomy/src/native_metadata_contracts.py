@@ -15,14 +15,13 @@ from typing import Any
 import torch
 from torch import nn
 from transformers import PretrainedConfig, activations
-from transformers.modeling_utils import ModuleUtilsMixin, get_parameter_dtype
+from transformers.modeling_utils import ModuleUtilsMixin
 
 CONTRACT_SOURCE_SHA256 = {
     "transformers.configuration_utils": "08a3889c1b8a73d340a37c93f72346ee0e385e339b7a72a03b5c026d4943baf7",
     "transformers.modeling_utils": "bf1c6b2a43cf7c36fb79f37c981424dd6ae78eb863fcaa5d2a37e76c9828611d",
 }
 
-_GET_PARAMETER_DTYPE = get_parameter_dtype
 _MODULE_UTILS_DTYPE_PROPERTY = ModuleUtilsMixin.dtype
 _MODULE_UTILS_DTYPE_GETTER = ModuleUtilsMixin.dtype.fget
 _DTYPE_BY_TORCH = {
@@ -84,7 +83,6 @@ def native_module_attribute(module: object, name: str) -> tuple[bool, Any]:
         or _MODULE_UTILS_DTYPE_GETTER.__module__ != "transformers.modeling_utils"
         or _MODULE_UTILS_DTYPE_GETTER.__qualname__ != "ModuleUtilsMixin.dtype"
         or not _trusted_modeling_utils_source()
-        or _GET_PARAMETER_DTYPE is not _MODULE_UTILS_DTYPE_GETTER.__globals__.get("get_parameter_dtype")
         or any(
             os.environ.get(flag, "").upper() in {"1", "ON", "TRUE", "YES"}
             for flag in ("XLA_USE_BF16", "XLA_DOWNCAST_BF16")
@@ -172,14 +170,13 @@ def _t5_source_hash() -> str:
 def _trusted_modeling_utils_source() -> bool:
     try:
         source = inspect.getsourcefile(_MODULE_UTILS_DTYPE_GETTER)
-        helper_source = inspect.getsourcefile(_GET_PARAMETER_DTYPE)
         return (
-            source == helper_source
-            and bool(source)
+            bool(source)
             and hashlib.sha256(Path(source).read_bytes()).hexdigest()
             == CONTRACT_SOURCE_SHA256["transformers.modeling_utils"]
-            and _GET_PARAMETER_DTYPE.__module__ == "transformers.modeling_utils"
-            and _GET_PARAMETER_DTYPE.__qualname__ == "get_parameter_dtype"
+            and _MODULE_UTILS_DTYPE_GETTER is ModuleUtilsMixin.dtype.fget
+            and _MODULE_UTILS_DTYPE_GETTER.__module__ == "transformers.modeling_utils"
+            and _MODULE_UTILS_DTYPE_GETTER.__qualname__ == "ModuleUtilsMixin.dtype"
         )
     except (OSError, TypeError, KeyError):
         return False

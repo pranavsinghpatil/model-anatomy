@@ -560,6 +560,16 @@ test("AI response keeps provenance and citation jumps to associated component", 
     .fill("Which module owns this component?");
   await page.getByRole("button", { name: "Send question" }).click();
   await expect(page.getByText("AI generated", { exact: true })).toBeVisible();
+  await expect(
+    page.getByText("Evidence-assisted answers", { exact: true }),
+  ).toBeVisible();
+  const warning = page.getByText(
+    "AI interpretation is not independently verified. Citations and numeric values are checked; confirm other claims against the cited evidence.",
+  );
+  await expect(warning).toHaveCount(1);
+  await expect(warning).not.toBeVisible();
+  await page.getByText("1 warning", { exact: true }).click();
+  await expect(warning).toBeVisible();
   expect(
     requests.find((request) => request.path.endsWith("/questions"))?.body,
   ).toEqual({

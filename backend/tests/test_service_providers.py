@@ -7,7 +7,7 @@ import pytest
 from pydantic import ValidationError
 
 from model_anatomy.api.settings import Settings
-from model_anatomy.service.ai import ExplanationService, context
+from model_anatomy.service.ai import INTERPRETATION_WARNING, ExplanationService, context
 from model_anatomy.service.errors import ServiceError
 from model_anatomy.service.storage import SupabaseStorage
 from model_anatomy.service.views import load_ir
@@ -15,7 +15,7 @@ from model_anatomy.service.views import load_ir
 
 @pytest.fixture
 def ir():
-    return load_ir((Path(__file__).resolve().parents[2] / "output/gpt2/model.json").read_bytes())
+    return load_ir((Path(__file__).resolve().parent / "fixtures/gpt2-report.json").read_bytes())
 
 
 def provider(ir, answer, citations=None, status=200):
@@ -40,6 +40,7 @@ def test_provider_actual_json_http_call_and_valid_citations(ir):
     ai, requests = provider(ir, "The model has 124439808 parameters, recorded in static metadata.")
     result = ai.answer(ir, "How many parameters?")
     assert result["ai_generated"] is True
+    assert result["warnings"] == [INTERPRETATION_WARNING]
     assert result["model"] == "nvidia/mock-nemotron"
     assert result["citations"] == [
         {"id": "e1", "source": "stored_ir", "kind": "derived", "locator": "metadata"}
@@ -191,3 +192,19 @@ def test_supabase_public_bucket_is_rejected_and_secrets_hidden():
             allowed_hosts=["app.example"],
             cors_origins=["*"],
         )
+
+
+@pytest.mark.parametrize(
+    "answer",
+    [
+        "This model uses rotary embeddings and has no cross-attention.",
+        "Latency is low and this model is better than every alternative.",
+    ],
+)
+def test_valid_citation_does_not_certify_nonnumeric_claims(ir, answer):
+    before = ir.to_json()
+    ai, _ = provider(ir, answer, ["e1"])
+    result = ai.answer(ir, "Explain the architecture")
+    assert result["warnings"] == [INTERPRETATION_WARNING]
+    assert result["ai_generated"] is True
+    assert ir.to_json() == before

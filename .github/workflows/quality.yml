@@ -2,9 +2,15 @@ name: quality
 
 on:
   pull_request:
-    branches: [main, b-mvp]
   push:
-    branches: [main, b-mvp]
+    branches: [main, feat/vv]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: quality-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   quality:
@@ -49,10 +55,11 @@ jobs:
         run: |
           .venv/bin/python -m uvicorn model_anatomy.api.app:create_app --factory --host 127.0.0.1 --port 8001 --no-access-log > /tmp/anatomy-api.log 2>&1 &
           for attempt in $(seq 1 30); do
-            if curl --fail --silent http://127.0.0.1:8001/openapi.json > /dev/null; then break; fi
+            if curl --fail --silent http://127.0.0.1:8001/openapi.json > /tmp/anatomy-openapi.json; then break; fi
             sleep 1
           done
-          npm run generate:api --prefix frontend
+          curl --fail --silent http://127.0.0.1:8001/openapi.json > /tmp/anatomy-openapi.json
+          npm run generate:api --prefix frontend -- /tmp/anatomy-openapi.json
           git diff --exit-code -- frontend/src/api/generated.ts
       - name: Browser build and formatting
         run: |

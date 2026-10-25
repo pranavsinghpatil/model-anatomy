@@ -766,7 +766,13 @@ export function ArtifactInspection({
                   <div>
                     <h4>Architecture resolution</h4>
                     <dl className="artifact-metadata-list">
-                      {["status", "stage", "code", "implementation", "provider_versions"].map((key) =>
+                      {[
+                        "status",
+                        "stage",
+                        "code",
+                        "implementation",
+                        "provider_versions",
+                      ].map((key) =>
                         profile.native_resolution?.[key] != null ? (
                           <div key={key}>
                             <dt>{key.replaceAll("_", " ")}</dt>
@@ -778,7 +784,8 @@ export function ArtifactInspection({
                     {profile.native_resolution.publisher_auto_map != null && (
                       <p>
                         This report uses the installed native implementation.
-                        Equivalence to the publisher's custom code has not been established.
+                        Equivalence to the publisher's custom code has not been
+                        established.
                       </p>
                     )}
                   </div>
@@ -787,18 +794,29 @@ export function ArtifactInspection({
                   <div>
                     <h4>Component architecture checks</h4>
                     <p>
-                      A verified component covers its recorded checkpoint namespace.
-                      It does not establish the outer model's computation or connections.
+                      A verified component covers its recorded checkpoint
+                      namespace. It does not establish the outer model's
+                      computation or connections.
                     </p>
                     <ul>
                       {profile.component_discovery?.map((component, index) => (
                         <li key={index}>
-                          <strong>{valueText(component.config_file ?? component.path ?? "Component discovery")}</strong>
+                          <strong>
+                            {valueText(
+                              component.config_file ??
+                                component.path ??
+                                "Component discovery",
+                            )}
+                          </strong>
                           <span>{valueText(component.status)}</span>
                           {component.selected_model_class != null && (
-                            <span>{valueText(component.selected_model_class)}</span>
+                            <span>
+                              {valueText(component.selected_model_class)}
+                            </span>
                           )}
-                          {component.message != null && <p>{valueText(component.message)}</p>}
+                          {component.message != null && (
+                            <p>{valueText(component.message)}</p>
+                          )}
                         </li>
                       ))}
                     </ul>

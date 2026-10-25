@@ -134,6 +134,11 @@ def cache_key(
 
 def ir_summary(data: dict) -> dict:
     metadata = data["metadata"]
+    artifacts = metadata.get("artifacts", {})
+    verified_headers = artifacts.get("verified_checkpoint_headers")
+    verified_names = artifacts.get("verified_checkpoint_names")
+    verified_headers = verified_headers if isinstance(verified_headers, dict) else None
+    verified_names = verified_names if isinstance(verified_names, dict) else None
     inspection = metadata.get("inspection")
     profile = metadata.get("model_profile")
     declared_task = profile.get("declared_task") if isinstance(profile, dict) else None
@@ -160,6 +165,8 @@ def ir_summary(data: dict) -> dict:
             "partial_reasons": [],
             "engine_version": metadata.get("engine_version"),
             "result_status": "inspected",
+            "verified_checkpoint_headers": verified_headers,
+            "verified_checkpoint_names": verified_names,
             "inspection": {
                 "kind": "artifact_inspection",
                 "reason_code": inspection["reason_code"],
@@ -280,6 +287,8 @@ def ir_summary(data: dict) -> dict:
         "partial_reasons": reasons,
         "engine_version": metadata.get("engine_version"),
         "result_status": "partial" if reasons else "completed",
+        "verified_checkpoint_headers": verified_headers,
+        "verified_checkpoint_names": verified_names,
     }
 
 
@@ -341,8 +350,19 @@ class JobService:
         return guest_id, new_token
 
     def _quota(self, session, guest_id: str, action: str) -> None:
+        limits = self._quota_limits(guest_id, action)
+        self._quota_available(session, guest_id, action)
+        for key, limit, seconds in limits:
+            window = int(self.clock() // seconds)
+            bucket = session.get(RateBucket, (key, window))
+            if bucket:
+                bucket.count += 1
+            else:
+                session.add(RateBucket(key=key, window=window, count=1))
+
+    def _quota_limits(self, guest_id: str, action: str) -> list[tuple[str, int, int]]:
         suffix = "jobs" if action == "jobs" else "questions"
-        limits = [
+        return [
             (
                 f"global:{action}:day",
                 getattr(self.settings, f"global_{suffix}_per_day"),
@@ -354,22 +374,22 @@ class JobService:
                 3600,
             ),
         ]
+
+    def _quota_available(self, session, guest_id: str, action: str) -> None:
+        """Reject exhausted quota windows without mutating their counters."""
+        limits = self._quota_limits(guest_id, action)
         for key, limit, seconds in limits:
             window = int(self.clock() // seconds)
             bucket = session.get(RateBucket, (key, window))
-            # if bucket and bucket.count >= limit:
-            #     minutes = math.ceil(((window + 1) * seconds - self.clock()) / 60)
-            #     scope = "Daily shared" if key.startswith("global:") else "Hourly visitor"
-            #     action_label = "analysis" if action == "jobs" else "AI question"
-            #     raise ServiceError(
-            #         429,
-            #         "rate_limited",
-            #         f"{scope} {action_label} allowance reached ({limit}). Try again in {max(1, minutes)} minutes.",
-            #     )
-            if bucket:
-                bucket.count += 1
-            else:
-                session.add(RateBucket(key=key, window=window, count=1))
+            if bucket and bucket.count >= limit:
+                minutes = math.ceil(((window + 1) * seconds - self.clock()) / 60)
+                scope = "Daily shared" if key.startswith("global:") else "Hourly visitor"
+                action_label = "analysis" if action == "jobs" else "AI question"
+                raise ServiceError(
+                    429,
+                    "rate_limited",
+                    f"{scope} {action_label} allowance reached ({limit}). Try again in {max(1, minutes)} minutes.",
+                )
 
     def _record_failure_outcome(
         self, session, job: Job, code: str, status: str, finished_at: float
@@ -423,38 +443,6 @@ class JobService:
         ).hexdigest()
         if session.get(InspectionFailure, failure_id) is None:
             session.add(InspectionFailure(id=failure_id, **identity))
-
-    def _quota_available(self, session, guest_id: str, action: str) -> None:
-        """Reject already-exhausted visitors before any report blob is read."""
-        suffix = "jobs" if action == "jobs" else "questions"
-        limits = [
-            (
-                f"global:{action}:day",
-                getattr(self.settings, f"global_{suffix}_per_day"),
-                86400,
-            ),
-            (
-                f"guest:{guest_id}:{action}:hour",
-                getattr(self.settings, f"guest_{suffix}_per_hour"),
-                3600,
-            ),
-        ]
-        for key, limit, seconds in limits:
-            window = int(self.clock() // seconds)
-            bucket = session.get(RateBucket, (key, window))
-            # if bucket and bucket.count >= limit:
-            #     minutes = math.ceil(((window + 1) * seconds - self.clock()) / 60)
-            #     scope = "Daily shared" if key.startswith("global:") else "Hourly visitor"
-            #     action_label = "analysis" if action == "jobs" else "AI question"
-            #     raise ServiceError(
-            #         429,
-            #         "rate_limited",
-            #         f"{scope} {action_label} allowance reached ({limit}). Try again in {max(1, minutes)} minutes.",
-            #     )
-            if bucket:
-                bucket.count += 1
-            else:
-                session.add(RateBucket(key=key, window=window, count=1))
 
     def question_quota(self, guest_id: str) -> None:
         with self.db.write() as session:

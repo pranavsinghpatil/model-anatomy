@@ -17,8 +17,8 @@ from uuid import uuid4
 
 from sqlalchemy.exc import DBAPIError, OperationalError
 
-from model_anatomy.dependencies import require_dependencies
 from model_anatomy.api.settings import Settings
+from model_anatomy.dependencies import require_dependencies
 from model_anatomy.src.errors import AnatomyError, ArtifactError, UnsupportedModelError
 
 from .database import Job
@@ -154,9 +154,7 @@ def child_main(settings: Settings, job_id: str, owner: str) -> None:
                 reconstruct,
                 parse_reference,
             )
-    except (
-        Exception
-    ) as exc:  # noqa: BLE001 - record unexpected child failures without leaking secrets
+    except Exception as exc:  # noqa: BLE001 - persist unexpected child failures without leaking details
         code, message, status, transient = classify_failure(exc)
         try:
             service.fail(
