@@ -11,7 +11,6 @@ from types import SimpleNamespace
 import pytest
 from sqlalchemy import inspect
 from sqlalchemy.exc import OperationalError
-
 from test_service_views import contract_report
 
 from model_anatomy.api.settings import Settings

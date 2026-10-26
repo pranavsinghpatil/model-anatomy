@@ -28,7 +28,7 @@ Implemented 26–27 October 2026. Backend APIs, quota rules and extraction contr
 
 - Production build and TypeScript compile passed. Vite retains its existing advisory for chunks larger than 500 kB.
 - All 42 focused feedback, recovery, screenshot and reflow cases passed on the built frontend, including both desktop and phone projects.
-- The broad production sweep passed 239 cases and skipped 36 explicitly opt-in live/publication cases. Its eleven failures were inspected and addressed. The final affected-journey run passed 131 cases; its three remaining fixture/navigation-test failures were corrected and all four targeted desktop/phone reruns passed. Across the sweep and reruns, all 252 non-opt-in cases (including the two new navigation cases) were exercised successfully. This is combined coverage across runs, not a claim of a single fresh all-green full-suite run.
+- The full GitHub browser job on `054dc46` passed **252 cases**, with **36 explicitly opt-in live/publication cases skipped** (288 cases, two workers). Local production sweeps and targeted reruns separately covered the same journeys and the final fixes.
 - A real API/worker run inspected `HuggingFaceTB/SmolLM2-135M` at revision `93efa2f097d58c2a74874c7e644dbc9b0cee75a2`: fresh report (`cached=false`), 134,515,008 parameters, component tensor/evidence inspection, actual JSON download, then normal UI reopen (`cached=true`) at the same revision. The exported report recorded zero weight payload bytes read.
 - AI inference is unavailable in this local profile. Disabled-AI, draft retention, question failure and citation recovery use isolated HTTP contract fixtures; no live AI result is claimed.
 - The initial development-server suite exposed stale selectors and slow lazy-module loading under concurrent tests. Expectations were migrated to intended behavior, and final validation uses the production build. Failures were inspected rather than hidden by blanket timeouts or automatic retries.
@@ -37,6 +37,12 @@ Implemented 26–27 October 2026. Backend APIs, quota rules and extraction contr
 Reproduce frontend regression checks with the commands in `AGENTS.md`. To avoid development transform contention locally, run `npm run build`, start `npx vite preview --host 127.0.0.1 --port 5175 --strictPort`, and use `E2E_BASE_URL=http://127.0.0.1:5175 npx playwright test --workers=2` (set environment variables using your shell).
 
 The opt-in real journey is `e2e/ux-live.spec.ts`, enabled with `UX_LIVE_API=1` and a running API/worker. The local launcher connects port 5173 to API port 8000. This test forces one fresh metadata inspection, then exercises the ordinary cached UI path.
+
+## CI fixture follow-up
+
+The first remote quality/container run exposed baseline verification defects: a missing `Barrier` import, model-family job doubles missing their original model reference, an undefined optional live-test component selector, and an undefined smoke-test base URL. The follow-up repairs these fixtures/helpers and mechanical import ordering. The smoke helper defaults to port 8001, matching the workflow's Docker port mapping. Extraction, API and quota behavior remain unchanged.
+
+The 29 targeted backend fixture tests and repository-wide Ruff checks pass. The full local Python suite passes: **853 passed, 25 skipped**.
 
 ## Screenshots
 

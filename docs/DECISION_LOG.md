@@ -1385,3 +1385,10 @@ Deliver related entry, catalog, progress, result, question and mobile metadata
 polish as one reviewed increment. The journey acceptance checklist, validation
 and clearly labeled fixture/real-model screenshots are in
 [UX journey polish](UX_JOURNEY_POLISH.md).
+
+The initial PR checks also exposed pre-existing verification defects. Repair
+missing test imports/reference fields, the optional live-test component selector,
+and the container smoke helper's default URL (port 8001, as declared by CI).
+Limit Python production changes to mechanical import ordering; keep extraction,
+API and quota behavior unchanged. Record the backend and CI verification in the
+same journey evidence document.

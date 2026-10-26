@@ -4,7 +4,6 @@ import json
 import httpx
 import pytest
 from pydantic import ValidationError
-
 from test_service_views import contract_report
 
 from model_anatomy.api.settings import Settings
