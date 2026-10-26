@@ -18,15 +18,19 @@ import {
   ExternalLink,
   Compass,
   Cpu,
-  Check,
-  Copy,
 } from "lucide-react";
 import { analysisHref, api, graphReady, pending } from "../api/client";
 import type { Citation, ExportFormat } from "../api/contract";
 import { ErrorNotice, Loading, Status } from "../components/Common";
 import { ModelAnatomyMark } from "../components/Logo";
-import { Menu, MenuItem, ThemeControl } from "../components/ui";
-import { Overview, Report } from "../components/AnalysisSummary";
+import { CopyButton, Menu, MenuItem, ThemeControl } from "../components/ui";
+import { useFeedback } from "../state/feedback";
+import { retryReference } from "../state/submissions";
+import {
+  hasCompleteArchitectureChecks,
+  Overview,
+  Report,
+} from "../components/AnalysisSummary";
 import { ArtifactInspection } from "../components/ArtifactInspection";
 import { ArchitectureWorkspace } from "../components/ArchitectureWorkspace";
 import { Progress, Recovery } from "../components/Progress";
@@ -65,9 +69,11 @@ function Workspace({ id }: { id: string }) {
   const { service, available } = useService();
   const recent = useRecent();
   const [citation, setCitation] = useState<Citation | null>(null);
-  const [copiedModelId, setCopiedModelId] = useState(false);
+  const { notify } = useFeedback();
   const [exporting, setExporting] = useState<ExportFormat | null>(null);
   const [exportError, setExportError] = useState<Error | null>(null);
+  const exportInFlight = useRef(false);
+  const exportFormat = useRef<ExportFormat | null>(null);
   const viewNav = useRef<HTMLElement>(null);
   const [highlight, setHighlight] = useState<HighlightRect | null>(null);
   function highlightView(target: HTMLElement) {
@@ -97,6 +103,13 @@ function Workspace({ id }: { id: string }) {
     refetchInterval: (q) => (pending(q.state.data?.status) ? 1500 : false),
   });
   const detail = analysis.data;
+  const retryJob = detail ?? recent.data?.analyses.find((job) => job.id === id);
+  const originalReference = retryReference(
+    retryJob ?? { id, model_id: "", revision: null },
+  );
+  const retryHref = originalReference
+    ? `/app?model=${encodeURIComponent(originalReference)}`
+    : "/app";
   const artifact = detail?.status === "inspected";
   const sourceTopology =
     detail?.quality?.mode === "publisher_reference_topology";
@@ -188,16 +201,24 @@ function Workspace({ id }: { id: string }) {
     },
   });
   async function download(format: ExportFormat) {
+    if (exportInFlight.current) return;
+    exportInFlight.current = true;
+    exportFormat.current = format;
     setExporting(format);
     setExportError(null);
     try {
       await api.export(id, format);
+      notify({
+        id: `export:${id}:${format}`,
+        title: `Download requested: ${formats.find((item) => item.format === format)?.label ?? format}`,
+      });
     } catch (error) {
       if (active.current)
         setExportError(
           error instanceof Error ? error : new Error("Export failed."),
         );
     } finally {
+      exportInFlight.current = false;
       if (active.current) setExporting(null);
     }
   }
@@ -253,7 +274,7 @@ function Workspace({ id }: { id: string }) {
             trigger={
               <>
                 <span className="model-name" title={detail?.model_id}>
-                  {detail?.model_id ?? "Loading analysis"}
+                  {detail?.model_id ?? "Loading inspection"}
                 </span>
                 <ChevronDown size={14} />
               </>
@@ -271,29 +292,13 @@ function Workspace({ id }: { id: string }) {
                 </MenuItem>
               ))}
             <MenuItem onSelect={() => void navigate("/app")}>
-              New analysis
+              New inspection
             </MenuItem>
           </Menu>
         </div>
         {detail?.model_id && (
           <div className="workspace-model-tools" aria-label="Model quick tools">
-            <button
-              type="button"
-              className="button button-ghost button-icon-only workspace-copy-btn"
-              onClick={() => {
-                void navigator.clipboard.writeText(detail.model_id);
-                setCopiedModelId(true);
-                setTimeout(() => setCopiedModelId(false), 2000);
-              }}
-              title={copiedModelId ? "Copied model ID" : "Copy model ID"}
-              aria-label="Copy model ID"
-            >
-              {copiedModelId ? (
-                <Check size={13} aria-hidden="true" />
-              ) : (
-                <Copy size={13} aria-hidden="true" />
-              )}
-            </button>
+            <CopyButton value={detail.model_id} label="Copy model ID" />
             {detail.model_id.includes("/") && (
               <a
                 href={`https://huggingface.co/${detail.model_id}`}
@@ -332,13 +337,13 @@ function Workspace({ id }: { id: string }) {
           <Link
             className="button button-secondary"
             to="/app"
-            aria-label="New analysis"
+            aria-label="New inspection"
           >
             <Plus size={16} />
-            <span className="wide-label">New analysis</span>
+            <span className="wide-label">New inspection</span>
           </Link>
           <Menu
-            label="Export analysis"
+            label="Export inspection"
             disabled={(!ready && !artifact) || exporting !== null}
             trigger={
               <>
@@ -412,15 +417,6 @@ function Workspace({ id }: { id: string }) {
         <div className="workspace-view-options">
           {detail && ready && !artifact && (
             <>
-              {detail.status === "partial" && (
-                <Link
-                  to={viewHref(search, "report")}
-                  className="viewbar-findings"
-                >
-                  View findings
-                  <ChevronRight size={13} aria-hidden="true" />
-                </Link>
-              )}
               <div
                 className="workspace-telemetry-ribbon"
                 aria-label="Model telemetry summary"
@@ -489,6 +485,16 @@ function Workspace({ id }: { id: string }) {
                     {detail.architecture ?? "Architecture unknown"}
                   </strong>
                   <dl>
+                    <div className="context-model-id">
+                      <dt>Model ID</dt>
+                      <dd>
+                        <span>{detail.model_id}</span>
+                        <CopyButton
+                          value={detail.model_id}
+                          label="Copy model ID"
+                        />
+                      </dd>
+                    </div>
                     <div>
                       <dt>Parameters</dt>
                       <dd>{count(detail.parameter_count, true)}</dd>
@@ -524,29 +530,46 @@ function Workspace({ id }: { id: string }) {
           <DotPattern width={22} height={22} cr={0.8} />
         </div>
         <div className="workbench-main">
-          {exportError && <ErrorNotice error={exportError} />}{" "}
-          {cancel.error && <ErrorNotice error={cancel.error} />}{" "}
-          {create.error && <ErrorNotice error={create.error} />}
+          {exportError && (
+            <div className="workspace-action-feedback">
+              <ErrorNotice
+                error={exportError}
+                context="export"
+                retry={() => {
+                  if (exportFormat.current) void download(exportFormat.current);
+                }}
+              />
+            </div>
+          )}
           {analysis.error ? (
             <div className="page-state">
               <ErrorNotice
                 error={analysis.error}
+                context="inspection"
                 retry={() => void analysis.refetch()}
               />
-              <Link className="button button-primary" to="/app">
+              <Link className="button button-primary" to={retryHref}>
                 Start a new inspection
               </Link>
             </div>
           ) : !detail ? (
             <div className="page-state">
-              <Loading text="Loading analysis" />
+              <Loading text="Loading inspection" />
             </div>
           ) : pending(detail.status) ? (
-            <Progress
-              detail={detail}
-              cancel={() => cancel.mutate(id)}
-              cancelling={cancel.isPending}
-            />
+            <>
+              {cancel.error && (
+                <ErrorNotice error={cancel.error} context="cancel" />
+              )}
+              <Progress
+                detail={detail}
+                cancel={() => {
+                  if (!cancel.isPending && detail.stage !== "cancelling")
+                    cancel.mutate(id);
+                }}
+                cancelling={cancel.isPending || detail.stage === "cancelling"}
+              />
+            </>
           ) : !ready && !artifact ? (
             <Recovery detail={detail} />
           ) : (
@@ -558,6 +581,15 @@ function Workspace({ id }: { id: string }) {
               {view === "report" && <Report detail={detail} />}
               {view === "artifacts" && (
                 <div className="artifacts-page">
+                  {create.error && (
+                    <ErrorNotice
+                      error={create.error}
+                      context="submit"
+                      retry={() => {
+                        if (create.variables) create.mutate(create.variables);
+                      }}
+                    />
+                  )}
                   <ArtifactInspection
                     key={id}
                     architecture={!artifact}
@@ -610,17 +642,35 @@ function Workspace({ id }: { id: string }) {
                   <Loading text="Restoring model hierarchy" />
                 ) : graph.data ? (
                   <>
-                    {sourceTopology && (
-                      <div className="source-topology-notice" role="note">
-                        <strong>Publisher reference topology · partial</strong>
-                        <span>
-                          Components come from reviewed source at this revision.
-                          Tensor-to-component ownership, parameter totals, and
-                          runtime dataflow are not verified. Dashed links show
-                          reference order only.
-                        </span>
+                    <section
+                      className="inspection-outcome"
+                      aria-label="Inspection outcome"
+                    >
+                      <div>
+                        <strong>
+                          {sourceTopology
+                            ? "Reference topology · partial"
+                            : detail.status === "partial"
+                              ? "Partial architecture"
+                              : hasCompleteArchitectureChecks(detail)
+                                ? "Architecture ready"
+                                : "Inspection finished"}
+                        </strong>
+                        <p>
+                          {sourceTopology
+                            ? "Explore the reviewed reference structure. Tensor ownership, shapes, parameter totals and runtime flow remain unverified; dashed links show reference order."
+                            : detail.status === "partial"
+                              ? "Explore the available structure and review the recorded limitations."
+                              : "Select a component to inspect its tensors and source evidence."}
+                        </p>
                       </div>
-                    )}
+                      {(detail.status === "partial" || sourceTopology) && (
+                        <Link to={viewHref(search, "report")}>
+                          View findings{" "}
+                          <ChevronRight size={13} aria-hidden="true" />
+                        </Link>
+                      )}
+                    </section>
                     <ArchitectureWorkspace
                       analysis={detail}
                       graph={graph.data}

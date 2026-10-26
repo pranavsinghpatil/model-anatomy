@@ -29,6 +29,7 @@ export function Questions({
   const [exchanges, setExchanges] = useState<Exchange[]>([]);
   const [jumping, setJumping] = useState<string | null>(null);
   const [jumpError, setJumpError] = useState<Error | null>(null);
+  const [failedCitation, setFailedCitation] = useState<Citation | null>(null);
   const ask = useMutation({
     mutationFn: (input: {
       question: string;
@@ -46,6 +47,13 @@ export function Questions({
   });
   const disabled =
     Boolean(disabledReason) || available === false || !ready || ask.isPending;
+  const availability = disabledReason
+    ? `${disabledReason} You can still inspect the report and its evidence.`
+    : available === false
+      ? "Model questions are unavailable right now. You can inspect the report and its evidence instead."
+      : !ready
+        ? "Questions are available after the inspection is ready. You can review the submitted model while it runs."
+        : "Answers use this inspection’s evidence.";
   return (
     <div className="questions" data-testid="questions">
       <div className="question-context">
@@ -57,15 +65,9 @@ export function Questions({
           <div className="panel-empty">
             <MessageSquare size={26} />
             <strong>Questions about this model</strong>
-            <p>
-              {disabledReason
-                ? disabledReason
-                : available === false
-                  ? "AI service unavailable"
-                  : !ready
-                    ? "Waiting for analysis"
-                    : "No questions yet"}
-            </p>
+            {!disabledReason && available !== false && ready && (
+              <p>Select a component to focus your question.</p>
+            )}
           </div>
         )}
         {exchanges.map((exchange, index) => (
@@ -90,15 +92,18 @@ export function Questions({
                       disabled={jumping !== null}
                       onClick={() => {
                         setJumpError(null);
+                        setFailedCitation(null);
                         setJumping(citation.id);
                         void jump(citation)
-                          .catch((error) =>
+                          .then(() => setFailedCitation(null))
+                          .catch((error) => {
+                            setFailedCitation(citation);
                             setJumpError(
                               error instanceof Error
                                 ? error
                                 : new Error("Unable to locate citation."),
-                            ),
-                          )
+                            );
+                          })
                           .finally(() => setJumping(null));
                       }}
                       title={citation.locator}
@@ -121,13 +126,38 @@ export function Questions({
         {ask.error && (
           <ErrorNotice
             error={ask.error}
+            context="question"
             retry={() => {
               if (ask.variables) ask.mutate(ask.variables);
             }}
           />
         )}
         {jumping && <Loading text="Locating cited evidence" />}
-        {jumpError && <ErrorNotice error={jumpError} />}
+        {jumpError && (
+          <ErrorNotice
+            error={jumpError}
+            context="citation"
+            retry={
+              failedCitation
+                ? () => {
+                    const citation = failedCitation;
+                    setJumpError(null);
+                    setJumping(citation.id);
+                    void jump(citation)
+                      .then(() => setFailedCitation(null))
+                      .catch((error) =>
+                        setJumpError(
+                          error instanceof Error
+                            ? error
+                            : new Error("Unable to locate citation."),
+                        ),
+                      )
+                      .finally(() => setJumping(null));
+                  }
+                : undefined
+            }
+          />
+        )}
       </div>
       <form
         className="question-form"
@@ -147,29 +177,19 @@ export function Questions({
         </label>
         <textarea
           id="question-input"
-          placeholder={
-            disabledReason
-              ? disabledReason
-              : available === false
-                ? "AI service unavailable"
-                : "Ask about this model..."
-          }
+          placeholder="Ask about this model..."
+          aria-describedby="question-availability"
           value={question}
-          onChange={(event) => setQuestion(event.target.value)}
+          onChange={(event) => {
+            setQuestion(event.target.value);
+            if (ask.error) ask.reset();
+          }}
           disabled={disabled}
           maxLength={2000}
           rows={3}
         />
         <div className="question-form-footer">
-          <span>
-            {disabledReason
-              ? disabledReason
-              : available === undefined
-                ? "AI availability unknown"
-                : available
-                  ? "Evidence-assisted answers"
-                  : "AI unavailable"}
-          </span>
+          <span id="question-availability">{availability}</span>
           <button
             className="send-button"
             type="submit"

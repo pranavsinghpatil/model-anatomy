@@ -37,20 +37,23 @@ test("selected report status stays consistent while recent jobs are still stale"
     recent: [{ ...job, status: "running", stage: "analyzing_components" }],
   });
   await openAnalysis(page, job.id, "report");
+  await expect(
+    page.getByRole("heading", { name: "Inspection report", exact: true }),
+  ).toBeVisible();
   await expect(page.getByTestId("report-checks")).toBeVisible();
   const selected = page.locator(".workspace-header");
   await expect(
-    selected.getByRole("status", { name: "Analysis status: completed" }),
+    selected.getByRole("status", { name: "Inspection status: Completed" }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Switch model" }).click();
   const selectedRecent = page
     .getByRole("menuitem")
     .filter({ hasText: job.model_id });
-  await expect(selectedRecent).toContainText("completed");
+  await expect(selectedRecent).toContainText("Completed");
   await expect(selectedRecent).not.toContainText("running");
   await page.keyboard.press("Escape");
   await expect(
-    selected.getByRole("status", { name: "Analysis status: completed" }),
+    selected.getByRole("status", { name: "Inspection status: Completed" }),
   ).toBeVisible();
 });
 
@@ -142,12 +145,6 @@ test("completed report separates revision, scope, checks, and warnings", async (
     partial_reasons: [],
     quality: {
       architecture_scope: "Native registered module architecture",
-      architecture_checks: {
-        module_inventory: true,
-        parameter_mapping: true,
-        native_architecture: true,
-        module_topology: true,
-      },
       semantic_coverage: 1,
       module_semantic_coverage: 1,
       checkpoint_parameter_coverage: 1,
@@ -169,7 +166,9 @@ test("completed report separates revision, scope, checks, and warnings", async (
   await openAnalysis(page, analysis.id, "report");
   await expect(page.getByTestId("report-checks")).toBeVisible();
   await expect(
-    page.locator(".workspace-header").getByLabel("Analysis status: completed"),
+    page
+      .locator(".workspace-header")
+      .getByLabel("Inspection status: Completed"),
   ).toBeVisible();
   await page.locator(".report-identity-details summary").click();
   await expect(page.getByTestId("model-revision")).toHaveText(base.revision!);
@@ -191,7 +190,6 @@ test("completed report separates revision, scope, checks, and warnings", async (
     scope.getByRole("heading", { name: "Analysis scope" }),
   ).toBeVisible();
   const identity = page.locator(".report-identity-details");
-  await identity.locator("summary").click();
   await expect(identity).toContainText("1.2.3");
   await expect(scope).toContainText("Forward execution was not requested.");
   await expect(page.locator(".report-warning-section")).toContainText(
@@ -214,7 +212,9 @@ test("legacy completed report does not claim complete architecture or current en
     audit.getByRole("heading", { name: "Inspection completed", exact: true }),
   ).toBeVisible();
   await expect(audit).toContainText("Not reported");
-  await expect(audit).toContainText("Unknown");
+  await expect(
+    audit.locator(".audit-mini-stat").filter({ hasText: "Execution Mode" }),
+  ).toContainText("Not reported");
   await expect(
     audit.getByRole("heading", { name: "Complete Architecture", exact: true }),
   ).toHaveCount(0);
@@ -257,7 +257,9 @@ test("partial report shows specific missing checks and unknown quality", async (
   await openAnalysis(page, analysis.id, "report");
   await expect(page.getByTestId("report-checks")).toBeVisible();
   await expect(
-    page.locator(".workspace-header").getByLabel("Analysis status: partial"),
+    page
+      .locator(".workspace-header")
+      .getByLabel("Inspection status: Partially complete"),
   ).toBeVisible();
   await page.locator(".report-identity-details summary").click();
   await expect(page.getByTestId("model-revision")).toHaveText(

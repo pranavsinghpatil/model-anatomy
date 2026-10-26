@@ -537,11 +537,21 @@ test("inspected report keeps supported exports and omits Mermaid", async ({
     artifactPages: [page(0, [], [])],
   });
   await openAnalysis(browser, job.id, "report");
+  await expect(
+    browser.getByRole("heading", { name: "Inspection report", exact: true }),
+  ).toBeVisible();
   const reportChecks = browser.getByTestId("report-checks");
   const scope = browser.getByTestId("analysis-scope");
   await expect(reportChecks).toBeVisible();
   await expect(scope).toBeVisible();
-  await expect(reportChecks.locator("details")).toHaveCount(0);
+  const technicalDetails = reportChecks.locator(".summary-technical-details");
+  await expect(technicalDetails).toHaveCount(1);
+  await expect(technicalDetails.locator("summary")).toHaveText(
+    "Technical details",
+  );
+  await expect(
+    technicalDetails.locator(".summary-reason-code"),
+  ).not.toBeVisible();
   await expect(scope.locator("details")).toHaveCount(0);
   const identity = browser.locator(".report-identity-details");
   await identity.locator("summary").click();
@@ -557,7 +567,7 @@ test("inspected report keeps supported exports and omits Mermaid", async ({
     ["Audit", "audit"],
   ] as const;
   for (const [label, format] of formats) {
-    await browser.getByLabel("Export analysis", { exact: true }).click();
+    await browser.getByLabel("Export inspection", { exact: true }).click();
     const download = browser.waitForEvent("download");
     await browser.getByRole("menuitem", { name: label, exact: true }).click();
     await download;
@@ -565,7 +575,7 @@ test("inspected report keeps supported exports and omits Mermaid", async ({
       requests.some((request) => request.path.endsWith(`/exports/${format}`)),
     ).toBe(true);
   }
-  await browser.getByLabel("Export analysis", { exact: true }).click();
+  await browser.getByLabel("Export inspection", { exact: true }).click();
   await expect(
     browser.getByRole("menuitem", { name: "Mermaid", exact: true }),
   ).toHaveCount(0);

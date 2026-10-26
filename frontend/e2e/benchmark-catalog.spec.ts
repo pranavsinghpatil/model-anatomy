@@ -210,7 +210,7 @@ test("stored report action inspects the persisted report and opens the visitor-o
     .getByRole("button", { name: "Open saved inspection for org/model-000" })
     .click();
   const opening = page.getByRole("button", {
-    name: "Opening saved report for org/model-000",
+    name: "Opening saved inspection for org/model-000",
   });
   await expect(opening).toBeDisabled();
   finishInspect?.();

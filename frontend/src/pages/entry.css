@@ -2497,6 +2497,68 @@
   border-bottom: 0;
 }
 
+/* Keep form and data surfaces legible over the decorative page background. */
+.entry-submit,
+.entry-recent,
+.catalog-detail-card,
+.benchmark-state {
+  backdrop-filter: none;
+}
+
+.entry-submit {
+  background: var(--surface);
+}
+
+.entry-input-row input[aria-invalid="true"] {
+  border-color: var(--danger, #dc2626);
+  box-shadow: 0 0 0 2px
+    color-mix(in srgb, var(--danger, #dc2626) 18%, transparent);
+}
+
+.entry-input-row input:focus-visible,
+.catalog-page-main button:focus-visible,
+.catalog-page-main select:focus-visible,
+.catalog-page-main input:focus-visible,
+.entry-example-chip:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.entry-boundaries {
+  scroll-margin-top: 24px;
+}
+
+.catalog-no-evidence {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  text-align: center;
+  padding: 32px 20px;
+}
+
+.catalog-no-evidence p {
+  max-width: 48ch;
+  margin: 0;
+}
+
+@media (max-width: 640px) {
+  .entry-input-row {
+    flex-direction: column;
+  }
+
+  .entry-input-row input,
+  .entry-input-row button {
+    width: 100%;
+  }
+
+  .catalog-page-main label,
+  .catalog-page-main select,
+  .catalog-page-main .catalog-empty-btn {
+    max-width: 100%;
+  }
+}
+
 .entry-table tbody tr:hover {
   background: color-mix(in srgb, var(--soft) 55%, var(--surface));
 }

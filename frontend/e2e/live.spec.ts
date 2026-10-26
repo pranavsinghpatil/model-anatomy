@@ -135,6 +135,11 @@ test("live workspace submits, inspects a component, and exports", async ({
       (node) => node.child_graph_id && node.parameter_count! > 0,
     ) ?? root.nodes[0];
   expect(component).toBeTruthy();
+  const componentDetail = (await (
+    await page.request.get(
+      `/api/v1/analyses/${created.id}/nodes/${result.root_graph_id}/${component!.id}`,
+    )
+  ).json()) as NodeDetail;
   await graphNode(page, component!.label);
   const inspector = page
     .getByRole("tabpanel", { name: "Details" })
@@ -158,7 +163,7 @@ test("live workspace submits, inspects a component, and exports", async ({
     componentDetail.evidence.length,
   );
 
-  await page.getByLabel("Export analysis", { exact: true }).click();
+  await page.getByLabel("Export inspection", { exact: true }).click();
   const download = page.waitForEvent("download");
   await page
     .getByRole("menuitem", { name: "Report JSON", exact: true })

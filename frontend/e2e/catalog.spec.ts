@@ -188,6 +188,7 @@ test("saved reports reopen through inspectCatalog and discovery entries refresh 
     })
     .click();
   await expect(page).toHaveURL(/\/app\/analyses\/job-test\?view=architecture$/);
+  await expect(page.getByTestId("graph-canvas")).toBeVisible();
   await expect(
     page.getByRole("group", { name: "Architecture presentation" }),
   ).toBeVisible();
@@ -482,6 +483,7 @@ test("recorded inspection failure keeps its prior saved report and retry referen
   page,
 }) => {
   await mockService(page);
+  let openingFails = true;
   await page.route("**/api/v1/catalog/discovery", (route) =>
     route.fulfill({
       status: 200,
@@ -511,9 +513,18 @@ test("recorded inspection failure keeps its prior saved report and retry referen
     "**/api/v1/catalog/previous-custom-report/inspect",
     (route) =>
       route.fulfill({
-        status: 200,
+        status: openingFails ? 503 : 200,
         contentType: "application/json",
-        body: JSON.stringify(analysisFor()),
+        body: JSON.stringify(
+          openingFails
+            ? {
+                error: {
+                  code: "service_unavailable",
+                  message: "Saved inspection could not be opened.",
+                },
+              }
+            : analysisFor(),
+        ),
       }),
   );
   await page.goto("/catalog");
@@ -530,6 +541,15 @@ test("recorded inspection failure keeps its prior saved report and retry referen
   await expect(page.getByText("Category source").locator("..")).toContainText(
     "model configuration",
   );
+  await page
+    .getByRole("button", { name: "Open previous saved report" })
+    .click();
+  const card = page.getByRole("article");
+  await expect(card.getByRole("alert")).toContainText(
+    "Saved inspection could not be opened.",
+  );
+  await expect(page).toHaveURL(/\/catalog$/);
+  openingFails = false;
   await page
     .getByRole("button", { name: "Open previous saved report" })
     .click();
@@ -647,7 +667,7 @@ test("background refresh error keeps last data and privacy excludes static bench
   failNext = true;
   await page.getByRole("button", { name: "Refresh model catalog" }).click();
   await expect(page.getByRole("status")).toContainText(
-    "Showing the last loaded catalog",
+    "Showing the last loaded results",
   );
   await expect(page.locator(".benchmark-card")).toHaveCount(2);
   expect(calls).toBeGreaterThan(1);

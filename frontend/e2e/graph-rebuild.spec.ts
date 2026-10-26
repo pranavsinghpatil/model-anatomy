@@ -249,7 +249,7 @@ test("distinguishes graph boundaries, repeats, module paths, and isolated invent
     `×${count(block.repeat)}`,
   );
   await expect(
-    repeated.getByRole("button", { name: "Open Transformer Block" }),
+    repeated.getByRole("button", { name: `Open ${block.label}` }),
   ).toContainText("Explore representative block");
 
   const inputNode = page.locator(`.model-node[data-node-id="${input.id}"]`);

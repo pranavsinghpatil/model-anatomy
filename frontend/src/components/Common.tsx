@@ -1,6 +1,8 @@
 import { AlertCircle, LoaderCircle, RefreshCw } from "lucide-react";
 import type { ButtonHTMLAttributes, ReactNode } from "react";
 import { ApiError } from "../api/client";
+import { feedbackFor, type FeedbackContext } from "../state/feedback-messages";
+import { CopyButton } from "./ui";
 
 export function IconButton({
   label,
@@ -22,18 +24,34 @@ export function IconButton({
     </button>
   );
 }
+
+const statusLabels: Record<string, string> = {
+  queued: "Queued",
+  running: "Running",
+  cancelling: "Cancelling",
+  completed: "Completed",
+  partial: "Partially complete",
+  failed: "Failed",
+  cancelled: "Cancelled",
+  timed_out: "Timed out",
+  unsupported: "Unsupported",
+  inspected: "Artifacts inspected",
+};
+
 export function Status({ status }: { status: string }) {
+  const label = statusLabels[status] ?? status.replaceAll("_", " ");
   return (
     <span
       className={`status status-${status}`}
       role="status"
-      aria-label={`Analysis status: ${status.replaceAll("_", " ")}`}
+      aria-label={`Inspection status: ${label}`}
     >
       <span className="status-dot" />
-      {status.replaceAll("_", " ")}
+      {label}
     </span>
   );
 }
+
 export function Loading({ text = "Loading" }: { text?: string }) {
   return (
     <div className="loading" role="status">
@@ -42,38 +60,49 @@ export function Loading({ text = "Loading" }: { text?: string }) {
     </div>
   );
 }
+
 export function ErrorNotice({
   error,
+  context = "request",
   retry,
+  actions,
+  id,
 }: {
   error: Error;
+  context?: FeedbackContext;
   retry?: () => void;
+  actions?: ReactNode;
+  id?: string;
 }) {
+  const feedback = feedbackFor(error, context);
   return (
-    <div className="error-notice" role="alert">
+    <div className="error-notice" role="alert" id={id}>
       <AlertCircle size={16} />
-      <div>
-        <strong>
-          {error instanceof ApiError && error.status === 410
-            ? "Analysis expired"
-            : "Request unavailable"}
-        </strong>
-        <p>{error.message}</p>
-        {error instanceof ApiError && (
-          <small>
-            {error.code}
-            {error.requestId ? ` / ${error.requestId}` : ""}
-          </small>
+      <div className="error-notice-content">
+        <strong>{feedback.title}</strong>
+        <p>{feedback.description}</p>
+        {error instanceof ApiError && feedback.technical && (
+          <details className="error-technical">
+            <summary>Technical details</summary>
+            <code>{feedback.technical}</code>
+            {error.requestId && (
+              <CopyButton value={error.requestId} label="Copy request ID" />
+            )}
+          </details>
         )}
       </div>
-      {retry && (
-        <IconButton label="Retry request" onClick={retry}>
-          <RefreshCw size={15} />
-        </IconButton>
-      )}
+      <div className="error-notice-actions">
+        {actions}
+        {retry && (
+          <IconButton label="Retry request" onClick={retry}>
+            <RefreshCw size={15} />
+          </IconButton>
+        )}
+      </div>
     </div>
   );
 }
+
 export function Warnings({ warnings }: { warnings: string[] }) {
   if (!warnings.length) return null;
   return (

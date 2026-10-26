@@ -17,6 +17,18 @@ import { CopyButton } from "./ui";
 import { Status } from "./Common";
 import "./analysis-summary.css";
 
+const architectureCheckKeys = [
+  "module_inventory",
+  "parameter_mapping",
+  "native_architecture",
+  "module_topology",
+] as const;
+
+export function hasCompleteArchitectureChecks(detail: AnalysisDetail): boolean {
+  const checks = detail.quality?.architecture_checks;
+  return architectureCheckKeys.every((key) => checks?.[key] === true);
+}
+
 export function Overview({ detail }: { detail: AnalysisDetail }) {
   const [search] = useSearchParams();
   const artifact = detail.status === "inspected";
@@ -83,9 +95,12 @@ export function Overview({ detail }: { detail: AnalysisDetail }) {
               computation order, or a unique model parameter count.
             </p>
             {inspection?.reason_code && (
-              <code className="summary-reason-code">
-                {inspection.reason_code}
-              </code>
+              <details className="summary-technical-details">
+                <summary>Technical details</summary>
+                <code className="summary-reason-code">
+                  {inspection.reason_code}
+                </code>
+              </details>
             )}
           </div>
           <dl className="summary-artifact-facts">
@@ -171,8 +186,10 @@ export function Overview({ detail }: { detail: AnalysisDetail }) {
           </div>
           <p>
             {artifact
-              ? "Start with the verified files, then inspect available tensor headers."
-              : "Move from the model summary to its structure, artifacts, or audit report."}
+              ? "Next, review the verified file inventory and any available tensor headers."
+              : detail.status === "partial"
+                ? "Next, inspect the available graph and review the incomplete checks in the report."
+                : "Next, explore the reconstructed components or review their evidence in the report."}
           </p>
         </div>
         <div className="next-actions">
@@ -257,9 +274,7 @@ export function Report({ detail }: { detail: AnalysisDetail }) {
     native_architecture: "Native architecture compatibility",
     module_topology: "Bounded module-call dependencies",
   };
-  const hasCompleteArchitectureChecks = Object.keys(checkLabels).every(
-    (key) => architectureChecks?.[key] === true,
-  );
+  const completeArchitectureChecks = hasCompleteArchitectureChecks(detail);
   const hasIncompleteArchitectureChecks = Object.keys(checkLabels).some(
     (key) => architectureChecks?.[key] === false,
   );
@@ -283,7 +298,6 @@ export function Report({ detail }: { detail: AnalysisDetail }) {
     ],
     ["Forward executed", bool(q?.forward_executed)],
     ["Runtime trace available", bool(q?.runtime_trace_available)],
-    ["Mode", q?.mode ?? "Unknown"],
   ];
 
   return (
@@ -315,7 +329,7 @@ export function Report({ detail }: { detail: AnalysisDetail }) {
               {artifact
                 ? "Artifact Inspection"
                 : detail.status === "completed"
-                  ? hasCompleteArchitectureChecks
+                  ? completeArchitectureChecks
                     ? "Complete Architecture"
                     : hasIncompleteArchitectureChecks
                       ? "Inspection completed with gaps"
@@ -333,7 +347,7 @@ export function Report({ detail }: { detail: AnalysisDetail }) {
                       ? "This partial graph comes from reviewed publisher source. Separate pinned audits verified shard headers and checkpoint-name correspondence; shapes, parameter totals, and runtime flow remain unverified."
                       : "This partial graph comes from reviewed publisher source. A separate pinned audit verified shard headers; tensor ownership and runtime flow remain unverified."
                     : "This partial graph comes from reviewed publisher source. Checkpoint shard headers and tensor ownership are unverified."
-                  : hasCompleteArchitectureChecks
+                  : completeArchitectureChecks
                     ? "Architecture facts come from inspected checkpoint metadata and native PyTorch module definitions."
                     : hasIncompleteArchitectureChecks
                       ? "One or more required architecture checks are incomplete. Review the recorded results and limits below."
@@ -358,8 +372,11 @@ export function Report({ detail }: { detail: AnalysisDetail }) {
           </div>
           <div className="audit-mini-stat">
             <span className="stat-label">Execution Mode</span>
-            <strong className="stat-value font-mono">
-              {q?.mode ?? "Unknown"}
+            <strong className="stat-value">
+              {q?.mode
+                ? q.mode.charAt(0).toUpperCase() +
+                  q.mode.slice(1).replaceAll("_", " ")
+                : "Not reported"}
             </strong>
           </div>
         </div>
@@ -424,9 +441,12 @@ export function Report({ detail }: { detail: AnalysisDetail }) {
               "Architecture reconstruction was unavailable for this inspection."}
           </p>
           {inspection?.reason_code && (
-            <code className="summary-reason-code">
-              {inspection.reason_code}
-            </code>
+            <details className="summary-technical-details">
+              <summary>Technical details</summary>
+              <code className="summary-reason-code">
+                {inspection.reason_code}
+              </code>
+            </details>
           )}
           <dl className="report-checks report-artifact-facts">
             <div>
@@ -576,6 +596,12 @@ export function Report({ detail }: { detail: AnalysisDetail }) {
       <details className="report-section report-identity-details">
         <summary>Artifact identity and report metadata</summary>
         <dl className="report-checks">
+          <div>
+            <dt>Mode</dt>
+            <dd>
+              <code>{q?.mode ?? "Unknown"}</code>
+            </dd>
+          </div>
           <div>
             <dt>Model ID</dt>
             <dd>

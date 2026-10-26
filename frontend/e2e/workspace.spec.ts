@@ -338,16 +338,16 @@ test("worker-offline health still opens a stored inspection", async ({
   await expect(
     page
       .getByRole("status")
-      .filter({ hasText: "Stored inspection service available" }),
-  ).toContainText("Stored inspection service available");
+      .filter({ hasText: "Saved inspections available; new runs unavailable" }),
+  ).toContainText("Saved inspections available; new runs unavailable");
   await page
     .getByLabel("Hugging Face model", { exact: true })
     .fill("org/model");
   await expect(
-    page.getByRole("button", { name: "Inspect model", exact: true }),
+    page.getByRole("button", { name: "Find saved inspection", exact: true }),
   ).toBeEnabled();
   await page
-    .getByRole("button", { name: "Inspect model", exact: true })
+    .getByRole("button", { name: "Find saved inspection", exact: true })
     .click();
   await expect(page).toHaveURL(/\/app\/analyses\/job-test\?view=architecture$/);
   await expect(page.getByTestId("graph-canvas")).toBeVisible();
@@ -357,7 +357,10 @@ test("worker-offline health still opens a stored inspection", async ({
   await showQuestions(page, isMobile);
   await expect(page.getByLabel("Ask about model evidence")).toBeDisabled();
   await expect(
-    page.getByText("AI service unavailable", { exact: true }),
+    page.getByText(
+      "Model questions are unavailable right now. You can inspect the report and its evidence instead.",
+      { exact: true },
+    ),
   ).toBeVisible();
   expect(requests.filter((request) => request.method === "POST")).toHaveLength(
     1,
@@ -392,13 +395,16 @@ test("worker-offline cache miss returns the service error without a fallback", a
     .getByLabel("Hugging Face model", { exact: true })
     .fill("org/cache-miss");
   await expect(
-    page.getByRole("button", { name: "Inspect model", exact: true }),
+    page.getByRole("button", { name: "Find saved inspection", exact: true }),
   ).toBeEnabled();
   await page
-    .getByRole("button", { name: "Inspect model", exact: true })
+    .getByRole("button", { name: "Find saved inspection", exact: true })
     .click();
   await expect(page.getByRole("alert")).toContainText(
-    "Analysis could not be started",
+    "Inspection could not be started",
+  );
+  await expect(page.getByRole("alert")).toContainText(
+    "New inspections are paused because the worker is unavailable. Saved inspections remain open.",
   );
   await expect(page).toHaveURL(/\/app$/);
   await expect(page.getByTestId("graph-canvas")).toHaveCount(0);
@@ -441,7 +447,7 @@ test("legacy example query cannot synthesize an analysis or graph", async ({
   await expect(page).toHaveURL(
     /\/app\/analyses\/example-gpt2(?:\?view=architecture)?$/,
   );
-  await expect(page.getByRole("alert")).toContainText("Analysis not found");
+  await expect(page.getByRole("alert")).toContainText("Inspection not found");
   await expect(page.getByTestId("graph-canvas")).toHaveCount(0);
   expect(requests.some((request) => request.path.includes("/examples"))).toBe(
     false,
@@ -473,8 +479,8 @@ for (const healthError of ["network", "invalid"] as const)
     await expect(
       page
         .getByRole("status")
-        .filter({ hasText: "Stored inspections are unavailable" }),
-    ).toContainText("Stored inspections are unavailable");
+        .filter({ hasText: "Inspection storage unavailable" }),
+    ).toContainText("Inspection storage unavailable");
     await page
       .getByLabel("Hugging Face model", { exact: true })
       .fill("org/model");
@@ -487,7 +493,7 @@ test("submits exact contract and cancels a pending job", async ({ page }) => {
   const job = {
     ...analysisFor("job-test"),
     status: "running" as const,
-    stage: "Resolving artifacts",
+    stage: "resolving",
     root_graph_id: null,
     parameter_count: null,
     dimensions: {},
@@ -504,10 +510,10 @@ test("submits exact contract and cancels a pending job", async ({ page }) => {
     page.getByRole("button", { name: "Cancel inspection", exact: true }),
   ).toBeVisible();
   await expect(
-    page.getByRole("progressbar", { name: "Inspection in progress" }),
+    page.getByRole("progressbar", { name: "Inspection progress" }),
   ).toBeVisible();
   await expect(page.locator(".progress-stage")).toContainText(
-    "Resolving artifacts",
+    "Resolving model artifacts",
   );
   expect(requests.find((request) => request.method === "POST")?.body).toEqual({
     model: "org/new-model",
@@ -561,7 +567,7 @@ test("AI response keeps provenance and citation jumps to associated component", 
   await page.getByRole("button", { name: "Send question" }).click();
   await expect(page.getByText("AI generated", { exact: true })).toBeVisible();
   await expect(
-    page.getByText("Evidence-assisted answers", { exact: true }),
+    page.getByText("Answers use this inspection’s evidence.", { exact: true }),
   ).toBeVisible();
   const warning = page.getByText(
     "AI interpretation is not independently verified. Citations and numeric values are checked; confirm other claims against the cited evidence.",
@@ -655,7 +661,7 @@ for (const unknown of [false, true])
       page.getByTestId("inspector").locator(".citation-record"),
     ).toHaveCount(0);
     await expect(
-      page.getByLabel("Export analysis", { exact: true }),
+      page.getByLabel("Export inspection", { exact: true }),
     ).toBeVisible();
   });
 
@@ -663,7 +669,7 @@ test("exports JSON and ZIP through the authenticated API", async ({ page }) => {
   await mockService(page);
   await openAnalysis(page, "job-test", "report");
   for (const label of ["Report JSON", "Complete ZIP"]) {
-    await page.getByLabel("Export analysis", { exact: true }).click();
+    await page.getByLabel("Export inspection", { exact: true }).click();
     const downloaded = page.waitForEvent("download");
     await page.getByRole("menuitem", { name: label, exact: true }).click();
     expect((await downloaded).suggestedFilename()).toMatch(
@@ -688,13 +694,15 @@ test("partial and symbolic dimensions remain honest", async ({
   await openAnalysis(page, "job-test", "overview");
   await expect(page.locator(".model-metrics")).toContainText("0");
   await expect(page.locator(".model-metrics")).toContainText("Unknown");
-  await expect(
-    page.getByRole("link", { name: "View findings", exact: true }),
-  ).toBeVisible();
   await page.getByRole("link", { name: "Architecture", exact: true }).click();
   await expect(page.getByTestId("graph-canvas")).toBeVisible();
   await expect(
-    page.locator(".workspace-header").getByLabel("Analysis status: partial"),
+    page.getByRole("link", { name: "View findings", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page
+      .locator(".workspace-header")
+      .getByLabel("Inspection status: Partially complete"),
   ).toBeVisible();
   await graphNode(page, embedding.label);
   await showDetails(page, isMobile);
@@ -735,9 +743,9 @@ for (const status of [422, 429, 503])
     await page
       .getByRole("button", { name: "Inspect model", exact: true })
       .click();
-    await expect(page.getByRole("alert")).toContainText(
-      "Analysis could not be started",
-    );
+    const alert = page.getByRole("alert");
+    await expect(alert).toContainText("Inspection could not be started");
+    await alert.getByText("Technical details", { exact: true }).click();
     await expect(page.getByRole("alert")).toContainText("test-request");
   });
 
@@ -748,7 +756,7 @@ for (const status of [404, 410])
     await mockService(page, { getStatus: status });
     await openAnalysis(page);
     await expect(page.getByRole("alert")).toContainText(
-      status === 410 ? "Analysis has expired" : "Analysis not found",
+      status === 410 ? "Inspection expired" : "Inspection not found",
     );
     await expect(page.getByTestId("graph-canvas")).toHaveCount(0);
   });
@@ -772,6 +780,8 @@ test("unavailable AI returns a structured error without fabricated answer", asyn
 test("empty service does not synthesize a graph", async ({ page }) => {
   await mockService(page, { noRecent: true });
   await page.goto("/app");
-  await expect(page.getByText("No analyses in this session yet")).toBeVisible();
+  await expect(
+    page.getByText("No inspections yet. Enter a public model above to begin."),
+  ).toBeVisible();
   await expect(page.getByTestId("graph-canvas")).toHaveCount(0);
 });

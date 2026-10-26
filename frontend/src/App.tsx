@@ -7,6 +7,7 @@ import {
   useLocation,
 } from "react-router-dom";
 import { Preferences } from "./state/preferences";
+import { FeedbackProvider } from "./state/feedback";
 import { Start } from "./pages/Entry";
 import { Loading } from "./components/Common";
 const Workspace = lazy(() => import("./pages/Workspace"));
@@ -31,37 +32,39 @@ export function App() {
   return (
     <Preferences>
       <BrowserRouter>
-        <a className="skip-link" href="#main">
-          Skip to content
-        </a>
-        <RouteFocus />
-        <Suspense
-          fallback={
-            <main id="main" tabIndex={-1} className="page-state">
-              <Loading text="Opening workspace" />
-            </main>
-          }
-        >
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/app" element={<Start />} />
-            <Route path="/catalog" element={<Catalog />} />
-            <Route
-              path="/app/catalog"
-              element={<Navigate replace to="/catalog" />}
-            />
-            <Route path="/app/analyses/:id" element={<Workspace />} />
-            <Route
-              path="*"
-              element={
-                <main id="main" tabIndex={-1} className="page-state">
-                  <h1>Page not found</h1>
-                  <a href="/app">Start an inspection</a>
-                </main>
-              }
-            />
-          </Routes>
-        </Suspense>
+        <FeedbackProvider>
+          <a className="skip-link" href="#main">
+            Skip to content
+          </a>
+          <RouteFocus />
+          <Suspense
+            fallback={
+              <main id="main" tabIndex={-1} className="page-state">
+                <Loading text="Opening workspace" />
+              </main>
+            }
+          >
+            <Routes>
+              <Route path="/" element={<Home />} />
+              <Route path="/app" element={<Start />} />
+              <Route path="/catalog" element={<Catalog />} />
+              <Route
+                path="/app/catalog"
+                element={<Navigate replace to="/catalog" />}
+              />
+              <Route path="/app/analyses/:id" element={<Workspace />} />
+              <Route
+                path="*"
+                element={
+                  <main id="main" tabIndex={-1} className="page-state">
+                    <h1>Page not found</h1>
+                    <a href="/app">Start an inspection</a>
+                  </main>
+                }
+              />
+            </Routes>
+          </Suspense>
+        </FeedbackProvider>
       </BrowserRouter>
     </Preferences>
   );

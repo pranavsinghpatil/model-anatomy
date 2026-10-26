@@ -113,6 +113,11 @@ test("workspace layout review at desktop, laptop, and phone widths", async ({
 
     await graphNode(page, embedding.label);
     await expect(page.getByTestId("inspector")).toBeVisible();
+    await expect(
+      page
+        .getByTestId("inspector")
+        .getByRole("heading", { name: embedding.label, exact: true }),
+    ).toBeVisible();
     await expectNoHorizontalOverflow(page);
     await page.screenshot({
       path: testInfo.outputPath(`selected-${width}.png`),

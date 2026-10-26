@@ -39,7 +39,7 @@ test("root and app routes open the same immediately usable entry", async ({
       page.getByRole("button", { name: "Inspect model", exact: true }),
     ).toBeInViewport();
     await expect(
-      page.getByRole("link", { name: "Your analyses" }),
+      page.getByRole("link", { name: "Your inspections" }),
     ).toBeVisible();
     await expect(page.locator(".entry-header .entry-brand-name")).toHaveCSS(
       "white-space",
@@ -114,7 +114,7 @@ test("a new inspection opens Architecture in the unified workspace", async ({
   ).toHaveAttribute("aria-current", "page");
   await expect(page.getByTestId("graph-canvas")).toBeVisible();
   await expect(
-    page.getByRole("button", { name: "Export analysis" }),
+    page.getByRole("button", { name: "Export inspection" }),
   ).toBeVisible();
 });
 
@@ -139,7 +139,7 @@ test("progress hands off a partial result to the graph and keeps findings second
     .getByRole("button", { name: "Inspect model", exact: true })
     .click();
   await expect(
-    page.getByRole("progressbar", { name: "Inspection in progress" }),
+    page.getByRole("progressbar", { name: "Inspection progress" }),
   ).toBeVisible();
   await expect(page).toHaveURL(/\/app\/analyses\/job-test\?view=architecture$/);
   await expect(page.getByTestId("graph-canvas")).toBeVisible();
@@ -195,7 +195,7 @@ test("progress hands off an inspected result to artifacts", async ({
     .getByRole("button", { name: "Inspect model", exact: true })
     .click();
   await expect(
-    page.getByRole("progressbar", { name: "Inspection in progress" }),
+    page.getByRole("progressbar", { name: "Inspection progress" }),
   ).toBeVisible();
   await expect(page).toHaveURL(/\/app\/analyses\/job-test\?view=artifacts$/);
   await expect(page.getByTestId("artifact-inspection")).toBeVisible();

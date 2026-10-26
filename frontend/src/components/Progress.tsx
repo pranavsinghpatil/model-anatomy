@@ -1,7 +1,6 @@
 import { Link } from "react-router-dom";
 import {
   LoaderCircle,
-  ShieldCheck,
   Square,
   GitBranch,
   FileSearch,
@@ -15,40 +14,37 @@ import "./progress.css";
 import { retryReference } from "../state/submissions";
 const stages: Record<string, [string, string]> = {
   queued: [
-    "Waiting for the worker",
-    "Your inspection is queued. It will begin when worker capacity is available.",
+    "In the queue",
+    "Your inspection will start when a worker is available.",
   ],
   resolving_revision: [
     "Pinning the model revision",
-    "Resolving a specific repository revision so the evidence can be reproduced.",
+    "Pinning this repository revision so the findings can be reproduced.",
   ],
   checking_cache: [
     "Checking inspected artifacts",
-    "Looking for a previous inspection of this exact revision and engine version.",
+    "Checking for an inspection of this same revision.",
   ],
   resolving: [
     "Resolving model artifacts",
-    "Finding the repository configuration and checkpoint metadata.",
+    "Finding the configuration and checkpoint metadata.",
   ],
   reading_metadata: [
     "Reading artifact metadata",
-    "Reading bounded headers and configuration without loading model weights.",
+    "Reading configuration and tensor headers without loading weights.",
   ],
   building_structure: [
     "Reconstructing the structure",
-    "Instantiating supported native structure and inspecting its modules.",
+    "Building the supported native structure and reading its modules.",
   ],
   analyzing_components: [
     "Mapping model components",
-    "Associating semantic components with recorded modules and tensor facts.",
+    "Linking model components to recorded modules and tensor facts.",
   ],
-  storing_metadata: [
-    "Saving the report",
-    "Persisting the inspected architecture and metadata.",
-  ],
+  storing_metadata: ["Saving the report", "Saving the inspection report."],
   validating: [
     "Validating the report",
-    "Checking the reconstructed representation and recording unresolved facts.",
+    "Checking the report and recording unresolved facts.",
   ],
 };
 export function Progress({
@@ -62,7 +58,7 @@ export function Progress({
 }) {
   const stage = stages[detail.stage ?? ""] ?? [
     "Inspecting model",
-    "The worker is processing the inspection. Progress below comes from the server.",
+    "Preparing the model metadata for inspection.",
   ];
   return (
     <div className="progress-page">
@@ -79,12 +75,19 @@ export function Progress({
       <div
         className="progress-track"
         role="progressbar"
-        aria-label="Inspection in progress"
+        aria-label="Inspection progress"
+        aria-valuetext={`${stage[0]}. ${stage[1]}`}
       />
-      <div className="progress-stage" role="status">
+      <div className="progress-stage">
         <Status status={detail.status} />
-        <code>{detail.stage ?? detail.status}</code>
+        <span role="status" aria-live="polite">
+          {stage[0]}
+        </span>
       </div>
+      <details className="progress-technical-details">
+        <summary>Technical details</summary>
+        <code>{detail.stage ?? "Stage not reported"}</code>
+      </details>
       <div className="inspection-steps" aria-label="Inspection workflow">
         {[
           {
@@ -118,12 +121,10 @@ export function Progress({
         <Square size={14} />
         {cancelling ? "Cancelling…" : "Cancel inspection"}
       </Button>
-      <div className="progress-note">
-        <ShieldCheck size={16} />
-        <span>
-          The highlighted stage comes from the server. No weights are loaded.
-        </span>
-      </div>
+      <p className="progress-leave-note">
+        You can leave this page; the inspection continues in the background.{" "}
+        <Link to="/">View your inspections</Link>
+      </p>
     </div>
   );
 }
@@ -131,7 +132,7 @@ export function Recovery({ detail }: { detail: AnalysisDetail }) {
   const messages: Record<string, [string, string]> = {
     failed: [
       "Inspection failed",
-      "The service could not complete this inspection. Review the recorded error before trying again.",
+      "The service could not finish this inspection. Review the reason, then retry or choose another model.",
     ],
     unsupported: [
       "Architecture unsupported",
@@ -143,7 +144,7 @@ export function Recovery({ detail }: { detail: AnalysisDetail }) {
     ],
     cancelled: [
       "Inspection cancelled",
-      "The worker was asked to stop this inspection. You can start another when ready.",
+      "This inspection has stopped. You can start another when ready.",
     ],
   };
   const [title, copy] = messages[detail.status] ?? [
@@ -156,8 +157,11 @@ export function Recovery({ detail }: { detail: AnalysisDetail }) {
       <p>{copy}</p>
       {detail.error && (
         <div className="analysis-error" role="alert">
-          <strong>{detail.error.code}</strong>
           <p>{detail.error.message}</p>
+          <details>
+            <summary>Technical details</summary>
+            <code>{detail.error.code}</code>
+          </details>
         </div>
       )}
       <Link
@@ -166,6 +170,9 @@ export function Recovery({ detail }: { detail: AnalysisDetail }) {
       >
         Edit model and retry
       </Link>
+      <p className="recovery-inspections">
+        <Link to="/">Your inspections</Link>
+      </p>
     </div>
   );
 }
