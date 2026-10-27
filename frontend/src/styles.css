@@ -89,6 +89,13 @@
     transparent 80%
   );
 }
+:root {
+  scrollbar-color: var(--muted) var(--background);
+}
+/* Entry and catalog use dark surfaces independently of the workspace theme. */
+:root:has(.entry-page) {
+  scrollbar-color: #475569 #040614;
+}
 :root[data-theme-switching] *,
 :root[data-theme-switching] *::before,
 :root[data-theme-switching] *::after {
