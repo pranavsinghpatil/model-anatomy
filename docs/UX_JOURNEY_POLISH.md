@@ -46,6 +46,29 @@ The 29 targeted backend fixture tests and repository-wide Ruff checks pass. The 
 
 ## Screenshots
 
+### Established catalog profile verification, 27 October 2026
+
+The first user-facing launch mistakenly used the worktree's isolated SQLite
+profile (one saved report and no benchmark publication). Reconnecting the
+existing private Supabase profile restored **382 unified catalog entries** and
+access to **416 durable report variants**. The saved-report rows retained 49
+completed, 216 partial and 151 artifact-inspected outcomes. These row counts
+include history/variants and are distinct from the unified catalog counts.
+
+The visible catalog showed 19 complete static reports, 90 partial graphs, 143
+artifact inspections and the published benchmark/teammate outcomes. An existing
+Pythia partial report reopened with its architecture graph and findings link.
+Database, storage and worker health were all available. This was an environment
+connection correction; the published `feat/vv` base was already included, and
+the separate `D:` checkout's unpublished work was left untouched.
+
+The launch command must retain `-Supabase -EnvFile` with the established private
+profile when changing worktrees. Credentials remain outside version control.
+
+![Restored real Supabase catalog](evidence/ux-journey-2026-10-27/catalog-restored-supabase.png)
+
+### Layout comparisons
+
 The before/after images below use explicit HTTP contract fixtures to compare presentation. They are UI snapshots, not evidence of model reconstruction. Before images were captured at the baseline above. Review covered 1440, 768 and 390 CSS pixels, both themes and reduced motion; the selected-component capture now waits for the component heading to load.
 
 | View | Before | After |
