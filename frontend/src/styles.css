@@ -96,6 +96,10 @@
 :root:has(.entry-page) {
   scrollbar-color: #475569 #040614;
 }
+/* This injected query panel can leave a fixed white drawer and latch over the app. */
+body:has(#root) :is(.chat-gpt-query-model-wrapper, .chat-gpt-query-model) {
+  display: none !important;
+}
 :root[data-theme-switching] *,
 :root[data-theme-switching] *::before,
 :root[data-theme-switching] *::after {

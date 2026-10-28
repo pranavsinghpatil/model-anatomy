@@ -26,3 +26,22 @@ Changing browser extension settings requires the user's approval.
 
 Validation: frontend production build (including TypeScript), formatting check,
 and `git diff --check` passed. Vite retained its existing large-chunk advisory.
+
+## Targeted latch fix
+
+The subsequent site-level fix suppresses both user-identified containers,
+`.chat-gpt-query-model-wrapper` and `.chat-gpt-query-model`, on pages containing
+the app root. Hiding the outer wrapper removes its panel and latch together.
+The stylesheet also applies to containers injected after the app has loaded.
+No browser extension settings are changed.
+
+The catalog regression test injects the named wrapper, its fixed white panel
+and latch, and a standalone panel. It verifies that the injected UI is hidden
+and the catalog remains usable. This is isolated DOM-fixture coverage; it does
+not claim another live verification of the user's installed extension.
+
+Validation of the latch fix: production build passed; the focused Playwright
+regression passed on desktop and mobile (2 tests) against an isolated production
+preview. The navigation assertion uses `Your inspections`, available in both
+responsive headers. The preview used the test runner's loopback permissions;
+initial isolated-server connection failures were resolved before acceptance.

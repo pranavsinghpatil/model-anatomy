@@ -108,6 +108,56 @@ async function catalogApi(
   return requests;
 }
 
+test("late query panels cannot cover the catalog or its navigation", async ({
+  page,
+}, testInfo) => {
+  await catalogApi(page);
+  await page.goto("/catalog");
+  await expect(
+    page.getByRole("heading", { name: "Model Catalog" }),
+  ).toBeVisible();
+  // Match the reported panel, including its out-of-bounds latch. Injection can
+  // happen after React mounts, so a one-time DOM cleanup is insufficient.
+  await page.evaluate(() => {
+    const wrapper = document.createElement("div");
+    wrapper.className =
+      "chat-gpt-query-model-wrapper outline-none active:outline-none focus:outline-none";
+    wrapper.style.cssText =
+      "position:fixed;right:0;top:0;width:440px;height:100vh;background:white;z-index:2147483647";
+    const panel = document.createElement("div");
+    panel.className =
+      "chat-gpt-query-model text-base min-w-[440px] max-sm:min-w-[90vw]";
+    const latch = document.createElement("button");
+    latch.textContent = "Close injected panel";
+    latch.style.cssText =
+      "position:absolute;right:100%;bottom:20px;width:60px;height:48px;background:white";
+    wrapper.append(panel, latch);
+    document.body.append(wrapper);
+    // Also protect against the panel being mounted without its usual wrapper.
+    document.body.append(panel.cloneNode(true));
+  });
+  await expect(page.locator(".chat-gpt-query-model-wrapper")).toBeHidden();
+  for (const panel of await page.locator(".chat-gpt-query-model").all()) {
+    await expect(panel).toBeHidden();
+  }
+  await expect(
+    page.getByRole("button", { name: "Close injected panel" }),
+  ).toBeHidden();
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth,
+    ),
+  ).toBe(true);
+  await page.screenshot({
+    path: testInfo.outputPath("catalog-with-query-panel-suppressed.png"),
+    animations: "disabled",
+  });
+  await page
+    .getByRole("link", { name: "Your inspections", exact: true })
+    .click();
+  await expect(page).toHaveURL(/\/#recent$/);
+});
+
 test("one catalog combines inspection and benchmark provenance with honest metrics", async ({
   page,
 }) => {
