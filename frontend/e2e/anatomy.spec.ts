@@ -154,7 +154,7 @@ test("anatomy renders the real assembly and preserves graph context", async ({
     name: "Back to graph",
     exact: true,
   });
-  if (isMobile && (await backToGraph.isVisible())) await backToGraph.click();
+  if (await backToGraph.isVisible()) await backToGraph.click();
 
   const zoom = page.getByRole("button", { name: "Zoom in", exact: true });
   await zoom.click();
@@ -184,7 +184,7 @@ test("anatomy renders the real assembly and preserves graph context", async ({
     "Interactive model assembly",
   );
 
-  if (isMobile && (await backToGraph.isVisible())) await backToGraph.click();
+  if (await backToGraph.isVisible()) await backToGraph.click();
   await page
     .getByRole("group", { name: "Architecture presentation" })
     .getByRole("button", { name: "Graph", exact: true })
@@ -259,7 +259,7 @@ test("anatomy controls, facets, keyboard inspection, and reduced motion work", a
     name: "Back to graph",
     exact: true,
   });
-  if (isMobile && (await backToGraph.isVisible())) await backToGraph.click();
+  if (await backToGraph.isVisible()) await backToGraph.click();
   const assembly = page.getByRole("group", {
     name: "Interactive model assembly",
   });
@@ -288,7 +288,7 @@ test("anatomy controls, facets, keyboard inspection, and reduced motion work", a
   await expect(page.getByTestId("inspector").locator("h2")).toHaveText(
     nodeTitle(keyboardNode),
   );
-  if (isMobile && (await backToGraph.isVisible())) await backToGraph.click();
+  if (await backToGraph.isVisible()) await backToGraph.click();
   await page.emulateMedia({ reducedMotion: "no-preference" });
   await expect(drawing(page)).toHaveAttribute("data-motion", "visible");
   const drawingElement = drawing(page);
@@ -309,6 +309,7 @@ test("anatomy controls, facets, keyboard inspection, and reduced motion work", a
 
 test("nested anatomy loads reported components lazily and restores the parent pose", async ({
   page,
+  isMobile,
 }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   const requests = await mockService(page);
@@ -318,7 +319,7 @@ test("nested anatomy loads reported components lazily and restores the parent po
   const childId = block.child_graph_id!;
   const child = graphs.get(childId)!;
   const attention = child.nodes.find((node) => node.kind === "self_attention")!;
-  const mlp = child.nodes.find((node) => node.kind === "feed_forward")!;
+  const mlp = child.nodes.find((node) => node.kind === "mlp")!;
   expect(attention).toBeTruthy();
   expect(mlp).toBeTruthy();
   await expect(
@@ -331,6 +332,12 @@ test("nested anatomy loads reported components lazily and restores the parent po
     requests.some((request) => request.path.includes(`/graphs/${childId}`)),
   ).toBe(false);
 
+  await selectFacet(page, block, isMobile);
+  const backToGraph = page.getByRole("button", {
+    name: "Back to graph",
+    exact: true,
+  });
+  if (await backToGraph.isVisible()) await backToGraph.click();
   await page.getByRole("button", { name: "Separate parts" }).click();
   await expect(drawing(page)).toHaveAttribute("data-pose", "1.000");
   const parentViewBox = await drawing(page)
@@ -377,6 +384,7 @@ test("nested anatomy loads reported components lazily and restores the parent po
 
 test("narrow anatomy keeps a long parent breadcrumb clickable", async ({
   page,
+  isMobile,
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.emulateMedia({ reducedMotion: "reduce" });
@@ -387,6 +395,12 @@ test("narrow anatomy keeps a long parent breadcrumb clickable", async ({
   await mockService(page, { job });
   await openAnalysis(page);
   await openAnatomy(page);
+  await selectFacet(page, block, isMobile);
+  const backToGraph = page.getByRole("button", {
+    name: "Back to graph",
+    exact: true,
+  });
+  if (await backToGraph.isVisible()) await backToGraph.click();
   await page
     .getByRole("button", { name: "Explore inside", exact: true })
     .click();
@@ -426,6 +440,7 @@ test("partial shape facts stay unknown and reported repeats have bounded geometr
   });
   await openAnalysis(page);
   await openAnatomy(page);
+  await selectFacet(page, block, isMobile);
   await expect(page.locator(".anatomy-readout")).toContainText(
     "×1,000 instances",
   );
@@ -465,11 +480,14 @@ test("partial shape facts stay unknown and reported repeats have bounded geometr
   await openAnalysis(page);
   await openAnatomy(page);
   await expect(page.locator(".anatomy-boundary")).toContainText(
-    "This reconstruction is partial",
+    "Some architecture checks remain incomplete. Open the Report view for the recorded reasons. Activation shapes are outside these checks.",
   );
   await selectFacet(page, embedding, isMobile);
   await expect(page.locator(".anatomy-part-summary dl")).toContainText(
-    "Unknown shape",
+    "Parameters",
+  );
+  await expect(page.locator(".anatomy-part-summary dl")).not.toContainText(
+    "First output shape",
   );
 });
 

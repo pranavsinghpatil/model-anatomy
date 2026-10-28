@@ -155,7 +155,7 @@ test("live ViT native module hierarchy and checkpoint tensor inspection", async 
   await expect(
     page.getByRole("navigation", { name: "Graph path" }),
   ).toContainText("ViT");
-  await page.getByLabel("Export analysis", { exact: true }).click();
+  await page.getByLabel("Export inspection", { exact: true }).click();
   const download = page.waitForEvent("download");
   await page
     .getByRole("menuitem", { name: "Complete ZIP", exact: true })

@@ -376,8 +376,8 @@ export function Inspector({
         <div className="overview-hint-box">
           <FileSearch size={15} />
           <span>
-            Select any component in the graph or component tree to inspect its
-            shapes, weights, and tensor byte offsets.
+            Select a component in the graph or tree to view its recorded
+            properties, tensors, and supporting evidence.
           </span>
         </div>
       </div>
@@ -451,10 +451,7 @@ export function Inspector({
           <Tabs.Content value="module">
             <>
               <ModuleProperties node={resolved} />
-              <details
-                className="metadata"
-                open={moduleArchitecture ? undefined : true}
-              >
+              <details className="metadata">
                 <summary>Optional input and output specifications</summary>
                 {moduleArchitecture && (
                   <p className="empty-copy">

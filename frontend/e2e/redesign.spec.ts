@@ -127,9 +127,9 @@ test("copy failure gives a manual fallback", async ({ page }) => {
   });
   await openAnalysis(page, "job-test", "overview");
   await page.getByRole("button", { name: "Copy revision" }).click();
-  await expect(page.locator(".copy-control [role='status']")).toContainText(
-    "Copy failed. Select and copy the text.",
-  );
+  await expect(
+    page.locator(".summary-revision .copy-control [role='status']"),
+  ).toContainText("Copy failed. Select and copy the text.");
 });
 
 test("copy feedback resets and keyboard navigation remains usable with reduced motion", async ({
@@ -146,9 +146,9 @@ test("copy feedback resets and keyboard navigation remains usable with reduced m
   await openAnalysis(page, "job-test", "overview");
   await page.getByRole("button", { name: "Copy revision" }).focus();
   await page.getByRole("button", { name: "Copy revision" }).press("Enter");
-  await expect(page.locator(".copy-control [role='status']")).toHaveText(
-    "Copied",
-  );
+  await expect(
+    page.locator(".summary-revision .copy-control [role='status']"),
+  ).toHaveText("Copied");
   await expect(
     page.getByRole("button", { name: "Copy revision" }),
   ).toBeEnabled();
@@ -177,7 +177,7 @@ test("failed report export leaves an actionable error", async ({ page }) => {
     }),
   );
   await openAnalysis(page, "job-test", "report");
-  await page.getByRole("button", { name: "Export analysis" }).click();
+  await page.getByRole("button", { name: "Export inspection" }).click();
   await page.getByRole("menuitem", { name: "Report JSON" }).click();
   await expect(page.getByRole("alert")).toContainText(
     "Export service unavailable",
@@ -266,7 +266,7 @@ test("late submission response does not redirect a visitor who continued an exis
       response.url().endsWith("/api/v1/analyses"),
   );
   await started;
-  await page.getByRole("link", { name: /^Continue analysis of / }).click();
+  await page.getByRole("link", { name: /^Open inspection of / }).click();
   await expect(page).toHaveURL(/\/app\/analyses\/job-test/);
   await expect(page.getByTestId("graph-canvas")).toBeVisible();
   release();

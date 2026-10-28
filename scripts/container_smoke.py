@@ -50,7 +50,7 @@ def check_architecture(client, path, detail, report):
     assert all(tensor["shape"] and tensor["dtype"] for tensor in inspection["tensors"])
 
 
-def run():
+def run(base_url: str = "http://127.0.0.1:8001") -> None:
     result = {"model_id": MODEL, "revision": REVISION, "analyses": []}
     first_analysis_path = None
     with httpx.Client(base_url=base_url, trust_env=False, timeout=15) as client:

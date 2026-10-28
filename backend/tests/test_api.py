@@ -13,10 +13,9 @@ import pytest
 from fastapi.testclient import TestClient
 from pydantic import ValidationError
 from sqlalchemy.exc import SQLAlchemyError
-
-from model_anatomy.api.app import COOKIE, create_app
 from test_service_views import contract_report
 
+from model_anatomy.api.app import COOKIE, create_app
 from model_anatomy.api.settings import Settings
 from model_anatomy.service.errors import ServiceError
 from model_anatomy.service.jobs import JobService, cache_key

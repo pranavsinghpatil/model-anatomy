@@ -373,7 +373,7 @@ export async function mockService(page: Page, scenario: Scenario = {}) {
           if (node.child_graph)
             visit(node.child_graph, node.label, graph.id, node.id);
       }
-      visit(artifact.root_graph, "gpt2", null, null);
+      visit(artifact.root_graph, job.model_id.split("/").at(-1)!, null, null);
       return json({
         root_graph_id: rootGraph.id,
         graphs: locations,

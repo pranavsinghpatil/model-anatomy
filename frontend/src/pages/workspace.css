@@ -6,6 +6,81 @@
   overflow: hidden;
   background: var(--background);
 }
+.workspace-action-feedback {
+  padding: 8px 16px;
+  flex-shrink: 0;
+}
+.workspace-model-tools .copy-control {
+  position: relative;
+}
+.workspace-model-tools .copy-control > [role="status"]:not(:empty) {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 30;
+  width: max-content;
+  max-width: min(300px, 75vw);
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 13px;
+  box-shadow: var(--shadow-sm);
+}
+.inspection-outcome {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 16px;
+  background: var(--surface);
+  flex-shrink: 0;
+}
+.inspection-outcome strong {
+  font-size: 14px;
+}
+.inspection-outcome p {
+  margin: 3px 0 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+.inspection-outcome > a {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+  min-height: 40px;
+  color: var(--accent);
+  white-space: nowrap;
+}
+.context-model-id {
+  display: block;
+}
+@media (max-width: 700px) {
+  .context-model-id {
+    display: block;
+  }
+  .context-model-id dd {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+  }
+  .context-model-id dd > span {
+    overflow-wrap: anywhere;
+    min-width: 0;
+  }
+}
+@media (max-width: 600px) {
+  .inspection-outcome {
+    padding: 8px 12px;
+    gap: 8px;
+    align-items: flex-start;
+  }
+  .inspection-outcome > a {
+    min-height: 44px;
+  }
+}
 .workspace-header {
   display: grid;
   grid-template-columns: auto auto minmax(0, 1fr) auto auto;

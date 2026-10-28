@@ -38,7 +38,7 @@
   --category-input: #0284c7;
   --category-transform: #6366f1;
   --category-repeat: #d97706;
-  --category-output: #059669;
+  --category-output: #047857;
   --pattern-ink: rgba(15, 23, 42, 0.05);
   --surface-raised:
     inset 0 1px 0 #ffffff, 0 1px 3px rgba(15, 23, 42, 0.04),
@@ -88,6 +88,17 @@
     rgba(56, 189, 248, 0.08) 45%,
     transparent 80%
   );
+}
+:root {
+  scrollbar-color: var(--muted) var(--background);
+}
+/* Entry and catalog use dark surfaces independently of the workspace theme. */
+:root:has(.entry-page) {
+  scrollbar-color: #475569 #040614;
+}
+/* This injected query panel can leave a fixed white drawer and latch over the app. */
+body:has(#root) :is(.chat-gpt-query-model-wrapper, .chat-gpt-query-model) {
+  display: none !important;
 }
 :root[data-theme-switching] *,
 :root[data-theme-switching] *::before,

@@ -65,6 +65,21 @@ without it. Do not replace live acceptance with a prepared-report fallback.
 a separate PyPI package. If installation fails before collection, report the
 setup failure separately from an executed test failure.
 
+## Preserve the established app data profile
+
+Before replacing a running app or changing worktrees, record its `/health`
+storage backend and `/api/v1/catalog/discovery` record count. Keep the user-facing
+runtime on that established database and storage profile. An isolated SQLite
+store is appropriate for tests, but must not replace the populated runtime at
+handover. A new checkout does not contain the user's durable catalog data.
+
+For an established Supabase installation, use `scripts/start-local.ps1 -Supabase`
+and pass the existing private profile with `-EnvFile`. That file can remain
+outside the worktree. Never copy credentials into source or commit them. After
+reconnecting, verify the catalog totals and reopen an existing saved inspection.
+When present, `.local/app-v1/ACTIVE_PROFILE.md` records the last profile path and
+launch command. This ignored handover note must contain no credentials.
+
 ## Definition of done
 A change is done only when:
 - implementation exists

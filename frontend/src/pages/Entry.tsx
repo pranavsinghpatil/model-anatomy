@@ -3,17 +3,17 @@ import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowRight,
-  ArrowUp,
   History,
   Network,
   ShieldCheck,
   Database,
 } from "lucide-react";
-import { analysisHref, api } from "../api/client";
-import { ErrorNotice, Loading, Status } from "../components/Common";
+import { analysisHref, api, ApiError } from "../api/client";
+import { ErrorNotice, Status } from "../components/Common";
 import { Button, ThemeControl } from "../components/ui";
 import { ModelAnatomyMark } from "../components/Logo";
 import { useRecent, useService } from "../state/queries";
+import { isModelValidationError } from "../state/feedback-messages";
 import { DitherBackground } from "../components/DitherBackground";
 import "./entry.css";
 
@@ -39,116 +39,22 @@ export function PageFooter() {
   return (
     <footer className="entry-footer" role="contentinfo">
       <div className="entry-footer-inner">
-        <div className="footer-top-grid">
-          {/* Column 1: Brand & Architecture Mission */}
-          <div className="footer-brand-col">
+        <div className="footer-bottom-bar">
+          <div className="footer-copyright">
             <Link
               to="/"
               className="footer-brand"
               aria-label="Model Anatomy home"
             >
-              <div className="brand-gem footer-gem" aria-hidden="true">
-                <ModelAnatomyMark size={15} />
-              </div>
               <span className="entry-brand-name">Model Anatomy</span>
-              <span className="brand-tag">STUDIO</span>
             </Link>
-            <p className="footer-mission">
-              Reconstructing trustworthy, semantic, tensor-aware architecture
-              graphs from open-weight Hugging Face models without downloading
-              weights.
-            </p>
-            <div className="footer-tech-badges">
-              <span className="tech-badge">PyTorch AST</span>
-              <span className="tech-badge">SafeTensors Stream</span>
-              <span className="tech-badge">Deterministic IR</span>
-            </div>
-          </div>
-
-          {/* Column 2: Architecture Views */}
-          <div className="footer-col">
-            <h4 className="footer-col-title">Inspection</h4>
-            <ul className="footer-nav-list">
-              <li>
-                <a href="/#blueprint">Architecture Graph</a>
-              </li>
-              <li>
-                <a href="/#blueprint">SafeTensors Headers</a>
-              </li>
-              <li>
-                <a href="/#blueprint">Parameter &amp; Weight BOM</a>
-              </li>
-              <li>
-                <a href="/#blueprint">Module AST Hierarchy</a>
-              </li>
-            </ul>
-          </div>
-
-          {/* Column 3: Model Registry */}
-          <div className="footer-col">
-            <h4 className="footer-col-title">Model Registry</h4>
-            <ul className="footer-nav-list">
-              <li>
-                <Link to="/catalog">Model Catalog</Link>
-              </li>
-              <li>
-                <Link to="/catalog">Architecture inspections</Link>
-              </li>
-              <li>
-                <Link to="/catalog">Artifact inspections</Link>
-              </li>
-              <li>
-                <Link to="/catalog">Stored revisions</Link>
-              </li>
-            </ul>
-          </div>
-
-          {/* Column 4: Evidence & Provenance */}
-          <div className="footer-col">
-            <h4 className="footer-col-title">Provenance</h4>
-            <ul className="footer-nav-list">
-              <li>
-                <Link to="/catalog">Stored models</Link>
-              </li>
-              <li>
-                <a href="/#main">Support Boundaries</a>
-              </li>
-              <li>
-                <span className="footer-static-note">
-                  Zero Weight Downloads
-                </span>
-              </li>
-              <li>
-                <span className="footer-static-note">
-                  Pinned Revision Audit
-                </span>
-              </li>
-            </ul>
-          </div>
-        </div>
-
-        {/* Footer Bottom Bar */}
-        <div className="footer-bottom-bar">
-          <div className="footer-copyright">
-            <span>&copy; {new Date().getFullYear()} Model Anatomy Studio.</span>
-            <span className="footer-sep">&middot;</span>
             <span className="footer-evidence-note">
-              Artifact-backed inspection with explicit evidence.
+              Inspection facts cite available model evidence.
             </span>
           </div>
           <div className="footer-actions">
-            <a
-              href="#main"
-              className="footer-back-to-top"
-              onClick={(e) => {
-                e.preventDefault();
-                window.scrollTo({ top: 0, behavior: "smooth" });
-              }}
-              aria-label="Back to top of page"
-            >
-              <span>Back to top</span>
-              <ArrowUp size={13} aria-hidden="true" />
-            </a>
+            <Link to="/catalog">Catalog</Link>
+            <a href="/#support">Support boundaries</a>
           </div>
         </div>
       </div>
@@ -167,24 +73,6 @@ export function EntryHeader() {
           <Brand />
           <span className="entry-header-divider" aria-hidden="true" />
           <nav className="entry-nav-links" aria-label="Sections">
-            <a
-              href={isCatalog ? "/#blueprint" : "#blueprint"}
-              className="entry-nav-link"
-            >
-              <span>Blueprint</span>
-            </a>
-            <a
-              href={isCatalog ? "/#metrics" : "#metrics"}
-              className="entry-nav-link"
-            >
-              <span>Metrics</span>
-            </a>
-            <a
-              href={isCatalog ? "/#capabilities" : "#capabilities"}
-              className="entry-nav-link"
-            >
-              <span>Capabilities</span>
-            </a>
             <Link
               to="/catalog"
               className={`entry-nav-link ${isCatalog ? "is-active" : ""}`}
@@ -197,13 +85,13 @@ export function EntryHeader() {
         <nav className="entry-header-actions" aria-label="Page controls">
           <Link className="entry-history-link" to="/#recent">
             <History size={14} />
-            <span>Your analyses</span>
+            <span>Your inspections</span>
           </Link>
           <a
             className="entry-header-cta"
             href={isCatalog ? "/#submit-title" : "#submit-title"}
           >
-            <span>Start inspection</span>
+            <span>New inspection</span>
             <ArrowRight size={13} />
           </a>
           <ThemeControl />
@@ -214,6 +102,7 @@ export function EntryHeader() {
 }
 
 export function Start() {
+  const location = useLocation();
   const active = useRef(true);
   const submissionPath = useRef(window.location.pathname);
   useEffect(() => {
@@ -226,9 +115,27 @@ export function Start() {
   const [model, setModel] = useState(
     () => new URLSearchParams(window.location.search).get("model") ?? "",
   );
+  useEffect(() => {
+    if (!["#support", "#recent", "#submit-title"].includes(location.hash))
+      return;
+    const target = document.getElementById(location.hash.slice(1));
+    if (!target) return;
+    if (target instanceof HTMLDetailsElement) target.open = true;
+    const focusTarget = target.matches("h2")
+      ? target
+      : target.querySelector<HTMLElement>("summary, h2");
+    const frame = window.requestAnimationFrame(() => {
+      target.scrollIntoView({ behavior: "instant", block: "start" });
+      if (focusTarget) {
+        if (focusTarget.tagName !== "SUMMARY") focusTarget.tabIndex = -1;
+        focusTarget.focus({ preventScroll: true });
+      }
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [location.hash]);
   const navigate = useNavigate();
   const client = useQueryClient();
-  const { health, service, available } = useService();
+  const { health, service, capability } = useService();
   const recent = useRecent();
   const jobs = [...(recent.data?.analyses ?? [])].sort(
     (a, b) => Date.parse(b.created_at) - Date.parse(a.created_at),
@@ -266,9 +173,8 @@ export function Start() {
                 <span className="hero-highlight-amber">model is built.</span>
               </h1>
               <p className="entry-lede">
-                Schematic layer flow, SafeTensors headers, parameter
-                allocations, and deterministic evidence — reconstructed live
-                without downloading model weights.
+                Explore model structure, checkpoint metadata and source evidence
+                from Hugging Face.
               </p>
             </div>
           </div>
@@ -285,24 +191,31 @@ export function Start() {
                 Hugging Face model
               </label>
               <div
-                className={`entry-live-service ${health.isPending ? "is-checking" : available ? "is-ready" : "is-unavailable"}`}
+                className={`entry-live-service ${capability === "checking" ? "is-checking" : capability === "ready" ? "is-ready" : "is-unavailable"}`}
                 role="status"
                 aria-live="polite"
               >
                 <span className="entry-live-dot" aria-hidden="true" />
                 <span>
-                  {health.isPending
-                    ? "Checking service availability"
-                    : available
-                      ? "Stored inspection service available"
-                      : "Stored inspection service unavailable"}
+                  {capability === "checking"
+                    ? "Checking inspection service"
+                    : capability === "ready"
+                      ? "New inspections available"
+                      : capability === "stored-only"
+                        ? "Saved inspections available; new runs unavailable"
+                        : "Inspection storage unavailable"}
                 </span>
               </div>
             </div>
             <form
               onSubmit={(event) => {
                 event.preventDefault();
-                if (model.trim() && available && !create.isPending)
+                if (
+                  model.trim() &&
+                  capability !== "checking" &&
+                  capability !== "unavailable" &&
+                  !create.isPending
+                )
                   create.mutate(model.trim());
               }}
             >
@@ -316,19 +229,39 @@ export function Start() {
                   autoComplete="off"
                   spellCheck={false}
                   value={model}
-                  onChange={(event) => setModel(event.target.value)}
+                  aria-invalid={Boolean(
+                    create.error && isModelValidationError(create.error),
+                  )}
+                  aria-describedby={
+                    create.error && isModelValidationError(create.error)
+                      ? "model-input-error"
+                      : "model-input-help"
+                  }
+                  onChange={(event) => {
+                    setModel(event.target.value);
+                    if (create.error) create.reset();
+                  }}
                 />
                 <Button
                   type="submit"
                   variant="primary"
-                  disabled={!available || !model.trim() || create.isPending}
+                  disabled={
+                    capability === "checking" ||
+                    capability === "unavailable" ||
+                    !model.trim() ||
+                    create.isPending
+                  }
                   aria-busy={create.isPending}
                 >
-                  {create.isPending ? "Starting…" : "Inspect model"}
+                  {create.isPending
+                    ? "Starting…"
+                    : capability === "stored-only"
+                      ? "Find saved inspection"
+                      : "Inspect model"}
                   <ArrowRight size={16} />
                 </Button>
               </div>
-              <p className="entry-field-help">
+              <p className="entry-field-help" id="model-input-help">
                 Public model repositories and pinned checkpoint file URLs. Model
                 weights are not downloaded.
               </p>
@@ -348,7 +281,10 @@ export function Start() {
                     type="button"
                     key={example.id}
                     title={example.id}
-                    onClick={() => setModel(example.id)}
+                    onClick={() => {
+                      setModel(example.id);
+                      if (create.error) create.reset();
+                    }}
                     aria-label={`Fill model field with ${example.id}`}
                   >
                     <span className="chip-name">{example.label}</span>
@@ -358,19 +294,16 @@ export function Start() {
               </div>
             </div>
 
-            {!available && !health.isPending && (
+            {capability === "stored-only" && (
               <div
                 className="entry-service entry-service-unavailable"
                 role="status"
               >
                 <div>
-                  <strong>Stored inspections are unavailable</strong>
+                  <strong>Saved reports remain available</strong>
                   <p>
-                    {service?.reason ??
-                      health.error?.message ??
-                      "The catalog database or artifact storage is not available."}{" "}
-                    New submissions can still match a previously stored
-                    inspection.
+                    New inspections are paused while the worker is offline. A
+                    matching saved inspection can still open.
                   </p>
                 </div>
                 <Button type="button" onClick={() => void health.refetch()}>
@@ -378,7 +311,147 @@ export function Start() {
                 </Button>
               </div>
             )}
-            {create.error && <ErrorNotice error={create.error} />}
+            {capability === "unavailable" && !health.isPending && (
+              <div
+                className="entry-service entry-service-unavailable"
+                role="status"
+              >
+                <div>
+                  <strong>Inspection service unavailable</strong>
+                  <p>
+                    {health.error
+                      ? "We cannot reach the inspection service. Check your connection and try again."
+                      : "The report database or storage is temporarily unavailable. Try checking again."}
+                  </p>
+                  {service?.reason && (
+                    <details>
+                      <summary>Technical details</summary>
+                      <code>{service.reason}</code>
+                    </details>
+                  )}
+                </div>
+                <Button type="button" onClick={() => void health.refetch()}>
+                  Check again
+                </Button>
+              </div>
+            )}
+            {create.error && (
+              <ErrorNotice
+                error={create.error}
+                context="submit"
+                id={
+                  isModelValidationError(create.error)
+                    ? "model-input-error"
+                    : undefined
+                }
+                actions={
+                  create.error instanceof ApiError &&
+                  create.error.code === "worker_unavailable" ? (
+                    <Link className="button" to="/catalog">
+                      Browse saved inspections
+                    </Link>
+                  ) : (
+                    <Link className="button" to="/#recent">
+                      Your inspections
+                    </Link>
+                  )
+                }
+                retry={
+                  !isModelValidationError(create.error) &&
+                  !(
+                    create.error instanceof ApiError &&
+                    create.error.code === "network_error"
+                  ) &&
+                  capability !== "unavailable" &&
+                  capability !== "checking"
+                    ? () => create.mutate(model.trim())
+                    : undefined
+                }
+              />
+            )}
+          </section>
+
+          <section
+            className="entry-recent"
+            id="recent"
+            aria-labelledby="recent-title"
+          >
+            <div className="entry-section-heading">
+              <div>
+                <h2 id="recent-title">Your inspections</h2>
+              </div>
+              <span className="entry-recent-count">
+                {`${jobs.length} ${jobs.length === 1 ? "inspection" : "inspections"}`}
+              </span>
+            </div>
+            <p className="entry-recent-copy">
+              {jobs.length > 0
+                ? "Open a recent inspection report from this browser. Saved reports can expire; each report shows its availability."
+                : "No inspections yet. Enter a public model above to begin."}
+            </p>
+            {jobs.length > 0 && (
+              <div className="entry-table-wrap">
+                <table className="entry-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Model</th>
+                      <th scope="col">Revision</th>
+                      <th scope="col">Submitted</th>
+                      <th scope="col">Status</th>
+                      <th scope="col">
+                        <span className="sr-only">Action</span>
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {jobs.map((job) => (
+                      <tr key={job.id}>
+                        <td>
+                          <Link
+                            className="entry-model-link"
+                            to={analysisHref(job)}
+                          >
+                            <span>
+                              <strong>{job.model_id}</strong>
+                              <small>
+                                {job.architecture ?? "Inspection in progress"}
+                                {job.expires_at &&
+                                  ` · Available until ${new Date(job.expires_at).toLocaleDateString()}`}
+                              </small>
+                            </span>
+                          </Link>
+                        </td>
+                        <td className="entry-revision">
+                          {job.revision ? job.revision.slice(0, 12) : "Pending"}
+                        </td>
+                        <td className="entry-time">
+                          <time dateTime={job.created_at}>
+                            {new Date(job.created_at).toLocaleString([], {
+                              month: "short",
+                              day: "numeric",
+                              hour: "numeric",
+                              minute: "2-digit",
+                            })}
+                          </time>
+                        </td>
+                        <td>
+                          <Status status={job.status} />
+                        </td>
+                        <td>
+                          <Link
+                            className="entry-continue"
+                            to={analysisHref(job)}
+                            aria-label={`Open inspection of ${job.model_id}`}
+                          >
+                            Open report <ArrowRight size={14} />
+                          </Link>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </section>
 
           {/* Optimized Architectural Telemetry Ribbon */}
@@ -504,46 +577,11 @@ export function Start() {
           </div>
 
           {/* Architecture Catalog Banner */}
-          <section
-            id="catalog"
-            className="entry-catalog-banner"
-            aria-labelledby="catalog-heading"
-          >
-            <div className="catalog-banner-glow" aria-hidden="true" />
-            <div className="catalog-banner-content">
-              <div className="catalog-banner-info">
-                <div className="catalog-pill-badge">
-                  <span className="entry-badge-dot" />
-                  <span>Architecture Registry</span>
-                  <span className="catalog-count-tag">Saved inspections</span>
-                </div>
-                <h2 id="catalog-heading" className="catalog-banner-title">
-                  Explore stored model inspections
-                </h2>
-                <p className="catalog-banner-desc">
-                  Browse real inspection records and open their saved
-                  architecture or artifact reports.
-                </p>
-                <div className="catalog-banner-tags">
-                  <span className="cat-chip">Saved model IDs</span>
-                  <span className="cat-chip">Stored dimensions</span>
-                  <span className="cat-chip">Inspection status</span>
-                </div>
-              </div>
-              <div className="catalog-banner-actions">
-                <Link to="/catalog" className="catalog-cta-btn">
-                  <span>Browse Full Catalog</span>
-                  <ArrowRight size={15} />
-                </Link>
-                <span className="catalog-cta-sub">Browse database records</span>
-              </div>
-            </div>
-          </section>
         </section>
 
-        <details className="entry-boundaries">
+        <details className="entry-boundaries" id="support">
           <summary>
-            <span>What can this inspect?</span>
+            <span>Support boundaries</span>
             <span className="entry-boundary-hint">
               Support and safety boundaries
             </span>
@@ -562,87 +600,6 @@ export function Start() {
             </p>
           </div>
         </details>
-
-        <section
-          className="entry-recent"
-          id="recent"
-          aria-labelledby="recent-title"
-        >
-          <div className="entry-section-heading">
-            <div>
-              <h2 id="recent-title">Recent analyses</h2>
-            </div>
-            <span className="entry-recent-count">
-              {`${jobs.length} ${jobs.length === 1 ? "analysis" : "analyses"}`}
-            </span>
-          </div>
-          <p className="entry-recent-copy">
-            {jobs.length > 0
-              ? "Your submitted analyses. Select one to continue."
-              : "No analyses in this session yet. Submit a public model above. Results stay on this browser."}
-          </p>
-          {jobs.length > 0 && (
-            <div className="entry-table-wrap">
-              <table className="entry-table">
-                <thead>
-                  <tr>
-                    <th scope="col">Model</th>
-                    <th scope="col">Revision</th>
-                    <th scope="col">Submitted</th>
-                    <th scope="col">Status</th>
-                    <th scope="col">
-                      <span className="sr-only">Action</span>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {jobs.map((job) => (
-                    <tr key={job.id}>
-                      <td>
-                        <Link
-                          className="entry-model-link"
-                          to={analysisHref(job)}
-                        >
-                          <span>
-                            <strong>{job.model_id}</strong>
-                            <small>
-                              {job.architecture ?? "Architecture pending"}
-                            </small>
-                          </span>
-                        </Link>
-                      </td>
-                      <td className="entry-revision">
-                        {job.revision ? job.revision.slice(0, 12) : "Pending"}
-                      </td>
-                      <td className="entry-time">
-                        <time dateTime={job.created_at}>
-                          {new Date(job.created_at).toLocaleString([], {
-                            month: "short",
-                            day: "numeric",
-                            hour: "numeric",
-                            minute: "2-digit",
-                          })}
-                        </time>
-                      </td>
-                      <td>
-                        <Status status={job.status} />
-                      </td>
-                      <td>
-                        <Link
-                          className="entry-continue"
-                          to={analysisHref(job)}
-                          aria-label={`Continue analysis of ${job.model_id}`}
-                        >
-                          Continue <ArrowRight size={14} />
-                        </Link>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </section>
       </main>
       <PageFooter />
     </div>

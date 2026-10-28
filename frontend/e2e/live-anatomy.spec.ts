@@ -235,7 +235,7 @@ test("live SmolLM2-135M supports graph, anatomy, lazy children, evidence, and ex
     path: evidencePath,
     contentType: "application/json",
   });
-  await page.getByLabel("Export analysis", { exact: true }).click();
+  await page.getByLabel("Export inspection", { exact: true }).click();
   const downloadPromise = page.waitForEvent("download");
   await page
     .getByRole("menuitem", { name: "Report JSON", exact: true })

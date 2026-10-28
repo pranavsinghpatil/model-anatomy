@@ -4,10 +4,9 @@ from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
-
-from model_anatomy.api.app import create_app
 from test_service_views import contract_report
 
+from model_anatomy.api.app import create_app
 from model_anatomy.api.settings import Settings
 from model_anatomy.service.errors import ServiceError
 from model_anatomy.service.jobs import JobService, model_reference, request_selector

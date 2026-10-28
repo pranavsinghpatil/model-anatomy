@@ -513,3 +513,34 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+.summary-technical-details {
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.summary-technical-details summary,
+.report-page code,
+.report-page .font-mono {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+.spec-val {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+.report-page .report-checks dd {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+@media (max-width: 600px) {
+  .audit-stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .audit-mini-stat:last-child {
+    grid-column: 1 / -1;
+  }
+}

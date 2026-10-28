@@ -1364,3 +1364,31 @@ guard checks the engine extras, known affected Torch versions, the Transformers
 source contract, all platform lock entries, and root requirement metadata.
 It fails against the previous floor and passes after the correction. This
 addresses the reviewed advisories without claiming future vulnerability coverage.
+
+
+## D-081 - Guide inspections with honest, contextual feedback
+
+### 2026-10-27 - frontend journey polish
+
+Use local confirmation for clipboard actions, persistent contextual errors for
+failed actions, and bounded accessible notifications for prepared downloads and
+observed background inspection outcomes. Download preparation cannot establish
+that a browser saved a file. Historical results and an already-open completion
+do not trigger completion notices.
+
+Distinguish available inspection service, worker-offline saved-report lookup,
+and unavailable database/storage. Keep uncertain submission retries explicit
+and preserve user inputs. Shorten guidance, disclose technical metadata on
+demand, and preserve every architecture completion/evidence boundary.
+
+Deliver related entry, catalog, progress, result, question and mobile metadata
+polish as one reviewed increment. The journey acceptance checklist, validation
+and clearly labeled fixture/real-model screenshots are in
+[UX journey polish](UX_JOURNEY_POLISH.md).
+
+The initial PR checks also exposed pre-existing verification defects. Repair
+missing test imports/reference fields, the optional live-test component selector,
+and the container smoke helper's default URL (port 8001, as declared by CI).
+Limit Python production changes to mechanical import ordering; keep extraction,
+API and quota behavior unchanged. Record the backend and CI verification in the
+same journey evidence document.

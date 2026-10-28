@@ -264,6 +264,7 @@ def test_native_family_reconstructs_with_trustworthy_graph_and_api_views(
         SimpleNamespace(
             id=f"fixture-{config['model_type']}",
             model_id=model_id,
+            model_input=model_id,
             revision=REVISION,
             status=summary["result_status"],
             stage=summary["result_status"],
@@ -276,6 +277,7 @@ def test_native_family_reconstructs_with_trustworthy_graph_and_api_views(
         ),
     )
     parsed_detail = AnalysisDetail.model_validate(detail)
+    assert parsed_detail.model_input == model_id
     assert parsed_detail.architecture == architecture
     assert parsed_detail.stage == parsed_detail.status
     assert parsed_detail.parameter_count == unique_parameters

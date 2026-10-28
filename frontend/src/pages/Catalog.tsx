@@ -42,7 +42,10 @@ export default function Catalog() {
   const [source, setSource] = useState("all");
   const [page, setPage] = useState(0);
   const [openingId, setOpeningId] = useState<string | null>(null);
-  const [actionError, setActionError] = useState("");
+  const [actionError, setActionError] = useState<Error | null>(null);
+  const [actionErrorRecord, setActionErrorRecord] = useState<string | null>(
+    null,
+  );
 
   const catalog = useQuery({
     queryKey: ["catalog", "discovery"],
@@ -63,9 +66,9 @@ export default function Catalog() {
     },
     onError: (error) =>
       setActionError(
-        error instanceof ApiError
-          ? error.message
-          : "Could not open the saved inspection.",
+        error instanceof Error
+          ? error
+          : new Error("Could not open the saved inspection."),
       ),
   });
 
@@ -125,15 +128,17 @@ export default function Catalog() {
   const startInspection = (item: DiscoveryCatalogResult) => {
     navigate(`/app?model=${encodeURIComponent(hfUrl(item))}`);
   };
-  const openSavedReport = (reportId: string) => {
-    setActionError("");
+  const openSavedReport = (reportId: string, item: DiscoveryCatalogResult) => {
+    setActionErrorRecord(recordKey(item));
+    setActionError(null);
     setOpeningId(reportId);
     inspect.mutate(reportId, { onSettled: () => setOpeningId(null) });
   };
   const openRecord = (item: DiscoveryCatalogResult) => {
-    setActionError("");
+    setActionError(null);
+    setActionErrorRecord(recordKey(item));
     if (item.stored_report_id) {
-      openSavedReport(item.stored_report_id);
+      openSavedReport(item.stored_report_id, item);
     } else {
       startInspection(item);
     }
@@ -209,7 +214,7 @@ export default function Catalog() {
             </button>
           </div>
 
-          {catalog.data && (
+          {catalog.data && catalog.data.total > 0 && (
             <div
               className="benchmark-summary"
               aria-label="Global catalog record totals"
@@ -264,14 +269,9 @@ export default function Catalog() {
             );
           })}
 
-          {actionError && (
-            <p className="benchmark-action-error" role="alert">
-              {actionError}
-            </p>
-          )}
           {catalog.isError && catalog.data && (
             <p className="catalog-refresh-error" role="status">
-              Refresh failed. Showing the last loaded catalog. {errorText}
+              Catalog refresh failed. Showing the last loaded results.
               <button type="button" onClick={() => void catalog.refetch()}>
                 Retry
               </button>
@@ -296,7 +296,20 @@ export default function Catalog() {
             </section>
           )}
 
-          {catalog.data && (
+          {catalog.data?.total === 0 && (
+            <div className="benchmark-state catalog-no-evidence">
+              <h3>No model evidence is available yet</h3>
+              <p>
+                Start an inspection to add a report and its verified artifact
+                facts to this catalog.
+              </p>
+              <Link to="/#submit-title" className="catalog-empty-btn">
+                <span>Inspect a model</span>
+                <ArrowRight size={14} />
+              </Link>
+            </div>
+          )}
+          {catalog.data && catalog.data.total > 0 && (
             <>
               <div
                 className="benchmark-filters"
@@ -419,20 +432,23 @@ export default function Catalog() {
 
               {visible.length === 0 ? (
                 <div className="benchmark-state">
-                  <h3>
-                    {catalog.data.total === 0
-                      ? "No model evidence is available yet"
-                      : "No records match these filters"}
-                  </h3>
+                  <h3>No records match these filters</h3>
                   <p>
-                    {catalog.data.total === 0
-                      ? "Inspect a Hugging Face model to add its verified artifact facts."
-                      : "Change the search or filters to view catalog records."}
+                    Clear the search and filters to see all catalog records.
                   </p>
-                  <Link to="/#submit-title" className="catalog-empty-btn">
-                    <span>Inspect a model</span>
-                    <ArrowRight size={14} />
-                  </Link>
+                  <button
+                    type="button"
+                    className="catalog-empty-btn"
+                    onClick={() => {
+                      setQuery("");
+                      setCategory("all");
+                      setOutcome("all");
+                      setScope("all");
+                      setSource("all");
+                    }}
+                  >
+                    Clear filters
+                  </button>
                 </div>
               ) : (
                 <div className="catalog-cards-grid benchmark-grid">
@@ -596,7 +612,7 @@ export default function Catalog() {
                                 ? `Outside inspection scope for ${item.model_id}`
                                 : item.stored_report_id
                                   ? openingId === item.stored_report_id
-                                    ? `Opening saved report for ${item.model_id}`
+                                    ? `Opening saved inspection for ${item.model_id}`
                                     : `Open saved inspection for ${item.model_id}`
                                   : `${isExternal ? "Inspect with current engine" : item.explicit_artifact && item.artifact_verified === false ? "Inspect pinned repository" : successful(item) ? "Inspect this revision" : "Retry inspection"} for ${item.model_id}`
                             }
@@ -607,9 +623,9 @@ export default function Catalog() {
                                 ? "Outside inspection scope"
                                 : openingId === item.stored_report_id &&
                                     item.stored_report_id
-                                  ? "Opening saved report…"
+                                  ? "Opening saved inspection…"
                                   : item.stored_report_id
-                                    ? "Open saved report"
+                                    ? "Open inspection"
                                     : isExternal
                                       ? "Inspect with current engine"
                                       : successful(item)
@@ -621,6 +637,13 @@ export default function Catalog() {
                             </span>
                             <ArrowRight size={14} />
                           </button>
+                          {actionError &&
+                            actionErrorRecord === recordKey(item) && (
+                              <ErrorNotice
+                                error={actionError}
+                                context="catalog"
+                              />
+                            )}
                           {item.stored_report_id && !successful(item) && (
                             <button
                               type="button"
@@ -867,6 +890,7 @@ export default function Catalog() {
                                           onClick={() =>
                                             openSavedReport(
                                               observation.stored_report_id!,
+                                              item,
                                             )
                                           }
                                         >

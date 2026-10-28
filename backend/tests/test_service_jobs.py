@@ -1,9 +1,9 @@
 import json
 from concurrent.futures import ThreadPoolExecutor
+from threading import Barrier
 
 import pytest
 from sqlalchemy import select
-
 from test_service_views import contract_report
 
 from model_anatomy.api.settings import Settings

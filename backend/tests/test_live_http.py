@@ -170,6 +170,7 @@ def test_real_model_submission_graph_tensors_exports_and_cache(
     repeated = next(node for node in graph["nodes"] if node["child_graph_id"])
     assert client.get(f"{path}/graphs/{repeated['child_graph_id']}").json()["nodes"]
     index = client.get(f"{path}/graph-index").json()
+    component_kind = preferred_component_kind or "embedding"
     component = next(node for node in index["nodes"] if node["kind"] == component_kind)
     node = client.get(f"{path}/nodes/{component['graph_id']}/{component['id']}").json()
     assert node["tensor_count"] > 0 and node["evidence"]

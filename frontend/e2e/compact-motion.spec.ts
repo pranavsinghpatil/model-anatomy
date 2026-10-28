@@ -9,7 +9,7 @@ test("entry keeps the form visible and recent analysis reachable at 90 percent z
   await mockService(page);
   await page.goto("/app");
   await expect(
-    page.getByRole("heading", { name: "Recent analyses" }),
+    page.getByRole("heading", { name: "Your inspections" }),
   ).toBeVisible();
   const geometry = await page.evaluate(() => {
     const input = document
