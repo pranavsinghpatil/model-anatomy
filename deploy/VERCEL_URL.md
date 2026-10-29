@@ -9,11 +9,16 @@ Once forwarding is configured, the Sandbox still serves the frontend, FastAPI,
 worker, and SQLite data. This entry point does not automatically resume a stopped
 Sandbox or extend its session duration.
 
-## 1. Prepare a regular Production Deployment
+## 1. Prepare a regular Production Deployment without Git integration
 
-In the existing Project's dashboard:
+The Project can remain under your own Vercel account even when a teammate owns
+the GitHub repository. For a personal GitHub repository, collaborators cannot
+connect it to a Vercel Project through Git integration. Repository read/write
+access alone does not grant that permission. This workflow instead uploads
+the local branch's committed frontend through Vercel's file deployment API.
 
-1. Open `Settings > Build and Deployment` and configure:
+1. In the existing Project's dashboard, open `Settings > Build and Deployment`
+   and keep these settings:
 
    | Setting | Value |
    | --- | --- |
@@ -22,18 +27,41 @@ In the existing Project's dashboard:
    | Install Command | `npm ci` |
    | Build Command | `npm run build` |
    | Output Directory | `dist` |
+   | Development Command | Automatic; Override off |
 
-2. Open `Settings > Git` and connect this repository. The GitHub account used
-   for browser authorization needs repository access. Your Vercel and GitHub
-   usernames do not need to match. This workflow does not use CLI login.
-3. Open `Settings > Environments > Production > Branch Tracking`, enter
-   `feat/deploy`, and save.
-4. Open `Deployments > Create Deployment` and select or enter `feat/deploy`.
-   If the interface requests a Git reference, you can also enter the repository's
-   `https://github.com/<owner>/<repo>/tree/feat/deploy` URL.
-5. Wait for the branch deployment to display `Ready` and `Production`. If it is
-   marked Preview, check Branch Tracking first. You can also select
-   `Promote to Production` from that deployment's menu.
+2. Leave `Settings > Git` unconnected. No Production Branch tracking setting
+   is needed for this file upload workflow; the script explicitly selects
+   the local `feat/deploy` branch and the `production` target.
+3. From the repository root, check the upload without requesting a Token or
+   contacting Vercel:
+
+   ```bash
+   python3 -B deploy/04_create_production_entrypoint.py --dry-run
+   ```
+
+4. Check the printed Project ID, Team ID, branch, commit, and build settings.
+   Then create the deployment:
+
+   ```bash
+   python3 -B deploy/04_create_production_entrypoint.py
+   ```
+
+5. Enter a Vercel Access Token generated under the account that owns the existing
+   Project. The Token is entered locally and is not saved. The helper reads
+   `deploy/sandbox-state.json`, checks the selected Project and Team, uploads the
+   committed frontend files, and waits for `READY`. It does not replace an
+   existing or currently building Production deployment.
+6. Open the Project's `Deployments` page and confirm that the deployment is
+   `Ready` and `Production`. If a build fails, inspect its build logs. If polling
+   times out or the connection is interrupted, check the dashboard and
+   `deploy/production-state.json` before retrying.
+
+Your Vercel login email and GitHub email may differ. In this workflow the
+Vercel Token, Project ID, and Team ID determine the destination. The request
+does not attach `gitSource` or Git author metadata, so it does not rely on
+GitHub account linking or commit-author recognition. The actual source branch
+and commit are recorded separately as deployment provenance. This does not
+rewrite commits or change your Git identity.
 
 This stage establishes the regular deployment and domain. The API is not yet
 forwarded to the Sandbox, so this is not a complete app acceptance check.
@@ -42,8 +70,10 @@ The existing `feat/deploy` source committed to GitHub can build the frontend.
 The local Step 3 script uploads its supervisor independently through the SDK;
 the deployment helpers do not need to be uploaded to GitHub first.
 
-References: [Vercel Git deployment and branch settings](https://vercel.com/docs/git),
-[build configuration](https://vercel.com/docs/builds).
+References: [GitHub repository import permissions](https://vercel.com/docs/git/vercel-for-github#missing-git-repository),
+[file deployment API](https://vercel.com/docs/rest-api/deployments/create-a-new-deployment),
+[build configuration](https://vercel.com/docs/builds/configure-a-build),
+[account authentication and email settings](https://vercel.com/docs/accounts).
 
 ## 2. Add a readable free domain
 
@@ -87,21 +117,29 @@ modify any routing rules in the Vercel dashboard.
 
 1. Return to the regular Project and open `CDN > Routing Rules > Add Rule`.
 2. Choose a rule name, such as `Sandbox demo`.
-3. Select `Path pattern` matching and enter `/:path*`.
+3. Select `Regex` matching and enter `^/(.*)$`.
 4. Select the `Rewrite` action. Use the URL printed by the current Step 3 run
-   followed by `/:path*` as the destination, for example:
+   followed by `/$1` as the destination, for example:
 
    ```text
-   https://sb-3b1er9u5fw5e.vercel.run/:path*
+   https://sb-3b1er9u5fw5e.vercel.run/$1
    ```
 
 5. Cover all HTTP methods. Do not forward only `GET`; analysis submissions
    use `POST`.
 6. Click `Save`. Use `Test Rules` to check `/`, `/health`, and `/api/v1/analyses`.
+   Confirm that `/health` resolves to the Sandbox's exact `/health` path and
+   `/assets/example.js` resolves to its exact `/assets/example.js` path. The
+   destination must not contain a literal path placeholder or an extra path suffix.
 7. Click `Publish` to apply the rule.
 
 A Rewrite keeps the new `vercel.app` address visible in the browser.
 Reference: [Project-Level Routing Rules](https://vercel.com/docs/routing/project-routing-rules).
+
+The explicit regex capture avoids ambiguous wildcard interpolation in the CDN
+editor. An HTTP 200 for `/` alone does not verify this rule: a broken rewrite
+can still return the SPA HTML while JavaScript and CSS files return 404.
+Verify the HTML's actual asset URLs and `/health` after publishing.
 
 ## 5. Verify the complete app
 

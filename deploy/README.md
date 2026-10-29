@@ -10,6 +10,7 @@ deploy/
 |-- 01_vercel_create_project.py       # Step 1: create a Vercel Project
 |-- 02_prepare_sandbox.py             # Step 2: upload committed source and prepare the environment
 |-- 03_start_sandbox_demo.py          # Step 3: start or resume the demo
+|-- 04_create_production_entrypoint.py # Step 4: upload the committed frontend for a production URL
 `-- support/
     `-- sandbox_demo_runtime.py       # Remote process supervisor uploaded by Step 3
 ```
@@ -69,6 +70,34 @@ Runtime data, logs, temporary files, and caches remain under
 `<app_dir>/.tmp/vercel-demo/` inside the Sandbox. The local `uv` cache remains
 under the repository's `.tmp/` directory. These are generated files, not
 deployment source files that need to be moved manually.
+
+## Step 4: create a Production entry point
+
+If the existing Project displays `No Production Deployment`, create its first
+Production deployment from local committed files:
+
+```bash
+python3 -B deploy/04_create_production_entrypoint.py --dry-run
+python3 -B deploy/04_create_production_entrypoint.py
+```
+
+The script reads only the committed `frontend/` tree from the local `feat/deploy`
+branch, even if a different branch is checked out or the working tree has changes.
+It uses `deploy/sandbox-state.json` for the existing Project and Team IDs.
+Enter a Token belonging to the Vercel account that owns that Project.
+No GitHub repository connection, GitHub Token, or Vercel CLI login is required.
+The request contains file contents and explicit source branch/commit provenance;
+it does not contain `gitSource` or Git author metadata.
+
+It configures the regular frontend build as Vite with `frontend` as the Root
+Directory, `npm ci` as the Install Command, `npm run build` as the Build Command,
+and `dist` as the Output Directory. Development Command remains automatic.
+It refuses to replace an existing or currently building Production deployment.
+Results are saved to the ignored `deploy/production-state.json`, without the Token.
+
+This step establishes a Production frontend deployment and domain. Complete the
+Sandbox Rewrite configuration before treating the new domain as the full app.
+Run offline helper tests with `python3 -B -m unittest discover -s deploy/tests -v`.
 
 ## A readable URL
 
