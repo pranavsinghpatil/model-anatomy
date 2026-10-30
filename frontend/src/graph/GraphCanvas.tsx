@@ -26,13 +26,15 @@ import {
 import type { ArchitectureGraph, GraphEdge, GraphNode } from "../api/contract";
 import { count, scopedNodeId } from "../format";
 import { ModelNode } from "./AnatomyNode";
-import { nodeTitle } from "./presentation";
+import { edgeLabel, nodeTitle } from "./presentation";
+import { RoutedEdge } from "./RoutedEdge";
 import type { GraphLayoutPreference } from "../state/workspace";
 import { ErrorNotice, IconButton, Loading } from "../components/Common";
 import { layoutGraph, type AnatomyEdge, type AnatomyNode } from "./layout";
 import "./graph.css";
 
 const nodeTypes = { anatomy: ModelNode };
+const edgeTypes = { routed: RoutedEdge };
 
 function readableAnchor(nodes: AnatomyNode[], selectedNode?: string | null) {
   return (
@@ -108,18 +110,27 @@ function Canvas({
     };
   }, []);
   const canvasHeight = useStore((s) => s.height);
-  const lastSelection = useRef({ node: selectedNode, width: 0 });
+  const lastSelection = useRef({
+    node: selectedNode,
+    edge: selectedEdge,
+    width: 0,
+  });
   const fitAfterLayout = useRef(false);
   useEffect(() => {
     const previous = lastSelection.current;
-    lastSelection.current = { node: selectedNode, width: canvasWidth };
+    lastSelection.current = {
+      node: selectedNode,
+      edge: selectedEdge,
+      width: canvasWidth,
+    };
     if (
       previous.node === selectedNode &&
+      previous.edge === selectedEdge &&
       (!previous.width || previous.width === canvasWidth)
     )
       return;
     if (
-      !selectedNode ||
+      (!selectedNode && !selectedEdge) ||
       !layout ||
       !canvasWidth ||
       !canvasHeight ||
@@ -128,6 +139,21 @@ function Canvas({
       !canvasElement.clientHeight
     )
       return;
+    if (selectedEdge) {
+      const endpoints = [selectedEdge.source, selectedEdge.target]
+        .map((id) => flow.getNode(scopedNodeId(graph.id, id)))
+        .filter((node): node is AnatomyNode => Boolean(node));
+      if (endpoints.length !== 2) return;
+      void flow.fitView({
+        nodes: endpoints,
+        padding: 0.2,
+        minZoom: 0.08,
+        maxZoom: 0.85,
+        duration: reduceMotion || previous.width !== canvasWidth ? 0 : 150,
+      });
+      return;
+    }
+    if (!selectedNode) return;
     const node = flow.getNode(scopedNodeId(graph.id, selectedNode));
     if (!node) return;
     const current = flow.getViewport();
@@ -152,6 +178,7 @@ function Canvas({
       );
   }, [
     selectedNode,
+    selectedEdge,
     layout,
     canvasWidth,
     canvasHeight,
@@ -204,15 +231,37 @@ function Canvas({
       !initializedViewport.current &&
       savedViewport.current &&
       !fitAfterLayout.current;
-    const readable =
-      !restore && !viewport && !fitAfterLayout.current && canvasHeight < 500;
+    // A full overview can make the node facts too small to read. Open new
+    // inspections at a useful scale; Fit remains available for the overview.
+    const readable = !restore && (!viewport || fitAfterLayout.current);
     fitAfterLayout.current = false;
     let active = true;
     const frame = requestAnimationFrame(async () => {
       if (!layout.nodes.length) return;
       if (restore)
         await flow.setViewport(savedViewport.current!, { duration: 0 });
-      else if (readable)
+      else if (selectedEdge) {
+        const endpoints = [selectedEdge.source, selectedEdge.target]
+          .map((id) =>
+            layout.nodes.find((node) => node.data.original.id === id),
+          )
+          .filter((node): node is AnatomyNode => Boolean(node));
+        if (endpoints.length === 2)
+          await flow.fitView({
+            nodes: endpoints,
+            padding: 0.2,
+            minZoom: 0.08,
+            maxZoom: 0.85,
+            duration: 0,
+          });
+        else
+          await flow.fitView({
+            padding: 0.12,
+            minZoom: 0.08,
+            maxZoom: 1,
+            duration: 0,
+          });
+      } else if (readable)
         await flow.fitView({
           nodes: [readableAnchor(layout.nodes, selectedNode)],
           padding: 0.18,
@@ -247,8 +296,11 @@ function Canvas({
     canvasWidth,
     canvasHeight,
     selectedNode,
+    selectedEdge,
   ]);
   const connected = useMemo(() => {
+    if (selectedEdge)
+      return new Set([selectedEdge.source, selectedEdge.target]);
     if (!selectedNode) return new Set<string>();
     const ids = new Set([selectedNode]);
     for (const edge of graph.edges) {
@@ -256,12 +308,12 @@ function Canvas({
       if (edge.target === selectedNode) ids.add(edge.source);
     }
     return ids;
-  }, [graph.edges, selectedNode]);
+  }, [graph.edges, selectedNode, selectedEdge]);
   const nodes = useMemo(
     () =>
       layout?.nodes.map((node) => ({
         ...node,
-        selected: node.data.original.id === selectedNode,
+        selected: !selectedEdge && node.data.original.id === selectedNode,
         data: {
           ...node.data,
           openGraph: open,
@@ -274,7 +326,7 @@ function Canvas({
           ),
         },
       })) ?? [],
-    [layout, selectedNode, open, search, neighborhood, connected],
+    [layout, selectedNode, selectedEdge, open, search, neighborhood, connected],
   );
   const matches = graph.nodes.filter((node) =>
     `${node.label} ${node.module_path ?? ""}`
@@ -286,17 +338,34 @@ function Canvas({
       layout?.edges.map((edge) => ({
         ...edge,
         selected: edge.data?.original === selectedEdge,
+        label: edge.data?.original
+          ? edgeLabel(
+              edge.data.original,
+              edge.data.original === selectedEdge || connectionLabels,
+            )
+          : edge.label,
         style: {
           ...edge.style,
-          opacity:
-            (neighborhood || selectedNode) &&
-            edge.source !== scopedNodeId(graph.id, selectedNode ?? "") &&
-            edge.target !== scopedNodeId(graph.id, selectedNode ?? "")
+          opacity: selectedEdge
+            ? edge.data?.original === selectedEdge
+              ? 1
+              : 0.14
+            : (neighborhood || selectedNode) &&
+                edge.source !== scopedNodeId(graph.id, selectedNode ?? "") &&
+                edge.target !== scopedNodeId(graph.id, selectedNode ?? "")
               ? 0.25
               : 1,
+          strokeWidth: edge.data?.original === selectedEdge ? 2.6 : 1.5,
         },
       })) ?? [],
-    [layout, selectedEdge, neighborhood, graph.id, selectedNode],
+    [
+      layout,
+      selectedEdge,
+      neighborhood,
+      graph.id,
+      selectedNode,
+      connectionLabels,
+    ],
   );
   if (error)
     return (
@@ -376,6 +445,7 @@ function Canvas({
           if (Number.isFinite(nextViewport.zoom)) setZoom(nextViewport.zoom);
         }}
         nodeTypes={nodeTypes}
+        edgeTypes={edgeTypes}
         onNodeClick={(_, node) => select(node.data.original)}
         onEdgeClick={(_, edge) => {
           if (edge.data) selectEdge?.(edge.data.original);
@@ -510,16 +580,35 @@ function Canvas({
             className="layout-direction"
             type="button"
             aria-label="Readable view"
-            title="Focus the selected component at a readable scale"
-            onClick={() =>
+            title={
+              selectedEdge
+                ? "Focus the selected connection at a readable scale"
+                : "Focus the selected component at a readable scale"
+            }
+            onClick={() => {
+              if (selectedEdge) {
+                const endpoints = [selectedEdge.source, selectedEdge.target]
+                  .map((id) => flow.getNode(scopedNodeId(graph.id, id)))
+                  .filter((node): node is AnatomyNode => Boolean(node));
+                if (endpoints.length === 2) {
+                  void flow.fitView({
+                    nodes: endpoints,
+                    padding: 0.2,
+                    minZoom: 0.08,
+                    maxZoom: 1,
+                    duration: reduceMotion ? 0 : 200,
+                  });
+                  return;
+                }
+              }
               void flow.fitView({
                 nodes: [readableAnchor(layout.nodes, selectedNode)],
                 padding: 0.2,
                 minZoom: 0.85,
                 maxZoom: 1,
                 duration: reduceMotion ? 0 : 200,
-              })
-            }
+              });
+            }}
           >
             <ScanEye size={16} />
             <span>Readable</span>

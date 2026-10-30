@@ -12,10 +12,16 @@ import {
   MoveRight,
   CircleDot,
 } from "lucide-react";
-import type { AnatomyNode as NodeType } from "./layout";
+import type { AnatomyNode as NodeType, GraphPort } from "./layout";
 import { count, shape } from "../format";
 import "./anatomy-node.css";
 import { nodeCategory, nodeSize, nodeTitle } from "./presentation";
+
+function portStyle(port: GraphPort, direction: "DOWN" | "RIGHT") {
+  return direction === "RIGHT"
+    ? { top: `${port.position}%` }
+    : { left: `${port.position}%` };
+}
 
 const categoryIcons = {
   boundary: CircleDot,
@@ -50,10 +56,17 @@ export function ModelNode({ data, selected }: NodeProps<NodeType>) {
       data-kind={node.kind}
       style={{ width: size.width, height: size.height }}
     >
-      <Handle
-        type="target"
-        position={data.direction === "RIGHT" ? Position.Left : Position.Top}
-      />
+      {data.targetPorts.map((port) => (
+        <Handle
+          key={port.id}
+          id={port.id}
+          type="target"
+          position={data.direction === "RIGHT" ? Position.Left : Position.Top}
+          className="graph-port"
+          style={portStyle(port, data.direction)}
+          title={`Reported input port: ${port.label}`}
+        />
+      ))}
       <div className="anatomy-node-body">
         <div className="anatomy-node-icon" aria-hidden="true">
           <Icon size={boundary ? 19 : 21} strokeWidth={1.7} />
@@ -162,10 +175,19 @@ export function ModelNode({ data, selected }: NodeProps<NodeType>) {
           <ChevronRight size={17} />
         </button>
       )}
-      <Handle
-        type="source"
-        position={data.direction === "RIGHT" ? Position.Right : Position.Bottom}
-      />
+      {data.sourcePorts.map((port) => (
+        <Handle
+          key={port.id}
+          id={port.id}
+          type="source"
+          position={
+            data.direction === "RIGHT" ? Position.Right : Position.Bottom
+          }
+          className="graph-port"
+          style={portStyle(port, data.direction)}
+          title={`Reported output port: ${port.label}`}
+        />
+      ))}
     </div>
   );
 }

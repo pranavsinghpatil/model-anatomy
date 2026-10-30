@@ -30,7 +30,7 @@ import type {
 } from "../api/contract";
 import { shape } from "../format";
 import { GraphCanvas } from "../graph/GraphCanvas";
-import { nodeTitle } from "../graph/presentation";
+import { edgeLabel, nodeTitle, relationLabel } from "../graph/presentation";
 import { ComponentTree } from "./ComponentTree";
 import { Inspector, EvidenceList } from "./Inspector";
 import { Questions } from "./Questions";
@@ -468,7 +468,7 @@ export function ArchitectureWorkspace({
               {graph.edges.some((edge) => edge.relation === "dependency") && (
                 <span>
                   <i className="structural" />
-                  Module dependency
+                  Dependency
                 </span>
               )}
               {graph.edges.some(
@@ -519,6 +519,12 @@ export function ArchitectureWorkspace({
       )}
     </div>
   );
+  const edgeSourceNode = edge
+    ? graph.nodes.find((node) => node.id === edge.source)
+    : undefined;
+  const edgeTargetNode = edge
+    ? graph.nodes.find((node) => node.id === edge.target)
+    : undefined;
   const inspector = (
     <aside
       className="workspace-inspector"
@@ -561,22 +567,39 @@ export function ArchitectureWorkspace({
           {edge ? (
             <div className="edge-inspector">
               <span className="eyebrow">CONNECTION</span>
-              <h2>{edge.label ?? edge.relation.replaceAll("_", " ")}</h2>
+              <h2>{edgeLabel(edge)}</h2>
               <dl className="properties">
                 <dt>Source component</dt>
                 <dd>
+                  <span>
+                    {edgeSourceNode
+                      ? nodeTitle(edgeSourceNode)
+                      : "Component not in this graph"}
+                  </span>
                   <code>{edge.source}</code>
                 </dd>
                 <dt>Target component</dt>
                 <dd>
+                  <span>
+                    {edgeTargetNode
+                      ? nodeTitle(edgeTargetNode)
+                      : "Component not in this graph"}
+                  </span>
                   <code>{edge.target}</code>
                 </dd>
                 <dt>Source port</dt>
-                <dd>{edge.source_port ?? "Unknown"}</dd>
+                <dd title={edge.source_port || "No source port was reported"}>
+                  {edge.source_port || "Unspecified port"}
+                </dd>
                 <dt>Target port</dt>
-                <dd>{edge.target_port ?? "Unknown"}</dd>
+                <dd title={edge.target_port || "No target port was reported"}>
+                  {edge.target_port || "Unspecified port"}
+                </dd>
                 <dt>Relationship</dt>
-                <dd>{edge.relation}</dd>
+                <dd>
+                  <span>{relationLabel(edge.relation)}</span>
+                  <code>{edge.relation}</code>
+                </dd>
                 <dt>Shape</dt>
                 <dd>
                   <code>{shape(edge.tensor?.shape)}</code>

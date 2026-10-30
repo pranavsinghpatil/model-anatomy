@@ -221,9 +221,7 @@ test("opening a nested graph clears a previously selected connection", async ({
   const inspector = page.getByRole("complementary", { name: "Inspector" });
   await expect(
     inspector.getByRole("heading", {
-      name:
-        rootGraph.edges[0].label ??
-        rootGraph.edges[0].relation.replaceAll("_", " "),
+      name: "hidden_states · [B, S, 768]",
       exact: true,
     }),
   ).toBeVisible();
