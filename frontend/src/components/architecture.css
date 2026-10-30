@@ -373,3 +373,12 @@
   background: var(--surface);
   color: var(--text);
 }
+.edge-inspector .properties dd > span,
+.edge-inspector .properties dd > code {
+  display: block;
+}
+.edge-inspector .properties dd > code {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 11px;
+}

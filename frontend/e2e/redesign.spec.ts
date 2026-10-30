@@ -277,20 +277,21 @@ test("late submission response does not redirect a visitor who continued an exis
   await expect(page).toHaveURL(/\/app\/analyses\/job-test/);
 });
 
-test("entry pages and long report identifiers fit every target width in both themes", async ({
-  page,
-}) => {
-  test.setTimeout(120_000);
-  const identifier = `acme/${"technical-model-identifier-".repeat(12)}revision`;
-  await mockService(page, {
-    job: {
-      ...analysisFor(),
-      model_id: identifier,
-      architecture: "LongArchitectureClass".repeat(10),
-      warnings: [identifier],
-    },
-  });
-  for (const width of widths) {
+// Isolate viewport cases so repeated full-page loads do not share one deadline.
+for (const width of widths) {
+  test(`entry pages and long report identifiers fit ${width}px in both themes`, async ({
+    page,
+  }) => {
+    test.setTimeout(120_000);
+    const identifier = `acme/${"technical-model-identifier-".repeat(12)}revision`;
+    await mockService(page, {
+      job: {
+        ...analysisFor(),
+        model_id: identifier,
+        architecture: "LongArchitectureClass".repeat(10),
+        warnings: [identifier],
+      },
+    });
     await page.setViewportSize({ width, height: 900 });
     for (const theme of ["Light", "Dark"] as const) {
       await page.goto("/");
@@ -313,5 +314,5 @@ test("entry pages and long report identifiers fit every target width in both the
           .toBe(true);
       }
     }
-  }
-});
+  });
+}

@@ -1,4 +1,5 @@
-import type { GraphNode } from "../api/contract";
+import type { GraphEdge, GraphNode } from "../api/contract";
+import { shape } from "../format";
 
 export function nodeTitle(node: GraphNode) {
   // Reported paths distinguish repeated native class labels without inventing
@@ -15,6 +16,38 @@ export function nodeTitle(node: GraphNode) {
   }
   return node.label;
 }
+const relationNames: Record<string, string> = {
+  dataflow: "Data flow",
+  conditional_dependency: "Conditional dependency",
+  parameter_ownership: "Parameter ownership",
+  dependency: "Dependency",
+  module_dependency: "Module dependency",
+  source_order: "Source order",
+  structural: "Structural relationship",
+};
+
+export function relationLabel(relation: string) {
+  return (
+    relationNames[relation] ??
+    relation
+      .replace(/[_-]+/g, " ")
+      .replace(/^\w/, (letter) => letter.toUpperCase())
+  );
+}
+
+export function edgeLabel(edge: GraphEdge, detail = false) {
+  const name = edge.label?.trim() || edge.tensor?.semantic_name?.trim();
+  const parts = [name || relationLabel(edge.relation)];
+  if (edge.tensor?.shape) parts.push(shape(edge.tensor.shape));
+  if (detail) {
+    if (name) parts.push(relationLabel(edge.relation));
+    const source = edge.source_port || "Unspecified port";
+    const target = edge.target_port || "Unspecified port";
+    parts.push(`${source} → ${target}`);
+  }
+  return parts.join(" · ");
+}
+
 export function nodeCategory(kind: string) {
   const value = kind.toLowerCase();
   if (value === "input" || value === "output") return "boundary";

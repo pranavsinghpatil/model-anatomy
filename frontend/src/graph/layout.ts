@@ -2,8 +2,8 @@ import ELK, { type ElkNode } from "elkjs/lib/elk-api";
 import ElkWorker from "elkjs/lib/elk-worker.min.js?worker";
 import { MarkerType, type Edge, type Node } from "@xyflow/react";
 import type { ArchitectureGraph, GraphNode } from "../api/contract";
-import { scopedNodeId, shape } from "../format";
-import { nodeSize } from "./presentation";
+import { scopedNodeId } from "../format";
+import { edgeLabel, nodeSize, nodeTitle } from "./presentation";
 
 export type AnatomyNode = Node<
   {
@@ -14,11 +14,16 @@ export type AnatomyNode = Node<
     openGraph: (node: GraphNode) => void;
     dimmed: boolean;
     isolated: boolean;
+    sourcePorts: GraphPort[];
+    targetPorts: GraphPort[];
   },
   "anatomy"
 >;
+export type GraphPort = { id: string; label: string; position: number };
 export type AnatomyEdge = Edge<{
   original: ArchitectureGraph["edges"][number];
+  route?: { x: number; y: number }[];
+  labelPosition?: { x: number; y: number };
 }>;
 const elk = new ELK({ workerFactory: () => new ElkWorker() });
 const layouts = new WeakMap<ArchitectureGraph, Map<string, Promise<ElkNode>>>();
@@ -40,18 +45,48 @@ export async function layoutGraph(
       "The service graph contains duplicate node IDs or unresolved edge endpoints.",
     );
   }
+  const portsByNode = new Map<string, { source: string[]; target: string[] }>();
+  const nodeTitles = new Map(
+    graph.nodes.map((node) => [node.id, nodeTitle(node)]),
+  );
+  for (const node of graph.nodes)
+    portsByNode.set(node.id, { source: [], target: [] });
+  const addPort = (
+    nodeId: string,
+    side: "source" | "target",
+    rawPort: string,
+  ) => {
+    const ports = portsByNode.get(nodeId)![side];
+    const port = rawPort;
+    if (!ports.includes(port)) ports.push(port);
+  };
+  for (const edge of graph.edges) {
+    addPort(edge.source, "source", edge.source_port);
+    addPort(edge.target, "target", edge.target_port);
+  }
+  const portId = (nodeId: string, side: "source" | "target", port: string) =>
+    `${scopedNodeId(graph.id, nodeId)}::${side}::${encodeURIComponent(port)}`;
+  const portsFor = (
+    nodeId: string,
+    side: "source" | "target",
+    positions: Map<string, number>,
+  ): GraphPort[] => {
+    const labels = portsByNode.get(nodeId)![side];
+    return labels.map((label) => ({
+      id: portId(nodeId, side, label),
+      label: label || "Unspecified port",
+      position: positions.get(portId(nodeId, side, label)) ?? 50,
+    }));
+  };
   const edges: AnatomyEdge[] = graph.edges.map((edge, index) => ({
     id: JSON.stringify([graph.id, "edge", index]),
     source: scopedNodeId(graph.id, edge.source),
     target: scopedNodeId(graph.id, edge.target),
-    label:
-      edge.label ??
-      (edge.tensor
-        ? shape(edge.tensor.shape)
-        : edge.relation === "dataflow"
-          ? undefined
-          : edge.relation),
-    type: "smoothstep",
+    sourceHandle: portId(edge.source, "source", edge.source_port),
+    targetHandle: portId(edge.target, "target", edge.target_port),
+    ariaLabel: `${nodeTitles.get(edge.source) ?? edge.source} → ${nodeTitles.get(edge.target) ?? edge.target} · ${edgeLabel(edge, true)}`,
+    label: edgeLabel(edge),
+    type: "routed",
     markerEnd: {
       type: MarkerType.ArrowClosed,
       width: 12,
@@ -100,19 +135,52 @@ export async function layoutGraph(
       layoutOptions: {
         "elk.algorithm": "layered",
         "elk.direction": direction,
-        "elk.spacing.nodeNode": "20",
-        "elk.layered.spacing.nodeNodeBetweenLayers": "20",
+        "elk.edgeRouting": "ORTHOGONAL",
+        "elk.spacing.nodeNode": "32",
+        "elk.spacing.edgeNode": "24",
+        "elk.layered.spacing.nodeNodeBetweenLayers": "64",
         "elk.layered.considerModelOrder.strategy": "NODES_AND_EDGES",
       },
-      children: connectedNodes.map((node) => ({
-        id: scopedNodeId(graph.id, node.id),
-        ...nodeSize(node, density),
-      })),
-      edges: edges.map((edge) => ({
-        id: edge.id,
-        sources: [edge.source],
-        targets: [edge.target],
-      })),
+      children: connectedNodes.map((node) => {
+        const nodePorts = portsByNode.get(node.id)!;
+        const side = direction === "RIGHT" ? "EAST" : "SOUTH";
+        const opposite = direction === "RIGHT" ? "WEST" : "NORTH";
+        return {
+          id: scopedNodeId(graph.id, node.id),
+          ...nodeSize(node, density),
+          ports: [
+            ...nodePorts.target.map((port) => ({
+              id: portId(node.id, "target", port),
+              width: 0,
+              height: 0,
+              layoutOptions: { "elk.port.side": opposite },
+            })),
+            ...nodePorts.source.map((port) => ({
+              id: portId(node.id, "source", port),
+              width: 0,
+              height: 0,
+              layoutOptions: { "elk.port.side": side },
+            })),
+          ],
+          layoutOptions: { "elk.portConstraints": "FIXED_ORDER" },
+        };
+      }),
+      edges: edges.map((edge) => {
+        const text = edgeLabel(edge.data!.original, true);
+        return {
+          id: edge.id,
+          sources: [edge.sourceHandle!],
+          targets: [edge.targetHandle!],
+          labels: [
+            {
+              id: `${edge.id}::label`,
+              text,
+              width: Math.min(240, Math.max(64, text.length * 5.6 + 16)),
+              height: 20,
+            },
+          ],
+        };
+      }),
     });
     graphLayouts.set(signature, pendingLayout);
     pendingLayout.catch(() => {
@@ -144,6 +212,36 @@ export async function layoutGraph(
     });
     inventoryY += nodeSize(node, density).height + 28;
   }
+  const routes = new Map<string, { x: number; y: number }[]>();
+  const labelPositions = new Map<string, { x: number; y: number }>();
+  const portPositions = new Map<string, number>();
+  for (const node of result.children ?? []) {
+    for (const port of node.ports ?? []) {
+      const coordinate =
+        direction === "RIGHT"
+          ? (port.y ?? 0) + (port.height ?? 0) / 2
+          : (port.x ?? 0) + (port.width ?? 0) / 2;
+      const extent = direction === "RIGHT" ? node.height : node.width;
+      if (extent) portPositions.set(port.id, (coordinate / extent) * 100);
+    }
+  }
+  for (const edge of result.edges ?? []) {
+    const label = edge.labels?.[0];
+    if (label && Number.isFinite(label.x) && Number.isFinite(label.y)) {
+      labelPositions.set(edge.id, {
+        x: (label.x ?? 0) + (label.width ?? 0) / 2,
+        y: (label.y ?? 0) + (label.height ?? 0) / 2,
+      });
+    }
+    if (edge.sections?.length !== 1) continue;
+    const section = edge.sections[0];
+    const points = [
+      section.startPoint,
+      ...(section.bendPoints ?? []),
+      section.endPoint,
+    ].filter((point): point is { x: number; y: number } => Boolean(point));
+    if (points.length > 1) routes.set(edge.id, points);
+  }
   return {
     nodes: graph.nodes.map((original) => ({
       id: scopedNodeId(graph.id, original.id),
@@ -163,8 +261,17 @@ export async function layoutGraph(
         openGraph: () => {},
         dimmed: false,
         isolated: isolated.some((node) => node.id === original.id),
+        sourcePorts: portsFor(original.id, "source", portPositions),
+        targetPorts: portsFor(original.id, "target", portPositions),
       },
     })),
-    edges,
+    edges: edges.map((edge) => ({
+      ...edge,
+      data: {
+        ...edge.data!,
+        route: routes.get(edge.id),
+        labelPosition: labelPositions.get(edge.id),
+      },
+    })),
   };
 }
