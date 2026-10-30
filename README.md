@@ -17,11 +17,7 @@ attributes, checkpoint tensor metadata, parameter ownership and evidence.
 Intermediate expressions such as individual `log` or `exp` operations are outside
 this architecture view. Model Autopsy is a later layer built on this representation.
 
-## Current state
-
-The October 25 submission audit and remaining release gates are tracked in
-[submission readiness](docs/SUBMISSION_READINESS.md). A working local build does
-not establish a publicly judgeable release.
+## Features
 
 The working CLI engine has been integrated from `feat/vv`. Fresh metadata-only
 runs verify GPT-2 and the primary target `HuggingFaceTB/SmolLM2-135M`, with no
@@ -29,8 +25,8 @@ weight payload downloads or forward execution. See [engine acceptance](docs/ENGI
 for pinned revisions, tests, and the remaining static-analysis limitations.
 The application includes durable anonymous analyses, a separate inspection worker,
 an interactive nested graph and tensor inspector, exports, and an evidence-bound
-Nemotron explanation integration. Hosted operation still requires cloud setup
-and deployment verification; configured integration is not live inference evidence.
+NVIDIA Nemotron question answering through Nebius Token Factory for researchers,
+developers, and students exploring model architecture.
 
 The frontend provides a lazy model tree, search across the model hierarchy,
 nested graph/node links that survive refresh, per-graph view restoration, and
@@ -77,16 +73,19 @@ access. Weight payload downloads and forward execution are disabled.
 
 ## Run the application
 
-Use three terminals for normal local development. Prerequisites are Python 3.11+,
-`uv`, and Node.js 20.19+ on the 20.x line or Node.js 22.12+.
-Run the Python commands from the project root.
+Use three terminals: one for the API, one for the worker, and one for the
+frontend. Prerequisites are Python 3.11+, `uv`, and Node.js 20.19+ on the 20.x line
+or Node.js 22.12+. Start every command block from the repository root; only the
+frontend block changes into `frontend/`.
+These commands use Bash on Linux, macOS, or WSL.
 
 Install once, or when dependencies change:
 
 ```bash
-uv sync --frozen --extra api --extra engine
-cd frontend
-npm ci
+mkdir -p .tmp
+TMPDIR="$PWD/.tmp" UV_PYTHON_INSTALL_DIR="$PWD/.tmp/python" \
+  uv --cache-dir ./.tmp/uv-cache sync --frozen --extra api --extra engine
+TMPDIR="$PWD/.tmp" npm --cache ./.tmp/npm-cache ci --prefix frontend
 ```
 
 Select only the extras needed by each environment. A CLI environment needs
@@ -99,21 +98,28 @@ Torch. API and worker startup provide readable missing-dependency checks.
 **Terminal 1 — API**
 
 ```bash
-uv run --no-sync model-anatomy-api
+mkdir -p .tmp
+TMPDIR="$PWD/.tmp" uv --cache-dir ./.tmp/uv-cache run --no-sync python -B -m model_anatomy.api
 ```
 
 **Terminal 2 — worker**
 
 ```bash
-uv run --no-sync python -m model_anatomy.service.worker
+mkdir -p .tmp
+TMPDIR="$PWD/.tmp" uv --cache-dir ./.tmp/uv-cache run --no-sync python -B -m model_anatomy.service.worker
 ```
 
 **Terminal 3 — frontend**
 
 ```bash
+mkdir -p .tmp
 cd frontend
-npm run dev
+TMPDIR="$PWD/../.tmp" VITE_DEMO_CONTROLS=false npm run dev
 ```
+
+Keep all three terminals running while using the app. Stop each process with
+`Ctrl+C` in its own terminal. The frontend command runs the local application
+with cloud Sandbox controls hidden.
 
 The API serves HTTP requests, visitor-owned analyses, saved reports and the job
 queue. The worker claims queued jobs, runs reconstruction in a separate child
@@ -155,30 +161,9 @@ job records in `.local/model-anatomy/jobs.sqlite3` and immutable report objects
 under `.local/model-anatomy/objects/`. They do not populate the CLI's `config/`,
 `output/` or `preview/` directories. Download web reports using Export.
 
-Production uses Supabase PostgreSQL and a private Storage bucket. Backend-only
-`NEBIUS_API_KEY` and `NEBIUS_MODEL` enable Nemotron explanations; choose a real
-available NVIDIA Nemotron ID, never a placeholder. Graph facts do not depend on
-AI. Do not commit secrets or model weights.
-
-### Optional launchers
-
-On Linux, after installing dependencies, the local launcher runs all three
-processes in one terminal:
-
-```bash
-uv run --no-sync python scripts/start-local.py
-```
-
-It reads the same per-directory configuration, refuses occupied ports or an
-active worker lease, writes logs under the configured data directory's
-`local-launcher/`, and stops only its own processes on Ctrl+C. It does not install
-packages or submit models. Do not run it alongside the three manual processes.
-
-The existing Windows launcher is
-`powershell -ExecutionPolicy Bypass -File scripts/start-local.ps1`. It uses a
-separate local testing profile under `.local/app-v1`, defaults to API port `8000`
-and frontend port `5173`, and provides explicit port/quota options. Its defaults
-are distinct from the normal API entry point and Linux launcher.
+Local graph inspection uses SQLite and local files without Supabase credentials.
+Keep an existing database/storage profile when restarting. The API and worker
+must use the same profile so saved analyses remain accessible.
 
 ### Development checks
 
@@ -192,13 +177,66 @@ See [service integration](docs/SERVICE_INTEGRATION.md) for the trust boundary an
 release gates, and [live backend acceptance](docs/LIVE_BACKEND_ACCEPTANCE.md) for
 HTTP-to-worker evidence. Historical acceptance documents describe the code and
 configuration used at the time of each run; use the commands above for current
-local defaults. Cloud deployment is separate: see [deployment](docs/DEPLOYMENT.md),
-[benchmarks](docs/BENCHMARKS.md) and the
-[submission checklist](docs/HACKATHON_SUBMISSION.md).
+local defaults. See [benchmarks](docs/BENCHMARKS.md) for measured reconstruction
+behavior and its limitations.
 
-## Hackathon fit
+## NVIDIA Nemotron and Nebius Token Factory
 
-For the Nebius × NVIDIA Global AI Hackathon, reconstruction remains deterministic. A clearly separated, optional Nebius Token Factory + NVIDIA model layer may explain already-established evidence in the explorer; it may never create or alter architectural facts. This makes the required model-service usage visible without weakening the product’s trust boundary.
+Model Anatomy uses an NVIDIA Nemotron model served through Nebius Token Factory
+to help researchers, developers, and students ask questions about an inspected
+model. Questions can focus on the architecture, a selected component, or recorded
+tensor information. The backend supplies relevant inspection facts and evidence
+to the model, then returns an explanation with references to that evidence.
+
+NVIDIA Nemotron provides the language-model explanations. Nebius Token Factory
+provides hosted inference through its API, so the question-answering feature
+does not require running a separate LLM or provisioning a local GPU. This brings
+contextual help into the inspection workflow: users can ask about the component
+they are exploring while keeping the underlying report available for checking.
+
+Architecture reconstruction remains deterministic. The LLM explains the stored
+report; it cannot create or change the graph, tensor metadata, or parameter
+counts. The service checks cited evidence IDs and numerical claims against the
+supplied context. Explanatory prose remains an AI interpretation, and missing
+evidence must stay explicit.
+
+### Configure question answering
+
+Create `backend/.env` from `backend/.env.example` if it does not exist. Otherwise,
+edit the existing file without replacing its database or storage configuration.
+Add your private Token Factory settings:
+
+```dotenv
+NEBIUS_API_KEY=YOUR_NEBIUS_TOKEN_FACTORY_API_KEY
+NEBIUS_MODEL=YOUR_AVAILABLE_NVIDIA_NEMOTRON_MODEL_ID
+```
+
+Replace both placeholders. Set `NEBIUS_MODEL` to the exact NVIDIA Nemotron model
+ID available in your Token Factory account; the application does not assume a
+particular Nemotron variant. The default API base URL is
+`https://api.tokenfactory.nebius.com/v1`. If your account uses another supported
+endpoint, set `MODEL_ANATOMY_NEBIUS_BASE_URL` in the same private backend file.
+
+Restart the API after editing these settings. API keys stay server-side in the
+Git-ignored `backend/.env`; never place them in frontend files or `VITE_`
+variables. Graph inspection works independently of these AI settings. The
+`/health` response reports configured AI availability, which is separate from
+checking that your provider accepts a particular model request.
+
+After an architecture inspection completes, open its report and the **Questions**
+tab. For example, ask which tensors belong to the selected component or
+what a recorded tensor shape means. Review the answer's evidence references
+alongside the graph and tensor inspector.
+
+The Token Factory request path is implemented in
+[`backend/model_anatomy/service/ai.py`](backend/model_anatomy/service/ai.py), and
+the application endpoint is
+`POST /api/v1/analyses/{analysis_id}/questions`. This is the Nebius service used
+for question answering; local reconstruction runs in the Python worker.
+
+## License
+
+Model Anatomy is released under the [MIT License](LICENSE).
 
 ## Documentation
 
