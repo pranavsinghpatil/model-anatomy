@@ -6,6 +6,7 @@ import {
   ReactFlow,
   ReactFlowProvider,
   ViewportPortal,
+  applyNodeChanges,
   useReactFlow,
   useStore,
   type Viewport,
@@ -396,6 +397,21 @@ function Canvas({
           }
         }}
         onNodesChange={(changes) => {
+          // Keep measured dimensions in our controlled nodes. Dropping them
+          // makes React Flow discard handle bounds on the next render, so
+          // existing relationships lose their SVG paths and hit targets.
+          const dimensions = changes.filter(
+            (change) => change.type === "dimensions",
+          );
+          if (dimensions.length)
+            setLayout((current) =>
+              current
+                ? {
+                    ...current,
+                    nodes: applyNodeChanges(dimensions, current.nodes),
+                  }
+                : current,
+            );
           const selected = changes.find(
             (change) => change.type === "select" && change.selected,
           );

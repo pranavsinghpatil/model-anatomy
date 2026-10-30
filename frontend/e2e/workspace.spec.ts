@@ -185,6 +185,13 @@ test("click and keyboard edge selection expose the original relationship", async
   await expect(page.getByTestId("graph-canvas")).toBeVisible();
   const edges = page.locator(".react-flow__edge");
   await expect(edges).toHaveCount(rootGraph.edges.length);
+  // Searching updates controlled node data without changing card dimensions.
+  // Every real relationship must retain its measured handles and SVG path.
+  const search = page.getByRole("textbox", { name: "Find component" });
+  await search.fill(embedding.label);
+  await expect(edges).toHaveCount(rootGraph.edges.length);
+  await search.clear();
+  await expect(edges).toHaveCount(rootGraph.edges.length);
   await expectGraphFramed(page);
   const minimap = page.getByTestId("rf__minimap");
   if (await minimap.isVisible()) {
@@ -252,12 +259,31 @@ test("opening a nested graph clears a previously selected connection", async ({
       exact: true,
     }),
   ).toBeVisible();
-  const nestedNode = graphs.get(block.child_graph_id!)!.nodes[0];
+  const nestedGraph = graphs.get(block.child_graph_id!)!;
+  const nestedNode = nestedGraph.nodes[0];
   await graphNode(page, nestedNode.label);
   await expect(
     inspector.getByRole("tablist", { name: "Analysis panels" }),
   ).toBeVisible();
   await expect(inspector).not.toContainText("Source component");
+
+  if (await back.isVisible()) await back.click();
+  await expectGraphFramed(page);
+  const nestedEdges = page.locator(".react-flow__edge");
+  await expect(nestedEdges).toHaveCount(nestedGraph.edges.length);
+  await clickVisibleEdge(page, nestedEdges.first());
+  await expect(inspector).toContainText("Source component");
+  await expect(inspector).toContainText(nestedGraph.edges[0].source);
+  await expect(inspector).toContainText(nestedGraph.edges[0].target);
+  if (await back.isVisible()) await back.click();
+
+  const keyboardEdge = nestedEdges.nth(1);
+  await keyboardEdge.focus();
+  await keyboardEdge.press("Enter");
+  await expect(inspector).toContainText(nestedGraph.edges[1].source);
+  await expect(inspector).toContainText(nestedGraph.edges[1].target);
+  if (await back.isVisible()) await back.click();
+  await expect(keyboardEdge).toHaveClass(/selected/);
 });
 
 test("nested navigation preserves each graph viewport through resize and reduced motion", async ({

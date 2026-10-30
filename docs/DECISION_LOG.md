@@ -1503,3 +1503,32 @@ push/cron deployment, account handover, quota/deadline limits, local UI-only mod
 and live acceptance. Preserve the agreed SQLite demo scope and December public
 Start deadline. Offline tests cover first deployment, placeholder authorization,
 account isolation, and rollback; real cloud acceptance still requires credentials.
+
+## D-083 - Retain measured nodes when rendering controlled React Flow graphs
+
+### 2026-10-29 - Mobile relationship rendering and selection regression
+
+Keep React Flow's dimension changes in the controlled layout nodes using
+`applyNodeChanges`. Handling selection alone discarded each node's `measured`
+state on subsequent renders. React Flow then invalidated its handle bounds,
+which could omit real edge SVGs and their pointer/keyboard targets even though
+the architecture graph still contained every relationship.
+
+Preserve the original graph edges, graph-scoped IDs, relationship provenance,
+and the separate layout shelf for isolated inventory. Do not invent connections,
+remove edges, or weaken edge-count assertions. Extend the existing workspace
+spec to check edge counts after search updates and actual SVG hit-testing and
+keyboard selection inside a nested graph.
+
+Before the fix, CI-mode repetition reproduced two missing-edge failures in
+20 executions of the reported mobile cases. Validation is restricted to
+`graph-rebuild.spec.ts` and `workspace.spec.ts`, with exact file matching to avoid
+including `white-workspace.spec.ts`. These fixture-driven browser checks test
+the renderer; they do not claim a new backend/model acceptance run.
+
+After the fix, the exact two specs passed all 60 desktop/mobile cases. The two
+reported mobile cases also passed 20 repeated executions in CI mode with two
+workers. TypeScript checking, formatting of the changed frontend files, and
+`git diff --check` passed. Artifacts and browser temporary files stayed under
+repository `.tmp/graph-edge-regression/`. Remote PR quality CI has not been run
+by this local validation.
