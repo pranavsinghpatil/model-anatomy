@@ -27,3 +27,11 @@ Each record carries its artifact source and locator. Semantic labels and graph e
 ## Failure model
 
 Each stage reports `success`, `partial`, `unsupported`, or `failed`, with a useful diagnostic. A partial graph is valid; a silently invented edge is not. Unsupported custom models fail honestly and do not block the known primary-model demo.
+
+## Service boundary
+
+FastAPI manages anonymous analyses, ownership, quotas, stored results, exports
+and evidence-bound questions without importing model libraries at startup.
+A separate, leased worker calls the shared engine in a bounded subprocess.
+React Flow renders stored IR and loads individual graphs and components on demand.
+See [service integration](SERVICE_INTEGRATION.md) for contracts and release gates.

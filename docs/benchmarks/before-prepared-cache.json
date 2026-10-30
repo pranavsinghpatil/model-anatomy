@@ -1,0 +1,18 @@
+{
+  "timestamp_utc": "2026-10-08T12:47:32Z",
+  "platform": "win32",
+  "python": "3.11.4",
+  "http": {
+    "visitors": 10,
+    "requests": 200,
+    "paths": [
+      "/healthz",
+      "/api/v1/capabilities",
+      "/api/v1/analyses/example-smollm"
+    ],
+    "p50_seconds": 0.9717949000187218,
+    "p95_seconds": 3.8667205999954604,
+    "max_seconds": 4.301349100016523,
+    "p95_under_one_second": false
+  }
+}

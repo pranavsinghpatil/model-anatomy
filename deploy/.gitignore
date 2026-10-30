@@ -1,0 +1,5 @@
+# Generated state belongs to each operator's Vercel project and Sandbox.
+sandbox-state.json
+demo-state.json
+production-state.json
+.env

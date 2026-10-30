@@ -1,0 +1,58 @@
+name: Start Demo
+run-name: Start the published demo by @${{ github.actor }}
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: model-anatomy-sandbox-demo
+  cancel-in-progress: false
+  queue: max
+
+jobs:
+  start:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      TMPDIR: ${{ github.workspace }}/.tmp/runner
+      TMP: ${{ github.workspace }}/.tmp/runner
+      TEMP: ${{ github.workspace }}/.tmp/runner
+      UV_CACHE_DIR: ${{ github.workspace }}/.tmp/uv-cache
+      UV_PYTHON_INSTALL_DIR: ${{ github.workspace }}/.tmp/python
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - name: Check out workflow implementation
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.workflow_sha }}
+          persist-credentials: false
+      - name: Prepare local temporary directory
+        run: mkdir -p .tmp/runner
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: '0.9.6'
+          enable-cache: false
+      - name: Resume and verify the published Sandbox
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          VERCEL_TEAM_ID: ${{ secrets.VERCEL_TEAM_ID }}
+          DEMO_PUBLIC_ORIGIN: ${{ vars.DEMO_PUBLIC_ORIGIN }}
+        run: >-
+          uv run --no-project --with vercel-sandbox==0.10.0
+          python -B deploy/05_github_demo.py start
+      - name: Save startup diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: demo-start-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .tmp/github-demo/*.json
+          include-hidden-files: true
+          if-no-files-found: ignore
+          retention-days: 7

@@ -1,0 +1,22 @@
+output/** linguist-generated=true
+preview/** linguist-generated=true
+uv.lock linguist-generated=true
+frontend/package-lock.json linguist-generated=true
+frontend/src/api/generated.ts linguist-generated=true
+
+# Preserve audited upstream bytes, including mixed newlines and diagnostic whitespace.
+/output/hf_model_parse_results.csv -text -whitespace
+/data/hf_model_ids.csv -text -whitespace
+
+# Immutable historical validation source: preserve its exact byte digest.
+backend/tests/fixtures/vv-validation-56ffad8.csv -text -whitespace linguist-generated=true
+backend/tests/fixtures/gpt2-report.json -text whitespace=cr-at-eol linguist-generated=true
+
+# Keep the frontend formatter stable in clean Windows and Linux checkouts.
+frontend/** text=auto eol=lf
+
+# Digest-pinned audit manifests must retain the original audited bytes.
+backend/model_anatomy/src/data/deepseek-v41-headers.json -text whitespace=cr-at-eol
+backend/model_anatomy/src/data/deepseek-v41-name-coverage.json -text whitespace=cr-at-eol
+docs/evidence/deepseek-v41-headers.json -text whitespace=cr-at-eol
+docs/evidence/deepseek-v41-name-coverage.json -text whitespace=cr-at-eol

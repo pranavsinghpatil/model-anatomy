@@ -1,0 +1,165 @@
+{
+  "schema_version": 1,
+  "purpose": "All baseline errors/access blocks, root remote-map blockers, and text/vision/audio/multimodal controls",
+  "cases": [
+    {
+      "model_id": "openai-community/gpt2",
+      "category": "causal-lm",
+      "revision": "607a30d783dfa663caf39e06633721c8d4cfcd7e",
+      "declared_task": "text-generation",
+      "notes": "API library_name=transformers"
+    },
+    {
+      "model_id": "microsoft/Phi-3-mini-4k-instruct",
+      "category": "causal-lm",
+      "revision": "f39ac1d28e925b323eae81227eaba4464caced4e",
+      "declared_task": "text-generation",
+      "notes": "API library_name=transformers"
+    },
+    {
+      "model_id": "meta-llama/Llama-3.2-1B-Instruct",
+      "category": "causal-lm",
+      "revision": "9213176726f574b556790deb65791e0c5aa438b6",
+      "declared_task": "text-generation",
+      "notes": "gated; API metadata is public but artifacts may require access; API library_name=transformers"
+    },
+    {
+      "model_id": "RLHFlow/ArmoRM-Llama3-8B-v0.1",
+      "category": "rlhf-reward-model",
+      "revision": "eb2676d20da2f2d41082289d23c59b9f7427f955",
+      "declared_task": "text-classification",
+      "notes": "Reward model, not a serialized RL policy; API library_name=transformers"
+    },
+    {
+      "model_id": "jinaai/jina-embeddings-v2-small-en",
+      "category": "embedding",
+      "revision": "44e7d1d6caec8c883c2d4b207588504d519788d0",
+      "declared_task": "feature-extraction",
+      "notes": "API library_name=sentence-transformers"
+    },
+    {
+      "model_id": "google/vit-base-patch16-224",
+      "category": "image-classification",
+      "revision": "3f49326eb077187dfe1c2a2bb15fbd74e6ab91e3",
+      "declared_task": "image-classification",
+      "notes": "API library_name=transformers"
+    },
+    {
+      "model_id": "nvidia/mit-b0",
+      "category": "image-classification",
+      "revision": "80983a413c30d36a39c20203974ae7807835e2b4",
+      "declared_task": "image-classification",
+      "notes": "API library_name=transformers"
+    },
+    {
+      "model_id": "nvidia/segformer-b0-finetuned-ade-512-512",
+      "category": "image-segmentation",
+      "revision": "489d5cd81a0b59fab9b7ea758d3548ebe99677da",
+      "declared_task": "image-segmentation",
+      "notes": "API library_name=transformers"
+    },
+    {
+      "model_id": "nvidia/segformer-b1-finetuned-ade-512-512",
+      "category": "image-segmentation",
+      "revision": "a775b4f5dcb2179e57006dca0e268281306412ef",
+      "declared_task": "image-segmentation",
+      "notes": "API library_name=transformers"
+    },
+    {
+      "model_id": "HuggingFaceTB/SmolVLM-256M-Instruct",
+      "category": "image-text-to-text",
+      "revision": "7e3e67edbbed1bf9888184d9df282b700a323964",
+      "declared_task": "image-text-to-text",
+      "notes": "API library_name=transformers"
+    },
+    {
+      "model_id": "openai/whisper-tiny",
+      "category": "speech-recognition",
+      "revision": "169d4a4341b33bc18d8881c4b69c2e104e1cc0af",
+      "declared_task": "automatic-speech-recognition",
+      "notes": "API library_name=transformers"
+    },
+    {
+      "model_id": "facebook/wav2vec2-base-960h",
+      "category": "speech-recognition",
+      "revision": "22aad52d435eb6dbaf354bdad9b0da84ce7d6156",
+      "declared_task": "automatic-speech-recognition",
+      "notes": "API library_name=transformers"
+    },
+    {
+      "model_id": "jonatasgrosman/wav2vec2-large-xlsr-53-english",
+      "category": "speech-recognition",
+      "revision": "569a6236e92bd5f7652a0420bfe9bb94c5664080",
+      "declared_task": "automatic-speech-recognition",
+      "notes": "API library_name=transformers"
+    },
+    {
+      "model_id": "facebook/mms-1b-all",
+      "category": "speech-recognition",
+      "revision": "3d33597edbdaaba14a8e858e2c8caa76e3cec0cd",
+      "declared_task": "automatic-speech-recognition",
+      "notes": "API library_name=transformers"
+    },
+    {
+      "model_id": "coqui/XTTS-v2",
+      "category": "voice-cloning-tts",
+      "revision": "6c2b0d75eae4b7047358e3b6bd9325f857d43f77",
+      "declared_task": "text-to-speech",
+      "notes": "voice-cloning text-to-speech; not speech-to-speech conversion; API library_name=coqui"
+    },
+    {
+      "model_id": "facebook/encodec_24khz",
+      "category": "neural-audio-codec",
+      "revision": "c1dbe2ae3f1de713481a3b3e7c47f357092ee040",
+      "declared_task": "feature-extraction",
+      "notes": "API library_name=transformers"
+    },
+    {
+      "model_id": "facebook/mms-tts-eng",
+      "category": "text-to-speech",
+      "revision": "c71de0fe7204c83f1c10820a7d696d0b450048ba",
+      "declared_task": "text-to-speech",
+      "notes": "API library_name=transformers"
+    },
+    {
+      "model_id": "stabilityai/sd-turbo",
+      "category": "text-to-image",
+      "revision": "b261bac6fd2cf515557d5d0707481eafa0485ec2",
+      "reference": "https://huggingface.co/stabilityai/sd-turbo/blob/b261bac6fd2cf515557d5d0707481eafa0485ec2/unet/diffusion_pytorch_model.safetensors",
+      "declared_task": "text-to-image",
+      "notes": "gated/access restrictions may apply; API library_name=diffusers"
+    },
+    {
+      "model_id": "stabilityai/sdxl-turbo",
+      "category": "text-to-image",
+      "revision": "71153311d3dbb46851df1931d3ca6e939de83304",
+      "reference": "https://huggingface.co/stabilityai/sdxl-turbo/blob/71153311d3dbb46851df1931d3ca6e939de83304/unet/diffusion_pytorch_model.safetensors",
+      "declared_task": "text-to-image",
+      "notes": "large metadata-only case; API library_name=diffusers"
+    },
+    {
+      "model_id": "stabilityai/stable-diffusion-xl-base-1.0",
+      "category": "text-to-image",
+      "revision": "462165984030d82259a11f4367a4eed129e94a7b",
+      "reference": "https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0/blob/462165984030d82259a11f4367a4eed129e94a7b/unet/diffusion_pytorch_model.safetensors",
+      "declared_task": "text-to-image",
+      "notes": "large metadata-only case; gated/access restrictions may apply; API library_name=diffusers"
+    },
+    {
+      "model_id": "black-forest-labs/FLUX.1-schnell",
+      "category": "text-to-image",
+      "revision": "741f7c3ce8b383c54771c7003378a50191e9efe9",
+      "reference": "https://huggingface.co/black-forest-labs/FLUX.1-schnell/blob/741f7c3ce8b383c54771c7003378a50191e9efe9/transformer/diffusion_pytorch_model-00001-of-00003.safetensors",
+      "declared_task": "text-to-image",
+      "notes": "large metadata-only case; gated/access restrictions may apply; API library_name=diffusers"
+    },
+    {
+      "model_id": "DeepFloyd/IF-I-XL-v1.0",
+      "category": "text-to-image",
+      "revision": "c03d510e9b75bce9f9db5bb85148c1402ad7e694",
+      "reference": "https://huggingface.co/DeepFloyd/IF-I-XL-v1.0/blob/c03d510e9b75bce9f9db5bb85148c1402ad7e694/unet/diffusion_pytorch_model.safetensors",
+      "declared_task": "text-to-image",
+      "notes": "gated/access restrictions may apply; API library_name=diffusers"
+    }
+  ]
+}

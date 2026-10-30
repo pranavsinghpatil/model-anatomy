@@ -1,0 +1,32 @@
+.demo-controls {
+  position: relative;
+  z-index: 20;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 24px;
+  padding: 14px clamp(16px, 4vw, 56px);
+  border-bottom: 1px solid var(--border, #ddd);
+  background: var(--surface, #fff);
+  color: var(--text, #202020);
+  font-size: 14px;
+}
+
+.demo-controls-copy {
+  min-width: 0;
+}
+
+.demo-controls-copy p {
+  margin: 4px 0;
+}
+
+.demo-controls-copy small {
+  opacity: 0.75;
+}
+
+.demo-controls-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}

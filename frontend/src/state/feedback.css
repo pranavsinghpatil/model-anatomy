@@ -1,0 +1,109 @@
+.feedback-viewport {
+  position: fixed;
+  z-index: 1000;
+  top: max(env(safe-area-inset-top), var(--feedback-top, 84px));
+  right: 24px;
+  display: flex;
+  width: min(420px, calc(100vw - 32px));
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  outline: none;
+  max-height: calc(100dvh - var(--feedback-top, 84px) - 16px);
+  overflow-y: auto;
+}
+.feedback-toast {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 15px 14px 15px 17px;
+  color: var(--text, #17202a);
+  background: var(--surface, #fff);
+  border: 1px solid var(--border, #dfe4e8);
+  border-left: 3px solid var(--accent, #168b83);
+  border-radius: 10px;
+  box-shadow: 0 12px 32px rgb(22 34 42 / 16%);
+}
+.feedback-toast-copy {
+  display: grid;
+  flex: 1;
+  gap: 4px;
+  min-width: 0;
+}
+.feedback-toast-title {
+  font-size: 13px;
+  font-weight: 650;
+}
+.feedback-toast-description {
+  overflow-wrap: anywhere;
+  color: var(--muted, #5b6570);
+  font-size: 12px;
+  line-height: 1.45;
+}
+.feedback-toast-action {
+  align-self: center;
+  flex: none;
+  color: var(--accent, #087e78);
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.feedback-toast-close {
+  display: grid;
+  flex: none;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  color: var(--muted, #5b6570);
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.feedback-toast-action:focus-visible,
+.feedback-toast-close:focus-visible {
+  outline: 2px solid var(--accent, #087e78);
+  outline-offset: 2px;
+}
+.error-notice-content {
+  flex: 1;
+  min-width: 0;
+}
+.error-notice-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.error-technical {
+  margin-top: 8px;
+  color: var(--muted, #5b6570);
+  font-size: 11px;
+}
+.error-technical summary {
+  cursor: pointer;
+}
+.error-technical code {
+  display: block;
+  margin-top: 5px;
+  overflow-wrap: anywhere;
+  font-family: var(--font-mono, monospace);
+}
+.error-technical .copy-button {
+  margin-top: 6px;
+}
+@media (max-width: 700px) {
+  .feedback-viewport {
+    right: 16px;
+    left: 16px;
+    width: auto;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .feedback-toast {
+    animation: none !important;
+    transition: none !important;
+  }
+}

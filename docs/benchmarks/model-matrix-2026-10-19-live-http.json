@@ -1,0 +1,53 @@
+[
+  {
+    "model_id": "microsoft/Phi-3-mini-4k-instruct",
+    "revision": "f39ac1d28e925b323eae81227eaba4464caced4e",
+    "status": "partial",
+    "cached": false,
+    "engine_version": "2026.10.19.3",
+    "parameter_count": 3821079552,
+    "tensor_count": 195,
+    "dimensions": {
+      "hidden": 3072,
+      "heads": 32,
+      "layers": 32,
+      "vocabulary": 32064
+    },
+    "elapsed_seconds": 16.25,
+    "weight_payload_bytes_read": 0,
+    "forward_executed": false,
+    "checkpoint_parameter_coverage": 1,
+    "node_inspection": {
+      "node_id": "model",
+      "tensor_count": 194
+    }
+  },
+  {
+    "model_id": "nvidia/segformer-b0-finetuned-ade-512-512",
+    "revision": "489d5cd81a0b59fab9b7ea758d3548ebe99677da",
+    "status": "partial",
+    "cached": false,
+    "engine_version": "2026.10.19.3",
+    "parameter_count": 3752694,
+    "tensor_count": 208,
+    "dimensions": {
+      "hidden": null,
+      "heads": [
+        1,
+        2,
+        5,
+        8
+      ],
+      "layers": 8,
+      "vocabulary": null
+    },
+    "elapsed_seconds": 13.812,
+    "weight_payload_bytes_read": 0,
+    "forward_executed": false,
+    "checkpoint_parameter_coverage": 1,
+    "node_inspection": {
+      "node_id": "segformer",
+      "tensor_count": 192
+    }
+  }
+]

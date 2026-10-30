@@ -1,0 +1,88 @@
+name: Deploy Demo
+run-name: Deploy Demo from ${{ inputs.source_branch }} by @${{ github.actor }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_branch:
+        description: Application source branch (the new Sandbox starts with an empty catalog)
+        type: choice
+        options:
+          - feat/deploy
+          - main
+        default: feat/deploy
+        required: true
+      initialize_project:
+        description: First setup only - replace this project's placeholder frontend (leave off for updates)
+        type: boolean
+        default: false
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: model-anatomy-sandbox-demo
+  cancel-in-progress: false
+  queue: max
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    env:
+      TMPDIR: ${{ github.workspace }}/.tmp/runner
+      TMP: ${{ github.workspace }}/.tmp/runner
+      TEMP: ${{ github.workspace }}/.tmp/runner
+      UV_CACHE_DIR: ${{ github.workspace }}/.tmp/uv-cache
+      UV_PYTHON_INSTALL_DIR: ${{ github.workspace }}/.tmp/python
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - name: Check out workflow implementation
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.workflow_sha }}
+          persist-credentials: false
+      - name: Prepare local temporary directory
+        run: mkdir -p .tmp/runner
+      - name: Check out selected application source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.source_branch }}
+          path: .tmp/source
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: '0.9.6'
+          enable-cache: false
+      - name: Run offline deployment checks
+        run: python -B -m unittest discover -s deploy/tests -v
+      - name: Publish the new Sandbox, frontend, and visitor controls
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          VERCEL_TEAM_ID: ${{ secrets.VERCEL_TEAM_ID }}
+          DEMO_PUBLIC_ORIGIN: ${{ vars.DEMO_PUBLIC_ORIGIN }}
+          SOURCE_BRANCH: ${{ inputs.source_branch }}
+          INITIALIZE_PROJECT: ${{ inputs.initialize_project }}
+        # Pass the branch choice as data; only this step receives the Vercel credential.
+        run: |
+          options=()
+          if [ "$INITIALIZE_PROJECT" = "true" ]; then
+            options+=(--initialize-project)
+          fi
+          uv run --no-project --with vercel-sandbox==0.10.0 \
+            python -B deploy/05_github_demo.py deploy \
+            --source-repo .tmp/source --source-branch "$SOURCE_BRANCH" "${options[@]}"
+      - name: Save deployment diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: demo-deploy-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .tmp/github-demo/*.json
+          include-hidden-files: true
+          if-no-files-found: ignore
+          retention-days: 7
