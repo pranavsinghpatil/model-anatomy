@@ -35,6 +35,8 @@ class Settings(BaseSettings):
         default=None, validation_alias=AliasChoices("DATABASE_URL", "MODEL_ANATOMY_DATABASE_URL"), repr=False
     )
     storage_backend: Literal["local", "supabase"] = "local"
+    demo_control_file: Path | None = None
+    demo_session_id: str | None = None
     supabase_url: str | None = None
     supabase_service_role_key: SecretStr | None = Field(
         default=None,
@@ -77,6 +79,13 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def production_is_explicit(self) -> "Settings":
+        if self.demo_control_file is not None or self.demo_session_id is not None:
+            if not self.demo_control_file or not self.demo_session_id:
+                raise ValueError("Demo control file and session identity must be configured together")
+            if self.environment != "local" or self.storage_backend != "local" or not self.resolved_database_url.startswith("sqlite:"):
+                raise ValueError("Visitor demo controls require the local SQLite profile")
+            if not self.demo_control_file.is_absolute():
+                raise ValueError("Demo control file must have an absolute path")
         if "*" in self.cors_origins:
             raise ValueError("Credentialed CORS requires explicit origins")
         if self.environment == "production":

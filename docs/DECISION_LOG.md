@@ -1392,3 +1392,114 @@ and the container smoke helper's default URL (port 8001, as declared by CI).
 Limit Python production changes to mechanical import ordering; keep extraction,
 API and quota behavior unchanged. Record the backend and CI verification in the
 same journey evidence document.
+
+## D-082 - Operate the Vercel demo through manual GitHub workflows
+
+### 2026-10-29 - Sandbox demo operations
+
+Provide manual Deploy Demo and Start Demo workflows, without push or scheduled
+deployment triggers. Deploy Demo selects committed source from `feat/deploy` or
+`main`, prepares a new SQLite/local-storage Sandbox with an empty catalog,
+verifies the application and assets, publishes the existing readable domain's
+CDN Rewrite to it, and only then stops the previous Sandbox. This intentionally
+does not migrate demo reports or analysis IDs. Start Demo resumes the currently
+published Sandbox with its existing code and data.
+
+Use an explicit Vercel Access Token in a GitHub repository secret, without
+requiring Vercel Git integration, matching login email addresses, or CLI login.
+Use the published CDN rule plus Sandbox metadata as the recovery source of
+truth, not a local state file or expiring Actions artifact. Refuse unpublished
+CDN edits and unrelated runtime profiles. Keep the 45-minute Hobby session and
+three-day snapshot limits explicit. See [GitHub demo operations](../deploy/GITHUB_ACTIONS.md)
+for configuration, failure handling, offline checks, and live acceptance limits.
+
+### 2026-10-29 - Private destination configuration and bounded automatic recovery
+
+Move actual Project/Team IDs to a Git-ignored deployment env file for local
+commands and to repository Secrets for Actions. Keep these values out of tracked
+configuration, documentation, and diagnostic JSON. Public URL and routing-rule
+selection can remain in the tracked JSON configuration.
+
+Add a five-minute scheduled recovery check through November 30, 2026 in New York.
+Resume only a stopped published Sandbox; do not restart active analyses, change
+source, or create a replacement. After the deadline, reject recovery operations
+and use the job's built-in Actions token to disable only this recovery workflow.
+Retain manual deployment/start controls and shared queued concurrency. GitHub
+schedule delays, Hobby usage quotas, and session limits remain explicit; this
+does not establish continuous availability through the end date.
+
+### 2026-10-29 - Correct the requested recovery end date
+
+The requested end date is December 16, 2026, inclusive in New York, replacing
+the earlier November 30 cutoff. Automatic recovery ends at December 17 00:00 EST
+(05:00 UTC). Preserve the existing stopped-only behavior and add boundary checks
+for the required December 1-15 period. This date change does not establish enough
+Hobby capacity or continuous availability: the current 8 GB allocation would
+consume 2,880 GB-hours across 360 hours, exceeding the 420 GB-hour allowance.
+Paid-plan evaluation and any resource or availability changes remain separate
+decisions; no upgrade is authorized by this date correction.
+
+The user subsequently chose to remain on Hobby and operate only during specified
+demo windows. Gate the scheduled job off by default with the repository variable
+`DEMO_RECOVERY_ENABLED`. Exact dates/hours, end-of-window handling, and remaining
+quota must be confirmed before enabling automatic recovery. Manual Deploy Demo
+and Start Demo remain available.
+
+### 2026-10-29 - Let visitors explicitly start and stop the shared demo
+
+Judging visits during December 1-15 are unscheduled. Replace recurring recovery
+with public Start Demo / Stop Demo controls. Opening a page or polling status
+never wakes a Sandbox. Serve the frontend and a small Python Function from the
+ordinary Production deployment; keep FastAPI, the worker, and SQLite in one
+shared Sandbox. Public Start ends after December 16 in New York. Keep manual
+GitHub Deploy Demo and Start Demo workflows and remove the recovery schedule.
+
+All visitors may request Start or Stop. Stop must reject every queued or running
+analysis across visitors. Serialize its global idle check with job admission's
+SQLite writer transaction, and retain a per-session file fence if the provider
+response is delayed. A new runtime session identity restores admission. Stop
+targets the inspected session rather than whichever session is current later.
+The ordinary application and Supabase profiles do not enable this optional gate.
+Natural Hobby timeout can still interrupt work; manual Stop safety cannot extend it.
+
+Publish matching frontend source, generated API-only rewrites, private server
+credentials, and Sandbox provenance through the file deployment API. Production
+metadata becomes the recovery source of truth. Disable the legacy project CDN
+catch-all once the new build is ready; preserve rollback and uncertain-publication
+guards. Server credentials derive from repository Secrets and never use Vite's
+public environment prefix. Extend snapshot retention from three to sixty days,
+keeping one snapshot per Sandbox. No paid plan or resource increase is authorized.
+
+Offline tests exercise real SQLite locking, API admission, public-control policy,
+rollout/rollback, and desktop/mobile button behavior. Live Function packaging,
+permissions, restart latency, and Production acceptance require the first GitHub
+deployment with the user's Secrets. See [demo operations](../deploy/GITHUB_ACTIONS.md).
+
+### 2026-10-29 - Make the demo independently deployable by the next account owner
+
+Support a fresh teammate-owned Vercel project instead of assuming the original
+operator's Production deployment, Sandbox, and CDN rule already exist. Keep one
+repository deployment destination at a time. Switching all three repository
+Secrets and the public-origin Variable selects the next owner's account; it does
+not transfer the previous domain, data, credentials, or resources.
+
+Move the operator-specific domain out of tracked JSON into `DEMO_PUBLIC_ORIGIN`
+(an Actions repository Variable, or ignored local deployment env). Keep Token,
+Project ID, and Team ID in Secrets/private env. First deployment accepts an empty
+unlinked project or explicitly authorized temporary frontend. The browser setup
+creates that placeholder through repository/template import, disconnects Git,
+and runs Deploy Demo once. No legacy CDN rule or local scripts 01-04 are needed.
+Preserve conservative rollback when the first deployment has no prior target.
+
+Existing all-Sandbox deployments still migrate by disabling their named legacy
+catch-all. Later interactive deployments may have no legacy rule. Reject
+unpublished routing edits and unrelated active CDN rules. Make optional Project
+creation configurable by name and save its identifiers only in the private env
+file, without printing them or replacing an already configured project.
+
+Document first checkout/setup, Secrets/Variables locations, source selection,
+manual operator/visitor controls, automatic work during a manual run, absence of
+push/cron deployment, account handover, quota/deadline limits, local UI-only mode,
+and live acceptance. Preserve the agreed SQLite demo scope and December public
+Start deadline. Offline tests cover first deployment, placeholder authorization,
+account isolation, and rollback; real cloud acceptance still requires credentials.

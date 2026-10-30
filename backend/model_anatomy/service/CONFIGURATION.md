@@ -74,6 +74,17 @@ marked AI-generated and never modify graph facts.
 
 ## Limits and retention
 
+The optional Vercel visitor-demo profile sets `MODEL_ANATOMY_DEMO_CONTROL_FILE`
+to an absolute local control path and `MODEL_ANATOMY_DEMO_SESSION_ID` to the
+current Sandbox session identity. Configure both together, only for local SQLite.
+They are unset for ordinary local and Supabase installations. Under the same
+SQLite writer lock used to accept jobs, a stop guard checks all queued/running
+jobs and writes a per-session admission fence. New submissions and saved-report
+inspection actions reject that session's fence before spending quota. A delayed
+provider response does not expire the fence; a genuinely new session uses a new
+identity. Malformed control state fails closed. See
+[visitor demo operations](../../../deploy/GITHUB_ACTIONS.md).
+
 Defaults: ten **waiting** jobs; two inspections/guest/hour; ten questions/guest/hour;
 twenty inspections globally/day; one hundred questions globally/day. Persisted
 fixed UTC windows count successful enqueues/provider attempts, not reads.

@@ -1,6 +1,6 @@
 """Resume the prepared Sandbox and serve a real SQLite-backed Model Anatomy demo.
 
-Credentials are prompted locally. No Vercel CLI, Supabase, or fresh Sandbox creation.
+Credentials use VERCEL_TOKEN or a local prompt. No CLI login or fresh Sandbox creation.
 Run from the repository root; the companion supervisor lives in deploy/support.
 """
 
@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import argparse
 import asyncio
-import getpass
 import http.cookiejar
 import json
 import subprocess
@@ -19,6 +18,7 @@ from urllib.error import HTTPError
 from urllib.parse import urlsplit
 from urllib.request import HTTPCookieProcessor, build_opener
 
+from support.credentials import access_token, bind_destination, without_destination
 
 DEPLOY_DIR = Path(__file__).resolve().parent
 RUNTIME_SCRIPT = DEPLOY_DIR / "support" / "sandbox_demo_runtime.py"
@@ -160,6 +160,12 @@ def caddyfile(app_dir: str) -> str:
         header Cache-Control "public, max-age=31536000, immutable"
         file_server
     }
+    handle /.well-known/model-anatomy-deployment.json {
+        root * CONTROL_PLACEHOLDER
+        rewrite * /deployment.json
+        header Cache-Control "no-store"
+        file_server
+    }
     handle {
         root * ROOT_PLACEHOLDER
         header Cache-Control "no-cache"
@@ -167,7 +173,9 @@ def caddyfile(app_dir: str) -> str:
         file_server
     }
 }
-""".replace("ROOT_PLACEHOLDER", root)
+""".replace("ROOT_PLACEHOLDER", root).replace(
+        "CONTROL_PLACEHOLDER", json.dumps(str(PurePosixPath(app_dir) / ".tmp/vercel-demo"))
+    )
 
 
 def public_checks(origin: str) -> dict:
@@ -185,10 +193,10 @@ def public_checks(origin: str) -> dict:
         raise RuntimeError("One of the database/storage/worker checks is unavailable")
     catalog = read("/api/v1/catalog/discovery")
     if not isinstance(catalog.get("total"), int):
-        raise RuntimeError("The catalog endpoint did not return the expected JSON")
+        raise RuntimeError("The catalog endpoint did not return the expected JSON")  # noqa: TRY004
     analyses = read("/api/v1/analyses")
     if not isinstance(analyses.get("analyses"), list):
-        raise RuntimeError("The visitor analyses endpoint did not return the expected JSON")
+        raise RuntimeError("The visitor analyses endpoint did not return the expected JSON")  # noqa: TRY004
     if not any(cookie.name == "model_anatomy_visitor" for cookie in cookies):
         raise RuntimeError("The public API did not establish the visitor cookie")
     page = read("/", as_json=False)
@@ -203,9 +211,8 @@ async def start(args: argparse.Namespace, prepared: dict) -> None:
     from vercel.api import session
     from vercel.sandbox import SandboxCredentials, SandboxServiceOptions
 
-    token = getpass.getpass("Vercel Access Token (hidden): ").strip()
-    if not token:
-        raise RuntimeError("An access token is required")
+    prepared = bind_destination(prepared)
+    token = access_token()
 
     async def credentials() -> SandboxCredentials:
         return SandboxCredentials(token=token, project_id=prepared["project_id"], team_id=prepared["team_id"])
@@ -216,12 +223,15 @@ async def start(args: argparse.Namespace, prepared: dict) -> None:
 
     def save() -> None:
         args.output.parent.mkdir(parents=True, exist_ok=True)
-        args.output.write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
+        args.output.write_text(json.dumps(without_destination(result), indent=2) + "\n", encoding="utf-8")
 
     async with session(service_options=[SandboxServiceOptions(credentials_factory=credentials)]):
         box = await sandbox.get_sandbox(name=prepared["sandbox_name"])
         print(f"Using existing Sandbox: {box.name}", flush=True)
-        await box.update(execution_time_limit=timedelta(minutes=45), persistent=True)
+        await box.update(
+            execution_time_limit=timedelta(minutes=45), persistent=True,
+            snapshot_expiration=timedelta(days=60),
+        )
         runtime = await box.session()  # Intentionally leaves the remote session running.
         result["session_id"] = runtime.id
         app_dir = prepared["app_dir"]
@@ -256,11 +266,18 @@ async def start(args: argparse.Namespace, prepared: dict) -> None:
 
         if not occupied:
             config = configuration(app_dir, origin, args.public_origin)
+            config["environment"].update({
+                "MODEL_ANATOMY_DEMO_CONTROL_FILE": str(control / "stop-reservation.json"),
+                "MODEL_ANATOMY_DEMO_SESSION_ID": runtime.id,
+            })
             await runtime.fs.mkdir(str(control))
             remote_script = str(control / "supervisor.py")
             await runtime.fs.write_text(remote_script, RUNTIME_SCRIPT.read_text(encoding="utf-8"))
             await runtime.fs.write_text(str(control / "runtime.json"), json.dumps(config, indent=2) + "\n")
             await runtime.fs.write_text(str(control / "Caddyfile"), caddyfile(app_dir))
+            await runtime.fs.write_text(str(control / "deployment.json"), json.dumps({
+                "commit": prepared["commit"], "sandbox_name": prepared["sandbox_name"],
+            }) + "\n")
             await runtime.run_process("caddy", ["validate", "--config", str(control / "Caddyfile"), "--adapter", "caddyfile"], check=True)
             server = await runtime.create_process(
                 python, ["-B", remote_script, str(control / "runtime.json")], cwd=app_dir,
@@ -273,6 +290,11 @@ async def start(args: argparse.Namespace, prepared: dict) -> None:
             raise RuntimeError("A running demo has another origin; it was preserved. Stop it before reconfiguring")
         else:
             print("Reusing the existing demo processes and SQLite data", flush=True)
+
+        await runtime.fs.write_text(
+            str(control / "control.py"),
+            (DEPLOY_DIR / "support/sandbox_demo_control.py").read_text(encoding="utf-8"),
+        )
 
         try:
             deadline = time.monotonic() + 90
@@ -324,7 +346,7 @@ def main() -> None:
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args()
     args.output = args.output.resolve()
-    prepared = json.loads(args.state.read_text())
+    prepared = bind_destination(json.loads(args.state.read_text()))
     required = ["project_id", "team_id", "sandbox_name", "app_dir", "commit"]
     if not prepared.get("prepared") or any(not prepared.get(key) for key in required):
         raise SystemExit("The preparation state is incomplete; finish preparation first")
@@ -349,7 +371,7 @@ if __name__ == "__main__":
         main()
     except KeyboardInterrupt:
         raise SystemExit("Interrupted. The remote Sandbox may still be running; keep the state files.")
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 - Redact credential-bearing SDK errors at the CLI boundary.
         print(f"Failed: {type(exc).__name__}")
         if isinstance(exc, RuntimeError):
             print(str(exc))

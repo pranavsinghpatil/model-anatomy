@@ -2,3 +2,4 @@
 sandbox-state.json
 demo-state.json
 production-state.json
+.env

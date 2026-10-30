@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import argparse
 import base64
-import getpass
 import io
 import json
 import subprocess
@@ -18,6 +17,8 @@ from pathlib import Path, PurePosixPath
 from urllib.error import HTTPError, URLError
 from urllib.parse import quote, urlencode
 from urllib.request import Request, urlopen
+
+from support.credentials import access_token, bind_destination, without_destination
 
 DEPLOY_DIR = Path(__file__).resolve().parent
 BRANCH = "feat/deploy"
@@ -119,14 +120,12 @@ def api(method: str, path: str, token: str, team_id: str, body: dict | None = No
 
 
 def create_entrypoint(args: argparse.Namespace, state: dict, commit: str, files: list[dict[str, str]]) -> None:
-    token = getpass.getpass("Vercel Access Token from the Project owner's account (hidden): ").strip()
-    if not token:
-        raise RuntimeError("A Vercel Access Token is required")
+    token = access_token()
     project_id = state["project_id"]
     team_id = state["team_id"]
     project = api("GET", "/v9/projects/" + quote(project_id, safe=""), token, team_id)
     check_project(project, project_id, team_id)
-    print(f"Project: {project['name']} ({project_id})", flush=True)
+    print(f"Project: {project['name']}", flush=True)
     print(f"Uploading {len(files)} committed frontend files from {BRANCH} at {commit}", flush=True)
     created = api(
         "POST", "/v13/deployments", token, team_id,
@@ -142,7 +141,7 @@ def create_entrypoint(args: argparse.Namespace, state: dict, commit: str, files:
         result.update({key: detail.get(key) for key in ["readyState", "url", "alias", "target"]})
         result["ready"] = detail.get("readyState") == "READY"
         args.output.parent.mkdir(parents=True, exist_ok=True)
-        args.output.write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
+        args.output.write_text(json.dumps(without_destination(result), indent=2) + "\n", encoding="utf-8")
 
     save(created)
     print(f"Created deployment: {deployment_id}", flush=True)
@@ -185,14 +184,12 @@ def main() -> None:
         parser.error("--timeout must be positive")
     args.repo = args.repo.resolve()
     args.output = args.output.resolve()
-    state = json.loads(args.state.read_text(encoding="utf-8"))
-    if not str(state.get("project_id", "")).startswith("prj_") or not str(state.get("team_id", "")).startswith("team_"):
-        parser.error("The state file must contain a Project ID and Team ID from Step 2")
+    state = bind_destination(json.loads(args.state.read_text(encoding="utf-8")))
     commit, files, total = frontend_files(args.repo)
     if args.dry_run:
         payload = deployment_payload(state["project_id"], "resolved-from-existing-project", commit, files)
         print(json.dumps({
-            "project_id": state["project_id"], "team_id": state["team_id"], "branch": BRANCH,
+            "destination_configured": True, "branch": BRANCH,
             "commit": commit, "file_count": len(files), "source_bytes": total,
             "request_bytes": len(json.dumps(payload, separators=(",", ":")).encode()),
             "project_settings": PROJECT_SETTINGS, "git_source": False, "git_author_metadata": False,

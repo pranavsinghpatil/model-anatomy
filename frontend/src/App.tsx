@@ -10,6 +10,7 @@ import { Preferences } from "./state/preferences";
 import { FeedbackProvider } from "./state/feedback";
 import { Start } from "./pages/Entry";
 import { Loading } from "./components/Common";
+import { DemoControls } from "./components/DemoControls";
 const Workspace = lazy(() => import("./pages/Workspace"));
 const Catalog = lazy(() => import("./pages/Catalog"));
 function RouteFocus() {
@@ -37,6 +38,7 @@ export function App() {
             Skip to content
           </a>
           <RouteFocus />
+          <DemoControls />
           <Suspense
             fallback={
               <main id="main" tabIndex={-1} className="page-state">

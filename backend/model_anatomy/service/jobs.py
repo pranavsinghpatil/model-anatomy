@@ -27,6 +27,8 @@ from .database import (
 from .errors import ServiceError
 from .storage import storage_for
 
+DEMO_CONTROL_PROTOCOL = "visitor-controls-v1"
+
 TERMINAL = {
     "completed",
     "partial",
@@ -488,6 +490,27 @@ class JobService:
                 mutex and mutex.worker_owner and mutex.worker_until > self.clock()
             )
 
+    def _require_demo_admission(self) -> None:
+        """Called under the DB writer lock shared with the Sandbox stop guard.
+
+        The session fence survives a delayed provider response and the guard's
+        short writer lease. Only starting services in a new Sandbox session
+        changes the configured identity and permits new submissions again.
+        """
+        path = self.settings.demo_control_file
+        if path is None:
+            return
+        try:
+            state = json.loads(path.read_text(encoding="utf-8"))
+        except FileNotFoundError:
+            return
+        except (OSError, ValueError):
+            raise ServiceError(503, "demo_control_unavailable", "Cannot verify whether the demo is stopping") from None
+        if not isinstance(state, dict) or not isinstance(state.get("session_id"), str) or not state["session_id"]:
+            raise ServiceError(503, "demo_control_unavailable", "Cannot verify whether the demo is stopping")
+        if state.get("session_id") == self.settings.demo_session_id:
+            raise ServiceError(503, "demo_stopping", "The demo is stopping. Start a new session after it has stopped")
+
     def create(self, guest_id: str, value: str, *, refresh: bool = False) -> dict:
         value, model_id = model_reference(value)
         now = self.clock()
@@ -502,6 +525,7 @@ class JobService:
             )
         )
         with self.db.write() as session:
+            self._require_demo_admission()
             # A saved report is usable without a live worker or queue capacity.
             if valid:
                 report, summary = valid
@@ -644,6 +668,7 @@ class JobService:
         report, summary = valid
         now = self.clock()
         with self.db.write() as session:
+            self._require_demo_admission()
             self._quota(session, guest_id, "jobs")
             value = f"https://huggingface.co/{report.model_id}/resolve/{report.revision}/{report.artifact}"
             job = self._ready_job(

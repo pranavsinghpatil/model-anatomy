@@ -6,11 +6,13 @@ import base64
 import importlib.util
 import json
 import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / "deploy"))
 SPEC = importlib.util.spec_from_file_location("production_entrypoint", ROOT / "deploy/04_create_production_entrypoint.py")
 if SPEC is None or SPEC.loader is None:
     raise RuntimeError("Cannot load the deployment helper")

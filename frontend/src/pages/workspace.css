@@ -1,5 +1,5 @@
 .workspace-shell {
-  height: calc(100dvh / var(--ui-scale));
+  height: calc(100dvh / var(--ui-scale) - var(--demo-controls-height, 0px));
   min-height: 440px;
   display: flex;
   flex-direction: column;

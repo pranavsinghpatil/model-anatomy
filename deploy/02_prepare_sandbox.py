@@ -1,35 +1,38 @@
 """Prepare committed Model Anatomy source in Vercel Sandbox; do not start the app.
 
 Run with the isolated SDK, without changing the application's Python environment:
-  uv run --no-project --with vercel-sandbox==0.10.0 python prepare_sandbox.py --repo PATH
+  uv run --no-project --with vercel-sandbox==0.10.0 python deploy/02_prepare_sandbox.py --repo PATH
 
-The SDK credentials are prompted locally and never written to the state file.
+The SDK credentials come from VERCEL_TOKEN or a local prompt and are never saved.
 """
 
 from __future__ import annotations
 
 import argparse
 import asyncio
-import getpass
 import io
 import json
+import os
+import re
 import subprocess
 import tarfile
 import uuid
 from datetime import timedelta
 from pathlib import Path, PurePosixPath
 
+from support.credentials import access_token, destination, load_private_environment, without_destination
 
-PROJECT_ID = "prj_mWgEmNh9xUbrq8fp7JSAk4kNP7fF"
 BRANCH = "feat/deploy"
 
 
-def committed_source(repo: Path) -> tuple[str, bytes, int]:
+def committed_source(repo: Path, branch: str = BRANCH, revision: str | None = None) -> tuple[str, bytes, int]:
     root = subprocess.check_output(
         ["git", "-C", str(repo), "rev-parse", "--show-toplevel"], text=True
     ).strip()
+    if revision is not None and not re.fullmatch(r"[0-9a-f]{40}", revision):
+        raise RuntimeError("An explicit revision must be a full Git commit SHA")
     revision = subprocess.check_output(
-        ["git", "-C", root, "rev-parse", f"refs/heads/{BRANCH}^{{commit}}"],
+        ["git", "-C", root, "rev-parse", f"{revision or 'refs/heads/' + branch}^{{commit}}"],
         text=True,
     ).strip()
     payload = subprocess.check_output(
@@ -48,6 +51,10 @@ def committed_source(repo: Path) -> tuple[str, bytes, int]:
             raise RuntimeError("The selected branch lacks required application files")
         for item in members:
             path = PurePosixPath(item.name)
+            if path.is_absolute() or ".." in path.parts or not (item.isfile() or item.isdir()):
+                raise RuntimeError("Archive contains an unsafe path, link, or special file")
+            if any(part in {".git", ".tmp", ".venv", "node_modules", ".vercel"} for part in path.parts):
+                raise RuntimeError("Archive contains generated state or local credentials")
             private_env = (
                 path.name == ".env"
                 or (path.name.startswith(".env.") and path.name != ".env.example")
@@ -67,24 +74,27 @@ async def prepare(args: argparse.Namespace, revision: str, payload: bytes) -> No
         SnapshotRetention,
     )
 
-    team_id = input("Vercel Team ID: ").strip()
-    token = getpass.getpass("Vercel Access Token (hidden): ").strip()
+    team_id = args.team_id or os.environ.get("VERCEL_TEAM_ID", "").strip()
+    if not team_id and not os.environ.get("CI"):
+        team_id = input("Vercel Team ID: ").strip()
+    token = access_token()
     if not team_id.startswith("team_") or not token:
         raise RuntimeError("A team_ ID and a nonempty access token are required")
 
     async def credentials() -> SandboxCredentials:
-        return SandboxCredentials(token=token, project_id=PROJECT_ID, team_id=team_id)
+        return SandboxCredentials(token=token, project_id=args.project_id, team_id=team_id)
 
     state = {
-        "project_id": PROJECT_ID,
+        "project_id": args.project_id,
         "team_id": team_id,
-        "branch": BRANCH,
+        "branch": args.branch,
         "commit": revision,
         "prepared": False,
     }
 
     def save_state() -> None:
-        args.state.write_text(json.dumps(state, indent=2) + "\n", encoding="utf-8")
+        args.state.parent.mkdir(parents=True, exist_ok=True)
+        args.state.write_text(json.dumps(without_destination(state), indent=2) + "\n", encoding="utf-8")
 
     async with session(service_options=[SandboxServiceOptions(credentials_factory=credentials)]):
         box = await sandbox.create_sandbox(
@@ -93,10 +103,10 @@ async def prepare(args: argparse.Namespace, revision: str, payload: bytes) -> No
             execution_time_limit=timedelta(minutes=45),
             resources=SandboxResources(vcpus=4, memory=8192),
             persistent=True,
-            snapshot_expiration=timedelta(days=3),
+            snapshot_expiration=timedelta(days=60),
             snapshot_retention=SnapshotRetention(count=1),
             ports=[],
-            tags={"app": "model-anatomy", "purpose": "demo", "commit": revision},
+            tags={"app": "model-anatomy", "purpose": "demo", "commit": revision, "branch": args.branch},
         )
         state["sandbox_name"] = box.name
         state["session_id"] = box.current_session_id
@@ -108,11 +118,21 @@ async def prepare(args: argparse.Namespace, revision: str, payload: bytes) -> No
 
         async def run(label: str, command: str, argv: list[str], **kwargs):
             print(f"\n>>> {label}", flush=True)
+            kwargs["env"] = {**install_environment, **kwargs.pop("env", {})}
             return await box.run_process(command, argv, check=True, **kwargs)
 
+        scratch = str(PurePosixPath(app_dir).parent / ".tmp" / box.name)
+        install_environment = {
+            "TMPDIR": scratch, "TMP": scratch, "TEMP": scratch,
+            "UV_CACHE_DIR": scratch + "/uv-cache",
+            "UV_PYTHON_INSTALL_DIR": scratch + "/python",
+            "npm_config_cache": scratch + "/npm-cache",
+            "PYTHONDONTWRITEBYTECODE": "1",
+        }
         stage = "upload committed source"
         try:
-            archive_path = "/tmp/model-anatomy-source.tar"
+            await box.fs.mkdir(scratch)
+            archive_path = scratch + "/source.tar"
             await box.fs.write_bytes(archive_path, payload, mode=0o600)
             await box.fs.mkdir(app_dir)
             await run(stage, "tar", ["-xf", archive_path, "-C", app_dir])
@@ -135,13 +155,13 @@ async def prepare(args: argparse.Namespace, revision: str, payload: bytes) -> No
                 await run(stage, "curl", [
                     "--fail", "--location", "--silent", "--show-error",
                     "https://astral.sh/uv/0.9.6/install.sh",
-                    "--output", "/tmp/model-anatomy-uv-install.sh",
+                    "--output", scratch + "/uv-install.sh",
                 ])
-                await run(stage, "sh", ["/tmp/model-anatomy-uv-install.sh"], env={
-                    "UV_INSTALL_DIR": "/tmp/model-anatomy-tools",
+                await run(stage, "sh", [scratch + "/uv-install.sh"], env={
+                    "UV_INSTALL_DIR": scratch + "/tools",
                     "UV_NO_MODIFY_PATH": "1",
                 })
-                uv = "/tmp/model-anatomy-tools/uv"
+                uv = scratch + "/tools/uv"
 
             stage = "install locked Python 3.11 API and engine dependencies"
             await run(stage, uv, [
@@ -195,7 +215,7 @@ async def prepare(args: argparse.Namespace, revision: str, payload: bytes) -> No
             try:
                 await box.stop()
                 state["stop_requested"] = True
-            except Exception as exc:
+            except Exception as exc:  # noqa: BLE001 - Cleanup failures must not expose SDK request details.
                 state["stop_error_type"] = type(exc).__name__
                 print("Stop could not be confirmed; check this sandbox in the Vercel dashboard.", flush=True)
             save_state()
@@ -206,16 +226,25 @@ async def prepare(args: argparse.Namespace, revision: str, payload: bytes) -> No
 
 
 def main() -> None:
+    load_private_environment()
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--repo", type=Path, default=Path.cwd())
+    parser.add_argument("--branch", default=BRANCH)
+    parser.add_argument("--revision", help="Optional full commit SHA, including a detached Actions checkout")
+    parser.add_argument("--project-id", default=os.environ.get("VERCEL_PROJECT_ID"))
+    parser.add_argument("--team-id", default=os.environ.get("VERCEL_TEAM_ID"))
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--state", type=Path, default=Path(__file__).resolve().with_name("sandbox-state.json"))
     args = parser.parse_args()
+    if not args.project_id or not args.team_id:
+        configured = destination()
+        args.project_id = args.project_id or configured["project_id"]
+        args.team_id = args.team_id or configured["team_id"]
     args.state = args.state.expanduser().resolve()
     if args.state.exists() and not args.dry_run:
         raise SystemExit("State file already exists. Keep it for resuming; do not create another sandbox yet.")
-    revision, payload, count = committed_source(args.repo.expanduser().resolve())
-    print(f"Branch: {BRANCH}\nCommit: {revision}\nCommitted files: {count}\nArchive size: {len(payload) / 1024**2:.1f} MiB", flush=True)
+    revision, payload, count = committed_source(args.repo.expanduser().resolve(), args.branch, args.revision)
+    print(f"Branch: {args.branch}\nCommit: {revision}\nCommitted files: {count}\nArchive size: {len(payload) / 1024**2:.1f} MiB", flush=True)
     if args.dry_run:
         print("Dry run passed. No credentials read and no Vercel requests sent.")
         return
@@ -227,7 +256,7 @@ if __name__ == "__main__":
         main()
     except KeyboardInterrupt:
         raise SystemExit("Interrupted. Check sandbox-state.json and the Vercel dashboard before retrying.")
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 - Redact credential-bearing SDK errors at the CLI boundary.
         print(f"Error type: {type(exc).__name__}")
         status = getattr(exc, "status_code", None)
         if status is not None:
